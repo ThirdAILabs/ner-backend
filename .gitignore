@@ -1,0 +1,54 @@
+# Environment variables file - Contains secrets!
+.env
+*.env
+env.local
+
+# Compiled Go binaries
+/api             # Binary in root from local builds (adjust if build output dir changes)
+/worker          # Binary in root from local builds
+*.exe            # Windows binaries
+*.dll            # Windows DLLs
+*.so             # Linux shared objects
+*.dylib          # macOS dynamic libraries
+
+# Binaries built inside cmd directories (adjust if needed)
+cmd/api/api
+cmd/worker/worker
+
+# Build output directory (if you create one)
+/bin/
+/build/
+/dist/
+
+# Dependency directory (if using vendor) - Less common with Go modules
+/vendor/
+
+# Log files
+*.log
+logs/
+
+# Test coverage files
+*.out
+coverage.html
+cover.out
+
+# IDE/Editor specific files
+.vscode/
+.idea/
+*.iml
+*.sublime-project
+*.sublime-workspace
+
+# OS specific files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*~
+
+# Debugging related (e.g., delve)
+/__debug_bin
