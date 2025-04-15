@@ -27,25 +27,23 @@ Setup
 
 1. Prerequisites: Install Go (1.21+), Docker, and Docker Compose (v2+).
 2. Clone: `git clone <repository-url>` then `cd ner-backend`
-3. Configure: Create an `.env` file (you can copy the example) and fill in your specific database, RabbitMQ, and MinIO/S3 credentials, endpoints, and bucket names.
-
-Build
-
-Build the Docker image using this command in the project root:
-`docker compose build`
 
 Running with Docker Compose
 
 Start Head Node Services (API, DB, Queue, Storage):
-`docker compose --profile head up -d`
+`docker compose --profile head up -d --build`
 
 Start Worker Services:
-`docker compose --profile worker up -d`
+`docker compose --profile worker up -d --build`
 (To run N workers, use: `docker compose --profile worker up -d --scale worker=N`)
 (Note: If workers run on separate hosts, update .env URLs to point to the head node's IP/hostname).
 
+To take services down, run:
+docker-compose --profile head down
+docker-compose --profile worker down
+
 Access Services (default ports):
-API Health: http://localhost:8000/health
+API Health: http://localhost:8001/health
 RabbitMQ UI: http://localhost:15672
 MinIO UI: http://localhost:9090
 

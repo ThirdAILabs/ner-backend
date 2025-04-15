@@ -225,8 +225,9 @@ func processMessage(d amqp.Delivery, deps WorkerDependencies) {
 		// Basic retry: NACK and requeue if possible (RabbitMQ handles redelivery)
 		// Be careful with infinite loops if task always fails!
 		// Consider dead-letter queues in RabbitMQ for persistent failures.
-		d.Nack(false, true) // multiple=false, requeue=true (for transient errors)
+		// d.Nack(false, true) multiple=false, requeue=true (for transient errors)
 		// If error is permanent (e.g., bad input), use d.Reject(false) or d.Nack(false, false)
+		d.Nack(false, false)
 	} else if processed {
 		log.Printf("Successfully processed task (Queue: %s). Acknowledging.", d.RoutingKey)
 		d.Ack(false) // Acknowledge successful processing

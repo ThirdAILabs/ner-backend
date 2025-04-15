@@ -53,7 +53,7 @@ func (q *Queries) GetModel(ctx context.Context, modelID string) (*models.Model, 
 func (q *Queries) UpdateModelStatus(ctx context.Context, modelID string, status models.ModelStatus, artifactPath string) error {
 	query := `
         UPDATE models
-        SET status = $2,
+        SET status = $2::VARCHAR(50),
             model_artifact_path = CASE WHEN $3 <> '' THEN $3 ELSE model_artifact_path END,
             completion_time = CASE WHEN $2 = $4 OR $2 = $5 THEN NOW() ELSE completion_time END
         WHERE model_id = $1`

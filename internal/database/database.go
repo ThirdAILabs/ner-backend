@@ -36,3 +36,41 @@ func NewConnectionPool(databaseURL string) (*pgxpool.Pool, error) {
 	log.Println("Database connection pool established.")
 	return pool, nil
 }
+
+// InitializeSchema creates database tables if they don't exist.
+func InitializeSchema(pool *pgxpool.Pool) error {
+	schemaSQL := `
+    CREATE TABLE IF NOT EXISTS models (
+        model_id VARCHAR(255) PRIMARY KEY,
+        status VARCHAR(50),
+        source_data_path TEXT,
+        model_artifact_path TEXT,
+        creation_time TIMESTAMPTZ DEFAULT NOW(),
+        completion_time TIMESTAMPTZ
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_models_status ON models (status);
+
+    CREATE TABLE IF NOT EXISTS inference_jobs (
+        job_id VARCHAR(255) PRIMARY KEY,
+        model_id VARCHAR(255) REFERENCES models(model_id),
+        source_s3_bucket TEXT,
+        source_s3_prefix TEXT,
+        dest_s3_bucket TEXT,
+        result_s3_prefix TEXT,
+        status VARCHAR(50),
+        creation_time TIMESTAMPTZ DEFAULT NOW(),
+        completion_time TIMESTAMPTZ
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_inference_jobs_model_id ON inference_jobs (model_id);
+    CREATE INDEX IF NOT EXISTS idx_inference_jobs_status ON inference_jobs (status);
+    `
+	log.Println("Initializing database schema...")
+	_, err := pool.Exec(context.Background(), schemaSQL)
+	if err != nil {
+		return fmt.Errorf("failed to initialize schema: %w", err)
+	}
+	log.Println("Database schema initialized/verified.")
+	return nil
+}

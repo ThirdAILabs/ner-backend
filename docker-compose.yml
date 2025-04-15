@@ -67,8 +67,10 @@ services:
     profiles: ["head"]
     command: ["--head"] # Tells entrypoint.sh to run /app/api
     ports:
-      - "${API_PORT:-8000}:8000" # Expose API port
-    env_file: .env # Load environment variables from .env file
+      - "${API_PORT:-8001}:8001" # Expose API port
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-postgresql://user:password@postgres:5432/ner_backend?sslmode=disable}
+      - RABBITMQ_URL=${RABBITMQ_URL:-amqp://user:password@rabbitmq:5672/}
     volumes:
       # - .:/app # Mount code for development (requires Go toolchain in container or local build)
       - /etc/localtime:/etc/localtime:ro
@@ -88,13 +90,12 @@ services:
       dockerfile: Dockerfile
     profiles: ["worker"]
     command: ["--worker"] # Tells entrypoint.sh to run /app/worker
-    env_file: .env
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-postgresql://user:password@postgres:5432/ner_backend?sslmode=disable}
+      - RABBITMQ_URL=${RABBITMQ_URL:-amqp://user:password@rabbitmq:5672/}
     volumes:
       # - .:/app # Mount code for development (optional)
       - /etc/localtime:/etc/localtime:ro
-    depends_on: # Workers depend on RabbitMQ being ready
-      rabbitmq:
-        condition: service_healthy
     deploy: # Allows scaling using 'docker compose up --scale worker=N'
         replicas: 1 # Default number of worker instances
     networks:

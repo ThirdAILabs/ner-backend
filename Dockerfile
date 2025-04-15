@@ -1,5 +1,5 @@
 # --- Build Stage ---
-    FROM golang:1.21 as builder
+    FROM golang:1.24 as builder
 
     WORKDIR /app
     
@@ -34,7 +34,7 @@
     RUN chmod +x /entrypoint.sh
     
     # Expose API port
-    EXPOSE 8000
+    EXPOSE 8001
     
     # Set the entrypoint script
     ENTRYPOINT ["/entrypoint.sh"]

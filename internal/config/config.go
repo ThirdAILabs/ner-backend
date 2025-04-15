@@ -40,7 +40,7 @@ func LoadConfig() (*Config, error) {
 	useSSL := useSSLStr == "true" || useSSLStr == "1"
 
 	cfg := &Config{
-		DatabaseURL:       getEnv("DATABASE_URL", "postgresql://user:password@localhost:5432/db?sslmode=disable"),
+		DatabaseURL:       getEnv("DATABASE_URL", "postgresql://user:password@localhost:5432/ner_backend?sslmode=disable"),
 		RabbitMQURL:       getEnv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/"),
 		S3EndpointURL:     getEnv("S3_ENDPOINT_URL", ""),
 		S3AccessKeyID:     getEnv("AWS_ACCESS_KEY_ID", ""),
@@ -50,7 +50,7 @@ func LoadConfig() (*Config, error) {
 		ModelBucketName:   getEnv("MODEL_BUCKET_NAME", "trained-models"),
 		QueueNames:        getEnv("QUEUE_NAMES", "inference_queue,training_queue"),
 		WorkerConcurrency: concurrency,
-		APIPort:           getEnv("API_PORT", "8000"),
+		APIPort:           getEnv("API_PORT", "8001"),
 	}
 
 	if cfg.S3EndpointURL != "" && (cfg.S3AccessKeyID == "" || cfg.S3SecretAccessKey == "") {

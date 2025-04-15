@@ -32,6 +32,11 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	defer dbPool.Close()
+
+	if err := database.InitializeSchema(dbPool); err != nil {
+		log.Fatalf("Failed to initialize database schema: %v", err)
+	}
+
 	dbQueries := database.NewQueries(dbPool)
 
 	// Initialize S3 Client
