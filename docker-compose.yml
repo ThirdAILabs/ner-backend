@@ -24,7 +24,7 @@ services:
     image: postgres:15
     profiles: ["head"] # <<< Only starts when '--profile head' is used
     environment:
-      - POSTGRES_DB=${POSTGRES_DB:-ner_backend}
+      - POSTGRES_DB=${POSTGRES_DB:-ner-backend}
       - POSTGRES_USER=${POSTGRES_USER:-user}
       - POSTGRES_PASSWORD=${POSTGRES_PASS:-password}
     volumes:
@@ -34,7 +34,7 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d ${POSTGRES_DB:-ner_backend}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d ${POSTGRES_DB:-ner-backend}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -69,7 +69,7 @@ services:
     ports:
       - "${API_PORT:-8001}:8001" # Expose API port
     environment:
-      - DATABASE_URL=${DATABASE_URL:-postgresql://user:password@postgres:5432/ner_backend?sslmode=disable}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://user:password@postgres:5432/ner-backend?sslmode=disable}
       - RABBITMQ_URL=${RABBITMQ_URL:-amqp://user:password@rabbitmq:5672/}
     volumes:
       # - .:/app # Mount code for development (requires Go toolchain in container or local build)
@@ -91,7 +91,7 @@ services:
     profiles: ["worker"]
     command: ["--worker"] # Tells entrypoint.sh to run /app/worker
     environment:
-      - DATABASE_URL=${DATABASE_URL:-postgresql://user:password@postgres:5432/ner_backend?sslmode=disable}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://user:password@postgres:5432/ner-backend?sslmode=disable}
       - RABBITMQ_URL=${RABBITMQ_URL:-amqp://user:password@rabbitmq:5672/}
     volumes:
       # - .:/app # Mount code for development (optional)

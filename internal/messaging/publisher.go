@@ -7,7 +7,7 @@ import (
 	"log"
 	"time"
 
-	"ner_backend/pkg/models" // Adjust import path
+	"ner-backend/pkg/models" // Adjust import path
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )

@@ -4,10 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"ner_backend/internal/database" // Adjust import path
-	"ner_backend/internal/messaging"
-	"ner_backend/internal/s3"
-	"ner_backend/pkg/models"
+	"ner-backend/internal/database" // Adjust import path
+	"ner-backend/internal/messaging"
+	"ner-backend/internal/s3"
+	"ner-backend/pkg/models"
 	"net/http"
 	"strings"
 

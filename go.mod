@@ -1,4 +1,4 @@
-module ner_backend
+module ner-backend
 
 go 1.22
 

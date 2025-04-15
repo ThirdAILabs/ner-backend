@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"log"
 
-	"ner_backend/pkg/models" // Adjust import path
+	"ner-backend/pkg/models" // Adjust import path
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )

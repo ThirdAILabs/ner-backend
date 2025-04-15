@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"ner_backend/internal/config" // Adjust import path
-	"ner_backend/internal/core"
-	"ner_backend/internal/database"
-	"ner_backend/internal/s3"
-	"ner_backend/pkg/models"
+	"ner-backend/internal/config" // Adjust import path
+	"ner-backend/internal/core"
+	"ner-backend/internal/database"
+	"ner-backend/internal/s3"
+	"ner-backend/pkg/models"
 	"os"
 	"path/filepath"
 	"runtime"

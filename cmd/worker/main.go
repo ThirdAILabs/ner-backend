@@ -2,10 +2,10 @@ package main
 
 import (
 	"log"
-	"ner_backend/internal/config" // Adjust import path
-	"ner_backend/internal/database"
-	"ner_backend/internal/messaging"
-	"ner_backend/internal/s3"
+	"ner-backend/internal/config" // Adjust import path
+	"ner-backend/internal/database"
+	"ner-backend/internal/messaging"
+	"ner-backend/internal/s3"
 	"os"
 	"os/signal"
 	"sync"

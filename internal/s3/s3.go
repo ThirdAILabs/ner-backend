@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"ner_backend/internal/config"
+	"ner-backend/internal/config"
 	"net/url"
 	"os"
 	"path/filepath"

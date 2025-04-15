@@ -40,7 +40,7 @@ func LoadConfig() (*Config, error) {
 	useSSL := useSSLStr == "true" || useSSLStr == "1"
 
 	cfg := &Config{
-		DatabaseURL:       getEnv("DATABASE_URL", "postgresql://user:password@localhost:5432/ner_backend?sslmode=disable"),
+		DatabaseURL:       getEnv("DATABASE_URL", "postgresql://user:password@localhost:5432/ner-backend?sslmode=disable"),
 		RabbitMQURL:       getEnv("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/"),
 		S3EndpointURL:     getEnv("S3_ENDPOINT_URL", ""),
 		S3AccessKeyID:     getEnv("AWS_ACCESS_KEY_ID", ""),

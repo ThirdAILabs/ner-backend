@@ -11,7 +11,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
-	"ner_backend/pkg/models" // Adjust import path if needed
+	"ner-backend/pkg/models" // Adjust import path if needed
 	"sync"
 	"testing"
 	"time"
