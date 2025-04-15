@@ -171,20 +171,3 @@ func (p *TaskPublisher) Close() {
 	}
 	log.Println("RabbitMQ publisher connection closed.")
 }
-
-// --- Define Payload Structs ---
-// (Could also be in pkg/models)
-
-type TrainTaskPayload struct {
-	ModelID          string `json:"model_id"`
-	SourceS3PathTags string `json:"source_s3_path_tags"`
-}
-
-type InferenceTaskPayload struct {
-	JobID             string `json:"job_id"`
-	ModelID           string `json:"model_id"`
-	ModelArtifactPath string `json:"model_artifact_path"` // Pass from API
-	SourceS3Bucket    string `json:"source_s3_bucket"`
-	SourceS3Key       string `json:"source_s3_key"`
-	DestS3Bucket      string `json:"dest_s3_bucket"`
-}
