@@ -26,7 +26,7 @@ Key files at the root include: .env for environment variables, .gitignore, docke
 Setup
 
 1. Prerequisites: Install Go (1.21+), Docker, and Docker Compose (v2+).
-2. Clone: `git clone <repository-url>` then `cd model_processor_go`
+2. Clone: `git clone <repository-url>` then `cd ner-backend`
 3. Configure: Create an `.env` file (you can copy the example) and fill in your specific database, RabbitMQ, and MinIO/S3 credentials, endpoints, and bucket names.
 
 Build
