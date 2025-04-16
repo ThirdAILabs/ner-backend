@@ -30,26 +30,22 @@ Setup
 
 Running with Docker Compose
 
-Start Head Node Services (API, DB, Queue, Storage):
+Start Head Node Services (API, DB, Queue, Storage): \
 `docker compose --profile head up -d --build`
 
 Start Worker Services:
-`docker compose --profile worker up -d --build`
-(To run N workers, use: `docker compose --profile worker up -d --scale worker=N`)
+`docker compose --profile worker up -d --build` \
+(To run N workers, use: `docker compose --profile worker up -d --scale worker=N`) \
 (Note: If workers run on separate hosts, update .env URLs to point to the head node's IP/hostname).
 
-To take services down, run:
-docker-compose --profile head down
-docker-compose --profile worker down
+To take services down, run: \
+`docker-compose --profile head down` \
+`docker-compose --profile worker down`
 
-Access Services (default ports):
-API Health: http://localhost:8001/health
-RabbitMQ UI: http://localhost:15672
+Access Services (default ports): \
+API Health: http://localhost:8001/health \
+RabbitMQ UI: http://localhost:15672 \
 MinIO UI: http://localhost:9090
-
-Stop Services:
-`docker compose down`
-(To also remove data volumes, use: `docker compose down -v`)
 
 Adding a New Task Type
 
@@ -62,10 +58,10 @@ Adding a New Task Type
 
 API Endpoints
 
-POST /models : Submit training job.
-GET /models/{model_id} : Get training job status.
-POST /inference : Submit inference job.
-GET /inference/{job_id} : Get inference job status.
+POST /models : Submit training job. \
+GET /models/{model_id} : Get training job status. \
+POST /inference : Submit inference job. \
+GET /inference/{job_id} : Get inference job status. \
 GET /health : Health check.
 
 ML Integration Note
