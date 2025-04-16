@@ -3,6 +3,7 @@ package s3
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"ner-backend/internal/config"
 	"net/url"
@@ -108,6 +109,41 @@ func (c *Client) DownloadFile(ctx context.Context, bucket, key, localPath string
 	}
 	log.Printf("Successfully downloaded to %s", localPath)
 	return nil
+}
+
+type s3ObjectStream struct {
+	client *s3.Client
+	bucket string
+	key    string
+	offset int
+}
+
+func (s *s3ObjectStream) Read(p []byte) (int, error) {
+	rng := fmt.Sprintf("bytes=%d-%d", s.offset, s.offset+len(p)-1)
+
+	resp, err := s.client.GetObject(context.TODO(), &s3.GetObjectInput{
+		Bucket: aws.String(s.bucket),
+		Key:    aws.String(s.key),
+		Range:  aws.String(rng),
+	})
+	if err != nil {
+		return 0, fmt.Errorf("failed to read object %s from s3://%s/%s: %w", rng, s.bucket, s.key, err)
+	}
+	defer resp.Body.Close()
+
+	n, err := io.ReadFull(resp.Body, p)
+	s.offset += n
+	if err != nil {
+		if err == io.EOF || err == io.ErrUnexpectedEOF {
+			return n, io.EOF
+		}
+		return n, fmt.Errorf("error reading resp body %s from s3://%s/%s: %w", rng, s.bucket, s.key, err)
+	}
+	return n, nil
+}
+
+func (c *Client) DownloadFileStream(bucket, key string) io.Reader {
+	return &s3ObjectStream{client: c.s3Client, bucket: bucket, key: key, offset: 0}
 }
 
 func (c *Client) ListFiles(ctx context.Context, bucket, prefix string) ([]string, error) {

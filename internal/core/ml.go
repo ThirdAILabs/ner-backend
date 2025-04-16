@@ -19,13 +19,6 @@ type InferenceResult struct {
 	ProcTimeMs int64    `json:"processing_time_ms"`
 }
 
-type Entity struct {
-	Text  string `json:"text"`
-	Label string `json:"label"`
-	Start int    `json:"start"`
-	End   int    `json:"end"`
-}
-
 func TrainModel(trainingDataDir string, modelSavePath string) error {
 	log.Printf("Placeholder: Starting training using data in %s...", trainingDataDir)
 	files, _ := os.ReadDir(trainingDataDir)
