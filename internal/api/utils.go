@@ -1,0 +1,93 @@
+package api
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"log/slog"
+	"net/http"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
+)
+
+type codedError struct {
+	err  error
+	code int
+}
+
+func (e *codedError) Error() string {
+	return e.err.Error()
+}
+
+func (e *codedError) Unwrap() error {
+	return e.err
+}
+
+func CodedError(code int, err error) error {
+	return &codedError{err: err, code: code}
+}
+
+func CodedErrorf(code int, format string, args ...any) error {
+	return &codedError{err: fmt.Errorf(format, args...), code: code}
+}
+
+func ParseRequest[T any](r *http.Request) (T, error) {
+	var data T
+	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
+		slog.Error("error parsing request body", "error", err)
+		return data, CodedErrorf(http.StatusBadRequest, "unable to parse request body")
+	}
+	return data, nil
+}
+
+func RestHandler(handler func(r *http.Request) (any, error)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		res, err := handler(r)
+		if err != nil {
+			var cerr *codedError
+			if errors.As(err, &cerr) {
+				http.Error(w, err.Error(), cerr.code)
+				if cerr.code == http.StatusInternalServerError {
+					slog.Error("internal server error received in endpoint", "error", err)
+				}
+			} else {
+				slog.Error("recieved non coded error from endpoint", "error", err)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+
+			}
+			return
+		}
+
+		if res == nil {
+			res = struct{}{}
+		}
+
+		WriteJsonResponse(w, res)
+	}
+}
+
+func WriteJsonResponse(w http.ResponseWriter, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	err := json.NewEncoder(w).Encode(data)
+	if err != nil {
+		slog.Error("error serializing response body", "error", err)
+		http.Error(w, fmt.Sprintf("error serializing response body: %v", err), http.StatusInternalServerError)
+	}
+}
+
+func URLParamUUID(r *http.Request, key string) (uuid.UUID, error) {
+	param := chi.URLParam(r, key)
+
+	if len(param) == 0 {
+		return uuid.Nil, CodedErrorf(http.StatusBadRequest, "missing {%v} url parameter", key)
+	}
+
+	id, err := uuid.Parse(param)
+	if err != nil {
+		return uuid.Nil, CodedErrorf(http.StatusBadRequest, "invalid uuid '%v' url parameter provided: %w", key, err)
+	}
+
+	return id, nil
+}

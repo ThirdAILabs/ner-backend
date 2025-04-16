@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"ner-backend/internal/api"
 	"ner-backend/internal/config" // Adjust import path
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
@@ -15,7 +16,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/go-chi/render"
 )
 
 func main() {
@@ -26,18 +26,10 @@ func main() {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
-	// Initialize Database Pool
-	dbPool, err := database.NewConnectionPool(cfg.DatabaseURL)
+	db, err := database.NewDatabase(cfg.DatabaseURL)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
-	defer dbPool.Close()
-
-	if err := database.InitializeSchema(dbPool); err != nil {
-		log.Fatalf("Failed to initialize database schema: %v", err)
-	}
-
-	dbQueries := database.NewQueries(dbPool)
 
 	// Initialize S3 Client
 	s3Client, err := s3.NewS3Client(cfg)
@@ -61,21 +53,11 @@ func main() {
 	r.Use(middleware.Logger)                    // Log requests
 	r.Use(middleware.Recoverer)                 // Recover from panics
 	r.Use(middleware.Timeout(60 * time.Second)) // Set request timeout
-	r.Use(render.SetContentType(render.ContentTypeJSON))
 
 	// API Handlers (dependency injection)
-	apiHandler := NewAPIHandler(dbQueries, publisher, s3Client)
+	apiHandler := api.NewBackendService(db, publisher, s3Client)
 
-	// Routes
-	r.Get("/health", apiHandler.HealthCheck)
-	r.Route("/models", func(r chi.Router) {
-		r.Post("/", apiHandler.SubmitTrainingJob)
-		r.Get("/{modelID}", apiHandler.GetModelStatus)
-	})
-	r.Route("/inference", func(r chi.Router) {
-		r.Post("/", apiHandler.SubmitInferenceJob)
-		r.Get("/{jobID}", apiHandler.GetInferenceJobStatus)
-	})
+	apiHandler.AddRoutes(r)
 
 	// --- Start HTTP Server ---
 	server := &http.Server{

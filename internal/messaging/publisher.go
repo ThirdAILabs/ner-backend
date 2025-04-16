@@ -128,7 +128,7 @@ func (p *TaskPublisher) PublishTrainTask(ctx context.Context, payload models.Tra
 		log.Printf("Failed to publish train task, may need reconnect: %v", err)
 		return fmt.Errorf("failed to publish train task: %w", err)
 	}
-	log.Printf("Published training task for model %s", payload.ModelID)
+	log.Printf("Published training task for model %s", payload.ModelId)
 	return nil
 }
 

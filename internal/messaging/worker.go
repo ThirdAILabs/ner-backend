@@ -18,34 +18,35 @@ import (
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+	"gorm.io/gorm"
 )
 
-type WorkerDependencies struct {
-	DB        *database.Queries
+type Worker struct {
+	DB        *gorm.DB
 	S3Client  *s3.Client
 	Config    *config.Config
 	WaitGroup *sync.WaitGroup
 }
 
-func StartWorkers(rabbitMQURL string, deps WorkerDependencies) error {
+func (worker *Worker) StartThreads(rabbitMQURL string) error {
 	_, err := connectToRabbitMQ(rabbitMQURL)
 	if err != nil {
 		return err
 	}
 
-	numWorkers := deps.Config.WorkerConcurrency
+	numWorkers := worker.Config.WorkerConcurrency
 	if numWorkers <= 0 {
 		numWorkers = runtime.NumCPU() // Default to number of CPUs
 		log.Printf("Worker concurrency not specified or invalid, defaulting to %d", numWorkers)
 	}
 
-	queuesToConsume := strings.Split(deps.Config.QueueNames, ",")
+	queuesToConsume := strings.Split(worker.Config.QueueNames, ",")
 	log.Printf("Starting %d worker goroutines, consuming from queues: %v", numWorkers, queuesToConsume)
 
-	deps.WaitGroup.Add(numWorkers) // Add count for all potential worker goroutines
+	worker.WaitGroup.Add(numWorkers) // Add count for all potential worker goroutines
 
 	for i := 0; i < numWorkers; i++ {
-		go runWorkerInstance(i, rabbitMQURL, deps, queuesToConsume)
+		go worker.runWorkerInstance(i, rabbitMQURL, queuesToConsume)
 	}
 
 	log.Printf("%d worker instances initiated.", numWorkers)
@@ -67,8 +68,8 @@ func connectToRabbitMQ(url string) (*amqp.Connection, error) {
 	return nil, fmt.Errorf("worker failed to connect after %d attempts: %w", MaxConnectRetry, err)
 }
 
-func runWorkerInstance(id int, rabbitMQURL string, deps WorkerDependencies, queues []string) {
-	defer deps.WaitGroup.Done()
+func (worker *Worker) runWorkerInstance(id int, rabbitMQURL string, queues []string) {
+	defer worker.WaitGroup.Done()
 	log.Printf("[Worker %d] Starting...", id)
 
 	var conn *amqp.Connection
@@ -175,7 +176,7 @@ func runWorkerInstance(id int, rabbitMQURL string, deps WorkerDependencies, queu
 				continue // Loop back to reconnect
 			}
 			log.Printf("[Worker %d] Received message from queue: %s", id, d.RoutingKey) // d.RoutingKey is the queue name here
-			processMessage(d, deps)                                                     // Process the message
+			worker.processMessage(d)                                                    // Process the message
 
 			// Add a timeout or heartbeat check if needed
 			// case <-time.After(30 * time.Second):
@@ -185,7 +186,7 @@ func runWorkerInstance(id int, rabbitMQURL string, deps WorkerDependencies, queu
 	// log.Printf("[Worker %d] Exiting.", id) // This part is unlikely to be reached in the current loop structure
 }
 
-func processMessage(d amqp.Delivery, deps WorkerDependencies) {
+func (worker *Worker) processMessage(d amqp.Delivery) {
 	ctx := context.Background() // Create a new context for each task
 	var err error
 	processed := false // Flag to track if processing was attempted
@@ -201,7 +202,7 @@ func processMessage(d amqp.Delivery, deps WorkerDependencies) {
 			return
 		}
 		processed = true
-		err = handleTrainTask(ctx, payload, deps)
+		err = worker.handleTrainTask(ctx, payload)
 
 	case InferenceQueue:
 		var payload models.InferenceTaskPayload
@@ -211,7 +212,7 @@ func processMessage(d amqp.Delivery, deps WorkerDependencies) {
 			return
 		}
 		processed = true
-		err = handleInferenceTask(ctx, payload, deps)
+		err = worker.handleInferenceTask(ctx, payload)
 
 	default:
 		log.Printf("Received message from unknown queue: %s. Discarding.", d.RoutingKey)
@@ -240,9 +241,9 @@ func processMessage(d amqp.Delivery, deps WorkerDependencies) {
 
 // --- Task Handlers ---
 
-func handleTrainTask(ctx context.Context, payload models.TrainTaskPayload, deps WorkerDependencies) error {
-	log.Printf("Handling training task for model %s", payload.ModelID)
-	tempDir, err := os.MkdirTemp("", fmt.Sprintf("train-%s-*", payload.ModelID))
+func (worker *Worker) handleTrainTask(ctx context.Context, payload models.TrainTaskPayload) error {
+	log.Printf("Handling training task for model %s", payload.ModelId)
+	tempDir, err := os.MkdirTemp("", fmt.Sprintf("train-%s-*", payload.ModelId))
 	if err != nil {
 		return fmt.Errorf("failed to create temp dir: %w", err)
 	}
@@ -252,19 +253,17 @@ func handleTrainTask(ctx context.Context, payload models.TrainTaskPayload, deps 
 	modelDir := filepath.Join(tempDir, "model")
 	localModelSavePath := filepath.Join(modelDir, "model.bin") // Use .bin or actual format
 
-	// Update DB status immediately (moved from Celery task)
-	err = deps.DB.UpdateModelStatus(ctx, payload.ModelID, models.StatusTraining, "")
-	if err != nil {
+	if err := database.UpdateModelStatus(ctx, worker.DB, payload.ModelId, database.ModelTraining); err != nil {
 		// Log error but continue training attempt? Or fail here?
-		log.Printf("Warning: Failed to update model %s status to TRAINING: %v", payload.ModelID, err)
+		log.Printf("Warning: Failed to update model %s status to TRAINING: %v", payload.ModelId, err)
 		// return fmt.Errorf("failed to set status to training: %w", err) // Option: fail fast
 	}
 
 	// Download Data
 	log.Println("Downloading training data...")
-	_, err = deps.S3Client.DownloadTrainingData(ctx, payload.SourceS3PathTags, dataDir)
+	_, err = worker.S3Client.DownloadTrainingData(ctx, payload.SourceS3PathTags, dataDir)
 	if err != nil {
-		deps.DB.UpdateModelStatus(ctx, payload.ModelID, models.StatusFailed, "") // Update DB on failure
+		database.UpdateModelStatus(ctx, worker.DB, payload.ModelId, database.ModelFailed)
 		return fmt.Errorf("failed to download training data: %w", err)
 	}
 	log.Println("Training data downloaded.")
@@ -273,34 +272,34 @@ func handleTrainTask(ctx context.Context, payload models.TrainTaskPayload, deps 
 	log.Println("Starting training...")
 	err = core.TrainModel(dataDir, localModelSavePath)
 	if err != nil {
-		deps.DB.UpdateModelStatus(ctx, payload.ModelID, models.StatusFailed, "")
+		database.UpdateModelStatus(ctx, worker.DB, payload.ModelId, database.ModelFailed)
 		return fmt.Errorf("training failed: %w", err)
 	}
 	log.Println("Training complete.")
 
 	// Upload Artifact
 	log.Println("Uploading model artifact...")
-	artifactS3Path, err := deps.S3Client.UploadModelArtifact(ctx, localModelSavePath, payload.ModelID, filepath.Base(localModelSavePath))
+	_, err = worker.S3Client.UploadModelArtifact(ctx, localModelSavePath, payload.ModelId, filepath.Base(localModelSavePath))
 	if err != nil {
-		deps.DB.UpdateModelStatus(ctx, payload.ModelID, models.StatusFailed, "") // Update DB on failure
+		database.UpdateModelStatus(ctx, worker.DB, payload.ModelId, database.ModelFailed)
 		return fmt.Errorf("failed to upload model artifact: %w", err)
 	}
 	log.Println("Model artifact uploaded.")
 
 	// Final DB Update on Success
-	err = deps.DB.UpdateModelStatus(ctx, payload.ModelID, models.StatusTrained, artifactS3Path)
+	err = database.UpdateModelStatus(ctx, worker.DB, payload.ModelId, database.ModelTrained)
 	if err != nil {
 		// Log error, but task succeeded overall
-		log.Printf("Warning: Failed to update model %s status to TRAINED: %v", payload.ModelID, err)
+		log.Printf("Warning: Failed to update model %s status to TRAINED: %v", payload.ModelId, err)
 		// Return success anyway, as the core work is done
 	}
 
 	return nil // Success
 }
 
-func handleInferenceTask(ctx context.Context, payload models.InferenceTaskPayload, deps WorkerDependencies) error {
-	log.Printf("Handling inference task for job %s, file %s", payload.JobID, payload.SourceS3Key)
-	tempDir, err := os.MkdirTemp("", fmt.Sprintf("infer-%s-*", payload.JobID))
+func (worker *Worker) handleInferenceTask(ctx context.Context, payload models.InferenceTaskPayload) error {
+	log.Printf("Handling inference task for job %s, file %s", payload.JobId, payload.SourceS3Key)
+	tempDir, err := os.MkdirTemp("", fmt.Sprintf("infer-%s-*", payload.JobId))
 	if err != nil {
 		return fmt.Errorf("failed to create temp dir: %w", err)
 	}
@@ -312,15 +311,15 @@ func handleInferenceTask(ctx context.Context, payload models.InferenceTaskPayloa
 
 	// Download Model
 	log.Println("Downloading model artifact...")
-	localModelPath, err := deps.S3Client.DownloadModelArtifact(ctx, payload.ModelID, modelDir, "model.bin") // Assuming .bin from training
+	localModelPath, err := worker.S3Client.DownloadModelArtifact(ctx, payload.ModelId, modelDir, "model.bin") // Assuming .bin from training
 	if err != nil {
-		return fmt.Errorf("failed to download model %s: %w", payload.ModelID, err)
+		return fmt.Errorf("failed to download model %s: %w", payload.ModelId, err)
 	}
 	log.Println("Model artifact downloaded.")
 
 	// Download Source File
 	log.Println("Downloading source file...")
-	err = deps.S3Client.DownloadFile(ctx, payload.SourceS3Bucket, payload.SourceS3Key, localInputPath)
+	err = worker.S3Client.DownloadFile(ctx, payload.SourceS3Bucket, payload.SourceS3Key, localInputPath)
 	if err != nil {
 		return fmt.Errorf("failed to download source file s3://%s/%s: %w", payload.SourceS3Bucket, payload.SourceS3Key, err)
 	}
@@ -347,8 +346,8 @@ func handleInferenceTask(ctx context.Context, payload models.InferenceTaskPayloa
 	// Upload Results
 	log.Println("Uploading results...")
 	resultFilename := strings.ReplaceAll(payload.SourceS3Key, "/", "_") + ".json"
-	resultS3Key := fmt.Sprintf("results/%s/%s", payload.JobID, resultFilename)
-	_, err = deps.S3Client.UploadFile(ctx, localResultPath, payload.DestS3Bucket, resultS3Key)
+	resultS3Key := fmt.Sprintf("results/%s/%s", payload.JobId, resultFilename)
+	_, err = worker.S3Client.UploadFile(ctx, localResultPath, payload.DestS3Bucket, resultS3Key)
 	if err != nil {
 		return fmt.Errorf("failed to upload results: %w", err)
 	}

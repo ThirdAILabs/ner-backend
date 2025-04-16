@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/google/uuid"
 )
 
 type Client struct {
@@ -149,13 +150,13 @@ func ParseS3Path(s3Path string) (bucket, key string, err error) {
 
 // --- Model Specific Wrappers ---
 
-func (c *Client) UploadModelArtifact(ctx context.Context, localPath, modelID, filename string) (string, error) {
-	key := fmt.Sprintf("%s/%s", modelID, filename)
+func (c *Client) UploadModelArtifact(ctx context.Context, localPath string, modelId uuid.UUID, filename string) (string, error) {
+	key := fmt.Sprintf("%s/%s", modelId.String(), filename)
 	return c.UploadFile(ctx, localPath, c.bucketName, key)
 }
 
-func (c *Client) DownloadModelArtifact(ctx context.Context, modelID, downloadDir, filename string) (string, error) {
-	key := fmt.Sprintf("%s/%s", modelID, filename)
+func (c *Client) DownloadModelArtifact(ctx context.Context, modelId uuid.UUID, downloadDir, filename string) (string, error) {
+	key := fmt.Sprintf("%s/%s", modelId.String(), filename)
 	localPath := filepath.Join(downloadDir, filename)
 	err := c.DownloadFile(ctx, c.bucketName, key, localPath)
 	if err != nil {

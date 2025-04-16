@@ -20,13 +20,10 @@ func main() {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
-	// Initialize Database Pool
-	dbPool, err := database.NewConnectionPool(cfg.DatabaseURL)
+	db, err := database.NewDatabase(cfg.DatabaseURL)
 	if err != nil {
-		log.Fatalf("Worker: Failed to connect to database: %v", err)
+		log.Fatalf("Failed to connect to database: %v", err)
 	}
-	defer dbPool.Close()
-	dbQueries := database.NewQueries(dbPool)
 
 	// Initialize S3 Client
 	s3Client, err := s3.NewS3Client(cfg)
@@ -38,16 +35,16 @@ func main() {
 	var wg sync.WaitGroup
 
 	// Worker Dependencies
-	deps := messaging.WorkerDependencies{
-		DB:        dbQueries,
+	worker := messaging.Worker{
+		DB:        db,
 		S3Client:  s3Client,
 		Config:    cfg,
 		WaitGroup: &wg,
 	}
 
 	// Start worker consumers
-	err = messaging.StartWorkers(cfg.RabbitMQURL, deps)
-	if err != nil {
+
+	if err := worker.StartThreads(cfg.RabbitMQURL); err != nil {
 		log.Fatalf("Worker: Failed to start message consumers: %v", err)
 	}
 
