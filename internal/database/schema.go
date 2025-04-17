@@ -31,7 +31,7 @@ const (
 	JobFailed    string = "FAILED"
 )
 
-type GenerateInferenceTasksTask struct {
+type ShardDataTask struct {
 	Id      uuid.UUID `gorm:"type:uuid;primaryKey"`
 	ModelId uuid.UUID `gorm:"type:uuid"`
 

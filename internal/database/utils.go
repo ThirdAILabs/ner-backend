@@ -21,8 +21,8 @@ func UpdateInferenceTaskStatus(ctx context.Context, txn *gorm.DB, jobId uuid.UUI
 	return nil
 }
 
-func UpdateGenerateInferenceTasksTaskStatus(ctx context.Context, txn *gorm.DB, jobId uuid.UUID, status string) error {
-	if err := txn.WithContext(ctx).Model(&GenerateInferenceTasksTask{Id: jobId}).Update("status", status).Error; err != nil {
+func UpdateShardDataTaskStatus(ctx context.Context, txn *gorm.DB, jobId uuid.UUID, status string) error {
+	if err := txn.WithContext(ctx).Model(&ShardDataTask{Id: jobId}).Update("status", status).Error; err != nil {
 		return err
 	}
 	return nil

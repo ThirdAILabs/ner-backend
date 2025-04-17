@@ -12,7 +12,7 @@ type TrainTaskPayload struct {
 	SourceS3PathTags string // Path to training data in S3/MinIO
 }
 
-type GenerateInferenceTasksPayload struct {
+type ShardDataPayload struct {
 	JobId             uuid.UUID
 	ModelId           uuid.UUID
 	ModelArtifactPath string

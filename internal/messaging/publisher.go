@@ -14,11 +14,11 @@ import (
 )
 
 const (
-	TrainingQueue               = "training_queue"
-	InferenceQueue              = "inference_queue"
-	GenerateInferenceTasksQueue = "generate_inference_tasks_queue"
-	RetryDelay                  = 5 * time.Second
-	MaxConnectRetry             = 5
+	TrainingQueue   = "training_queue"
+	InferenceQueue  = "inference_queue"
+	ShardDataQueue  = "shard_data_queue"
+	RetryDelay      = 5 * time.Second
+	MaxConnectRetry = 5
 )
 
 type TaskPublisher struct {
@@ -60,11 +60,11 @@ func (p *TaskPublisher) connect() error {
 				p.conn.Close()
 				return fmt.Errorf("failed to declare queue %s: %w", InferenceQueue, err)
 			}
-			_, err = p.channel.QueueDeclare(GenerateInferenceTasksQueue, true, false, false, false, nil) // Durable
+			_, err = p.channel.QueueDeclare(ShardDataQueue, true, false, false, false, nil) // Durable
 			if err != nil {
 				p.channel.Close()
 				p.conn.Close()
-				return fmt.Errorf("failed to declare queue %s: %w", GenerateInferenceTasksQueue, err)
+				return fmt.Errorf("failed to declare queue %s: %w", ShardDataQueue, err)
 			}
 
 			log.Println("RabbitMQ channel opened and queues declared.")
@@ -156,9 +156,9 @@ func (p *TaskPublisher) PublishTrainTask(ctx context.Context, payload models.Tra
 	return nil
 }
 
-func (p *TaskPublisher) PublishGenerateInferenceTasksTask(ctx context.Context, payload models.GenerateInferenceTasksPayload) error {
-	taskType := "generate_inference_tasks_task"
-	err := p.publishTaskInternal(ctx, GenerateInferenceTasksQueue, payload, taskType)
+func (p *TaskPublisher) PublishShardDataTask(ctx context.Context, payload models.ShardDataPayload) error {
+	taskType := "shard_data_task"
+	err := p.publishTaskInternal(ctx, ShardDataQueue, payload, taskType)
 	if err != nil {
 		return err
 	}

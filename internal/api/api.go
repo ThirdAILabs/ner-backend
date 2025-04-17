@@ -133,8 +133,8 @@ func (s *BackendService) SubmitInferenceJob(r *http.Request) (any, error) {
 	// 2. Create inference job entry with status QUEUED
 	jobId := uuid.New()
 
-	// 3. Publish ONE GenerateInferenceTasks message
-	log.Printf("Queueing GenerateInferenceTasks task for job %s...", jobId)
+	// 3. Publish ONE ShardData message
+	log.Printf("Queueing ShardData task for job %s...", jobId)
 
 	// Get chunk size from config (or use a default)
 	// Assuming config is accessible here, otherwise add it to APIHandler dependencies
@@ -146,7 +146,7 @@ func (s *BackendService) SubmitInferenceJob(r *http.Request) (any, error) {
 		chunkTargetBytes = 10 * 1024 * 1024 * 1024 // Default 10GB
 	}
 
-	genPayload := models.GenerateInferenceTasksPayload{
+	genPayload := models.ShardDataPayload{
 		JobId:             jobId,
 		ModelId:           req.ModelId,
 		ModelArtifactPath: model.ModelArtifactPath,
@@ -156,11 +156,11 @@ func (s *BackendService) SubmitInferenceJob(r *http.Request) (any, error) {
 		ChunkTargetBytes:  chunkTargetBytes,
 	}
 
-	err = s.publisher.PublishGenerateInferenceTasksTask(ctx, genPayload)
+	err = s.publisher.PublishShardDataTask(ctx, genPayload)
 	if err != nil {
 		// If publishing fails, should we mark the job as failed?
-		log.Printf("CRITICAL: Failed to publish GenerateInferenceTasks task for job %s: %v", jobId, err)
-		_ = database.UpdateGenerateInferenceTasksTaskStatus(ctx, s.db, jobId, database.JobFailed) // Mark job failed
+		log.Printf("CRITICAL: Failed to publish ShardData task for job %s: %v", jobId, err)
+		_ = database.UpdateShardDataTaskStatus(ctx, s.db, jobId, database.JobFailed) // Mark job failed
 		return nil, err
 	}
 
@@ -179,7 +179,7 @@ func (s *BackendService) GetInferenceJob(r *http.Request) (any, error) {
 
 	ctx := r.Context()
 
-	var job database.GenerateInferenceTasksTask
+	var job database.ShardDataTask
 	if err := s.db.WithContext(ctx).Find(&job, "id = ?", jobId).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, CodedErrorf(http.StatusNotFound, "inference job not found")

@@ -215,15 +215,15 @@ func (worker *Worker) processMessage(d amqp.Delivery) {
 		processed = true
 		err = worker.handleInferenceTask(ctx, payload)
 
-	case GenerateInferenceTasksQueue:
-		var payload models.GenerateInferenceTasksPayload
+	case ShardDataQueue:
+		var payload models.ShardDataPayload
 		if err = json.Unmarshal(d.Body, &payload); err != nil {
-			log.Printf("Error unmarshalling generate tasks task: %v. Body: %s", err, string(d.Body))
+			log.Printf("Error unmarshalling shard data task: %v. Body: %s", err, string(d.Body))
 			d.Reject(false) // Discard malformed message
 			return
 		}
 		processed = true
-		err = worker.handleGenerateInferenceTasksTask(ctx, payload) // Call new handler
+		err = worker.handleShardDataTask(ctx, payload) // Call new handler
 
 	default:
 		log.Printf("Received message from unknown queue: %s. Discarding.", d.RoutingKey)
@@ -315,7 +315,7 @@ func (worker *Worker) handleInferenceTask(ctx context.Context, payload models.In
 	return nil // Success
 }
 
-func (worker *Worker) handleGenerateInferenceTasksTask(ctx context.Context, payload models.GenerateInferenceTasksPayload) error {
+func (worker *Worker) handleShardDataTask(ctx context.Context, payload models.ShardDataPayload) error {
 	log.Printf("Handling generate tasks for job %s, bucket %s, prefix %s", payload.JobId, payload.SourceS3Bucket, payload.SourceS3Prefix)
 
 	// Optional: Update job status to GENERATING
@@ -372,7 +372,7 @@ func (worker *Worker) handleGenerateInferenceTasksTask(ctx context.Context, payl
 	if err != nil {
 		log.Printf("ERROR Handler: Failed during S3 processing/chunk publishing for job %s: %v", payload.JobId, err)
 		// Attempt to mark the job as failed
-		_ = database.UpdateGenerateInferenceTasksTaskStatus(ctx, worker.DB, payload.JobId, database.JobFailed)
+		_ = database.UpdateShardDataTaskStatus(ctx, worker.DB, payload.JobId, database.JobFailed)
 		// Return the error from the handler
 		return fmt.Errorf("failed during task generation for job %s: %w", payload.JobId, err)
 	}
@@ -393,7 +393,7 @@ func (worker *Worker) handleGenerateInferenceTasksTask(ctx context.Context, payl
 		log.Printf("Handler: Setting job %s status to RUNNING.", payload.JobId)
 	}
 
-	dbErr := database.UpdateGenerateInferenceTasksTaskStatus(ctx, worker.DB, payload.JobId, finalStatus)
+	dbErr := database.UpdateShardDataTaskStatus(ctx, worker.DB, payload.JobId, finalStatus)
 	if dbErr != nil {
 		// Log error, but main task generation succeeded (or completed with 0 tasks)
 		log.Printf("Warning Handler: Failed to update job %s final status to %s: %v", payload.JobId, finalStatus, dbErr)
