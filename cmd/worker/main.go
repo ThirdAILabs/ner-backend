@@ -34,12 +34,19 @@ func main() {
 	// WaitGroup to wait for worker goroutines to finish
 	var wg sync.WaitGroup
 
+	publisher, err := messaging.NewTaskPublisher(cfg.RabbitMQURL)
+	if err != nil {
+		log.Fatalf("Failed to connect to RabbitMQ: %v", err)
+	}
+	defer publisher.Close()
+
 	// Worker Dependencies
 	worker := messaging.Worker{
 		DB:        db,
 		S3Client:  s3Client,
 		Config:    cfg,
 		WaitGroup: &wg,
+		Publisher: publisher,
 	}
 
 	// Start worker consumers

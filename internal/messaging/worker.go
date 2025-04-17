@@ -26,6 +26,7 @@ type Worker struct {
 	S3Client  *s3.Client
 	Config    *config.Config
 	WaitGroup *sync.WaitGroup
+	Publisher *TaskPublisher
 }
 
 func (worker *Worker) StartThreads(rabbitMQURL string) error {
@@ -214,6 +215,16 @@ func (worker *Worker) processMessage(d amqp.Delivery) {
 		processed = true
 		err = worker.handleInferenceTask(ctx, payload)
 
+	case GenerateInferenceTasksQueue:
+		var payload models.GenerateInferenceTasksPayload
+		if err = json.Unmarshal(d.Body, &payload); err != nil {
+			log.Printf("Error unmarshalling generate tasks task: %v. Body: %s", err, string(d.Body))
+			d.Reject(false) // Discard malformed message
+			return
+		}
+		processed = true
+		err = worker.handleGenerateInferenceTasksTask(ctx, payload) // Call new handler
+
 	default:
 		log.Printf("Received message from unknown queue: %s. Discarding.", d.RoutingKey)
 		d.Reject(false) // Discard unknown message
@@ -298,62 +309,96 @@ func (worker *Worker) handleTrainTask(ctx context.Context, payload models.TrainT
 }
 
 func (worker *Worker) handleInferenceTask(ctx context.Context, payload models.InferenceTaskPayload) error {
-	log.Printf("Handling inference task for job %s, file %s", payload.JobId, payload.SourceS3Key)
-	tempDir, err := os.MkdirTemp("", fmt.Sprintf("infer-%s-*", payload.JobId))
-	if err != nil {
-		return fmt.Errorf("failed to create temp dir: %w", err)
-	}
-	defer os.RemoveAll(tempDir)
 
-	localInputPath := filepath.Join(tempDir, filepath.Base(payload.SourceS3Key))
-	localResultPath := filepath.Join(tempDir, "results.json")
-	modelDir := filepath.Join(tempDir, "model")
-
-	// Download Model
-	log.Println("Downloading model artifact...")
-	localModelPath, err := worker.S3Client.DownloadModelArtifact(ctx, payload.ModelId, modelDir, "model.bin") // Assuming .bin from training
-	if err != nil {
-		return fmt.Errorf("failed to download model %s: %w", payload.ModelId, err)
-	}
-	log.Println("Model artifact downloaded.")
-
-	// Download Source File
-	log.Println("Downloading source file...")
-	err = worker.S3Client.DownloadFile(ctx, payload.SourceS3Bucket, payload.SourceS3Key, localInputPath)
-	if err != nil {
-		return fmt.Errorf("failed to download source file s3://%s/%s: %w", payload.SourceS3Bucket, payload.SourceS3Key, err)
-	}
-	log.Println("Source file downloaded.")
-
-	// Run Inference (Placeholder)
-	log.Println("Running inference...")
-	results, err := core.RunInference(localModelPath, localInputPath)
-	if err != nil {
-		return fmt.Errorf("inference failed: %w", err)
-	}
-	log.Println("Inference complete.")
-
-	// Save results locally
-	resultBytes, err := json.MarshalIndent(results, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal inference results: %w", err)
-	}
-	err = os.WriteFile(localResultPath, resultBytes, 0644)
-	if err != nil {
-		return fmt.Errorf("failed to save results locally: %w", err)
-	}
-
-	// Upload Results
-	log.Println("Uploading results...")
-	resultFilename := strings.ReplaceAll(payload.SourceS3Key, "/", "_") + ".json"
-	resultS3Key := fmt.Sprintf("results/%s/%s", payload.JobId, resultFilename)
-	_, err = worker.S3Client.UploadFile(ctx, localResultPath, payload.DestS3Bucket, resultS3Key)
-	if err != nil {
-		return fmt.Errorf("failed to upload results: %w", err)
-	}
-	log.Println("Results uploaded.")
-
-	// Optional: Update individual task status in DB if tracking is implemented
+	// TODO: download s3 keys from bucket, download model, run inference of model on files, upload results to s3
 
 	return nil // Success
+}
+
+func (worker *Worker) handleGenerateInferenceTasksTask(ctx context.Context, payload models.GenerateInferenceTasksPayload) error {
+	log.Printf("Handling generate tasks for job %s, bucket %s, prefix %s", payload.JobId, payload.SourceS3Bucket, payload.SourceS3Prefix)
+
+	// Optional: Update job status to GENERATING
+	// err := deps.DB.UpdateInferenceJobStatus(ctx, payload.JobID, models.JobGeneratingTasks)
+	// if err != nil { log.Printf("Warning: Failed to update job %s status to GENERATING: %v", payload.JobID, err) }
+
+	s3Client := worker.S3Client // Get underlying *s3.Client
+
+	targetBytes := payload.ChunkTargetBytes
+	if targetBytes <= 0 {
+		targetBytes = 10 * 1024 * 1024 * 1024 // Default 10GB if not set or invalid
+		log.Printf("Using default chunk target size: %d bytes for job %s", targetBytes, payload.JobId)
+	}
+
+	var totalTasksQueued int = 0 // Counter managed by the callback
+
+	// Define the callback function to process each chunk
+	processChunkCallback := func(ctx context.Context, chunkKeys []string, chunkSize int64) error {
+		// This function now contains the logic specific to creating and publishing the task
+		currentTaskIndex := totalTasksQueued + 1 // For logging clarity
+		log.Printf("Handler: Processing chunk %d for job %s (Size: %d bytes, Keys: %d)", currentTaskIndex, payload.JobId, chunkSize, len(chunkKeys))
+
+		inferencePayload := models.InferenceTaskPayload{
+			JobId:             payload.JobId,
+			ModelId:           payload.ModelId,
+			ModelArtifactPath: payload.ModelArtifactPath,
+			SourceS3Bucket:    payload.SourceS3Bucket,
+			SourceS3Keys:      chunkKeys,
+			DestS3Bucket:      payload.DestS3Bucket,
+		}
+
+		if err := worker.Publisher.PublishInferenceTask(ctx, inferencePayload); err != nil {
+			log.Printf("ERROR Handler: Failed to publish inference chunk %d for job %s: %v", currentTaskIndex, payload.JobId, err)
+			// Return the error so the helper function knows processing failed
+			return fmt.Errorf("failed to publish inference chunk %d: %w", currentTaskIndex, err)
+		}
+
+		totalTasksQueued++                                                                                    // Increment count *after* successful publishing
+		log.Printf("Handler: Successfully published chunk %d for job %s.", currentTaskIndex-1, payload.JobId) // Log index starts from 1
+		return nil
+	}
+
+	// Call the helper function
+	processedChunks, err := s3Client.ListAndChunkS3Objects(
+		ctx,
+		payload.SourceS3Bucket,
+		payload.SourceS3Prefix,
+		targetBytes,
+		payload.JobId, // Pass JobID for logging context in helper
+		processChunkCallback,
+	)
+
+	// Check for errors from the helper (S3 listing or callback failure)
+	if err != nil {
+		log.Printf("ERROR Handler: Failed during S3 processing/chunk publishing for job %s: %v", payload.JobId, err)
+		// Attempt to mark the job as failed
+		_ = database.UpdateGenerateInferenceTasksTaskStatus(ctx, worker.DB, payload.JobId, database.JobFailed)
+		// Return the error from the handler
+		return fmt.Errorf("failed during task generation for job %s: %w", payload.JobId, err)
+	}
+
+	// Double-check if the counter matches (it should if no errors occurred)
+	if processedChunks != totalTasksQueued {
+		log.Printf("Warning Handler: Mismatch between processed chunks (%d) and tasks queued (%d) for job %s. This might indicate an issue.", processedChunks, totalTasksQueued, payload.JobId)
+	}
+
+	log.Printf("Handler: Finished generating %d inference task chunks for job %s.", totalTasksQueued, payload.JobId)
+
+	// Update job status based on whether any tasks were generated
+	finalStatus := database.JobRunning
+	if totalTasksQueued == 0 {
+		log.Printf("Handler: No inference tasks were generated for job %s (no files found or matched prefix?). Setting status to COMPLETED.", payload.JobId)
+		finalStatus = database.JobCompleted
+	} else {
+		log.Printf("Handler: Setting job %s status to RUNNING.", payload.JobId)
+	}
+
+	dbErr := database.UpdateGenerateInferenceTasksTaskStatus(ctx, worker.DB, payload.JobId, finalStatus)
+	if dbErr != nil {
+		// Log error, but main task generation succeeded (or completed with 0 tasks)
+		log.Printf("Warning Handler: Failed to update job %s final status to %s: %v", payload.JobId, finalStatus, dbErr)
+		// Do not return this as a handler error, as the core task succeeded.
+	}
+
+	return nil // Success for the generator task handler
 }

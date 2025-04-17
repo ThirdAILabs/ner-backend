@@ -7,20 +7,28 @@ import (
 
 // --- Task Payload Structs ---
 
-// TrainTaskPayload defines the message sent to the training queue
 type TrainTaskPayload struct {
 	ModelId          uuid.UUID
 	SourceS3PathTags string // Path to training data in S3/MinIO
 }
 
-// InferenceTaskPayload defines the message sent to the inference queue
+type GenerateInferenceTasksPayload struct {
+	JobId             uuid.UUID
+	ModelId           uuid.UUID
+	ModelArtifactPath string
+	SourceS3Bucket    string
+	SourceS3Prefix    string
+	DestS3Bucket      string
+	ChunkTargetBytes  int64
+}
+
 type InferenceTaskPayload struct {
 	JobId             uuid.UUID
 	ModelId           uuid.UUID
 	ModelArtifactPath string // S3 Path to the trained model artifact
 	SourceS3Bucket    string
-	SourceS3Key       string // Specific file key to process
-	DestS3Bucket      string // Bucket to upload results to
+	SourceS3Keys      []string // List of keys for the chunk
+	DestS3Bucket      string   // Bucket to upload results to
 }
 
 type TrainRequest struct {

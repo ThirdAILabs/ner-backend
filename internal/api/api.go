@@ -1,9 +1,7 @@
 package api
 
 import (
-	"database/sql"
 	"errors"
-	"fmt"
 	"log" // Adjust import path
 	"log/slog"
 	"ner-backend/internal/database"
@@ -11,6 +9,8 @@ import (
 	"ner-backend/internal/s3"
 	"ner-backend/pkg/models"
 	"net/http"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -49,7 +49,7 @@ func (s *BackendService) SubmitTrainingJob(r *http.Request) (any, error) {
 	}
 
 	if req.SourceS3Path == "" || !strings.HasPrefix(req.SourceS3Path, "s3://") {
-		return nil, CodedErrorf(http.StatusBadRequest, "invalid source_s3_path, source_s3_path is required and must start wiht s3://")
+		return nil, CodedErrorf(http.StatusBadRequest, "invalid source_s3_path, source_s3_path is required and must start with s3://")
 	}
 
 	ctx := r.Context() // Use request context
@@ -85,130 +85,89 @@ func (s *BackendService) SubmitTrainingJob(r *http.Request) (any, error) {
 }
 
 func (s *BackendService) GetModel(r *http.Request) (any, error) {
-	modelId, err := URLParamUUID(r, "model_id")
+	modelId, err := URLParamUUID(r, "model_id") // Assuming URLParamUUID is defined
 	if err != nil {
-		return nil, err
+		return nil, CodedErrorf(http.StatusBadRequest, "invalid model_id format")
 	}
 
 	ctx := r.Context()
 
-	var model database.Model
-	if err := s.db.WithContext(ctx).Find(&model, "id = ?", modelId).Error; err != nil {
+	model, err := database.GetModelByID(ctx, s.db, modelId) // Use the new helper
+	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, CodedErrorf(http.StatusNotFound, "model not found")
 		}
-		slog.Error("error getting model", "error", err)
+		slog.Error("error getting model from database", "error", err, "model_id", modelId)
 		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving model record")
 	}
 
-	return model, nil
+	return model, nil // Return the pointer returned by the helper
 }
 
 func (s *BackendService) SubmitInferenceJob(r *http.Request) (any, error) {
 	var req models.InferenceRequest
-
 	req, err := ParseRequest[models.InferenceRequest](r)
 	if err != nil {
 		return nil, err
 	}
 
+	// Basic validation
 	if req.SourceS3Bucket == "" || req.DestS3Bucket == "" {
-		return nil, CodedErrorf(http.StatusUnprocessableEntity, "missing required fields: model_id, source_s3_bucket, dest_s3_bucket")
+		return nil, CodedErrorf(http.StatusBadRequest, "model_id, source_s3_bucket, and dest_s3_bucket are required")
 	}
 
 	ctx := r.Context()
 
-	var model database.Model
-	if err := s.db.WithContext(ctx).Find(&model, "id = ?", req.ModelId).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, CodedErrorf(http.StatusNotFound, "model not found")
-		}
-		slog.Error("error getting model", "error", err)
+	// 1. Check model status (Same as before)
+	model, err := database.GetModelByID(ctx, s.db, req.ModelId)
+	if err != nil { /* handle */
 		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving model record")
 	}
-
-	if model.Status != database.ModelTrained {
-		return nil, CodedErrorf(http.StatusUnprocessableEntity, "model is not ready: model has status: %s", model.Status)
+	if model == nil { /* handle */
+		return nil, err
 	}
-	if model.ModelArtifactPath == "" {
-		return nil, CodedErrorf(http.StatusInternalServerError, "model artifact path is missing")
-	}
-
-	job := database.InferenceJob{
-		Id:             uuid.New(),
-		ModelId:        model.Id,
-		SourceS3Bucket: req.SourceS3Bucket,
-		SourceS3Prefix: sql.NullString{String: req.SourceS3Prefix, Valid: req.SourceS3Prefix != ""},
-		DestS3Bucket:   req.DestS3Bucket,
-		Status:         database.JobQueued,
-		CreationTime:   time.Now(),
+	if model.Status != database.ModelTrained { /* handle */
+		return nil, CodedErrorf(http.StatusBadRequest, "model_id, source_s3_bucket, and dest_s3_bucket are required")
 	}
 
-	if err := s.db.WithContext(ctx).Create(&job).Error; err != nil {
-		slog.Error("error creating inference job", "error", err)
-		return nil, CodedErrorf(http.StatusInternalServerError, "failed to create inference job entry")
+	// 2. Create inference job entry with status QUEUED
+	jobId := uuid.New()
+
+	// 3. Publish ONE GenerateInferenceTasks message
+	log.Printf("Queueing GenerateInferenceTasks task for job %s...", jobId)
+
+	// Get chunk size from config (or use a default)
+	// Assuming config is accessible here, otherwise add it to APIHandler dependencies
+	// For simplicity, let's read env var directly here, though config struct is better
+	chunkTargetBytesStr := os.Getenv("S3_CHUNK_TARGET_BYTES")
+	chunkTargetBytes, convErr := strconv.ParseInt(chunkTargetBytesStr, 10, 64)
+	if convErr != nil || chunkTargetBytes <= 0 {
+		log.Printf("Warning: Invalid or missing S3_CHUNK_TARGET_BYTES env var ('%s'), using default 10GB", chunkTargetBytesStr)
+		chunkTargetBytes = 10 * 1024 * 1024 * 1024 // Default 10GB
 	}
 
-	// 3. List files (Consider doing this asynchronously for large buckets)
-	filesToProcess, listErr := s.s3Client.ListFiles(ctx, req.SourceS3Bucket, req.SourceS3Prefix)
-	if listErr != nil {
-		slog.Error("error listing files in s3 bucket", "bucket", req.SourceS3Bucket, "prefix", req.SourceS3Prefix, "error", listErr)
-		database.UpdateInferenceJobStatus(ctx, s.db, job.Id, database.JobFailed)
-		return nil, CodedErrorf(http.StatusInternalServerError, "failed to list files in source S3 bucket: %v", listErr)
+	genPayload := models.GenerateInferenceTasksPayload{
+		JobId:             jobId,
+		ModelId:           req.ModelId,
+		ModelArtifactPath: model.ModelArtifactPath,
+		SourceS3Bucket:    req.SourceS3Bucket,
+		SourceS3Prefix:    req.SourceS3Prefix,
+		DestS3Bucket:      req.DestS3Bucket,
+		ChunkTargetBytes:  chunkTargetBytes,
 	}
 
-	taskCount := len(filesToProcess)
-	if taskCount == 0 {
-		database.UpdateInferenceJobStatus(ctx, s.db, job.Id, database.JobCompleted)
-		log.Printf("No files found for inference job %s", job.Id)
-		return models.InferenceSubmitResponse{
-			Message:   "No files found to process in specified location",
-			JobId:     job.Id,
-			TaskCount: 0,
-		}, nil
+	err = s.publisher.PublishGenerateInferenceTasksTask(ctx, genPayload)
+	if err != nil {
+		// If publishing fails, should we mark the job as failed?
+		log.Printf("CRITICAL: Failed to publish GenerateInferenceTasks task for job %s: %v", jobId, err)
+		_ = database.UpdateGenerateInferenceTasksTaskStatus(ctx, s.db, jobId, database.JobFailed) // Mark job failed
+		return nil, err
 	}
 
-	// 4. Submit tasks (Can do this in a goroutine?)
-	log.Printf("Queueing %d inference tasks for job %s...", taskCount, job.Id)
-	publishErrors := false
-	for _, s3Key := range filesToProcess {
-		payload := models.InferenceTaskPayload{
-			JobId:             job.Id,
-			ModelId:           req.ModelId,
-			ModelArtifactPath: model.ModelArtifactPath,
-			SourceS3Bucket:    req.SourceS3Bucket,
-			SourceS3Key:       s3Key,
-			DestS3Bucket:      req.DestS3Bucket,
-		}
-		// Use context from request, maybe add timeout?
-		if err := s.publisher.PublishInferenceTask(ctx, payload); err != nil {
-			log.Printf("ERROR: Failed to publish inference task for key %s, job %s: %v", s3Key, job.Id, err)
-			publishErrors = true
-			// Decide whether to stop or continue queueing other tasks
-			// break // Option: stop queueing on first error
-		}
-	}
-
-	// 5. Update job status
-	finalStatus := database.JobRunning
-	if publishErrors {
-		// Decide final status if some tasks failed to publish
-		// Could mark as FAILED, or RUNNING_WITH_ERRORS if we had such a state
-		log.Printf("WARNING: Some tasks failed to publish for job %s", job.Id)
-		// Keeping status as RUNNING for now, assuming some tasks might have queued
-	}
-
-	if err := database.UpdateInferenceJobStatus(ctx, s.db, job.Id, finalStatus); err != nil {
-		// Log error, but tasks might already be running
-		log.Printf("ERROR: Failed to update job %s status to %s after queueing: %v", job.Id, finalStatus, err)
-	}
-
-	log.Printf("Submitted inference job %s with %d tasks (Publish errors: %v)", job.Id, taskCount, publishErrors)
-
+	log.Printf("Submitted job generation task for inference job %s", jobId)
 	return models.InferenceSubmitResponse{
-		Message:   fmt.Sprintf("Inference job submitted with %d tasks", taskCount),
-		JobId:     job.Id,
-		TaskCount: taskCount,
+		Message: "Inference job accepted for processing",
+		JobId:   jobId,
 	}, nil
 }
 
@@ -220,7 +179,7 @@ func (s *BackendService) GetInferenceJob(r *http.Request) (any, error) {
 
 	ctx := r.Context()
 
-	var job database.InferenceJob
+	var job database.GenerateInferenceTasksTask
 	if err := s.db.WithContext(ctx).Find(&job, "id = ?", jobId).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, CodedErrorf(http.StatusNotFound, "inference job not found")

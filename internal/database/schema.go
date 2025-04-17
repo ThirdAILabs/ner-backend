@@ -31,7 +31,20 @@ const (
 	JobFailed    string = "FAILED"
 )
 
-type InferenceJob struct {
+type GenerateInferenceTasksTask struct {
+	Id      uuid.UUID `gorm:"type:uuid;primaryKey"`
+	ModelId uuid.UUID `gorm:"type:uuid"`
+
+	SourceS3Bucket string
+	SourceS3Prefix sql.NullString
+	DestS3Bucket   string
+
+	Status         string `gorm:"size:20;not null"`
+	CreationTime   time.Time
+	CompletionTime sql.NullTime
+}
+
+type InferenceTask struct {
 	Id      uuid.UUID `gorm:"type:uuid;primaryKey"`
 	ModelId uuid.UUID `gorm:"type:uuid"`
 

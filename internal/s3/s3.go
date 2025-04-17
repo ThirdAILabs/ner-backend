@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
 	"ner-backend/internal/config"
 	"net/url"
 	"os"
@@ -50,7 +51,7 @@ func NewS3Client(cfg *config.Config) (*Client, error) {
 
 	s3Client := s3.NewFromConfig(awsCfg, func(o *s3.Options) {
 		// Needed for MinIO which doesn't enforce bucket naming rules always
-		o.UsePathStyle = true // Use path-style addressing (needed for MinIO)
+		o.UsePathStyle = true // Use path-style addressing (needed for MinIO) - Assuming true based on original, not cfg.S3UsePathStyle
 	})
 
 	return &Client{
@@ -195,4 +196,106 @@ func (c *Client) DownloadTrainingData(ctx context.Context, sourceS3Path, downloa
 		return nil, fmt.Errorf("failed to download any training files from %s", sourceS3Path)
 	}
 	return downloadedFiles, nil
+}
+
+func (c *Client) ListAndChunkS3Objects( // Changed to a method with receiver (c *Client)
+	ctx context.Context,
+	bucket string,
+	prefix string,
+	targetChunkBytes int64,
+	callerID uuid.UUID, // Generic ID for logging context (e.g., Job ID, Request ID)
+	processChunk func(ctx context.Context, chunkKeys []string, chunkSize int64) error,
+) (int, error) {
+	// Using slog.Default() for logging. Could use c.logger if it were initialized.
+	logger := slog.Default().With("component", "S3Chunker", "caller", callerID, "bucket", bucket, "prefix", prefix)
+
+	// Use the client from the receiver (c.s3Client) instead of a parameter
+	paginator := s3.NewListObjectsV2Paginator(c.s3Client, &s3.ListObjectsV2Input{
+		Bucket: aws.String(bucket),
+		Prefix: aws.String(prefix),
+	})
+
+	var currentChunkKeys []string
+	var currentChunkSizeBytes int64 = 0
+	var totalChunksProcessed int = 0
+	pageCount := 0
+
+	logger.Info("Starting S3 listing", "targetBytes", targetChunkBytes)
+
+	for paginator.HasMorePages() {
+		pageCount++
+		pageLogger := logger.With("page", pageCount)
+		pageLogger.Debug("Fetching S3 page")
+		page, err := paginator.NextPage(ctx)
+		if err != nil {
+			pageLogger.Error("Failed to list objects page", "error", err)
+			return totalChunksProcessed, fmt.Errorf("failed to list objects page %d for caller %s: %w", pageCount, callerID, err)
+		}
+
+		for _, obj := range page.Contents {
+			if obj.Key == nil || strings.HasSuffix(*obj.Key, "/") || obj.Size == nil {
+				continue
+			}
+			objectKey := *obj.Key
+			objectSize := *obj.Size
+			if objectSize == 0 {
+				logger.Debug("Skipping zero-byte object", "key", objectKey)
+				continue
+			}
+
+			// Finalize previous chunk if needed
+			if len(currentChunkKeys) > 0 && (currentChunkSizeBytes+objectSize) > targetChunkBytes {
+				chunkNum := totalChunksProcessed + 1
+				chunkLogger := logger.With("chunkNum", chunkNum, "keyCount", len(currentChunkKeys), "sizeBytes", currentChunkSizeBytes)
+				chunkLogger.Info("Finalizing chunk", "reason", "next_item_exceeds_size", "nextKey", objectKey, "nextSize", objectSize)
+
+				keysToProcess := make([]string, len(currentChunkKeys))
+				copy(keysToProcess, currentChunkKeys)
+				if err := processChunk(ctx, keysToProcess, currentChunkSizeBytes); err != nil {
+					chunkLogger.Error("Processing chunk failed", "error", err)
+					return totalChunksProcessed, fmt.Errorf("processing chunk %d failed for caller %s: %w", chunkNum, callerID, err)
+				}
+				totalChunksProcessed++
+				currentChunkKeys = []string{}
+				currentChunkSizeBytes = 0
+			}
+
+			// Add current object to chunk
+			currentChunkKeys = append(currentChunkKeys, objectKey)
+			currentChunkSizeBytes += objectSize
+
+			// Finalize current chunk if target met/exceeded
+			if currentChunkSizeBytes >= targetChunkBytes {
+				chunkNum := totalChunksProcessed + 1
+				chunkLogger := logger.With("chunkNum", chunkNum, "keyCount", len(currentChunkKeys), "sizeBytes", currentChunkSizeBytes)
+				chunkLogger.Info("Finalizing chunk", "reason", "target_met_or_exceeded")
+
+				keysToProcess := make([]string, len(currentChunkKeys))
+				copy(keysToProcess, currentChunkKeys)
+				if err := processChunk(ctx, keysToProcess, currentChunkSizeBytes); err != nil {
+					chunkLogger.Error("Processing chunk failed", "error", err)
+					return totalChunksProcessed, fmt.Errorf("processing chunk %d failed for caller %s: %w", chunkNum, callerID, err)
+				}
+				totalChunksProcessed++
+				currentChunkKeys = []string{}
+				currentChunkSizeBytes = 0
+			}
+		}
+	}
+
+	// Process final chunk
+	if len(currentChunkKeys) > 0 {
+		chunkNum := totalChunksProcessed + 1
+		chunkLogger := logger.With("chunkNum", chunkNum, "keyCount", len(currentChunkKeys), "sizeBytes", currentChunkSizeBytes)
+		chunkLogger.Info("Finalizing last chunk")
+
+		if err := processChunk(ctx, currentChunkKeys, currentChunkSizeBytes); err != nil {
+			chunkLogger.Error("Processing final chunk failed", "error", err)
+			return totalChunksProcessed, fmt.Errorf("processing final chunk %d failed for caller %s: %w", chunkNum, callerID, err)
+		}
+		totalChunksProcessed++
+	}
+
+	logger.Info("Finished S3 listing", slog.Int("processedChunks", totalChunksProcessed))
+	return totalChunksProcessed, nil // Success
 }
