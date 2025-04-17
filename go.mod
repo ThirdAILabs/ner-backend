@@ -5,6 +5,7 @@ go 1.23.0
 toolchain go1.23.6
 
 require (
+	github.com/alecthomas/participle/v2 v2.1.4
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.17.72
 	github.com/gen2brain/go-fitz v1.24.14
 	github.com/go-gormigrate/gormigrate/v2 v2.1.4

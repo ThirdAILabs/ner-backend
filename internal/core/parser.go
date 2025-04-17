@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"io"
 	"log/slog"
 	"path/filepath"
@@ -17,31 +18,49 @@ type ParsedChunk struct {
 }
 
 type Parser interface {
-	Parse(object string, data io.Reader, output chan ParsedChunk)
+	Parse(object string, data io.Reader) chan ParsedChunk
 }
 
 type DefaultParser struct {
 	maxChunkSize int
 }
 
-func (parser *DefaultParser) Parse(object string, data io.Reader, output chan ParsedChunk) {
+const defaultMaxChunkSize = 512 * 1024 * 1024 // 512 MB
+
+func NewDefaultParser() *DefaultParser {
+	return &DefaultParser{maxChunkSize: defaultMaxChunkSize}
+}
+
+func (parser *DefaultParser) Parse(object string, data io.Reader) chan ParsedChunk {
+	output := make(chan ParsedChunk)
+
 	ext := filepath.Ext(object)
 
-	switch ext {
-	case ".pdf":
-		parser.parsePdf(object, data, output)
-	case ".txt", ".csv", ".html", ".json", ".xml":
-		parser.parsePlaintext(object, data, output)
-	default:
-		slog.Warn("unsupported file type", "object", object)
-	}
+	go func() {
+		defer close(output)
+
+		switch ext {
+		case ".pdf":
+			parser.parsePdf(object, data, output)
+		case ".txt", ".csv", ".html", ".json", ".xml":
+			parser.parsePlaintext(object, data, output)
+		default:
+			slog.Warn("unsupported file type", "object", object)
+		}
+	}()
+
+	return output
 }
 
 func (parser *DefaultParser) parsePdf(object string, data io.Reader, output chan ParsedChunk) {
 	document := make([]byte, parser.maxChunkSize)
 
 	n, err := io.ReadFull(data, document)
-	if err != nil && err != io.EOF && err != io.ErrUnexpectedEOF {
+	if err == nil {
+		// if the error is nil then the end of the stream was not reached, thus we cannot parse the pdf.
+		output <- ParsedChunk{Object: object, Error: fmt.Errorf("pdf is too large for parsing")}
+		return
+	} else if err != io.EOF && err != io.ErrUnexpectedEOF {
 		output <- ParsedChunk{Object: object, Error: err}
 		return
 	}

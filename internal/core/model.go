@@ -1,6 +1,9 @@
 package core
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
 
 type Entity struct {
 	Label string
@@ -11,4 +14,11 @@ type Entity struct {
 
 type Model interface {
 	Predict(ctx context.Context, text string) ([]Entity, error)
+}
+
+func LoadModel(modelType, path string) (Model, error) {
+	switch modelType {
+	default:
+		return nil, fmt.Errorf("unsupported model type: %s", modelType)
+	}
 }

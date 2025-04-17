@@ -18,7 +18,7 @@ func GetMigrator(db *gorm.DB) *gormigrate.Gormigrate {
 		log.Println("clean database detected, running full schema initialization")
 
 		return db.AutoMigrate(
-			&Model{}, &InferenceJob{}, &TaggedEntity{},
+			&Model{}, &InferenceJob{}, &Group{}, &ObjectGroup{}, &ObjectEntity{},
 		)
 	})
 
