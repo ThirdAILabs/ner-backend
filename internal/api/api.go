@@ -121,7 +121,7 @@ func (s *BackendService) SubmitInferenceJob(r *http.Request) (any, error) {
 	ctx := r.Context()
 
 	var model database.Model
-	
+
 	if err := s.db.WithContext(ctx).Transaction(func(txn *gorm.DB) error {
 		if err := txn.First(&model, "id = ?", req.ModelId).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -260,11 +260,14 @@ func (s *BackendService) GetInferenceJobEntities(r *http.Request) (any, error) {
 		if offset, err = strconv.Atoi(offsetStr); err != nil {
 			return nil, CodedErrorf(http.StatusBadRequest, "invalid offset value")
 		}
+		if offset < 0 {
+			return nil, CodedErrorf(http.StatusBadRequest, "offset value must be >= 0")
+		}
 	}
 	if limitStr := params.Get("limit"); limitStr != "" {
 		if limit, err = strconv.Atoi(limitStr); err != nil {
-			if limit > 200 {
-				return nil, CodedErrorf(http.StatusBadRequest, "limit value must be <= 200")
+			if limit > 200  || limit < 0{
+				return nil, CodedErrorf(http.StatusBadRequest, "limit value must be >= 0 and <= 200")
 			}
 			return nil, CodedErrorf(http.StatusBadRequest, "invalid limit value")
 		}
