@@ -15,17 +15,16 @@ Expr        := OrExpr ( "OR" OrExpr )*
 OrExpr      := AndExpr ( "AND" AndExpr )*
 AndExpr     := Condition | "NOT" Condition
 Condition   := Filter | "(" Expr ")"
-Filter 			:= Label Op Value
-Label       := "COUNT" <identifier> | <identifier>
-Op          := "CONTAINS" | "<" | ">" | "="
-Value       := <string> | <int>
+Filter 			:= "COUNT(" <identifier> ")" IntOp <int> | <identifier> StrOp <string>
+IntOp       := "<" | ">" | "="
+StrOp       := "CONTAINS" | "<" | ">" | "="
 
 */
 
 var (
 	parser = participle.MustBuild[QueryExpr](
 		participle.Unquote("String"),
-		participle.Union[Value](StringValue{}, IntValue{}),
+		// participle.Union[Value](StringValue{}, IntValue{}),
 	)
 )
 
@@ -179,96 +178,74 @@ func (c *Condition) String() string {
 }
 
 type FilterExpr struct {
-	Label Label  ` @@`
-	Op    string `@("CONTAINS" | "<" | ">" | "=" )`
-	Value Value  `@@`
+	CountFilter  *CountFilterExpr  `"COUNT" @@`
+	StringFilter *StringFilterExpr `| @@`
 }
 
 func (f *FilterExpr) ToFilter() (Filter, error) {
-	if f.Label.Count {
-		i, ok := f.Value.(IntValue)
-		if !ok {
-			return nil, fmt.Errorf("COUNT expr requires an int value to compare to")
-		}
-
-		switch f.Op {
-		case "<":
-			return &CountFilter{label: f.Label.Name, min: -1, max: i.Value}, nil
-		case ">":
-			return &CountFilter{label: f.Label.Name, min: i.Value, max: math.MaxInt}, nil
-		case "=":
-			return &CountFilter{label: f.Label.Name, min: i.Value - 1, max: i.Value + 1}, nil
-		default:
-			return nil, fmt.Errorf("invalid operator %s used with COUNT", f.Op)
-		}
-	}
-
-	s, ok := f.Value.(StringValue)
-	if !ok {
-		return nil, fmt.Errorf("if not using COUNT operator then the value to compare to must be a string")
-	}
-
-	switch f.Op {
-	case "CONTAINS":
-		return &SubstringFilter{label: f.Label.Name, substr: s.Value}, nil
-	case "<":
-		return &StringLtFilter{label: f.Label.Name, value: s.Value}, nil
-	case ">":
-		return &StringGtFilter{label: f.Label.Name, value: s.Value}, nil
-	case "=":
-		return &StringEqFilter{label: f.Label.Name, value: s.Value}, nil
-	default:
-		return nil, fmt.Errorf("invalid operator %s used with string value", f.Op)
+	if f.CountFilter != nil {
+		return f.CountFilter.ToFilter()
+	} else if f.StringFilter != nil {
+		return f.StringFilter.ToFilter()
+	} else {
+		return nil, fmt.Errorf("invalid filter expression")
 	}
 }
 
 func (f *FilterExpr) String() string {
-	return fmt.Sprintf("%v %s %v", f.Label.String(), f.Op, f.Value)
-}
-
-type Label struct {
-	Count bool   `@"COUNT"?`
-	Name  string `@Ident` // TODO: Should this be string instead?
-}
-
-func (l *Label) String() string {
-	if l.Count {
-		return fmt.Sprintf("COUNT(%s)", l.Name)
+	if f.CountFilter != nil {
+		return f.CountFilter.String()
+	} else if f.StringFilter != nil {
+		return f.StringFilter.String()
+	} else {
+		return "<invalid filter expression>"
 	}
-	return l.Name
 }
 
-type Value interface{ value() }
+type CountFilterExpr struct {
+	Label string `"(" @Ident")"`
+	Op    string `@("<" | ">" | "=" )`
+	Value int    `@Int`
+}
 
-type StringValue struct {
+func (c *CountFilterExpr) ToFilter() (Filter, error) {
+	switch c.Op {
+	case "<":
+		return &CountFilter{label: c.Label, min: -1, max: c.Value}, nil
+	case ">":
+		return &CountFilter{label: c.Label, min: c.Value, max: math.MaxInt}, nil
+	case "=":
+		return &CountFilter{label: c.Label, min: c.Value - 1, max: c.Value + 1}, nil
+	default:
+		return nil, fmt.Errorf("invalid operator %s used with COUNT", c.Op)
+	}
+}
+
+func (c *CountFilterExpr) String() string {
+	return fmt.Sprintf("COUNT(%s) %s %d", c.Label, c.Op, c.Value)
+}
+
+type StringFilterExpr struct {
+	Label string `@Ident`
+	Op    string `@("CONTAINS" | "<" | ">" | "=" )`
 	Value string `@String`
 }
 
-func (s StringValue) value() {}
-
-type IntValue struct {
-	Value int `@Int`
+func (s *StringFilterExpr) ToFilter() (Filter, error) {
+	switch s.Op {
+	case "CONTAINS":
+		return &SubstringFilter{label: s.Label, substr: s.Value}, nil
+	case "<":
+		return &StringLtFilter{label: s.Label, value: s.Value}, nil
+	case ">":
+		return &StringGtFilter{label: s.Label, value: s.Value}, nil
+	case "=":
+		return &StringEqFilter{label: s.Label, value: s.Value}, nil
+	default:
+		return nil, fmt.Errorf("invalid operator %s used with string value", s.Op)
+	}
 }
 
-func (i IntValue) value() {}
-
-// func main() {
-
-// 	parser := participle.MustBuild[Query](
-// 		participle.Unquote("String"),
-// 		participle.Union[Value](StringValue{}, IntValue{}),
-// 	)
-
-// 	// q1 := `"SUBSTRING(x, ab)" AND	NOT "COUNT_GT(y, 2)" OR ("COUNT_LT(z, 5)" AND "SUBSTRING(z, 12)" OR "SUBSTRING(y, a94 9)")`
-
-// 	q, err := parser.ParseString(
-// 		"", `l1 CONTAINS "ab 2" AND	NOT COUNT l2 = 4 OR (l3 CONTAINS "abc" AND COUNT l4 < 10 OR l5 CONTAINS "9")`,
-// 	)
-
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-// 	fmt.Printf("%+v\n", q)
-
-// }
+func (s *StringFilterExpr) String() string {
+	return fmt.Sprintf("%s %s %s", s.Label, s.Op, s.Value)
+}

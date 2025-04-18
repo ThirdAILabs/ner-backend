@@ -1,6 +1,7 @@
 package core
 
 import (
+	"math"
 	"reflect"
 	"testing"
 )
@@ -74,7 +75,7 @@ func TestParseQuery_NotExpression(t *testing.T) {
 }
 
 func TestParseQuery_ComplexExpression(t *testing.T) {
-	query := `label1 CONTAINS "value1" AND (label2 = "value2" OR NOT label3 > "value3")`
+	query := `label1 CONTAINS "value1" AND (label2 = "value2" OR NOT COUNT(label3) > 4)`
 	expected := &AndFilter{
 		filters: []Filter{
 			&SubstringFilter{label: "label1", substr: "value1"},
@@ -82,7 +83,7 @@ func TestParseQuery_ComplexExpression(t *testing.T) {
 				filters: []Filter{
 					&StringEqFilter{label: "label2", value: "value2"},
 					&NotFilter{
-						filter: &StringGtFilter{label: "label3", value: "value3"},
+						filter: &CountFilter{label: "label3", min: 4, max: math.MaxInt},
 					},
 				},
 			},
@@ -100,7 +101,7 @@ func TestParseQuery_ComplexExpression(t *testing.T) {
 }
 
 func TestParseQuery_CountFilter(t *testing.T) {
-	query := `COUNT label1 < 10`
+	query := `COUNT(label1) < 10`
 	expected := &CountFilter{label: "label1", min: -1, max: 10}
 
 	filter, err := ParseQuery(query)
