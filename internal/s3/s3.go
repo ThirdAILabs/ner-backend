@@ -3,6 +3,7 @@ package s3
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"log/slog"
 	"ner-backend/internal/config"
@@ -19,8 +20,14 @@ import (
 	"github.com/google/uuid"
 )
 
+type s3API interface {
+	manager.DownloadAPIClient
+	manager.UploadAPIClient
+	manager.ListObjectsV2APIClient
+}
+
 type Client struct {
-	s3Client   *s3.Client
+	s3Client   s3API
 	downloader *manager.Downloader
 	uploader   *manager.Uploader
 	bucketName string // Default model bucket
@@ -54,12 +61,16 @@ func NewS3Client(cfg *config.Config) (*Client, error) {
 		o.UsePathStyle = true // Use path-style addressing (needed for MinIO) - Assuming true based on original, not cfg.S3UsePathStyle
 	})
 
+	return NewFromClient(s3Client, cfg.ModelBucketName), nil
+}
+
+func NewFromClient(client s3API, bucketName string) *Client {
 	return &Client{
-		s3Client:   s3Client,
-		downloader: manager.NewDownloader(s3Client),
-		uploader:   manager.NewUploader(s3Client),
-		bucketName: cfg.ModelBucketName,
-	}, nil
+		s3Client:   client,
+		downloader: manager.NewDownloader(client),
+		uploader:   manager.NewUploader(client),
+		bucketName: bucketName,
+	}
 }
 
 func (c *Client) UploadFile(ctx context.Context, localPath, bucket, key string) (string, error) {
@@ -109,6 +120,41 @@ func (c *Client) DownloadFile(ctx context.Context, bucket, key, localPath string
 	}
 	log.Printf("Successfully downloaded to %s", localPath)
 	return nil
+}
+
+type s3ObjectStream struct {
+	client s3API
+	bucket string
+	key    string
+	offset int
+}
+
+func (s *s3ObjectStream) Read(p []byte) (int, error) {
+	rng := fmt.Sprintf("bytes=%d-%d", s.offset, s.offset+len(p)-1)
+
+	resp, err := s.client.GetObject(context.TODO(), &s3.GetObjectInput{
+		Bucket: aws.String(s.bucket),
+		Key:    aws.String(s.key),
+		Range:  aws.String(rng),
+	})
+	if err != nil {
+		return 0, fmt.Errorf("failed to read object %s from s3://%s/%s: %w", rng, s.bucket, s.key, err)
+	}
+	defer resp.Body.Close()
+
+	n, err := io.ReadFull(resp.Body, p)
+	s.offset += n
+	if err != nil {
+		if err == io.EOF || err == io.ErrUnexpectedEOF {
+			return n, io.EOF
+		}
+		return n, fmt.Errorf("error reading resp body %s from s3://%s/%s: %w", rng, s.bucket, s.key, err)
+	}
+	return n, nil
+}
+
+func (c *Client) DownloadFileStream(bucket, key string) io.Reader {
+	return &s3ObjectStream{client: c.s3Client, bucket: bucket, key: key, offset: 0}
 }
 
 func (c *Client) ListFiles(ctx context.Context, bucket, prefix string) ([]string, error) {

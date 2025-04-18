@@ -55,12 +55,28 @@ type InferenceTask struct {
 	Status         string `gorm:"size:20;not null"`
 	CreationTime   time.Time
 	CompletionTime sql.NullTime
+
+	Groups []Group `gorm:"foreignKey:InferenceJobId;constraint:OnDelete:CASCADE"`
 }
 
-type TaggedEntity struct {
+type Group struct {
+	Id             uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Name           string
+	InferenceJobId uuid.UUID `gorm:"type:uuid"`
+	Query          string
+}
+
+type ObjectGroup struct {
 	InferenceJobId uuid.UUID `gorm:"type:uuid;primaryKey"`
 	Object         string    `gorm:"primaryKey"`
-	Index          uint      `gorm:"primaryKey"`
-	Tag            string
-	Value          string
+	GroupId        uuid.UUID `gorm:"type:uuid;primaryKey"`
+}
+
+type ObjectEntity struct {
+	InferenceJobId uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Object         string    `gorm:"primaryKey"`
+	Start          int       `gorm:"primaryKey"`
+	End            int       `gorm:"primaryKey"`
+	Label          string
+	Text           string
 }
