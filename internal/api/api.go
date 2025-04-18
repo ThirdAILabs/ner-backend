@@ -3,15 +3,14 @@ package api
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"log" // Adjust import path
 	"log/slog"
+	"ner-backend/internal/core"
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/s3"
 	"ner-backend/pkg/models"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -32,56 +31,24 @@ func NewBackendService(db *gorm.DB, pub *messaging.TaskPublisher, s3c *s3.Client
 func (s *BackendService) AddRoutes(r chi.Router) {
 	r.Get("/health", RestHandler(func(r *http.Request) (any, error) { return nil, nil }))
 	r.Route("/models", func(r chi.Router) {
-		r.Post("/", RestHandler(s.SubmitTrainingJob))
+		r.Get("/", RestHandler(s.ListModels))
 		r.Get("/{model_id}", RestHandler(s.GetModel))
 	})
 	r.Route("/inference", func(r chi.Router) {
+		r.Get("/", RestHandler(s.ListInferenceJobs))
 		r.Post("/", RestHandler(s.SubmitInferenceJob))
 		r.Get("/{job_id}", RestHandler(s.GetInferenceJob))
 	})
 }
 
-func (s *BackendService) SubmitTrainingJob(r *http.Request) (any, error) {
-	var req models.TrainRequest
-	req, err := ParseRequest[models.TrainRequest](r)
-	if err != nil {
-		return nil, err
+func (s *BackendService) ListModels(r *http.Request) (any, error) {
+	ctx := r.Context()
+	var models []database.Model
+	if err := s.db.WithContext(ctx).Find(&models).Error; err != nil {
+		slog.Error("error getting models", "error", err)
+		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving model records")
 	}
-
-	if req.SourceS3Path == "" || !strings.HasPrefix(req.SourceS3Path, "s3://") {
-		return nil, CodedErrorf(http.StatusBadRequest, "invalid source_s3_path, source_s3_path is required and must start wiht s3://")
-	}
-
-	ctx := r.Context() // Use request context
-
-	model := &database.Model{
-		Id:           uuid.New(),
-		Name:         req.ModelName,
-		Type:         "TODO",
-		Status:       database.ModelQueued,
-		CreationTime: time.Now(),
-	}
-
-	if err := s.db.WithContext(ctx).Create(&model).Error; err != nil {
-		slog.Error("error creating model", "error", err)
-		return nil, CodedErrorf(http.StatusInternalServerError, "failed to create model entry")
-	}
-
-	payload := models.TrainTaskPayload{
-		ModelId:          model.Id,
-		SourceS3PathTags: req.SourceS3Path,
-	}
-
-	// Publish task in background? For now, do it directly.
-	if err := s.publisher.PublishTrainTask(ctx, payload); err != nil {
-		// Attempt to rollback DB state or mark as failed? Difficult without transactions.
-		// For now, log error and return failure to client.
-		slog.Error("error publishing training task", "model_id", model.Id, "error", err)
-		return nil, CodedErrorf(http.StatusInternalServerError, "failed to queue training task")
-	}
-
-	slog.Info("Submitted training job for model", "model_id", model.Id)
-	return models.TrainSubmitResponse{Message: "Training job submitted", ModelId: model.Id}, nil
+	return models, nil
 }
 
 func (s *BackendService) GetModel(r *http.Request) (any, error) {
@@ -104,9 +71,17 @@ func (s *BackendService) GetModel(r *http.Request) (any, error) {
 	return model, nil
 }
 
-func (s *BackendService) SubmitInferenceJob(r *http.Request) (any, error) {
-	var req models.InferenceRequest
+func (s *BackendService) ListInferenceJobs(r *http.Request) (any, error) {
+	ctx := r.Context()
+	var jobs []database.InferenceJob
+	if err := s.db.WithContext(ctx).Preload("Groups").Find(&jobs).Error; err != nil {
+		slog.Error("error getting inference jobs", "error", err)
+		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving inference job records")
+	}
+	return jobs, nil
+}
 
+func (s *BackendService) SubmitInferenceJob(r *http.Request) (any, error) {
 	req, err := ParseRequest[models.InferenceRequest](r)
 	if err != nil {
 		return nil, err
@@ -144,6 +119,19 @@ func (s *BackendService) SubmitInferenceJob(r *http.Request) (any, error) {
 		CreationTime:   time.Now(),
 	}
 
+	for name, query := range req.Groups {
+		if _, err := core.ParseQuery(query); err != nil {
+			return nil, CodedErrorf(http.StatusUnprocessableEntity, "invalid query '%s' for group '%s': %v", query, name, err)
+		}
+
+		job.Groups = append(job.Groups, database.Group{
+			Id:             uuid.New(),
+			Name:           name,
+			InferenceJobId: job.Id,
+			Query:          query,
+		})
+	}
+
 	if err := s.db.WithContext(ctx).Create(&job).Error; err != nil {
 		slog.Error("error creating inference job", "error", err)
 		return nil, CodedErrorf(http.StatusInternalServerError, "failed to create inference job entry")
@@ -161,11 +149,7 @@ func (s *BackendService) SubmitInferenceJob(r *http.Request) (any, error) {
 	if taskCount == 0 {
 		database.UpdateInferenceJobStatus(ctx, s.db, job.Id, database.JobCompleted)
 		log.Printf("No files found for inference job %s", job.Id)
-		return models.InferenceSubmitResponse{
-			Message:   "No files found to process in specified location",
-			JobId:     job.Id,
-			TaskCount: 0,
-		}, nil
+		return models.InferenceResponse{JobId: job.Id}, nil
 	}
 
 	// 4. Submit tasks (Can do this in a goroutine?)
@@ -205,11 +189,7 @@ func (s *BackendService) SubmitInferenceJob(r *http.Request) (any, error) {
 
 	log.Printf("Submitted inference job %s with %d tasks (Publish errors: %v)", job.Id, taskCount, publishErrors)
 
-	return models.InferenceSubmitResponse{
-		Message:   fmt.Sprintf("Inference job submitted with %d tasks", taskCount),
-		JobId:     job.Id,
-		TaskCount: taskCount,
-	}, nil
+	return models.InferenceResponse{JobId: job.Id}, nil
 }
 
 func (s *BackendService) GetInferenceJob(r *http.Request) (any, error) {
