@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"ner-backend/internal/core/types"
 	"os"
 	"path/filepath"
 	"time"
@@ -13,10 +14,10 @@ import (
 // Replace these with actual ML logic (which is complex in Go)
 
 type InferenceResult struct {
-	File       string   `json:"file"`
-	ModelUsed  string   `json:"model_used"`
-	Entities   []Entity `json:"entities"`
-	ProcTimeMs int64    `json:"processing_time_ms"`
+	File       string         `json:"file"`
+	ModelUsed  string         `json:"model_used"`
+	Entities   []types.Entity `json:"entities"`
+	ProcTimeMs int64          `json:"processing_time_ms"`
 }
 
 func TrainModel(trainingDataDir string, modelSavePath string) error {
@@ -72,7 +73,7 @@ func RunInference(modelArtifactPath string, inputFilepath string) (*InferenceRes
 	results := &InferenceResult{
 		File:      filepath.Base(inputFilepath),
 		ModelUsed: modelArtifactPath,
-		Entities: []Entity{
+		Entities: []types.Entity{
 			{Text: "Go Systems Inc.", Label: "ORG", Start: 15, End: 30},
 			{Text: "Austin", Label: "GPE", Start: 60, End: 66},
 			{Text: "Monday, April 14, 2025", Label: "DATE", Start: 80, End: 103},

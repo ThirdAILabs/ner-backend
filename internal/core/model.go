@@ -2,21 +2,21 @@ package core
 
 import (
 	"fmt"
+	"ner-backend/internal/core/bolt"
+	"ner-backend/internal/core/types"
+	// "ner-backend/internal/core/bolt"
 )
 
-type Entity struct {
-	Label string
-	Text  string
-	Start int // TODO how should this be represented?
-	End   int
-}
-
 type Model interface {
-	Predict(text string) ([]Entity, error)
+	Predict(text string) ([]types.Entity, error)
+
+	Release()
 }
 
 func LoadModel(modelType, path string) (Model, error) {
 	switch modelType {
+	case "bolt":
+		return bolt.LoadNER(path)
 	default:
 		return nil, fmt.Errorf("unsupported model type: %s", modelType)
 	}

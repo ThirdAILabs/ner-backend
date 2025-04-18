@@ -1,10 +1,11 @@
 package core
 
 import (
+	"ner-backend/internal/core/types"
 	"strings"
 )
 
-type LabelToEntities map[string][]Entity
+type LabelToEntities map[string][]types.Entity
 
 type Filter interface {
 	Matches(entities LabelToEntities) bool

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"ner-backend/internal/core/types"
 	"ner-backend/internal/database"
 	"ner-backend/internal/s3"
 	"os"
@@ -97,7 +98,7 @@ func (proc *InferenceJobProcessor) processObject(
 
 	chunks := parser.Parse(object, proc.s3client.DownloadFileStream(bucket, object))
 
-	labelToEntities := make(map[string][]Entity)
+	labelToEntities := make(map[string][]types.Entity)
 
 	for chunk := range chunks {
 		if chunk.Error != nil {

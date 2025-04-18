@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"ner-backend/internal/core/types"
 	"ner-backend/internal/database"
 	"ner-backend/internal/s3"
 	"regexp"
@@ -18,13 +19,13 @@ type regexModel struct {
 	patterns map[string]regexp.Regexp
 }
 
-func (m *regexModel) Predict(text string) ([]Entity, error) {
-	var entities []Entity
+func (m *regexModel) Predict(text string) ([]types.Entity, error) {
+	var entities []types.Entity
 	for label, pattern := range m.patterns {
 		matches := pattern.FindAllStringSubmatchIndex(text, -1)
 		for _, match := range matches {
 			if len(match) > 0 {
-				entities = append(entities, Entity{
+				entities = append(entities, types.Entity{
 					Label: label,
 					Text:  text[match[0]:match[1]],
 					Start: match[0],
@@ -35,6 +36,8 @@ func (m *regexModel) Predict(text string) ([]Entity, error) {
 	}
 	return entities, nil
 }
+
+func (m *regexModel) Release() {}
 
 type mockS3Client struct{}
 
