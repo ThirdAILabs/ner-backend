@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"log"
+	"ner-backend/cmd" // Adjust import path
 	"ner-backend/internal/api"
-	"ner-backend/internal/config" // Adjust import path
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/s3"
@@ -14,16 +14,32 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/caarlos0/env/v11"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
 
+type APIConfig struct {
+	DatabaseURL       string `env:"DATABASE_URL,notEmpty,required"`
+	RabbitMQURL       string `env:"RABBITMQ_URL,notEmpty,required"`
+	S3EndpointURL     string `env:"S3_ENDPOINT_URL,notEmpty,required"`
+	S3AccessKeyID     string `env:"AWS_ACCESS_KEY_ID,notEmpty,required"`
+	S3SecretAccessKey string `env:"AWS_SECRET_ACCESS_KEY,notEmpty,required"`
+	S3Region          string `env:"AWS_REGION,notEmpty,required"`
+	ModelBucketName   string `env:"MODEL_BUCKET_NAME" envDefault:"models"`
+	QueueNames        string `env:"QUEUE_NAMES" envDefault:"inference_queue,training_queue,shard_data_queue"`
+	WorkerConcurrency int    `env:"CONCURRENCY" envDefault:"1"`
+	APIPort           string `env:"API_PORT" envDefault:"8001"`
+}
+
 func main() {
 	log.Println("Starting API Server...")
 
-	cfg, err := config.LoadConfig()
-	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
+	cmd.LoadEnvFile()
+
+	var cfg APIConfig
+	if err := env.Parse(&cfg); err != nil {
+		log.Fatalf("error parsing config: %v", err)
 	}
 
 	db, err := database.NewDatabase(cfg.DatabaseURL)
@@ -32,7 +48,14 @@ func main() {
 	}
 
 	// Initialize S3 Client
-	s3Client, err := s3.NewS3Client(cfg)
+	s3Cfg := s3.Config{
+		S3EndpointURL:     cfg.S3EndpointURL,
+		S3AccessKeyID:     cfg.S3AccessKeyID,
+		S3SecretAccessKey: cfg.S3SecretAccessKey,
+		S3Region:          cfg.S3Region,
+		ModelBucketName:   cfg.ModelBucketName,
+	}
+	s3Client, err := s3.NewS3Client(&s3Cfg)
 	if err != nil {
 		log.Fatalf("Failed to create S3 client: %v", err)
 	}

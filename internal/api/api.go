@@ -158,7 +158,6 @@ func (s *BackendService) SubmitInferenceJob(r *http.Request) (any, error) {
 
 	err = s.publisher.PublishShardDataTask(ctx, genPayload)
 	if err != nil {
-		// If publishing fails, should we mark the job as failed?
 		log.Printf("CRITICAL: Failed to publish ShardData task for job %s: %v", jobId, err)
 		_ = database.UpdateShardDataTaskStatus(ctx, s.db, jobId, database.JobFailed) // Mark job failed
 		return nil, err

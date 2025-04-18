@@ -1,8 +1,8 @@
 package main
 
 import (
-	"log"
-	"ner-backend/internal/config" // Adjust import path
+	"log" // Adjust import path
+	"ner-backend/cmd"
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/s3"
@@ -10,14 +10,31 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+
+	"github.com/caarlos0/env/v11"
 )
+
+type WorkerConfig struct {
+	DatabaseURL       string `env:"DATABASE_URL,notEmpty,required"`
+	RabbitMQURL       string `env:"RABBITMQ_URL,notEmpty,required"`
+	S3EndpointURL     string `env:"S3_ENDPOINT_URL,notEmpty,required"`
+	S3AccessKeyID     string `env:"AWS_ACCESS_KEY_ID,notEmpty,required"`
+	S3SecretAccessKey string `env:"AWS_SECRET_ACCESS_KEY,notEmpty,required"`
+	S3Region          string `env:"AWS_REGION,notEmpty,required"`
+	ModelBucketName   string `env:"MODEL_BUCKET_NAME" envDefault:"models"`
+	QueueNames        string `env:"QUEUE_NAMES" envDefault:"inference_queue,training_queue,shard_data_queue"`
+	WorkerConcurrency int    `env:"CONCURRENCY" envDefault:"1"`
+	APIPort           string `env:"API_PORT" envDefault:"8001"`
+}
 
 func main() {
 	log.Println("Starting Worker Process...")
 
-	cfg, err := config.LoadConfig()
-	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
+	cmd.LoadEnvFile()
+
+	var cfg WorkerConfig
+	if err := env.Parse(&cfg); err != nil {
+		log.Fatalf("error parsing config: %v", err)
 	}
 
 	db, err := database.NewDatabase(cfg.DatabaseURL)
@@ -26,7 +43,14 @@ func main() {
 	}
 
 	// Initialize S3 Client
-	s3Client, err := s3.NewS3Client(cfg)
+	s3Cfg := s3.Config{
+		S3EndpointURL:     cfg.S3EndpointURL,
+		S3AccessKeyID:     cfg.S3AccessKeyID,
+		S3SecretAccessKey: cfg.S3SecretAccessKey,
+		S3Region:          cfg.S3Region,
+		ModelBucketName:   cfg.ModelBucketName,
+	}
+	s3Client, err := s3.NewS3Client(&s3Cfg)
 	if err != nil {
 		log.Fatalf("Worker: Failed to create S3 client: %v", err)
 	}
@@ -41,10 +65,14 @@ func main() {
 	defer publisher.Close()
 
 	// Worker Dependencies
+	workerCfg := messaging.WorkerConfig{
+		WorkerConcurrency: cfg.WorkerConcurrency,
+		QueueNames:        cfg.QueueNames,
+	}
 	worker := messaging.Worker{
 		DB:        db,
 		S3Client:  s3Client,
-		Config:    cfg,
+		Config:    &workerCfg,
 		WaitGroup: &wg,
 		Publisher: publisher,
 	}

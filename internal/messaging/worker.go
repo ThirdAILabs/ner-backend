@@ -4,8 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
-	"ner-backend/internal/config" // Adjust import path
+	"log" // Adjust import path
 	"ner-backend/internal/core"
 	"ner-backend/internal/database"
 	"ner-backend/internal/s3"
@@ -21,10 +20,15 @@ import (
 	"gorm.io/gorm"
 )
 
+type WorkerConfig struct {
+	WorkerConcurrency int
+	QueueNames        string
+}
+
 type Worker struct {
 	DB        *gorm.DB
 	S3Client  *s3.Client
-	Config    *config.Config
+	Config    *WorkerConfig
 	WaitGroup *sync.WaitGroup
 	Publisher *TaskPublisher
 }

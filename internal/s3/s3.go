@@ -6,7 +6,6 @@ import (
 	"io"
 	"log"
 	"log/slog"
-	"ner-backend/internal/config"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -33,7 +32,15 @@ type Client struct {
 	bucketName string // Default model bucket
 }
 
-func NewS3Client(cfg *config.Config) (*Client, error) {
+type Config struct {
+	S3EndpointURL     string
+	S3AccessKeyID     string
+	S3SecretAccessKey string
+	S3Region          string
+	ModelBucketName   string
+}
+
+func NewS3Client(cfg *Config) (*Client, error) {
 	resolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
 		if cfg.S3EndpointURL != "" {
 			return aws.Endpoint{
