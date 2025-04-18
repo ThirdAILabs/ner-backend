@@ -104,7 +104,7 @@ func (proc *InferenceJobProcessor) processObject(
 			return nil, nil, fmt.Errorf("error parsing document: %w", chunk.Error)
 		}
 
-		chunkEntities, err := model.Predict(context.TODO(), chunk.Text)
+		chunkEntities, err := model.Predict(chunk.Text)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error running model inference: %w", err)
 		}
@@ -128,11 +128,12 @@ func (proc *InferenceJobProcessor) processObject(
 	}
 
 	allEntities := make([]database.ObjectEntity, 0)
-	for label, entities := range labelToEntities {
+	for _, entities := range labelToEntities {
 		for _, entity := range entities {
 			allEntities = append(allEntities, database.ObjectEntity{
 				InferenceJobId: jobId,
-				Label:          label,
+				Label:          entity.Label,
+				Text:           entity.Text,
 				Start:          entity.Start,
 				End:            entity.End,
 				Object:         object,

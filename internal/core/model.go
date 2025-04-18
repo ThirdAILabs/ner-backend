@@ -1,7 +1,6 @@
 package core
 
 import (
-	"context"
 	"fmt"
 )
 
@@ -13,7 +12,7 @@ type Entity struct {
 }
 
 type Model interface {
-	Predict(ctx context.Context, text string) ([]Entity, error)
+	Predict(text string) ([]Entity, error)
 }
 
 func LoadModel(modelType, path string) (Model, error) {

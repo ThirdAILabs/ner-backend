@@ -19,8 +19,14 @@ import (
 	"github.com/google/uuid"
 )
 
+type s3API interface {
+	manager.DownloadAPIClient
+	manager.UploadAPIClient
+	manager.ListObjectsV2APIClient
+}
+
 type Client struct {
-	s3Client   *s3.Client
+	s3Client   s3API
 	downloader *manager.Downloader
 	uploader   *manager.Uploader
 	bucketName string // Default model bucket
@@ -54,12 +60,16 @@ func NewS3Client(cfg *config.Config) (*Client, error) {
 		o.UsePathStyle = true // Use path-style addressing (needed for MinIO)
 	})
 
+	return NewFromClient(s3Client, cfg.ModelBucketName), nil
+}
+
+func NewFromClient(client s3API, bucketName string) *Client {
 	return &Client{
-		s3Client:   s3Client,
-		downloader: manager.NewDownloader(s3Client),
-		uploader:   manager.NewUploader(s3Client),
-		bucketName: cfg.ModelBucketName,
-	}, nil
+		s3Client:   client,
+		downloader: manager.NewDownloader(client),
+		uploader:   manager.NewUploader(client),
+		bucketName: bucketName,
+	}
 }
 
 func (c *Client) UploadFile(ctx context.Context, localPath, bucket, key string) (string, error) {
@@ -112,7 +122,7 @@ func (c *Client) DownloadFile(ctx context.Context, bucket, key, localPath string
 }
 
 type s3ObjectStream struct {
-	client *s3.Client
+	client s3API
 	bucket string
 	key    string
 	offset int
