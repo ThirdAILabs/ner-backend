@@ -51,6 +51,8 @@ type Group struct {
 	Name           string
 	InferenceJobId uuid.UUID `gorm:"type:uuid"`
 	Query          string
+
+	Objects []ObjectGroup `gorm:"foreignKey:InferenceJobId;constraint:OnDelete:CASCADE"`
 }
 
 type ObjectGroup struct {
