@@ -83,7 +83,7 @@ func TestInference(t *testing.T) {
 		},
 	}
 
-	jobId := uuid.New()
+	reportId := uuid.New()
 
 	inferenceJobProcessor := InferenceJobProcessor{
 		s3client: s3.NewFromClient(&mockS3Client{}, "test-bucket"),
@@ -99,7 +99,7 @@ func TestInference(t *testing.T) {
 	object := "test.txt"
 
 	allEntities, groups, err := inferenceJobProcessor.processObject(
-		jobId,
+		reportId,
 		NewDefaultParser(),
 		model,
 		map[uuid.UUID]Filter{groupId1: group1, groupId2: group2},
@@ -112,11 +112,11 @@ func TestInference(t *testing.T) {
 	phoneStart, emailStart := strings.Index(testDoc, phone), strings.Index(testDoc, email)
 
 	assert.ElementsMatch(t, allEntities, []database.ObjectEntity{
-		{InferenceJobId: jobId, Object: object, Label: "phone", Text: phone, Start: phoneStart, End: phoneStart + len(phone)},
-		{InferenceJobId: jobId, Object: object, Label: "email", Text: email, Start: emailStart, End: emailStart + len(email)},
+		{ReportId: reportId, Object: object, Label: "phone", Text: phone, Start: phoneStart, End: phoneStart + len(phone)},
+		{ReportId: reportId, Object: object, Label: "email", Text: email, Start: emailStart, End: emailStart + len(email)},
 	})
 
 	assert.ElementsMatch(t, groups, []database.ObjectGroup{
-		{InferenceJobId: jobId, GroupId: groupId1, Object: object},
+		{ReportId: reportId, GroupId: groupId1, Object: object},
 	})
 }

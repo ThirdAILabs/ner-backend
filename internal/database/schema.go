@@ -31,56 +31,66 @@ const (
 	JobFailed    string = "FAILED"
 )
 
-type ShardDataTask struct {
-	Id      uuid.UUID `gorm:"type:uuid;primaryKey"`
+type Report struct {
+	Id uuid.UUID `gorm:"type:uuid;primaryKey"`
+
 	ModelId uuid.UUID `gorm:"type:uuid"`
+	Model   *Model    `gorm:"foreignKey:ModelId"`
 
 	SourceS3Bucket string
 	SourceS3Prefix sql.NullString
-	DestS3Bucket   string
 
-	Status           string `gorm:"size:20;not null"`
-	CreationTime     time.Time
-	CompletionTime   sql.NullTime
-	ChunkTargetBytes int64
+	CreationTime   time.Time
+	CompletionTime sql.NullTime
 
 	Groups []Group `gorm:"foreignKey:ShardDataTaskId;constraint:OnDelete:CASCADE"`
 }
 
-type InferenceTask struct {
-	Id              uuid.UUID `gorm:"type:uuid;primaryKey"`
-	ModelId         uuid.UUID `gorm:"type:uuid"`
-	ShardDataTaskId uuid.UUID `gorm:"type:uuid"`
-
-	SourceS3Bucket string
-	SourceS3Prefix sql.NullString
-	DestS3Bucket   string
+type ShardDataTask struct {
+	ReportId uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Report   *Report   `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
 
 	Status         string `gorm:"size:20;not null"`
 	CreationTime   time.Time
 	CompletionTime sql.NullTime
+
+	ChunkTargetBytes int64
+}
+
+type InferenceTask struct {
+	ReportId uuid.UUID `gorm:"type:uuid;primaryKey"`
+	TaskId   int       `gorm:"primaryKey"`
+	Report   *Report   `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
+
+	Status         string `gorm:"size:20;not null"`
+	CreationTime   time.Time
+	CompletionTime sql.NullTime
+
+	SourceS3Bucket string
+	SourceS3Keys   string
+	TotalSize      int64
 }
 
 type Group struct {
-	Id             uuid.UUID `gorm:"type:uuid;primaryKey"`
-	Name           string
-	InferenceJobId uuid.UUID `gorm:"type:uuid"`
-	Query          string
+	Id       uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Name     string
+	ReportId uuid.UUID `gorm:"type:uuid"`
+	Query    string
 
-	Objects []ObjectGroup `gorm:"foreignKey:InferenceJobId;constraint:OnDelete:CASCADE"`
+	Objects []ObjectGroup `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
 }
 
 type ObjectGroup struct {
-	InferenceJobId uuid.UUID `gorm:"type:uuid;primaryKey"`
-	Object         string    `gorm:"primaryKey"`
-	GroupId        uuid.UUID `gorm:"type:uuid;primaryKey"`
+	ReportId uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Object   string    `gorm:"primaryKey"`
+	GroupId  uuid.UUID `gorm:"type:uuid;primaryKey"`
 }
 
 type ObjectEntity struct {
-	InferenceJobId uuid.UUID `gorm:"type:uuid;primaryKey"`
-	Object         string    `gorm:"primaryKey"`
-	Start          int       `gorm:"primaryKey"`
-	End            int       `gorm:"primaryKey"`
-	Label          string
-	Text           string
+	ReportId uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Object   string    `gorm:"primaryKey"`
+	Start    int       `gorm:"primaryKey"`
+	End      int       `gorm:"primaryKey"`
+	Label    string
+	Text     string
 }

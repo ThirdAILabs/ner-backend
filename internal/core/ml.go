@@ -36,7 +36,7 @@ func TrainModel(trainingDataDir string, modelSavePath string) error {
 		return fmt.Errorf("placeholder: failed to create model dir %s: %w", dir, err)
 	}
 	content := fmt.Sprintf("Trained model based on data from %s\nTimestamp: %v\n",
-		trainingDataDir, time.Now())
+		trainingDataDir, time.Now().UTC())
 	err := os.WriteFile(modelSavePath, []byte(content), 0644)
 	if err != nil {
 		return fmt.Errorf("placeholder: failed to save model to %s: %w", modelSavePath, err)
@@ -63,7 +63,7 @@ func RunInference(modelArtifactPath string, inputFilepath string) (*InferenceRes
 	log.Printf("Placeholder: Input file size: %d bytes", len(content))
 
 	// Simulate processing time
-	startTime := time.Now()
+	startTime := time.Now().UTC()
 	d := time.Duration(rand.Intn(4000)+1000) * time.Millisecond // 1-5 seconds
 	log.Printf("Placeholder: Simulating inference for %v...", d)
 	time.Sleep(d)

@@ -22,14 +22,23 @@ type InferenceJobProcessor struct {
 	modelArtifactPath string
 }
 
+func NewInferenceJobProcessor(db *gorm.DB, s3client *s3.Client, localModelDir string, modelArtifactPath string) *InferenceJobProcessor {
+	return &InferenceJobProcessor{
+		db:                db,
+		s3client:          s3client,
+		localModelDir:     localModelDir,
+		modelArtifactPath: modelArtifactPath,
+	}
+}
+
 func (proc *InferenceJobProcessor) RunInferenceTask(
-	jobId uuid.UUID,
+	reportId uuid.UUID,
 	modelId uuid.UUID,
 	modelType string,
 	groupToQuery map[uuid.UUID]string,
 	bucket string,
 	objects []string,
-) {
+) error {
 	parser := NewDefaultParser()
 
 	model, err := proc.loadModel(modelId, modelType)
@@ -40,28 +49,39 @@ func (proc *InferenceJobProcessor) RunInferenceTask(
 	for groupId, query := range groupToQuery {
 		filter, err := ParseQuery(query)
 		if err != nil {
-
+			return fmt.Errorf("error loading model: %w", err)
 		}
 		groupToFilter[groupId] = filter
 	}
 
+	objectErrorCnt := 0
+
 	for _, object := range objects {
-		entities, groups, err := proc.processObject(jobId, parser, model, groupToFilter, bucket, object)
+		entities, groups, err := proc.processObject(reportId, parser, model, groupToFilter, bucket, object)
 		if err != nil {
 			slog.Error("error processing object", "object", object, "error", err)
+			objectErrorCnt++
 			continue
 		}
 
 		if err := proc.db.CreateInBatches(&entities, 100).Error; err != nil {
 			slog.Error("error saving entities to database", "object", object, "error", err)
+			objectErrorCnt++
 			continue
 		}
 
 		if err := proc.db.CreateInBatches(groups, 100); err != nil {
 			slog.Error("error saving groups to database", "object", object, "error", err)
+			objectErrorCnt++
 			continue
 		}
 	}
+
+	if objectErrorCnt > 0 {
+		return fmt.Errorf("errors while processing %d/%d objects", objectErrorCnt, len(objects))
+	}
+
+	return nil
 }
 
 func (proc *InferenceJobProcessor) loadModel(modelId uuid.UUID, modelType string) (Model, error) {
@@ -88,7 +108,7 @@ func (proc *InferenceJobProcessor) loadModel(modelId uuid.UUID, modelType string
 }
 
 func (proc *InferenceJobProcessor) processObject(
-	jobId uuid.UUID,
+	reportId uuid.UUID,
 	parser Parser,
 	model Model,
 	groupFilter map[uuid.UUID]Filter,
@@ -121,9 +141,9 @@ func (proc *InferenceJobProcessor) processObject(
 	for groupId, filter := range groupFilter {
 		if filter.Matches(labelToEntities) {
 			groups = append(groups, database.ObjectGroup{
-				InferenceJobId: jobId,
-				GroupId:        groupId,
-				Object:         object,
+				ReportId: reportId,
+				GroupId:  groupId,
+				Object:   object,
 			})
 		}
 	}
@@ -132,12 +152,12 @@ func (proc *InferenceJobProcessor) processObject(
 	for _, entities := range labelToEntities {
 		for _, entity := range entities {
 			allEntities = append(allEntities, database.ObjectEntity{
-				InferenceJobId: jobId,
-				Label:          entity.Label,
-				Text:           entity.Text,
-				Start:          entity.Start,
-				End:            entity.End,
-				Object:         object,
+				ReportId: reportId,
+				Label:    entity.Label,
+				Text:     entity.Text,
+				Start:    entity.Start,
+				End:      entity.End,
+				Object:   object,
 			})
 		}
 	}

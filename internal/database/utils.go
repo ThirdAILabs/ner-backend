@@ -14,24 +14,16 @@ func UpdateModelStatus(ctx context.Context, txn *gorm.DB, modelId uuid.UUID, sta
 	return nil
 }
 
-func UpdateInferenceTaskStatus(ctx context.Context, txn *gorm.DB, jobId uuid.UUID, status string) error {
-	if err := txn.WithContext(ctx).Model(&InferenceTask{Id: jobId}).Update("status", status).Error; err != nil {
+func UpdateInferenceTaskStatus(ctx context.Context, txn *gorm.DB, reportId uuid.UUID, taskId int, status string) error {
+	if err := txn.WithContext(ctx).Model(&InferenceTask{ReportId: reportId, TaskId: taskId}).Update("status", status).Error; err != nil {
 		return err
 	}
 	return nil
 }
 
-func UpdateShardDataTaskStatus(ctx context.Context, txn *gorm.DB, jobId uuid.UUID, status string) error {
-	if err := txn.WithContext(ctx).Model(&ShardDataTask{Id: jobId}).Update("status", status).Error; err != nil {
+func UpdateShardDataTaskStatus(ctx context.Context, txn *gorm.DB, reportId uuid.UUID, status string) error {
+	if err := txn.WithContext(ctx).Model(&ShardDataTask{ReportId: reportId}).Update("status", status).Error; err != nil {
 		return err
 	}
 	return nil
-}
-
-func GetModelByID(ctx context.Context, db *gorm.DB, modelId uuid.UUID) (*Model, error) {
-	var model Model
-	if err := db.WithContext(ctx).Where("id = ?", modelId).First(&model).Error; err != nil {
-		return nil, err
-	}
-	return &model, nil
 }

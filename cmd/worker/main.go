@@ -3,6 +3,7 @@ package main
 import (
 	"log" // Adjust import path
 	"ner-backend/cmd"
+	"ner-backend/internal/core"
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/s3"
@@ -74,6 +75,7 @@ func main() {
 		Config:    &workerCfg,
 		WaitGroup: &wg,
 		Publisher: publisher,
+		Processor: core.NewInferenceJobProcessor(db, s3Client, "./tmp_models_TODO", cfg.ModelBucketName),
 	}
 
 	// Start worker consumers

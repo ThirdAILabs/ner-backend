@@ -13,37 +13,10 @@ type TrainTaskPayload struct {
 }
 
 type ShardDataPayload struct {
-	JobId   uuid.UUID
-	ModelId uuid.UUID
-
-	ModelArtifactPath string
-
-	SourceS3Bucket string
-	SourceS3Prefix string
-
-	DestS3Bucket     string
-	ChunkTargetBytes int64
+	ReportId uuid.UUID
 }
 
 type InferenceTaskPayload struct {
-	JobId             uuid.UUID
-	ModelId           uuid.UUID
-	ShardDataTaskId   uuid.UUID
-	ModelArtifactPath string // S3 Path to the trained model artifact
-	SourceS3Bucket    string
-	SourceS3Keys      []string // List of keys for the chunk
-	DestS3Bucket      string   // Bucket to upload results to
-}
-
-type InferenceRequest struct {
-	ModelId        uuid.UUID `validate:"required"`
-	SourceS3Bucket string    `validate:"required"`
-	SourceS3Prefix string
-	DestS3Bucket   string `validate:"required"`
-
-	Groups map[string]string
-}
-
-type InferenceResponse struct {
-	JobId uuid.UUID
+	ReportId uuid.UUID
+	TaskId   int
 }

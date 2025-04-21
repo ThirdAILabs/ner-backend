@@ -2,7 +2,6 @@ package messaging
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log" // Adjust import path
@@ -34,6 +33,8 @@ type Worker struct {
 	Config    *WorkerConfig
 	WaitGroup *sync.WaitGroup
 	Publisher *TaskPublisher
+
+	Processor *core.InferenceJobProcessor
 }
 
 func (worker *Worker) StartThreads(rabbitMQURL string) error {
@@ -316,161 +317,125 @@ func (worker *Worker) handleTrainTask(ctx context.Context, payload models.TrainT
 }
 
 func (worker *Worker) handleInferenceTask(ctx context.Context, payload models.InferenceTaskPayload) error {
-	log.Printf("Handling inference task for job %s", payload.JobId) // Log job ID once
-	tempDir, err := os.MkdirTemp("", fmt.Sprintf("infer-%s-*", payload.JobId))
-	if err != nil {
-		return fmt.Errorf("failed to create temp dir: %w", err)
-	}
-	defer os.RemoveAll(tempDir)
+	reportId := payload.ReportId
 
-	modelDir := filepath.Join(tempDir, "model")
-
-	// Download Model (once for the job)
-	log.Println("Downloading model artifact...")
-	localModelPath, err := worker.S3Client.DownloadModelArtifact(ctx, payload.ModelId, modelDir, "model.bin") // Assuming .bin from training
-	if err != nil {
-		return fmt.Errorf("failed to download model %s: %w", payload.ModelId, err)
-	}
-	log.Println("Model artifact downloaded.")
-
-	// Loop through each source key
-	for _, sourceS3Key := range payload.SourceS3Keys {
-		log.Printf("Processing file %s for job %s", sourceS3Key, payload.JobId) // Log current file
-
-		localInputPath := filepath.Join(tempDir, filepath.Base(sourceS3Key))
-		// Define local result path inside loop, maybe make unique if needed later, but simple overwrite is fine for now
-		localResultPath := filepath.Join(tempDir, "results.json")
-
-		// Download Source File
-		log.Println("Downloading source file...")
-		err = worker.S3Client.DownloadFile(ctx, payload.SourceS3Bucket, sourceS3Key, localInputPath)
-		if err != nil {
-			// Log error for this specific file, but return to stop the whole task as per original logic
-			return fmt.Errorf("failed to download source file s3://%s/%s: %w", payload.SourceS3Bucket, sourceS3Key, err)
-		}
-		log.Println("Source file downloaded.")
-
-		// Run Inference
-		log.Println("Running inference...")
-		results, err := core.RunInference(localModelPath, localInputPath)
-		if err != nil {
-			return fmt.Errorf("inference failed for file %s: %w", sourceS3Key, err)
-		}
-		log.Println("Inference complete.")
-
-		// Save results locally
-		resultBytes, err := json.MarshalIndent(results, "", "  ")
-		if err != nil {
-			return fmt.Errorf("failed to marshal inference results for file %s: %w", sourceS3Key, err)
-		}
-		err = os.WriteFile(localResultPath, resultBytes, 0644)
-		if err != nil {
-			return fmt.Errorf("failed to save results locally for file %s: %w", sourceS3Key, err)
-		}
-
-		// Upload Results
-		log.Println("Uploading results...")
-		resultFilename := strings.ReplaceAll(sourceS3Key, "/", "_") + ".json"
-		resultS3Key := fmt.Sprintf("results/%s/%s", payload.JobId, resultFilename)
-		_, err = worker.S3Client.UploadFile(ctx, localResultPath, payload.DestS3Bucket, resultS3Key)
-		if err != nil {
-			return fmt.Errorf("failed to upload results for file %s: %w", sourceS3Key, err)
-		}
-		log.Println("Results uploaded.")
-
+	var task database.InferenceTask
+	if err := worker.DB.WithContext(ctx).Preload("Report").Preload("Report.Model").Preload("Report.Groups").First(&task, "report_id = ? AND task_id = ?", reportId, payload.TaskId).Error; err != nil {
+		slog.Error("error fetching inference task", "report_id", reportId, "task_id", payload.TaskId, "error", err)
+		return fmt.Errorf("error getting inference task: %w", err)
 	}
 
-	log.Printf("Successfully processed all files for job %s", payload.JobId)
+	if err := database.UpdateInferenceTaskStatus(ctx, worker.DB, reportId, payload.TaskId, database.JobRunning); err != nil {
+		slog.Error("error updating inference task status to running", "report_id", reportId, "task_id", payload.TaskId, "error", err)
+	}
+
+	s3Objects := strings.Split(task.SourceS3Keys, ";")
+
+	groupToQuery := map[uuid.UUID]string{}
+	for _, group := range task.Report.Groups {
+		groupToQuery[group.Id] = group.Query
+	}
+
+	workerErr := worker.Processor.RunInferenceTask(task.ReportId, task.Report.Model.Id, task.Report.Model.Type, groupToQuery, task.SourceS3Bucket, s3Objects)
+	if workerErr != nil {
+		slog.Error("error running inference task", "report_id", reportId, "task_id", payload.TaskId, "error", workerErr)
+		if err := database.UpdateInferenceTaskStatus(ctx, worker.DB, reportId, payload.TaskId, database.JobFailed); err != nil {
+			slog.Error("error updating inference task status to failed", "report_id", reportId, "task_id", payload.TaskId, "error", err)
+		}
+		return fmt.Errorf("error running inference task: %w", workerErr)
+	}
+
+	if err := database.UpdateInferenceTaskStatus(ctx, worker.DB, reportId, payload.TaskId, database.JobCompleted); err != nil {
+		slog.Error("error updating inference task status to complete", "report_id", reportId, "task_id", payload.TaskId, "error", err)
+		return fmt.Errorf("error updating inference task status to complete: %w", err)
+	}
+
 	return nil
 }
 
 func (worker *Worker) handleShardDataTask(ctx context.Context, payload models.ShardDataPayload) error {
-	slog.Info("Handling generate tasks", "jobId", payload.JobId, "sourceBucket", payload.SourceS3Bucket, "sourcePrefix", payload.SourceS3Prefix)
+	reportId := payload.ReportId
 
-	s3Client := worker.S3Client
+	var task database.ShardDataTask
+	if err := worker.DB.WithContext(ctx).Preload("Report").First(&task, "report_id = ?", reportId).Error; err != nil {
+		slog.Error("error fetching shard data task", "report_id", reportId, "error", err)
+		return fmt.Errorf("error getting shard data task: %w", err)
+	}
 
-	targetBytes := payload.ChunkTargetBytes
+	slog.Info("Handling generate tasks", "jobId", task.ReportId, "sourceBucket", task.Report.SourceS3Bucket, "sourcePrefix", task.Report.SourceS3Prefix)
+
+	targetBytes := task.ChunkTargetBytes
 	if targetBytes <= 0 {
 		targetBytes = 10 * 1024 * 1024 * 1024 // Default 10GB if not set or invalid
-		slog.Info("Using default chunk target size", "targetBytes", targetBytes, "jobId", payload.JobId)
+		slog.Info("Using default chunk target size", "targetBytes", targetBytes, "jobId", reportId)
 	}
 
-	var totalTasksQueued int = 0
-
-	job := database.InferenceTask{
-		Id:              uuid.New(),
-		ModelId:         payload.ModelId,
-		ShardDataTaskId: payload.JobId,
-		SourceS3Bucket:  payload.SourceS3Bucket,
-		SourceS3Prefix:  sql.NullString{String: payload.SourceS3Prefix, Valid: payload.SourceS3Prefix != ""},
-		DestS3Bucket:    payload.DestS3Bucket,
-		Status:          database.JobQueued,
-		CreationTime:    time.Now(),
-	}
-
-	if err := worker.DB.WithContext(ctx).Create(&job).Error; err != nil {
-		slog.Error("error creating inference job", "error", err)
-		_ = database.UpdateShardDataTaskStatus(ctx, worker.DB, payload.JobId, database.JobFailed)
-		return fmt.Errorf("failed during task generation for job %s: %w", payload.JobId, err)
-	}
+	var taskIndex int = 0
 
 	// Define the callback function to process each chunk
 	processChunkCallback := func(ctx context.Context, chunkKeys []string, chunkSize int64) error {
-		currentTaskIndex := totalTasksQueued + 1 // For logging clarity
-		slog.Info("Handler: Processing chunk", "chunkIndex", currentTaskIndex, "jobId", payload.JobId, "chunkSize", chunkSize, "keyCount", len(chunkKeys))
+		taskIndex++ // Increment count *after* successful publishing
+		slog.Info("Handler: Processing chunk", "chunkIndex", taskIndex, "jobId", reportId, "chunkSize", chunkSize, "keyCount", len(chunkKeys))
+
+		task := database.InferenceTask{
+			ReportId:     reportId,
+			TaskId:       taskIndex,
+			Status:       database.JobQueued,
+			CreationTime: time.Now().UTC(),
+
+			SourceS3Bucket: task.Report.SourceS3Bucket,
+			SourceS3Keys:   strings.Join(chunkKeys, ";"),
+			TotalSize:      chunkSize,
+		}
 
 		inferencePayload := models.InferenceTaskPayload{
-			JobId:             job.Id,
-			ShardDataTaskId:   payload.JobId,
-			ModelId:           payload.ModelId,
-			ModelArtifactPath: payload.ModelArtifactPath,
-			SourceS3Bucket:    payload.SourceS3Bucket,
-			SourceS3Keys:      chunkKeys,
-			DestS3Bucket:      payload.DestS3Bucket,
+			ReportId: task.ReportId, TaskId: task.TaskId,
 		}
 
 		if err := worker.Publisher.PublishInferenceTask(ctx, inferencePayload); err != nil {
 			// Use slog.Error for failures
-			slog.Error("Handler: Failed to publish inference chunk", "chunkIndex", currentTaskIndex, "jobId", payload.JobId, "error", err)
+			slog.Error("Handler: Failed to publish inference chunk", "report_id", reportId, "task_id", taskIndex, "error", err)
 			// Return the error so the helper function knows processing failed
-			return fmt.Errorf("failed to publish inference chunk %d: %w", currentTaskIndex, err)
+			return fmt.Errorf("failed to publish inference chunk %d: %w", taskIndex, err)
 		}
 
-		totalTasksQueued++ // Increment count *after* successful publishing
-		// Log success using the index of the task just published (which is now totalTasksQueued)
-		slog.Info("Handler: Successfully published chunk", "chunkIndex", totalTasksQueued, "jobId", payload.JobId)
+		if err := worker.DB.WithContext(ctx).Create(&task).Error; err != nil {
+			slog.Error("error saving inference task to db", "report_id", task.ReportId, "task_id", task.TaskId, "error", err)
+			return fmt.Errorf("error saving inference task to db: %w", err)
+		}
+
 		return nil
 	}
 
-	processedChunks, err := s3Client.ListAndChunkS3Objects(
+	processedChunks, err := worker.S3Client.ListAndChunkS3Objects(
 		ctx,
-		payload.SourceS3Bucket,
-		payload.SourceS3Prefix,
+		task.Report.SourceS3Bucket,
+		task.Report.SourceS3Prefix.String,
 		targetBytes,
-		payload.JobId,
+		reportId,
 		processChunkCallback,
 	)
 
 	// Check for errors from the helper (S3 listing or callback failure)
 	if err != nil {
 		// Use slog.Error
-		slog.Error("Failed during S3 processing/chunk publishing", "jobId", payload.JobId, "error", err)
-		_ = database.UpdateShardDataTaskStatus(ctx, worker.DB, payload.JobId, database.JobFailed)
-		return fmt.Errorf("failed during task generation for job %s: %w", payload.JobId, err)
+		slog.Error("Failed during S3 processing/chunk publishing", "report_id", reportId, "error", err)
+		_ = database.UpdateShardDataTaskStatus(ctx, worker.DB, reportId, database.JobFailed)
+		return fmt.Errorf("failed during task generation for job %s: %w", reportId, err)
 	}
 
 	// Double-check if the counter matches (it should if no errors occurred)
-	if processedChunks != totalTasksQueued {
+	if processedChunks != taskIndex {
 		// Use slog.Warn for potential issues/mismatches
-		slog.Warn("Mismatch between processed chunks and tasks queued", "processedChunks", processedChunks, "tasksQueued", totalTasksQueued, "jobId", payload.JobId)
+		slog.Warn("Mismatch between processed chunks and tasks queued", "processedChunks", processedChunks, "n_tasks", taskIndex, "report_id", reportId)
 	}
 
-	slog.Info("Finished generating inference task chunks", "tasksQueued", totalTasksQueued, "jobId", payload.JobId)
+	slog.Info("Finished generating inference task chunks", "n_tasks", taskIndex, "report_id", reportId)
 
-	dbErr := database.UpdateShardDataTaskStatus(ctx, worker.DB, payload.JobId, database.JobCompleted)
+	dbErr := database.UpdateShardDataTaskStatus(ctx, worker.DB, reportId, database.JobCompleted)
 	if dbErr != nil {
 		// Use slog.Error
-		slog.Error("Failed to update job final status", "jobId", payload.JobId, "status", database.JobCompleted, "error", dbErr)
+		slog.Error("Failed to update job final status", "report_id", reportId, "status", database.JobCompleted, "error", dbErr)
 	}
 
 	return nil

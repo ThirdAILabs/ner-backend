@@ -2,8 +2,7 @@ package api
 
 import (
 	"database/sql"
-	"errors"
-	"log" // Adjust import path
+	"errors" // Adjust import path
 	"log/slog"
 	"ner-backend/internal/core"
 	"ner-backend/internal/database"
@@ -37,12 +36,12 @@ func (s *BackendService) AddRoutes(r chi.Router) {
 		r.Get("/", RestHandler(s.ListModels))
 		r.Get("/{model_id}", RestHandler(s.GetModel))
 	})
-	r.Route("/inference", func(r chi.Router) {
-		r.Get("/", RestHandler(s.ListInferenceJobs))
-		r.Post("/", RestHandler(s.SubmitInferenceJob))
-		r.Get("/{job_id}", RestHandler(s.GetInferenceJob))
-		r.Get("/{job_id}/groups/{group_id}", RestHandler(s.GetInferenceJobGroup))
-		r.Get("/{job_id}/entities", RestHandler(s.GetInferenceJobEntities))
+	r.Route("/reports", func(r chi.Router) {
+		r.Get("/", RestHandler(s.ListReports))
+		r.Post("/", RestHandler(s.CreateReport))
+		r.Get("/{report_id}", RestHandler(s.GetReport))
+		r.Get("/{report_id}/groups/{group_id}", RestHandler(s.GetReportGroup))
+		r.Get("/{report_id}/entities", RestHandler(s.GetReportEntities))
 	})
 }
 
@@ -64,8 +63,8 @@ func (s *BackendService) GetModel(r *http.Request) (any, error) {
 
 	ctx := r.Context()
 
-	model, err := database.GetModelByID(ctx, s.db, modelId)
-	if err != nil {
+	var model database.Model
+	if err := s.db.WithContext(ctx).First(&model, "id = ?", modelId).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, CodedErrorf(http.StatusNotFound, "model not found")
 		}
@@ -76,7 +75,7 @@ func (s *BackendService) GetModel(r *http.Request) (any, error) {
 	return model, nil
 }
 
-func (s *BackendService) ListInferenceJobs(r *http.Request) (any, error) {
+func (s *BackendService) ListReports(r *http.Request) (any, error) {
 	ctx := r.Context()
 	var jobs []database.ShardDataTask
 	if err := s.db.WithContext(ctx).Preload("Groups").Find(&jobs).Error; err != nil {
@@ -86,8 +85,21 @@ func (s *BackendService) ListInferenceJobs(r *http.Request) (any, error) {
 	return jobs, nil
 }
 
-func (s *BackendService) SubmitInferenceJob(r *http.Request) (any, error) {
-	req, err := ParseRequest[models.InferenceRequest](r)
+type CreateReportRequest struct {
+	ModelId        uuid.UUID `validate:"required"`
+	SourceS3Bucket string    `validate:"required"`
+	SourceS3Prefix string
+	DestS3Bucket   string `validate:"required"`
+
+	Groups map[string]string
+}
+
+type CreateReportResponse struct {
+	JobId uuid.UUID
+}
+
+func (s *BackendService) CreateReport(r *http.Request) (any, error) {
+	req, err := ParseRequest[CreateReportRequest](r)
 	if err != nil {
 		return nil, err
 	}
@@ -97,15 +109,12 @@ func (s *BackendService) SubmitInferenceJob(r *http.Request) (any, error) {
 		return nil, CodedErrorf(http.StatusUnprocessableEntity, "missing required fields: model_id, source_s3_bucket, dest_s3_bucket")
 	}
 
-	job := database.ShardDataTask{
-		Id:               uuid.New(),
-		ModelId:          req.ModelId,
-		SourceS3Bucket:   req.SourceS3Bucket,
-		SourceS3Prefix:   sql.NullString{String: req.SourceS3Prefix, Valid: req.SourceS3Prefix != ""},
-		DestS3Bucket:     req.DestS3Bucket,
-		ChunkTargetBytes: s.chunkTargetBytes,
-		CreationTime:     time.Now(),
-		Status:           database.JobQueued,
+	report := database.Report{
+		Id:             uuid.New(),
+		ModelId:        req.ModelId,
+		SourceS3Bucket: req.SourceS3Bucket,
+		SourceS3Prefix: sql.NullString{String: req.SourceS3Prefix, Valid: req.SourceS3Prefix != ""},
+		CreationTime:   time.Now().UTC(),
 	}
 
 	for name, query := range req.Groups {
@@ -113,12 +122,19 @@ func (s *BackendService) SubmitInferenceJob(r *http.Request) (any, error) {
 			return nil, CodedErrorf(http.StatusUnprocessableEntity, "invalid query '%s' for group '%s': %v", query, name, err)
 		}
 
-		job.Groups = append(job.Groups, database.Group{
-			Id:             uuid.New(),
-			Name:           name,
-			InferenceJobId: job.Id,
-			Query:          query,
+		report.Groups = append(report.Groups, database.Group{
+			Id:       uuid.New(),
+			Name:     name,
+			ReportId: report.Id,
+			Query:    query,
 		})
+	}
+
+	task := database.ShardDataTask{
+		ReportId:         report.Id,
+		Status:           database.JobQueued,
+		CreationTime:     time.Now().UTC(),
+		ChunkTargetBytes: s.chunkTargetBytes,
 	}
 
 	ctx := r.Context()
@@ -141,46 +157,34 @@ func (s *BackendService) SubmitInferenceJob(r *http.Request) (any, error) {
 			return CodedErrorf(http.StatusInternalServerError, "model artifact path is missing")
 		}
 
-		if err := s.db.WithContext(ctx).Create(&job).Error; err != nil {
-			slog.Error("error creating inference job", "error", err)
-			return CodedErrorf(http.StatusInternalServerError, "failed to create inference job entry")
+		if err := s.db.WithContext(ctx).Create(&report).Error; err != nil {
+			slog.Error("error creating report entrt", "error", err)
+			return CodedErrorf(http.StatusInternalServerError, "failed to create report entry")
 		}
+
+		err = s.publisher.PublishShardDataTask(ctx, models.ShardDataPayload{ReportId: report.Id})
+		if err != nil {
+			slog.Error("error queueing shard data task", "error", err)
+			_ = database.UpdateShardDataTaskStatus(ctx, s.db, report.Id, database.JobFailed)
+			return CodedErrorf(http.StatusInternalServerError, "failed to queue shard data task")
+		}
+
+		if err := s.db.WithContext(ctx).Create(&task).Error; err != nil {
+			slog.Error("error creating shard data task", "error", err)
+			return CodedErrorf(http.StatusInternalServerError, "failed to create shard data task")
+		}
+
 		return nil
 	}); err != nil {
 		return nil, err
 	}
 
-	log.Printf("Queueing ShardData task for job %s...", job.Id)
-
-	shardDataPayload := models.ShardDataPayload{
-		JobId:             job.Id,
-		ModelId:           req.ModelId,
-		ModelArtifactPath: model.ModelArtifactPath,
-		SourceS3Bucket:    req.SourceS3Bucket,
-		SourceS3Prefix:    req.SourceS3Prefix,
-		DestS3Bucket:      req.DestS3Bucket,
-		ChunkTargetBytes:  s.chunkTargetBytes,
-	}
-
-	err = s.publisher.PublishShardDataTask(ctx, shardDataPayload)
-	if err != nil {
-		log.Printf("CRITICAL: Failed to publish ShardData task for job %s: %v", job.Id, err)
-		_ = database.UpdateShardDataTaskStatus(ctx, s.db, job.Id, database.JobFailed)
-		return nil, err
-	}
-
-	finalStatus := database.JobRunning
-
-	if err := database.UpdateShardDataTaskStatus(ctx, s.db, job.Id, finalStatus); err != nil {
-		log.Printf("ERROR: Failed to update job %s status to %s after queueing: %v", job.Id, finalStatus, err)
-	}
-
-	log.Printf("Submitted inference job %s.", job.Id)
-	return models.InferenceResponse{JobId: job.Id}, nil
+	slog.Info("created report", "report_id", report.Id)
+	return CreateReportResponse{JobId: report.Id}, nil
 }
 
-func (s *BackendService) GetInferenceJob(r *http.Request) (any, error) {
-	jobId, err := URLParamUUID(r, "job_id")
+func (s *BackendService) GetReport(r *http.Request) (any, error) {
+	reportId, err := URLParamUUID(r, "report_id")
 	if err != nil {
 		return nil, err
 	}
@@ -189,19 +193,19 @@ func (s *BackendService) GetInferenceJob(r *http.Request) (any, error) {
 
 	// TODO: get statuses of all inference tasks associated with shard data task
 	var job database.ShardDataTask
-	if err := s.db.WithContext(ctx).Find(&job, "id = ?", jobId).Error; err != nil {
+	if err := s.db.WithContext(ctx).Find(&job, "id = ?", reportId).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, CodedErrorf(http.StatusNotFound, "inference job not found")
 		}
-		slog.Error("error getting inference job", "job_id", jobId, "error", err)
+		slog.Error("error getting inference job", "report_id", reportId, "error", err)
 		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving inference job record")
 	}
 
 	return job, nil
 }
 
-func (s *BackendService) GetInferenceJobGroup(r *http.Request) (any, error) {
-	jobId, err := URLParamUUID(r, "job_id")
+func (s *BackendService) GetReportGroup(r *http.Request) (any, error) {
+	reportId, err := URLParamUUID(r, "report_id")
 	if err != nil {
 		return nil, err
 	}
@@ -214,19 +218,19 @@ func (s *BackendService) GetInferenceJobGroup(r *http.Request) (any, error) {
 	ctx := r.Context()
 
 	var group database.Group
-	if err := s.db.WithContext(ctx).Preload("Objects").First(&group, "inference_job_id = ? AND id = ?", jobId, groupId).Error; err != nil {
+	if err := s.db.WithContext(ctx).Preload("Objects").First(&group, "report_id = ? AND id = ?", reportId, groupId).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, CodedErrorf(http.StatusNotFound, "inference job group not found")
 		}
-		slog.Error("error getting inference job group", "job_id", jobId, "group_id", groupId, "error", err)
+		slog.Error("error getting inference job group", "report_id", reportId, "group_id", groupId, "error", err)
 		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving inference job group record")
 	}
 
 	return group, nil
 }
 
-func (s *BackendService) GetInferenceJobEntities(r *http.Request) (any, error) {
-	jobId, err := URLParamUUID(r, "job_id")
+func (s *BackendService) GetReportEntities(r *http.Request) (any, error) {
+	reportId, err := URLParamUUID(r, "report_id")
 	if err != nil {
 		return nil, err
 	}
@@ -261,8 +265,8 @@ func (s *BackendService) GetInferenceJobEntities(r *http.Request) (any, error) {
 	}
 
 	var entities []database.ObjectEntity
-	if err := query.Find(&entities, "inference_job_id = ?", jobId).Error; err != nil {
-		slog.Error("error getting job entities", "job_id", jobId, "error", err)
+	if err := query.Find(&entities, "report_id = ?", reportId).Error; err != nil {
+		slog.Error("error getting job entities", "report_id", reportId, "error", err)
 		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving inference job entities")
 	}
 
