@@ -24,7 +24,6 @@ type WorkerConfig struct {
 	ModelBucketName   string `env:"MODEL_BUCKET_NAME" envDefault:"models"`
 	QueueNames        string `env:"QUEUE_NAMES" envDefault:"inference_queue,training_queue,shard_data_queue"`
 	WorkerConcurrency int    `env:"CONCURRENCY" envDefault:"1"`
-	APIPort           string `env:"API_PORT" envDefault:"8001"`
 }
 
 func main() {

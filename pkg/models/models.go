@@ -28,6 +28,7 @@ type ShardDataPayload struct {
 type InferenceTaskPayload struct {
 	JobId             uuid.UUID
 	ModelId           uuid.UUID
+	ShardDataTaskId   uuid.UUID
 	ModelArtifactPath string // S3 Path to the trained model artifact
 	SourceS3Bucket    string
 	SourceS3Keys      []string // List of keys for the chunk

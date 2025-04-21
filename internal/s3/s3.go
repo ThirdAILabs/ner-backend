@@ -251,15 +251,14 @@ func (c *Client) DownloadTrainingData(ctx context.Context, sourceS3Path, downloa
 	return downloadedFiles, nil
 }
 
-func (c *Client) ListAndChunkS3Objects( // Changed to a method with receiver (c *Client)
+func (c *Client) ListAndChunkS3Objects(
 	ctx context.Context,
 	bucket string,
 	prefix string,
 	targetChunkBytes int64,
-	callerID uuid.UUID, // Generic ID for logging context (e.g., Job ID, Request ID)
+	callerID uuid.UUID,
 	processChunk func(ctx context.Context, chunkKeys []string, chunkSize int64) error,
 ) (int, error) {
-	// Using slog.Default() for logging. Could use c.logger if it were initialized.
 	logger := slog.Default().With("component", "S3Chunker", "caller", callerID, "bucket", bucket, "prefix", prefix)
 
 	// Use the client from the receiver (c.s3Client) instead of a parameter

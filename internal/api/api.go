@@ -57,14 +57,14 @@ func (s *BackendService) ListModels(r *http.Request) (any, error) {
 }
 
 func (s *BackendService) GetModel(r *http.Request) (any, error) {
-	modelId, err := URLParamUUID(r, "model_id") // Assuming URLParamUUID is defined
+	modelId, err := URLParamUUID(r, "model_id")
 	if err != nil {
-		return nil, CodedErrorf(http.StatusBadRequest, "invalid model_id format")
+		return nil, err
 	}
 
 	ctx := r.Context()
 
-	model, err := database.GetModelByID(ctx, s.db, modelId) // Use the new helper
+	model, err := database.GetModelByID(ctx, s.db, modelId)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, CodedErrorf(http.StatusNotFound, "model not found")
@@ -73,7 +73,7 @@ func (s *BackendService) GetModel(r *http.Request) (any, error) {
 		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving model record")
 	}
 
-	return model, nil // Return the pointer returned by the helper
+	return model, nil
 }
 
 func (s *BackendService) ListInferenceJobs(r *http.Request) (any, error) {
@@ -94,7 +94,7 @@ func (s *BackendService) SubmitInferenceJob(r *http.Request) (any, error) {
 
 	// Basic validation
 	if req.SourceS3Bucket == "" || req.DestS3Bucket == "" {
-		return nil, CodedErrorf(http.StatusBadRequest, "model_id, source_s3_bucket, and dest_s3_bucket are required")
+		return nil, CodedErrorf(http.StatusUnprocessableEntity, "missing required fields: model_id, source_s3_bucket, dest_s3_bucket")
 	}
 
 	job := database.ShardDataTask{
