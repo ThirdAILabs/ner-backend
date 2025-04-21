@@ -39,14 +39,18 @@ type ShardDataTask struct {
 	SourceS3Prefix sql.NullString
 	DestS3Bucket   string
 
-	Status         string `gorm:"size:20;not null"`
-	CreationTime   time.Time
-	CompletionTime sql.NullTime
+	Status           string `gorm:"size:20;not null"`
+	CreationTime     time.Time
+	CompletionTime   sql.NullTime
+	ChunkTargetBytes int64
+
+	Groups []Group `gorm:"foreignKey:ShardDataTaskId;constraint:OnDelete:CASCADE"`
 }
 
 type InferenceTask struct {
-	Id      uuid.UUID `gorm:"type:uuid;primaryKey"`
-	ModelId uuid.UUID `gorm:"type:uuid"`
+	Id              uuid.UUID `gorm:"type:uuid;primaryKey"`
+	ModelId         uuid.UUID `gorm:"type:uuid"`
+	ShardDataTaskId uuid.UUID `gorm:"type:uuid"`
 
 	SourceS3Bucket string
 	SourceS3Prefix sql.NullString
@@ -55,8 +59,6 @@ type InferenceTask struct {
 	Status         string `gorm:"size:20;not null"`
 	CreationTime   time.Time
 	CompletionTime sql.NullTime
-
-	Groups []Group `gorm:"foreignKey:InferenceJobId;constraint:OnDelete:CASCADE"`
 }
 
 type Group struct {
@@ -64,6 +66,8 @@ type Group struct {
 	Name           string
 	InferenceJobId uuid.UUID `gorm:"type:uuid"`
 	Query          string
+
+	Objects []ObjectGroup `gorm:"foreignKey:InferenceJobId;constraint:OnDelete:CASCADE"`
 }
 
 type ObjectGroup struct {

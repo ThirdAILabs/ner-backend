@@ -30,6 +30,7 @@ type APIConfig struct {
 	QueueNames        string `env:"QUEUE_NAMES" envDefault:"inference_queue,training_queue,shard_data_queue"`
 	WorkerConcurrency int    `env:"CONCURRENCY" envDefault:"1"`
 	APIPort           string `env:"API_PORT" envDefault:"8001"`
+	ChunkTargetBytes  int64  `env:"S3_CHUNK_TARGET_BYTES" envDefault:"10737418240"`
 }
 
 func main() {
@@ -78,7 +79,7 @@ func main() {
 	r.Use(middleware.Timeout(60 * time.Second)) // Set request timeout
 
 	// API Handlers (dependency injection)
-	apiHandler := api.NewBackendService(db, publisher, s3Client)
+	apiHandler := api.NewBackendService(db, publisher, s3Client, cfg.ChunkTargetBytes)
 
 	apiHandler.AddRoutes(r)
 
