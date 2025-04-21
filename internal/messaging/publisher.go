@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"log/slog"
 	"time"
 
 	"ner-backend/pkg/models" // Adjust import path
@@ -15,6 +16,7 @@ import (
 const (
 	TrainingQueue   = "training_queue"
 	InferenceQueue  = "inference_queue"
+	ShardDataQueue  = "shard_data_queue"
 	RetryDelay      = 5 * time.Second
 	MaxConnectRetry = 5
 )
@@ -57,6 +59,12 @@ func (p *TaskPublisher) connect() error {
 				p.channel.Close()
 				p.conn.Close()
 				return fmt.Errorf("failed to declare queue %s: %w", InferenceQueue, err)
+			}
+			_, err = p.channel.QueueDeclare(ShardDataQueue, true, false, false, false, nil) // Durable
+			if err != nil {
+				p.channel.Close()
+				p.conn.Close()
+				return fmt.Errorf("failed to declare queue %s: %w", ShardDataQueue, err)
 			}
 
 			log.Println("RabbitMQ channel opened and queues declared.")
@@ -102,63 +110,67 @@ func (p *TaskPublisher) ensureChannel() error {
 	return nil
 }
 
-// PublishTrainTask sends a training task to the queue
-func (p *TaskPublisher) PublishTrainTask(ctx context.Context, payload models.TrainTaskPayload) error {
+func (p *TaskPublisher) publishTaskInternal(ctx context.Context, queueName string, payload interface{}, taskType string) error {
 	if err := p.ensureChannel(); err != nil {
 		return err
 	}
 
 	body, err := json.Marshal(payload)
 	if err != nil {
-		return fmt.Errorf("failed to marshal train task payload: %w", err)
+		slog.Error("Failed to marshal payload",
+			slog.String("task_type", taskType),
+			slog.Any("error", err),
+		)
+		return fmt.Errorf("failed to marshal %s payload: %w", taskType, err)
 	}
 
 	err = p.channel.PublishWithContext(ctx,
-		"",            // exchange (default)
-		TrainingQueue, // routing key (queue name)
-		false,         // mandatory
-		false,         // immediate
+		"",        // exchange (default)
+		queueName, // routing key (queue name)
+		false,     // mandatory
+		false,     // immediate
 		amqp.Publishing{
 			ContentType:  "application/json",
 			DeliveryMode: amqp.Persistent, // Make message persistent
 			Body:         body,
 		})
+
 	if err != nil {
-		// Handle potential connection errors here too, maybe trigger reconnect
-		log.Printf("Failed to publish train task, may need reconnect: %v", err)
-		return fmt.Errorf("failed to publish train task: %w", err)
+		slog.Error("Failed to publish task, potential connection issue",
+			slog.String("task_type", taskType),
+			slog.String("queue", queueName),
+			slog.Any("error", err),
+		)
+		return fmt.Errorf("failed to publish %s: %w", taskType, err)
 	}
-	log.Printf("Published training task for model %s", payload.ModelId)
+
 	return nil
 }
 
-// PublishInferenceTask sends an inference task to the queue
-func (p *TaskPublisher) PublishInferenceTask(ctx context.Context, payload models.InferenceTaskPayload) error {
-	if err := p.ensureChannel(); err != nil {
+func (p *TaskPublisher) PublishTrainTask(ctx context.Context, payload models.TrainTaskPayload) error {
+	taskType := "train_task"
+	err := p.publishTaskInternal(ctx, TrainingQueue, payload, taskType)
+	if err != nil {
 		return err
 	}
+	return nil
+}
 
-	body, err := json.Marshal(payload)
+func (p *TaskPublisher) PublishShardDataTask(ctx context.Context, payload models.ShardDataPayload) error {
+	taskType := "shard_data_task"
+	err := p.publishTaskInternal(ctx, ShardDataQueue, payload, taskType)
 	if err != nil {
-		return fmt.Errorf("failed to marshal inference task payload: %w", err)
+		return err
 	}
+	return nil
+}
 
-	err = p.channel.PublishWithContext(ctx,
-		"",             // exchange (default)
-		InferenceQueue, // routing key (queue name)
-		false,          // mandatory
-		false,          // immediate
-		amqp.Publishing{
-			ContentType:  "application/json",
-			DeliveryMode: amqp.Persistent, // Make message persistent
-			Body:         body,
-		})
+func (p *TaskPublisher) PublishInferenceTask(ctx context.Context, payload models.InferenceTaskPayload) error {
+	taskType := "inference_task"
+	err := p.publishTaskInternal(ctx, InferenceQueue, payload, taskType)
 	if err != nil {
-		log.Printf("Failed to publish inference task, may need reconnect: %v", err)
-		return fmt.Errorf("failed to publish inference task: %w", err)
+		return err
 	}
-	// Avoid logging every single inference task publication if high volume
-	// log.Printf("Published inference task for job %s, key %s", payload.JobID, payload.SourceS3Key)
 	return nil
 }
 

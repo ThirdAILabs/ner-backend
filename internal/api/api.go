@@ -21,13 +21,14 @@ import (
 )
 
 type BackendService struct {
-	db        *gorm.DB
-	publisher *messaging.TaskPublisher
-	s3Client  *s3.Client
+	db               *gorm.DB
+	publisher        *messaging.TaskPublisher
+	s3Client         *s3.Client
+	chunkTargetBytes int64
 }
 
-func NewBackendService(db *gorm.DB, pub *messaging.TaskPublisher, s3c *s3.Client) *BackendService {
-	return &BackendService{db: db, publisher: pub, s3Client: s3c}
+func NewBackendService(db *gorm.DB, pub *messaging.TaskPublisher, s3c *s3.Client, chunkTargetBytes int64) *BackendService {
+	return &BackendService{db: db, publisher: pub, s3Client: s3c, chunkTargetBytes: chunkTargetBytes}
 }
 
 func (s *BackendService) AddRoutes(r chi.Router) {
@@ -63,12 +64,12 @@ func (s *BackendService) GetModel(r *http.Request) (any, error) {
 
 	ctx := r.Context()
 
-	var model database.Model
-	if err := s.db.WithContext(ctx).First(&model, "id = ?", modelId).Error; err != nil {
+	model, err := database.GetModelByID(ctx, s.db, modelId)
+	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, CodedErrorf(http.StatusNotFound, "model not found")
 		}
-		slog.Error("error getting model", "model_id", modelId, "error", err)
+		slog.Error("error getting model from database", "error", err, "model_id", modelId)
 		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving model record")
 	}
 
@@ -77,7 +78,7 @@ func (s *BackendService) GetModel(r *http.Request) (any, error) {
 
 func (s *BackendService) ListInferenceJobs(r *http.Request) (any, error) {
 	ctx := r.Context()
-	var jobs []database.InferenceJob
+	var jobs []database.ShardDataTask
 	if err := s.db.WithContext(ctx).Preload("Groups").Find(&jobs).Error; err != nil {
 		slog.Error("error getting inference jobs", "error", err)
 		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving inference job records")
@@ -91,18 +92,20 @@ func (s *BackendService) SubmitInferenceJob(r *http.Request) (any, error) {
 		return nil, err
 	}
 
+	// Basic validation
 	if req.SourceS3Bucket == "" || req.DestS3Bucket == "" {
 		return nil, CodedErrorf(http.StatusUnprocessableEntity, "missing required fields: model_id, source_s3_bucket, dest_s3_bucket")
 	}
 
-	job := database.InferenceJob{
-		Id:             uuid.New(),
-		ModelId:        req.ModelId,
-		SourceS3Bucket: req.SourceS3Bucket,
-		SourceS3Prefix: sql.NullString{String: req.SourceS3Prefix, Valid: req.SourceS3Prefix != ""},
-		DestS3Bucket:   req.DestS3Bucket,
-		Status:         database.JobQueued,
-		CreationTime:   time.Now(),
+	job := database.ShardDataTask{
+		Id:               uuid.New(),
+		ModelId:          req.ModelId,
+		SourceS3Bucket:   req.SourceS3Bucket,
+		SourceS3Prefix:   sql.NullString{String: req.SourceS3Prefix, Valid: req.SourceS3Prefix != ""},
+		DestS3Bucket:     req.DestS3Bucket,
+		ChunkTargetBytes: s.chunkTargetBytes,
+		CreationTime:     time.Now(),
+		Status:           database.JobQueued,
 	}
 
 	for name, query := range req.Groups {
@@ -147,58 +150,32 @@ func (s *BackendService) SubmitInferenceJob(r *http.Request) (any, error) {
 		return nil, err
 	}
 
-	// 3. List files (Consider doing this asynchronously for large buckets)
-	filesToProcess, listErr := s.s3Client.ListFiles(ctx, req.SourceS3Bucket, req.SourceS3Prefix)
-	if listErr != nil {
-		slog.Error("error listing files in s3 bucket", "bucket", req.SourceS3Bucket, "prefix", req.SourceS3Prefix, "error", listErr)
-		database.UpdateInferenceJobStatus(ctx, s.db, job.Id, database.JobFailed)
-		return nil, CodedErrorf(http.StatusInternalServerError, "failed to list files in source S3 bucket: %v", listErr)
+	log.Printf("Queueing ShardData task for job %s...", job.Id)
+
+	shardDataPayload := models.ShardDataPayload{
+		JobId:             job.Id,
+		ModelId:           req.ModelId,
+		ModelArtifactPath: model.ModelArtifactPath,
+		SourceS3Bucket:    req.SourceS3Bucket,
+		SourceS3Prefix:    req.SourceS3Prefix,
+		DestS3Bucket:      req.DestS3Bucket,
+		ChunkTargetBytes:  s.chunkTargetBytes,
 	}
 
-	taskCount := len(filesToProcess)
-	if taskCount == 0 {
-		database.UpdateInferenceJobStatus(ctx, s.db, job.Id, database.JobCompleted)
-		log.Printf("No files found for inference job %s", job.Id)
-		return models.InferenceResponse{JobId: job.Id}, nil
+	err = s.publisher.PublishShardDataTask(ctx, shardDataPayload)
+	if err != nil {
+		log.Printf("CRITICAL: Failed to publish ShardData task for job %s: %v", job.Id, err)
+		_ = database.UpdateShardDataTaskStatus(ctx, s.db, job.Id, database.JobFailed)
+		return nil, err
 	}
 
-	// 4. Submit tasks (Can do this in a goroutine?)
-	log.Printf("Queueing %d inference tasks for job %s...", taskCount, job.Id)
-	publishErrors := false
-	for _, s3Key := range filesToProcess {
-		payload := models.InferenceTaskPayload{
-			JobId:             job.Id,
-			ModelId:           req.ModelId,
-			ModelArtifactPath: model.ModelArtifactPath,
-			SourceS3Bucket:    req.SourceS3Bucket,
-			SourceS3Key:       s3Key,
-			DestS3Bucket:      req.DestS3Bucket,
-		}
-		// Use context from request, maybe add timeout?
-		if err := s.publisher.PublishInferenceTask(ctx, payload); err != nil {
-			log.Printf("ERROR: Failed to publish inference task for key %s, job %s: %v", s3Key, job.Id, err)
-			publishErrors = true
-			// Decide whether to stop or continue queueing other tasks
-			// break // Option: stop queueing on first error
-		}
-	}
-
-	// 5. Update job status
 	finalStatus := database.JobRunning
-	if publishErrors {
-		// Decide final status if some tasks failed to publish
-		// Could mark as FAILED, or RUNNING_WITH_ERRORS if we had such a state
-		log.Printf("WARNING: Some tasks failed to publish for job %s", job.Id)
-		// Keeping status as RUNNING for now, assuming some tasks might have queued
-	}
 
-	if err := database.UpdateInferenceJobStatus(ctx, s.db, job.Id, finalStatus); err != nil {
-		// Log error, but tasks might already be running
+	if err := database.UpdateShardDataTaskStatus(ctx, s.db, job.Id, finalStatus); err != nil {
 		log.Printf("ERROR: Failed to update job %s status to %s after queueing: %v", job.Id, finalStatus, err)
 	}
 
-	log.Printf("Submitted inference job %s with %d tasks (Publish errors: %v)", job.Id, taskCount, publishErrors)
-
+	log.Printf("Submitted inference job %s.", job.Id)
 	return models.InferenceResponse{JobId: job.Id}, nil
 }
 
@@ -210,8 +187,9 @@ func (s *BackendService) GetInferenceJob(r *http.Request) (any, error) {
 
 	ctx := r.Context()
 
-	var job database.InferenceJob
-	if err := s.db.WithContext(ctx).First(&job, "id = ?", jobId).Error; err != nil {
+	// TODO: get statuses of all inference tasks associated with shard data task
+	var job database.ShardDataTask
+	if err := s.db.WithContext(ctx).Find(&job, "id = ?", jobId).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, CodedErrorf(http.StatusNotFound, "inference job not found")
 		}
@@ -266,7 +244,7 @@ func (s *BackendService) GetInferenceJobEntities(r *http.Request) (any, error) {
 	}
 	if limitStr := params.Get("limit"); limitStr != "" {
 		if limit, err = strconv.Atoi(limitStr); err != nil {
-			if limit > 200  || limit < 0{
+			if limit > 200 || limit < 0 {
 				return nil, CodedErrorf(http.StatusBadRequest, "limit value must be >= 0 and <= 200")
 			}
 			return nil, CodedErrorf(http.StatusBadRequest, "invalid limit value")

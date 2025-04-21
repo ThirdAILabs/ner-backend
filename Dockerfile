@@ -11,23 +11,13 @@
     COPY . .
     
     # Build the API server binary
-    RUN CGO_ENABLED=0 GOOS=linux go build -v -o /app/bin/api ./cmd/api
+    RUN CGO_ENABLED=1 GOOS=linux go build -v -o /app/api ./cmd/api
     
     # Build the Worker binary
-    RUN CGO_ENABLED=0 GOOS=linux go build -v -o /app/bin/worker ./cmd/worker
-    
-    # --- Final Stage ---
-    # Use a minimal base image
-    FROM alpine:latest
-    
-    # Install any runtime dependencies needed (e.g., CA certificates)
-    RUN apk --no-cache add ca-certificates tzdata
-    
+    RUN CGO_ENABLED=1 GOOS=linux go build -v -o /app/worker ./cmd/worker
+
     WORKDIR /app
     
-    # Copy the compiled binaries and entrypoint script from the builder stage
-    COPY --from=builder /app/bin/api /app/api
-    COPY --from=builder /app/bin/worker /app/worker
     COPY ./entrypoint.sh /entrypoint.sh
     
     # Ensure entrypoint is executable

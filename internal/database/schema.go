@@ -31,9 +31,26 @@ const (
 	JobFailed    string = "FAILED"
 )
 
-type InferenceJob struct {
+type ShardDataTask struct {
 	Id      uuid.UUID `gorm:"type:uuid;primaryKey"`
 	ModelId uuid.UUID `gorm:"type:uuid"`
+
+	SourceS3Bucket string
+	SourceS3Prefix sql.NullString
+	DestS3Bucket   string
+
+	Status           string `gorm:"size:20;not null"`
+	CreationTime     time.Time
+	CompletionTime   sql.NullTime
+	ChunkTargetBytes int64
+
+	Groups []Group `gorm:"foreignKey:ShardDataTaskId;constraint:OnDelete:CASCADE"`
+}
+
+type InferenceTask struct {
+	Id              uuid.UUID `gorm:"type:uuid;primaryKey"`
+	ModelId         uuid.UUID `gorm:"type:uuid"`
+	ShardDataTaskId uuid.UUID `gorm:"type:uuid"`
 
 	SourceS3Bucket string
 	SourceS3Prefix sql.NullString
@@ -42,8 +59,6 @@ type InferenceJob struct {
 	Status         string `gorm:"size:20;not null"`
 	CreationTime   time.Time
 	CompletionTime sql.NullTime
-
-	Groups []Group `gorm:"foreignKey:InferenceJobId;constraint:OnDelete:CASCADE"`
 }
 
 type Group struct {
