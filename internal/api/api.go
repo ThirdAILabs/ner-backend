@@ -21,12 +21,12 @@ import (
 
 type BackendService struct {
 	db               *gorm.DB
-	publisher        *messaging.TaskPublisher
+	publisher        messaging.Publisher
 	s3Client         *s3.Client
 	chunkTargetBytes int64
 }
 
-func NewBackendService(db *gorm.DB, pub *messaging.TaskPublisher, s3c *s3.Client, chunkTargetBytes int64) *BackendService {
+func NewBackendService(db *gorm.DB, pub messaging.Publisher, s3c *s3.Client, chunkTargetBytes int64) *BackendService {
 	return &BackendService{db: db, publisher: pub, s3Client: s3c, chunkTargetBytes: chunkTargetBytes}
 }
 
@@ -86,10 +86,10 @@ func (s *BackendService) ListReports(r *http.Request) (any, error) {
 }
 
 type CreateReportRequest struct {
-	ModelId        uuid.UUID `validate:"required"`
-	SourceS3Bucket string    `validate:"required"`
+	ModelId        uuid.UUID
+	SourceS3Bucket string
 	SourceS3Prefix string
-	DestS3Bucket   string `validate:"required"`
+	DestS3Bucket   string
 
 	Groups map[string]string
 }

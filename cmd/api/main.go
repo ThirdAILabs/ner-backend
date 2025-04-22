@@ -62,7 +62,7 @@ func main() {
 	}
 
 	// Initialize RabbitMQ Publisher
-	publisher, err := messaging.NewTaskPublisher(cfg.RabbitMQURL)
+	publisher, err := messaging.NewRabbitMQPublisher(cfg.RabbitMQURL)
 	if err != nil {
 		log.Fatalf("Failed to connect to RabbitMQ: %v", err)
 	}

@@ -9,7 +9,6 @@ import (
 	"ner-backend/internal/s3"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 
 	"github.com/caarlos0/env/v11"
@@ -55,34 +54,20 @@ func main() {
 		log.Fatalf("Worker: Failed to create S3 client: %v", err)
 	}
 
-	// WaitGroup to wait for worker goroutines to finish
-	var wg sync.WaitGroup
-
-	publisher, err := messaging.NewTaskPublisher(cfg.RabbitMQURL)
+	publisher, err := messaging.NewRabbitMQPublisher(cfg.RabbitMQURL)
 	if err != nil {
 		log.Fatalf("Failed to connect to RabbitMQ: %v", err)
 	}
 	defer publisher.Close()
 
-	// Worker Dependencies
-	workerCfg := messaging.WorkerConfig{
-		WorkerConcurrency: cfg.WorkerConcurrency,
-		QueueNames:        cfg.QueueNames,
-	}
-	worker := messaging.Worker{
-		DB:        db,
-		S3Client:  s3Client,
-		Config:    &workerCfg,
-		WaitGroup: &wg,
-		Publisher: publisher,
-		Processor: core.NewInferenceJobProcessor(db, s3Client, "./tmp_models_TODO", cfg.ModelBucketName),
+	receiver, err := messaging.NewRabbitMQReceiver(cfg.RabbitMQURL)
+	if err != nil {
+		log.Fatalf("Failed to connect to RabbitMQ: %v", err)
 	}
 
-	// Start worker consumers
+	worker := core.NewTaskProcessor(db, s3Client, publisher, receiver, "./tmp_models_TODO", cfg.ModelBucketName)
 
-	if err := worker.StartThreads(cfg.RabbitMQURL); err != nil {
-		log.Fatalf("Worker: Failed to start message consumers: %v", err)
-	}
+	go worker.Start()
 
 	log.Println("Worker started. Waiting for tasks. Press Ctrl+C to exit.")
 
@@ -92,6 +77,8 @@ func main() {
 	<-quit
 
 	log.Println("Shutdown signal received, waiting for workers to finish...")
+
+	worker.Stop()
 
 	// TODO: Implement graceful shutdown for workers if needed
 	// e.g., signal workers to stop consuming new messages and wait for current ones
