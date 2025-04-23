@@ -11,9 +11,7 @@ Check the health status of the service.
 
 **Example Response:**
 ```json
-{
-  "status": "healthy"
-}
+{}
 ```
 
 ---
