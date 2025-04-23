@@ -59,5 +59,5 @@ type CreateReportRequest struct {
 }
 
 type CreateReportResponse struct {
-	JobId uuid.UUID
+	ReportId uuid.UUID
 }

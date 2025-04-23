@@ -7,7 +7,6 @@ import (
 	"ner-backend/internal/core"
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
-	"ner-backend/internal/s3"
 	"ner-backend/pkg/api"
 	"net/http"
 	"strconv"
@@ -22,12 +21,11 @@ import (
 type BackendService struct {
 	db               *gorm.DB
 	publisher        messaging.Publisher
-	s3Client         *s3.Client
 	chunkTargetBytes int64
 }
 
-func NewBackendService(db *gorm.DB, pub messaging.Publisher, s3c *s3.Client, chunkTargetBytes int64) *BackendService {
-	return &BackendService{db: db, publisher: pub, s3Client: s3c, chunkTargetBytes: chunkTargetBytes}
+func NewBackendService(db *gorm.DB, pub messaging.Publisher, chunkTargetBytes int64) *BackendService {
+	return &BackendService{db: db, publisher: pub, chunkTargetBytes: chunkTargetBytes}
 }
 
 func (s *BackendService) AddRoutes(r chi.Router) {
@@ -93,9 +91,8 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		return nil, err
 	}
 
-	// Basic validation
-	if req.SourceS3Bucket == "" {
-		return nil, CodedErrorf(http.StatusUnprocessableEntity, "missing required fields: model_id, source_s3_bucket, dest_s3_bucket")
+	if req.ModelId == uuid.Nil || req.SourceS3Bucket == "" {
+		return nil, CodedErrorf(http.StatusUnprocessableEntity, "the following fields are required: ModelId, SourceS3Bucket")
 	}
 
 	report := database.Report{
@@ -166,7 +163,7 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 	}
 
 	slog.Info("created report", "report_id", report.Id)
-	return api.CreateReportResponse{JobId: report.Id}, nil
+	return api.CreateReportResponse{ReportId: report.Id}, nil
 }
 
 func (s *BackendService) GetReport(r *http.Request) (any, error) {

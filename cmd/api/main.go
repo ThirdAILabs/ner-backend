@@ -7,7 +7,6 @@ import (
 	"ner-backend/internal/api"
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
-	"ner-backend/internal/s3"
 	"net/http"
 	"os"
 	"os/signal"
@@ -48,19 +47,6 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	// Initialize S3 Client
-	s3Cfg := s3.Config{
-		S3EndpointURL:     cfg.S3EndpointURL,
-		S3AccessKeyID:     cfg.S3AccessKeyID,
-		S3SecretAccessKey: cfg.S3SecretAccessKey,
-		S3Region:          cfg.S3Region,
-		ModelBucketName:   cfg.ModelBucketName,
-	}
-	s3Client, err := s3.NewS3Client(&s3Cfg)
-	if err != nil {
-		log.Fatalf("Failed to create S3 client: %v", err)
-	}
-
 	// Initialize RabbitMQ Publisher
 	publisher, err := messaging.NewRabbitMQPublisher(cfg.RabbitMQURL)
 	if err != nil {
@@ -79,7 +65,7 @@ func main() {
 	r.Use(middleware.Timeout(60 * time.Second)) // Set request timeout
 
 	// API Handlers (dependency injection)
-	apiHandler := api.NewBackendService(db, publisher, s3Client, cfg.ChunkTargetBytes)
+	apiHandler := api.NewBackendService(db, publisher, cfg.ChunkTargetBytes)
 
 	apiHandler.AddRoutes(r)
 

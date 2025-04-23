@@ -135,7 +135,7 @@ func createReport(t *testing.T, router http.Handler, req api.CreateReportRequest
 	var res api.CreateReportResponse
 	err := httpRequest(router, "POST", "/reports", req, &res)
 	require.NoError(t, err)
-	return res.JobId
+	return res.ReportId
 }
 
 func reportIsComplete(report api.Report) bool {
@@ -192,7 +192,7 @@ func TestInferenceWorklow(t *testing.T) {
 
 	queue := messaging.NewInMemoryQueue()
 
-	backend := backend.NewBackendService(db, queue, s3, 120)
+	backend := backend.NewBackendService(db, queue, 120)
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
