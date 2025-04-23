@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"ner-backend/pkg/models"
+	"sync"
 )
 
 type inMemoryTask struct {
@@ -32,7 +33,8 @@ func (t *inMemoryTask) Reject() error {
 }
 
 type InMemoryQueue struct {
-	tasks chan Task
+	tasks      chan Task
+	destructor sync.Once
 }
 
 func NewInMemoryQueue() *InMemoryQueue {
@@ -69,8 +71,7 @@ func (q *InMemoryQueue) Tasks() <-chan Task {
 }
 
 func (q *InMemoryQueue) Close() {
-	if q.tasks != nil {
+	q.destructor.Do(func() {
 		close(q.tasks)
-		q.tasks = nil
-	}
+	})
 }

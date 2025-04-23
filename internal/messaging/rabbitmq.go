@@ -29,10 +29,11 @@ func connectToRabbitMQ(url string) (*amqp.Connection, error) {
 }
 
 type RabbitMQPublisher struct {
-	connLock sync.RWMutex
-	conn     *amqp.Connection
-	channel  *amqp.Channel
-	url      string
+	connLock   sync.RWMutex
+	conn       *amqp.Connection
+	channel    *amqp.Channel
+	url        string
+	destructor sync.Once
 }
 
 func NewRabbitMQPublisher(rabbitMQURL string) (*RabbitMQPublisher, error) {
@@ -146,9 +147,11 @@ func (p *RabbitMQPublisher) PublishInferenceTask(ctx context.Context, payload mo
 }
 
 func (p *RabbitMQPublisher) Close() {
-	if err := p.conn.Close(); err != nil {
-		slog.Error("error closing rabbitmq connection", "error", err)
-	}
+	p.destructor.Do(func() {
+		if err := p.conn.Close(); err != nil {
+			slog.Error("error closing rabbitmq connection", "error", err)
+		}
+	})
 }
 
 type RabbitMQTask struct {
