@@ -4,12 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"ner-backend/internal/api"
+	backend "ner-backend/internal/api"
 	"ner-backend/internal/core"
 	"ner-backend/internal/core/types"
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/s3"
+	"ner-backend/pkg/api"
 	"net/http"
 	"os"
 	"regexp"
@@ -137,20 +138,14 @@ func createReport(t *testing.T, router http.Handler, req api.CreateReportRequest
 	return res.JobId
 }
 
-func reportIsComplete(report database.Report) bool {
-	if report.ShardDataTask.Status != database.JobCompleted {
-		return false
-	}
-	for _, task := range report.InferenceTasks {
-		if task.Status != database.JobCompleted {
-			return false
-		}
-	}
-	return true
+func reportIsComplete(report api.Report) bool {
+	return report.ShardDataTaskStatus == database.JobCompleted &&
+		report.InferenceTaskStatuses[database.JobQueued].TotalTasks == 0 &&
+		report.InferenceTaskStatuses[database.JobRunning].TotalTasks == 0
 }
 
-func waitForReport(t *testing.T, router http.Handler, jobId uuid.UUID) database.Report {
-	var report database.Report
+func waitForReport(t *testing.T, router http.Handler, jobId uuid.UUID) api.Report {
+	var report api.Report
 
 	for i := 0; i < 20; i++ {
 		time.Sleep(500 * time.Millisecond)
@@ -166,15 +161,15 @@ func waitForReport(t *testing.T, router http.Handler, jobId uuid.UUID) database.
 	return report
 }
 
-func getReportGroup(t *testing.T, router http.Handler, jobId, groupId uuid.UUID) database.Group {
-	var res database.Group
+func getReportGroup(t *testing.T, router http.Handler, jobId, groupId uuid.UUID) api.Group {
+	var res api.Group
 	err := httpRequest(router, "GET", fmt.Sprintf("/reports/%s/groups/%s", jobId, groupId), nil, &res)
 	require.NoError(t, err)
 	return res
 }
 
-func getReportEntities(t *testing.T, router http.Handler, jobId uuid.UUID) []database.ObjectEntity {
-	var res []database.ObjectEntity
+func getReportEntities(t *testing.T, router http.Handler, jobId uuid.UUID) []api.Entity {
+	var res []api.Entity
 	err := httpRequest(router, "GET", fmt.Sprintf("/reports/%s/entities", jobId), nil, &res)
 	require.NoError(t, err)
 	return res
@@ -197,7 +192,7 @@ func TestInferenceWorklow(t *testing.T) {
 
 	queue := messaging.NewInMemoryQueue()
 
-	backend := api.NewBackendService(db, queue, s3, 120)
+	backend := backend.NewBackendService(db, queue, s3, 120)
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
@@ -222,9 +217,9 @@ func TestInferenceWorklow(t *testing.T) {
 
 	report := waitForReport(t, router, reportId)
 
-	assert.Equal(t, modelId, report.ModelId)
+	assert.Equal(t, modelId, report.Model.Id)
 	assert.Equal(t, dataBucket, report.SourceS3Bucket)
-	assert.Equal(t, 10, len(report.InferenceTasks))
+	assert.Equal(t, 10, report.InferenceTaskStatuses[database.JobCompleted].TotalTasks)
 	assert.Equal(t, 2, len(report.Groups))
 
 	entities := getReportEntities(t, router, reportId)
@@ -232,9 +227,10 @@ func TestInferenceWorklow(t *testing.T) {
 
 	for _, group := range report.Groups {
 		group := getReportGroup(t, router, reportId, group.Id)
-		assert.Equal(t, report.Id, group.ReportId)
 		assert.Equal(t, fmt.Sprintf("COUNT(%s) > 0", group.Name), group.Query)
 		assert.Equal(t, 10, len(group.Objects))
+		for _, obj := range group.Objects {
+			assert.Contains(t, obj, group.Name)
+		}
 	}
-
 }

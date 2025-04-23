@@ -8,7 +8,7 @@ import (
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/s3"
-	"ner-backend/pkg/models"
+	"ner-backend/pkg/api"
 	"net/http"
 	"strconv"
 	"time"
@@ -52,7 +52,8 @@ func (s *BackendService) ListModels(r *http.Request) (any, error) {
 		slog.Error("error getting models", "error", err)
 		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving model records")
 	}
-	return models, nil
+
+	return convertModels(models), nil
 }
 
 func (s *BackendService) GetModel(r *http.Request) (any, error) {
@@ -72,33 +73,22 @@ func (s *BackendService) GetModel(r *http.Request) (any, error) {
 		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving model record")
 	}
 
-	return model, nil
+	return convertModel(model), nil
 }
 
 func (s *BackendService) ListReports(r *http.Request) (any, error) {
 	ctx := r.Context()
-	var jobs []database.ShardDataTask
-	if err := s.db.WithContext(ctx).Preload("Groups").Find(&jobs).Error; err != nil {
+	var reports []database.Report
+	if err := s.db.WithContext(ctx).Preload("Model").Preload("Groups").Find(&reports).Error; err != nil {
 		slog.Error("error getting inference jobs", "error", err)
 		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving inference job records")
 	}
-	return jobs, nil
-}
 
-type CreateReportRequest struct {
-	ModelId        uuid.UUID
-	SourceS3Bucket string
-	SourceS3Prefix string
-
-	Groups map[string]string
-}
-
-type CreateReportResponse struct {
-	JobId uuid.UUID
+	return convertReports(reports), nil
 }
 
 func (s *BackendService) CreateReport(r *http.Request) (any, error) {
-	req, err := ParseRequest[CreateReportRequest](r)
+	req, err := ParseRequest[api.CreateReportRequest](r)
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +148,7 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 			return CodedErrorf(http.StatusInternalServerError, "failed to create report entry")
 		}
 
-		err = s.publisher.PublishShardDataTask(ctx, models.ShardDataPayload{ReportId: report.Id})
+		err = s.publisher.PublishShardDataTask(ctx, messaging.ShardDataPayload{ReportId: report.Id})
 		if err != nil {
 			slog.Error("error queueing shard data task", "error", err)
 			_ = database.UpdateShardDataTaskStatus(ctx, txn, report.Id, database.JobFailed)
@@ -176,7 +166,7 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 	}
 
 	slog.Info("created report", "report_id", report.Id)
-	return CreateReportResponse{JobId: report.Id}, nil
+	return api.CreateReportResponse{JobId: report.Id}, nil
 }
 
 func (s *BackendService) GetReport(r *http.Request) (any, error) {
@@ -188,15 +178,41 @@ func (s *BackendService) GetReport(r *http.Request) (any, error) {
 	ctx := r.Context()
 
 	var report database.Report
-	if err := s.db.WithContext(ctx).Preload("Groups").Preload("ShardDataTask").Preload("InferenceTasks").Find(&report, "id = ?", reportId).Error; err != nil {
+	if err := s.db.WithContext(ctx).Preload("Model").Preload("Groups").Preload("ShardDataTask").Find(&report, "id = ?", reportId).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, CodedErrorf(http.StatusNotFound, "inference job not found")
 		}
 		slog.Error("error getting inference job", "report_id", reportId, "error", err)
-		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving inference job record")
+		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving report data")
 	}
 
-	return report, nil
+	type taskStatusCategory struct {
+		Status string
+		Count  int
+		Total  int
+	}
+
+	var statusCategories []taskStatusCategory
+
+	if err := s.db.WithContext(ctx).Model(&database.InferenceTask{}).
+		Where("report_id = ?", reportId).
+		Select("status, COUNT(*) as count, sum(total_size) as total").
+		Group("status").
+		Find(&statusCategories).Error; err != nil {
+		slog.Error("error getting inference job task statuses", "report_id", reportId, "error", err)
+		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving inference task statuses")
+	}
+
+	apiReport := convertReport(report)
+	apiReport.InferenceTaskStatuses = make(map[string]api.TaskStatusCategory)
+	for _, category := range statusCategories {
+		apiReport.InferenceTaskStatuses[category.Status] = api.TaskStatusCategory{
+			TotalTasks: category.Count,
+			TotalSize:  category.Total,
+		}
+	}
+
+	return apiReport, nil
 }
 
 func (s *BackendService) GetReportGroup(r *http.Request) (any, error) {
@@ -221,7 +237,7 @@ func (s *BackendService) GetReportGroup(r *http.Request) (any, error) {
 		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving inference job group record")
 	}
 
-	return group, nil
+	return convertGroup(group), nil
 }
 
 func (s *BackendService) GetReportEntities(r *http.Request) (any, error) {
@@ -265,5 +281,5 @@ func (s *BackendService) GetReportEntities(r *http.Request) (any, error) {
 		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving inference job entities")
 	}
 
-	return entities, nil
+	return convertEntities(entities), nil
 }

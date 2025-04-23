@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"ner-backend/pkg/models"
 	"sync"
 	"time"
 
@@ -134,15 +133,15 @@ func (p *RabbitMQPublisher) publishTaskInternal(ctx context.Context, queueName s
 	return nil
 }
 
-func (p *RabbitMQPublisher) PublishTrainTask(ctx context.Context, payload models.TrainTaskPayload) error {
+func (p *RabbitMQPublisher) PublishTrainTask(ctx context.Context, payload TrainTaskPayload) error {
 	return p.publishTaskInternal(ctx, TrainingQueue, payload)
 }
 
-func (p *RabbitMQPublisher) PublishShardDataTask(ctx context.Context, payload models.ShardDataPayload) error {
+func (p *RabbitMQPublisher) PublishShardDataTask(ctx context.Context, payload ShardDataPayload) error {
 	return p.publishTaskInternal(ctx, ShardDataQueue, payload)
 }
 
-func (p *RabbitMQPublisher) PublishInferenceTask(ctx context.Context, payload models.InferenceTaskPayload) error {
+func (p *RabbitMQPublisher) PublishInferenceTask(ctx context.Context, payload InferenceTaskPayload) error {
 	return p.publishTaskInternal(ctx, InferenceQueue, payload)
 }
 
