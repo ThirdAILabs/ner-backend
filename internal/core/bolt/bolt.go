@@ -1,6 +1,6 @@
 package bolt
 
-// #cgo linux LDFLAGS: -L./lib/linux_x64 -L./lib/linux_arm64 -lthirdai -lrocksdb -lutf8proc -lspdlog -fopenmp
+// #cgo linux LDFLAGS: -L./lib/linux_amd64 -L./lib/linux_arm64 -lthirdai -lrocksdb -lutf8proc -lspdlog -fopenmp
 // #cgo darwin LDFLAGS: -L./lib/macos_arm64 -lthirdai -lrocksdb -lutf8proc -lspdlog -L/opt/homebrew/opt/libomp/lib/ -lomp
 // #cgo CFLAGS: -O3
 // #cgo CXXFLAGS: -O3 -fPIC -std=c++17 -I./include -fvisibility=hidden
