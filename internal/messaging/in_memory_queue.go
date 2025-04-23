@@ -3,7 +3,6 @@ package messaging
 import (
 	"context"
 	"encoding/json"
-	"ner-backend/pkg/models"
 	"sync"
 )
 
@@ -54,15 +53,15 @@ func (q *InMemoryQueue) publishTaskInternal(queue string, payload interface{}) e
 	return nil
 }
 
-func (q *InMemoryQueue) PublishTrainTask(ctx context.Context, payload models.TrainTaskPayload) error {
+func (q *InMemoryQueue) PublishTrainTask(ctx context.Context, payload TrainTaskPayload) error {
 	return q.publishTaskInternal(TrainingQueue, payload)
 }
 
-func (q *InMemoryQueue) PublishShardDataTask(ctx context.Context, payload models.ShardDataPayload) error {
+func (q *InMemoryQueue) PublishShardDataTask(ctx context.Context, payload ShardDataPayload) error {
 	return q.publishTaskInternal(ShardDataQueue, payload)
 }
 
-func (q *InMemoryQueue) PublishInferenceTask(ctx context.Context, payload models.InferenceTaskPayload) error {
+func (q *InMemoryQueue) PublishInferenceTask(ctx context.Context, payload InferenceTaskPayload) error {
 	return q.publishTaskInternal(InferenceQueue, payload)
 }
 

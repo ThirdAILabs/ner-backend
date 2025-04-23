@@ -8,7 +8,6 @@ import (
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/s3"
-	"ner-backend/pkg/models"
 	"strings"
 	"time"
 
@@ -58,7 +57,7 @@ func (proc *TaskProcessor) ProcessTask(task messaging.Task) {
 	switch task.Type() {
 
 	case messaging.InferenceQueue:
-		var payload models.InferenceTaskPayload
+		var payload messaging.InferenceTaskPayload
 		if err = json.Unmarshal(task.Payload(), &payload); err != nil {
 			slog.Error("error unmarshalling inference task", "error", err)
 			task.Reject() // Discard malformed message
@@ -67,7 +66,7 @@ func (proc *TaskProcessor) ProcessTask(task messaging.Task) {
 		err = proc.processInferenceTask(ctx, payload)
 
 	case messaging.ShardDataQueue:
-		var payload models.ShardDataPayload
+		var payload messaging.ShardDataPayload
 		if err = json.Unmarshal(task.Payload(), &payload); err != nil {
 			slog.Error("error unmarshalling shard data task", "error", err)
 			task.Reject() // Discard malformed message
@@ -76,7 +75,7 @@ func (proc *TaskProcessor) ProcessTask(task messaging.Task) {
 		err = proc.processShardDataTask(ctx, payload) // Call new handler
 
 	case messaging.TrainingQueue:
-		var payload models.TrainTaskPayload
+		var payload messaging.TrainTaskPayload
 		if err = json.Unmarshal(task.Payload(), &payload); err != nil {
 			slog.Error("error unmarshalling training task", "error", err)
 			// Reject message (non-requeueable) as it's malformed
@@ -100,7 +99,7 @@ func (proc *TaskProcessor) ProcessTask(task messaging.Task) {
 	}
 }
 
-func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload models.InferenceTaskPayload) error {
+func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload messaging.InferenceTaskPayload) error {
 	reportId := payload.ReportId
 
 	var task database.InferenceTask
@@ -109,7 +108,7 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mod
 		return fmt.Errorf("error getting inference task: %w", err)
 	}
 
-	proc.updateInferenceTaskStatus(ctx, reportId, payload.TaskId, database.JobRunning)
+	database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobRunning)
 
 	s3Objects := strings.Split(task.SourceS3Keys, ";")
 
@@ -121,18 +120,18 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mod
 	workerErr := proc.inference.RunInferenceTask(task.ReportId, task.Report.Model.Id, task.Report.Model.Type, groupToQuery, task.SourceS3Bucket, s3Objects)
 	if workerErr != nil {
 		slog.Error("error running inference task", "report_id", reportId, "task_id", payload.TaskId, "error", workerErr)
-		proc.updateInferenceTaskStatus(ctx, reportId, payload.TaskId, database.JobFailed)
+		database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobFailed)
 		return fmt.Errorf("error running inference task: %w", workerErr)
 	}
 
-	if err := proc.updateInferenceTaskStatus(ctx, reportId, payload.TaskId, database.JobCompleted); err != nil {
+	if err := database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobCompleted); err != nil {
 		return fmt.Errorf("error updating inference task status to complete: %w", err)
 	}
 
 	return nil
 }
 
-func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload models.ShardDataPayload) error {
+func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload messaging.ShardDataPayload) error {
 	reportId := payload.ReportId
 
 	var task database.ShardDataTask
@@ -167,7 +166,7 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mod
 			TotalSize:      chunkSize,
 		}
 
-		inferencePayload := models.InferenceTaskPayload{
+		inferencePayload := messaging.InferenceTaskPayload{
 			ReportId: task.ReportId, TaskId: task.TaskId,
 		}
 
@@ -197,7 +196,7 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mod
 
 	if err != nil {
 		slog.Error("Failed during S3 processing/chunk publishing", "report_id", reportId, "error", err)
-		proc.updateShardDataTaskStatus(ctx, reportId, database.JobFailed)
+		database.UpdateShardDataTaskStatus(ctx, proc.db, reportId, database.JobFailed)
 		return fmt.Errorf("failed during task generation for job %s: %w", reportId, err)
 	}
 
@@ -207,30 +206,14 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mod
 
 	slog.Info("Finished generating inference task chunks", "n_tasks", taskIndex, "report_id", reportId)
 
-	if err := proc.updateShardDataTaskStatus(ctx, reportId, database.JobCompleted); err != nil {
+	if err := database.UpdateShardDataTaskStatus(ctx, proc.db, reportId, database.JobCompleted); err != nil {
 		return fmt.Errorf("failed to update job final status: %w", err)
 	}
 
 	return nil
 }
 
-func (proc *TaskProcessor) processTrainTask(ctx context.Context, payload models.TrainTaskPayload) error {
+func (proc *TaskProcessor) processTrainTask(ctx context.Context, payload messaging.TrainTaskPayload) error {
 	slog.Error("train tasks are not implemented yet", "payload", payload)
-	return nil
-}
-
-func (proc *TaskProcessor) updateInferenceTaskStatus(ctx context.Context, reportId uuid.UUID, taskId int, status string) error {
-	if err := proc.db.WithContext(ctx).Model(&database.InferenceTask{ReportId: reportId, TaskId: taskId}).Update("status", status).Error; err != nil {
-		slog.Error("error updating inference task status", "report_id", reportId, "task_id", taskId, "status", status, "error", err)
-		return err
-	}
-	return nil
-}
-
-func (proc *TaskProcessor) updateShardDataTaskStatus(ctx context.Context, reportId uuid.UUID, status string) error {
-	if err := proc.db.WithContext(ctx).Model(&database.ShardDataTask{ReportId: reportId}).Update("status", status).Error; err != nil {
-		slog.Error("error updating shard data task status", "report_id", reportId, "status", status, "error", err)
-		return err
-	}
 	return nil
 }

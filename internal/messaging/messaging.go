@@ -2,8 +2,9 @@ package messaging
 
 import (
 	"context"
-	"ner-backend/pkg/models"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const (
@@ -26,12 +27,26 @@ type Task interface {
 	Reject() error
 }
 
+type TrainTaskPayload struct {
+	ModelId          uuid.UUID
+	SourceS3PathTags string // Path to training data in S3/MinIO
+}
+
+type ShardDataPayload struct {
+	ReportId uuid.UUID
+}
+
+type InferenceTaskPayload struct {
+	ReportId uuid.UUID
+	TaskId   int
+}
+
 type Publisher interface {
-	PublishTrainTask(ctx context.Context, payload models.TrainTaskPayload) error
+	PublishTrainTask(ctx context.Context, payload TrainTaskPayload) error
 
-	PublishShardDataTask(ctx context.Context, payload models.ShardDataPayload) error
+	PublishShardDataTask(ctx context.Context, payload ShardDataPayload) error
 
-	PublishInferenceTask(ctx context.Context, payload models.InferenceTaskPayload) error
+	PublishInferenceTask(ctx context.Context, payload InferenceTaskPayload) error
 
 	Close()
 }
