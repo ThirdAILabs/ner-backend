@@ -71,6 +71,10 @@ services:
     environment:
       - DATABASE_URL=${DATABASE_URL:-postgresql://user:password@postgres:5432/ner-backend?sslmode=disable}
       - RABBITMQ_URL=${RABBITMQ_URL:-amqp://user:password@rabbitmq:5672/}
+      - S3_ENDPOINT_URL=${S3_ENDPOINT_URL:-http://minio:9000}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-YOURACCESSKEY}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-YOURSECRETKEY}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
     volumes:
       # - .:/app # Mount code for development (requires Go toolchain in container or local build)
       - /etc/localtime:/etc/localtime:ro
