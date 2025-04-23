@@ -19,14 +19,16 @@ import (
 	"github.com/google/uuid"
 )
 
-type s3API interface {
+type S3Api interface {
 	manager.DownloadAPIClient
 	manager.UploadAPIClient
 	manager.ListObjectsV2APIClient
+
+	CreateBucket(ctx context.Context, params *s3.CreateBucketInput, optFns ...func(*s3.Options)) (*s3.CreateBucketOutput, error)
 }
 
 type Client struct {
-	s3Client   s3API
+	s3Client   S3Api
 	downloader *manager.Downloader
 	uploader   *manager.Uploader
 	bucketName string // Default model bucket
@@ -71,7 +73,7 @@ func NewS3Client(cfg *Config) (*Client, error) {
 	return NewFromClient(s3Client, cfg.ModelBucketName), nil
 }
 
-func NewFromClient(client s3API, bucketName string) *Client {
+func NewFromClient(client S3Api, bucketName string) *Client {
 	return &Client{
 		s3Client:   client,
 		downloader: manager.NewDownloader(client),
@@ -87,11 +89,15 @@ func (c *Client) UploadFile(ctx context.Context, localPath, bucket, key string) 
 	}
 	defer file.Close()
 
-	log.Printf("Uploading %s to s3://%s/%s", localPath, bucket, key)
-	_, err = c.uploader.Upload(ctx, &s3.PutObjectInput{
+	return c.UploadObject(ctx, bucket, key, file)
+}
+
+func (c *Client) UploadObject(ctx context.Context, bucket, key string, data io.Reader) (string, error) {
+	log.Printf("Uploading object to s3://%s/%s", bucket, key)
+	_, err := c.uploader.Upload(ctx, &s3.PutObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
-		Body:   file,
+		Body:   data,
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to upload file to s3://%s/%s: %w", bucket, key, err)
@@ -130,7 +136,7 @@ func (c *Client) DownloadFile(ctx context.Context, bucket, key, localPath string
 }
 
 type s3ObjectStream struct {
-	client s3API
+	client S3Api
 	bucket string
 	key    string
 	offset int
@@ -350,4 +356,15 @@ func (c *Client) ListAndChunkS3Objects(
 
 	logger.Info("Finished S3 listing", slog.Int("processedChunks", totalChunksProcessed))
 	return totalChunksProcessed, nil // Success
+}
+
+func (c *Client) CreateBucket(ctx context.Context, bucketName string) error {
+	_, err := c.s3Client.CreateBucket(ctx, &s3.CreateBucketInput{
+		Bucket: aws.String(bucketName),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create bucket %s: %w", bucketName, err)
+	}
+	log.Printf("Successfully created bucket %s", bucketName)
+	return nil
 }

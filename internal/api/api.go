@@ -89,7 +89,6 @@ type CreateReportRequest struct {
 	ModelId        uuid.UUID
 	SourceS3Bucket string
 	SourceS3Prefix string
-	DestS3Bucket   string
 
 	Groups map[string]string
 }
@@ -105,7 +104,7 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 	}
 
 	// Basic validation
-	if req.SourceS3Bucket == "" || req.DestS3Bucket == "" {
+	if req.SourceS3Bucket == "" {
 		return nil, CodedErrorf(http.StatusUnprocessableEntity, "missing required fields: model_id, source_s3_bucket, dest_s3_bucket")
 	}
 
@@ -153,23 +152,20 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		if model.Status != database.ModelTrained {
 			return CodedErrorf(http.StatusUnprocessableEntity, "model is not ready: model has status: %s", model.Status)
 		}
-		if model.ModelArtifactPath == "" {
-			return CodedErrorf(http.StatusInternalServerError, "model artifact path is missing")
-		}
 
-		if err := s.db.WithContext(ctx).Create(&report).Error; err != nil {
-			slog.Error("error creating report entrt", "error", err)
+		if err := txn.WithContext(ctx).Create(&report).Error; err != nil {
+			slog.Error("error creating report entry", "error", err)
 			return CodedErrorf(http.StatusInternalServerError, "failed to create report entry")
 		}
 
 		err = s.publisher.PublishShardDataTask(ctx, models.ShardDataPayload{ReportId: report.Id})
 		if err != nil {
 			slog.Error("error queueing shard data task", "error", err)
-			_ = database.UpdateShardDataTaskStatus(ctx, s.db, report.Id, database.JobFailed)
+			_ = database.UpdateShardDataTaskStatus(ctx, txn, report.Id, database.JobFailed)
 			return CodedErrorf(http.StatusInternalServerError, "failed to queue shard data task")
 		}
 
-		if err := s.db.WithContext(ctx).Create(&task).Error; err != nil {
+		if err := txn.WithContext(ctx).Create(&task).Error; err != nil {
 			slog.Error("error creating shard data task", "error", err)
 			return CodedErrorf(http.StatusInternalServerError, "failed to create shard data task")
 		}
@@ -191,9 +187,8 @@ func (s *BackendService) GetReport(r *http.Request) (any, error) {
 
 	ctx := r.Context()
 
-	// TODO: get statuses of all inference tasks associated with shard data task
-	var job database.ShardDataTask
-	if err := s.db.WithContext(ctx).Find(&job, "id = ?", reportId).Error; err != nil {
+	var report database.Report
+	if err := s.db.WithContext(ctx).Preload("Groups").Preload("ShardDataTask").Preload("InferenceTasks").Find(&report, "id = ?", reportId).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, CodedErrorf(http.StatusNotFound, "inference job not found")
 		}
@@ -201,7 +196,7 @@ func (s *BackendService) GetReport(r *http.Request) (any, error) {
 		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving inference job record")
 	}
 
-	return job, nil
+	return report, nil
 }
 
 func (s *BackendService) GetReportGroup(r *http.Request) (any, error) {

@@ -24,8 +24,8 @@ type TaskProcessor struct {
 	reciever  messaging.Reciever
 }
 
-func NewTaskProcessor(db *gorm.DB, s3client *s3.Client, publisher messaging.Publisher, reciever messaging.Reciever, localModelDir string, modelArtifactPath string) *TaskProcessor {
-	inference := NewInferenceJobProcessor(db, s3client, localModelDir, modelArtifactPath)
+func NewTaskProcessor(db *gorm.DB, s3client *s3.Client, publisher messaging.Publisher, reciever messaging.Reciever, localModelDir string, modelBucket string) *TaskProcessor {
+	inference := NewInferenceJobProcessor(db, s3client, localModelDir, modelBucket)
 	return &TaskProcessor{
 		db:        db,
 		inference: inference,

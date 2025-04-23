@@ -18,16 +18,16 @@ type InferenceJobProcessor struct {
 	db       *gorm.DB
 	s3client *s3.Client
 
-	localModelDir     string
-	modelArtifactPath string
+	localModelDir string
+	modelBucket   string
 }
 
-func NewInferenceJobProcessor(db *gorm.DB, s3client *s3.Client, localModelDir string, modelArtifactPath string) *InferenceJobProcessor {
+func NewInferenceJobProcessor(db *gorm.DB, s3client *s3.Client, localModelDir string, modelBucket string) *InferenceJobProcessor {
 	return &InferenceJobProcessor{
-		db:                db,
-		s3client:          s3client,
-		localModelDir:     localModelDir,
-		modelArtifactPath: modelArtifactPath,
+		db:            db,
+		s3client:      s3client,
+		localModelDir: localModelDir,
+		modelBucket:   modelBucket,
 	}
 }
 
@@ -43,6 +43,7 @@ func (proc *InferenceJobProcessor) RunInferenceTask(
 
 	model, err := proc.loadModel(modelId, modelType)
 	if err != nil {
+		return err
 	}
 
 	groupToFilter := make(map[uuid.UUID]Filter)
@@ -70,7 +71,7 @@ func (proc *InferenceJobProcessor) RunInferenceTask(
 			continue
 		}
 
-		if err := proc.db.CreateInBatches(groups, 100); err != nil {
+		if err := proc.db.CreateInBatches(groups, 100).Error; err != nil {
 			slog.Error("error saving groups to database", "object", object, "error", err)
 			objectErrorCnt++
 			continue
@@ -93,13 +94,12 @@ func (proc *InferenceJobProcessor) loadModel(modelId uuid.UUID, modelType string
 
 		modelObjectKey := filepath.Join(modelId.String(), "model.bin")
 
-		if err := proc.s3client.DownloadFile(context.TODO(), proc.modelArtifactPath, modelObjectKey, localPath); err != nil {
+		if err := proc.s3client.DownloadFile(context.TODO(), proc.modelBucket, modelObjectKey, localPath); err != nil {
 			return nil, fmt.Errorf("failed to download model from S3: %w", err)
 		}
 	}
 
-	// Load the model from the local path
-	model, err := LoadModel(localPath, modelType)
+	model, err := LoadModel(modelType, localPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load model: %w", err)
 	}

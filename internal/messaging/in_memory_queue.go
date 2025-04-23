@@ -67,3 +67,10 @@ func (q *InMemoryQueue) PublishInferenceTask(ctx context.Context, payload models
 func (q *InMemoryQueue) Tasks() <-chan Task {
 	return q.tasks
 }
+
+func (q *InMemoryQueue) Close() {
+	if q.tasks != nil {
+		close(q.tasks)
+		q.tasks = nil
+	}
+}

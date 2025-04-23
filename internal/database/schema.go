@@ -15,13 +15,12 @@ const (
 )
 
 type Model struct {
-	Id                uuid.UUID `gorm:"type:uuid;primaryKey"`
-	Name              string
-	Type              string `gorm:"size:20;not null"`
-	Status            string `gorm:"size:20;not null"`
-	ModelArtifactPath string `gorm:"not null"`
-	CreationTime      time.Time
-	CompletionTime    sql.NullTime
+	Id             uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Name           string
+	Type           string `gorm:"size:20;not null"`
+	Status         string `gorm:"size:20;not null"`
+	CreationTime   time.Time
+	CompletionTime sql.NullTime
 }
 
 const (
@@ -40,10 +39,12 @@ type Report struct {
 	SourceS3Bucket string
 	SourceS3Prefix sql.NullString
 
-	CreationTime   time.Time
-	CompletionTime sql.NullTime
+	CreationTime time.Time
 
-	Groups []Group `gorm:"foreignKey:ShardDataTaskId;constraint:OnDelete:CASCADE"`
+	Groups []Group `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
+
+	ShardDataTask  *ShardDataTask  `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
+	InferenceTasks []InferenceTask `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
 }
 
 type ShardDataTask struct {
@@ -77,7 +78,7 @@ type Group struct {
 	ReportId uuid.UUID `gorm:"type:uuid"`
 	Query    string
 
-	Objects []ObjectGroup `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
+	Objects []ObjectGroup `gorm:"foreignKey:GroupId;constraint:OnDelete:CASCADE"`
 }
 
 type ObjectGroup struct {

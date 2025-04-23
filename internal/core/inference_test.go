@@ -39,7 +39,9 @@ func (m *regexModel) Predict(text string) ([]types.Entity, error) {
 
 func (m *regexModel) Release() {}
 
-type mockS3Client struct{}
+type mockS3Client struct {
+	s3.S3Api
+}
 
 type stringReadCloser struct{ *strings.Reader }
 
@@ -53,26 +55,6 @@ func (m *mockS3Client) GetObject(context.Context, *aws_s3.GetObjectInput, ...fun
 			Reader: strings.NewReader(testDoc),
 		},
 	}, nil
-}
-
-// Unused for these tests
-func (m *mockS3Client) PutObject(context.Context, *aws_s3.PutObjectInput, ...func(*aws_s3.Options)) (*aws_s3.PutObjectOutput, error) {
-	return nil, nil
-}
-func (m *mockS3Client) UploadPart(context.Context, *aws_s3.UploadPartInput, ...func(*aws_s3.Options)) (*aws_s3.UploadPartOutput, error) {
-	return nil, nil
-}
-func (m *mockS3Client) CreateMultipartUpload(context.Context, *aws_s3.CreateMultipartUploadInput, ...func(*aws_s3.Options)) (*aws_s3.CreateMultipartUploadOutput, error) {
-	return nil, nil
-}
-func (m *mockS3Client) CompleteMultipartUpload(context.Context, *aws_s3.CompleteMultipartUploadInput, ...func(*aws_s3.Options)) (*aws_s3.CompleteMultipartUploadOutput, error) {
-	return nil, nil
-}
-func (m *mockS3Client) AbortMultipartUpload(context.Context, *aws_s3.AbortMultipartUploadInput, ...func(*aws_s3.Options)) (*aws_s3.AbortMultipartUploadOutput, error) {
-	return nil, nil
-}
-func (m *mockS3Client) ListObjectsV2(context.Context, *aws_s3.ListObjectsV2Input, ...func(*aws_s3.Options)) (*aws_s3.ListObjectsV2Output, error) {
-	return nil, nil
 }
 
 func TestInference(t *testing.T) {

@@ -13,11 +13,24 @@ type Model interface {
 	Release()
 }
 
-func LoadModel(modelType, path string) (Model, error) {
-	switch modelType {
-	case "bolt":
-		return bolt.LoadNER(path)
-	default:
-		return nil, fmt.Errorf("unsupported model type: %s", modelType)
+type modelLoader func(string) (Model, error)
+
+var modelLoaders map[string]modelLoader = map[string]modelLoader{
+	"bolt": func(path string) (Model, error) { return bolt.LoadNER(path) },
+}
+
+func RegisterModelLoader(modelType string, loader modelLoader) {
+	if _, exists := modelLoaders[modelType]; exists {
+		panic(fmt.Sprintf("model type %s already registered", modelType))
 	}
+	modelLoaders[modelType] = loader
+}
+
+func LoadModel(modelType, path string) (Model, error) {
+	loader, ok := modelLoaders[modelType]
+	if !ok {
+		return nil, fmt.Errorf("unknown model type %s", modelType)
+	}
+
+	return loader(path)
 }
