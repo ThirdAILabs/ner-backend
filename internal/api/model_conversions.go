@@ -15,7 +15,7 @@ func convertModel(m database.Model) api.Model {
 }
 
 func convertModels(ms []database.Model) []api.Model {
-	var models []api.Model
+	models := make([]api.Model, 0, len(ms))
 	for _, m := range ms {
 		models = append(models, convertModel(m))
 	}
@@ -44,7 +44,7 @@ func convertGroups(gs []database.Group) []api.Group {
 }
 
 func convertReport(r database.Report) api.Report {
-	report :=  api.Report{
+	report := api.Report{
 		Id:             r.Id,
 		Model:          convertModel(*r.Model),
 		SourceS3Bucket: r.SourceS3Bucket,
@@ -61,7 +61,7 @@ func convertReport(r database.Report) api.Report {
 }
 
 func convertReports(rs []database.Report) []api.Report {
-	var reports []api.Report
+	reports := make([]api.Report, 0, len(rs))
 	for _, r := range rs {
 		reports = append(reports, convertReport(r))
 	}
