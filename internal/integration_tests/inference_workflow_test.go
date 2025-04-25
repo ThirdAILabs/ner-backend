@@ -6,6 +6,7 @@ import (
 	"fmt"
 	backend "ner-backend/internal/api"
 	"ner-backend/internal/core"
+	"ner-backend/internal/core/datagen"
 	"ner-backend/internal/core/types"
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
@@ -46,6 +47,14 @@ func (m *regexModel) Predict(text string) ([]types.Entity, error) {
 		}
 	}
 	return entities, nil
+}
+
+func (m *regexModel) Finetune(taskPrompt string, tags []datagen.TagInfo, samples []datagen.Sample) error {
+	return nil
+}
+
+func (m *regexModel) Save(path string) error {
+	return nil
 }
 
 func (m *regexModel) Release() {}

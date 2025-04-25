@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"ner-backend/internal/core/datagen"
 	"ner-backend/internal/core/types"
 	"ner-backend/internal/database"
 	"ner-backend/internal/s3"
@@ -37,6 +38,14 @@ func (m *regexModel) Predict(text string) ([]types.Entity, error) {
 	return entities, nil
 }
 
+func (m *regexModel) Finetune(taskPrompt string, tags []datagen.TagInfo, samples []datagen.Sample) error {
+	return nil
+}
+
+func (m *regexModel) Save(path string) error {
+	return nil
+}
+
 func (m *regexModel) Release() {}
 
 type mockS3Client struct {
@@ -67,8 +76,8 @@ func TestInference(t *testing.T) {
 
 	reportId := uuid.New()
 
-	inferenceJobProcessor := InferenceJobProcessor{
-		s3client: s3.NewFromClient(&mockS3Client{}, "test-bucket"),
+	inferenceJobProcessor := TaskProcessor{
+		s3Client: s3.NewFromClient(&mockS3Client{}, "test-bucket"),
 	}
 
 	groupId1, groupId2 := uuid.New(), uuid.New()
@@ -80,7 +89,7 @@ func TestInference(t *testing.T) {
 
 	object := "test.txt"
 
-	allEntities, groups, err := inferenceJobProcessor.processObject(
+	allEntities, groups, err := inferenceJobProcessor.runInferenceOnObject(
 		reportId,
 		NewDefaultParser(),
 		model,

@@ -57,7 +57,7 @@ func (p *RabbitMQPublisher) connect() error {
 		return fmt.Errorf("failed to open rabbitmq channel: %w", err)
 	}
 
-	queues := []string{TrainingQueue, InferenceQueue, ShardDataQueue}
+	queues := []string{FinetuneQueue, InferenceQueue, ShardDataQueue}
 	for _, queue := range queues {
 		_, err := p.channel.QueueDeclare(queue, true, false, false, false, nil)
 		if err != nil {
@@ -133,8 +133,8 @@ func (p *RabbitMQPublisher) publishTaskInternal(ctx context.Context, queueName s
 	return nil
 }
 
-func (p *RabbitMQPublisher) PublishTrainTask(ctx context.Context, payload TrainTaskPayload) error {
-	return p.publishTaskInternal(ctx, TrainingQueue, payload)
+func (p *RabbitMQPublisher) PublishFinetuneTask(ctx context.Context, payload FinetuneTaskPayload) error {
+	return p.publishTaskInternal(ctx, FinetuneQueue, payload)
 }
 
 func (p *RabbitMQPublisher) PublishShardDataTask(ctx context.Context, payload ShardDataPayload) error {
@@ -228,7 +228,7 @@ func (c *RabbitMQReceiver) receiveTasks() error {
 		return fmt.Errorf("failed to set channel qos: %w", err)
 	}
 
-	queues := []string{TrainingQueue, InferenceQueue, ShardDataQueue}
+	queues := []string{FinetuneQueue, InferenceQueue, ShardDataQueue}
 
 	for _, queue := range queues {
 		msgs, err := channel.Consume(queue, "", false, false, false, false, nil)
