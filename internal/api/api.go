@@ -103,6 +103,10 @@ func (s *BackendService) FineTuneModel(r *http.Request) (any, error) {
 			return CodedErrorf(http.StatusInternalServerError, "error retrieving base model record")
 		}
 
+		if baseModel.Status != database.ModelTrained {
+			return CodedErrorf(http.StatusUnprocessableEntity, "base model is not ready for finetuning: model has status: %s", baseModel.Status)
+		}
+
 		model = database.Model{
 			Id:           uuid.New(),
 			BaseModelId:  uuid.NullUUID{UUID: baseModel.Id, Valid: true},
