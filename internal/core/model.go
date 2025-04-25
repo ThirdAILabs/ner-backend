@@ -3,12 +3,17 @@ package core
 import (
 	"fmt"
 	"ner-backend/internal/core/bolt"
+	"ner-backend/internal/core/datagen"
 	"ner-backend/internal/core/types"
 	// "ner-backend/internal/core/bolt"
 )
 
 type Model interface {
 	Predict(text string) ([]types.Entity, error)
+
+	Finetune(taskPrompt string, tags []datagen.TagInfo, samples []datagen.Sample) error
+
+	Save(path string) error
 
 	Release()
 }

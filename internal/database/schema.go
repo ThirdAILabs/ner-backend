@@ -15,7 +15,11 @@ const (
 )
 
 type Model struct {
-	Id             uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Id uuid.UUID `gorm:"type:uuid;primaryKey"`
+
+	BaseModelId uuid.NullUUID `gorm:"type:uuid"`
+	BaseModel   *Model        `gorm:"foreignKey:BaseModelId"`
+
 	Name           string
 	Type           string `gorm:"size:20;not null"`
 	Status         string `gorm:"size:20;not null"`
