@@ -48,9 +48,8 @@ const JobTab: React.FC<{ jobEntries: JobEntry[] }> = ({ jobEntries }) => {
 
   useEffect(() => {
     const calculateEmptyRows = () => {
-      const screenHeight = window.innerHeight;
-      const tableTop = document.querySelector('.MuiTableContainer-root')?.getBoundingClientRect().top || 0;
-      const availableHeight = screenHeight - tableTop - 32;
+      const containerHeight = 600; // Fixed container height
+      const availableHeight = containerHeight - ROW_HEIGHT; // Subtract header height
       const totalRows = Math.floor(availableHeight / ROW_HEIGHT);
       setEmptyRows(Math.max(0, totalRows - jobEntries.length));
     };
@@ -60,12 +59,11 @@ const JobTab: React.FC<{ jobEntries: JobEntry[] }> = ({ jobEntries }) => {
     return () => window.removeEventListener('resize', calculateEmptyRows);
   }, [jobEntries.length]);
 
-
   return (
     <div className="job-tab">
       <button className='new-job-button'>New</button>
-      <TableContainer component={Paper}>
-        <Table sx={{ minWidth: 700 }} aria-label="customized table">
+      <TableContainer component={Paper} sx={{ maxHeight: 600 }}>
+        <Table stickyHeader sx={{ minWidth: 700 }} aria-label="customized table">
           <TableHead>
             <TableRow>
               <StyledTableCell>Name</StyledTableCell>
