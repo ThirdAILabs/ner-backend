@@ -1,5 +1,28 @@
+@import '../../base/variables';
+
 .job-tab {
   display: flex;
   flex-direction: column;
   width: 100%;
+  gap: 24px;
+  padding: 24px;
+}
+
+.new-job-button {
+  margin-top: 16px;
+  align-self: flex-end;
+  padding: 8px 24px;
+  margin-right: 16px;
+  background-color: #ffffff;
+  color: black;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: $background-color 0.2s ease;
+
+  &:hover {
+    background-color: $background-color;
+  }
 }

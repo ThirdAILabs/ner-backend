@@ -10,6 +10,34 @@ const ModelPage: React.FC = () => {
     setActiveTab(tab);
   };
 
+  const jobEntries = [
+    {
+      name: 'Daniel Docs 1',
+      source: 'S3 Bucket - Daniel Docs 1',
+      initiated: '2 months ago',
+      progress: {
+        status: 'Completed',
+        completed: '2 months ago',
+      },
+    },
+    {
+      name: 'Daniel Docs 2',
+      source: 'S3 Bucket - Daniel Docs 2',
+      initiated: '1 month ago',
+      progress: {
+        status: 'In Progress',
+        current: 50,
+        total: 100,
+      },
+    },
+  ];
+
+  //repeating this jobEntries 30 times
+  const repeatedJobEntries = Array.from({ length: 30 }, (_, i) => ({
+    ...jobEntries[i % jobEntries.length],
+    name: `${jobEntries[i % jobEntries.length].name} ${i + 1}`,
+  }));
+
   return (
     <div className="main-container">
       <div className="breadcrumb">
@@ -51,7 +79,7 @@ const ModelPage: React.FC = () => {
             <p>Monitoring content goes here...</p>
           </div>
         )}
-        {activeTab === 'Jobs' && <JobTab />}
+        {activeTab === 'Jobs' && <JobTab jobEntries={repeatedJobEntries} />}
       </div>
     </div>
   );

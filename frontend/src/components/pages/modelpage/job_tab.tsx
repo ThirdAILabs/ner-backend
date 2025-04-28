@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { styled } from '@mui/material/styles';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -8,8 +8,9 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
 import '../../../styles/pages/modelpage/job_tab.scss';
+import LinearProgressBar from '../../common/progressBar'
 
-interface DocumentItem {
+interface JobEntry {
   name: string;
   source: string;
   initiated: string;
@@ -41,52 +42,28 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
   },
 }));
 
-const JobTab: React.FC = () => {
-  const documents: DocumentItem[] = [
-    {
-      name: 'Daniel Docs 1',
-      source: 'S3 Bucket - Daniel Docs 1',
-      initiated: '2 months ago',
-      progress: {
-        status: 'Completed',
-        completed: '2 months ago',
-      },
-    },
-    {
-      name: 'Daniel Docs 2',
-      source: 'S3 Bucket - Daniel Docs 2',
-      initiated: '3 days ago',
-      progress: {
-        status: 'InProgress',
-        current: 52,
-        total: 92,
-      },
-    },
-  ];
+const JobTab: React.FC<{ jobEntries: JobEntry[] }> = ({ jobEntries }) => {
+  const [emptyRows, setEmptyRows] = useState(0);
+  const ROW_HEIGHT = 53; // height of each row in pixels
 
-  const renderProgress = (progress: DocumentItem['progress']) => {
-    if (progress.status === 'Completed') {
-      return <span>Completed {progress.completed}</span>;
-    } else {
-      return (
-        <div className="progress-container">
-          <div className="progress-bar">
-            <div
-              className="progress-fill"
-              style={{ width: `${(progress.current! / progress.total!) * 100}%` }}
-            ></div>
-          </div>
-          <span className="progress-text">
-            {progress.current}M / {progress.total}M
-          </span>
-        </div>
-      );
-    }
-  };
+  useEffect(() => {
+    const calculateEmptyRows = () => {
+      const screenHeight = window.innerHeight;
+      const tableTop = document.querySelector('.MuiTableContainer-root')?.getBoundingClientRect().top || 0;
+      const availableHeight = screenHeight - tableTop - 32;
+      const totalRows = Math.floor(availableHeight / ROW_HEIGHT);
+      setEmptyRows(Math.max(0, totalRows - jobEntries.length));
+    };
+
+    calculateEmptyRows();
+    window.addEventListener('resize', calculateEmptyRows);
+    return () => window.removeEventListener('resize', calculateEmptyRows);
+  }, [jobEntries.length]);
+
 
   return (
     <div className="job-tab">
-      <button>New</button>
+      <button className='new-job-button'>New</button>
       <TableContainer component={Paper}>
         <Table sx={{ minWidth: 700 }} aria-label="customized table">
           <TableHead>
@@ -99,17 +76,34 @@ const JobTab: React.FC = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {documents.map((doc, index) => (
+            {jobEntries.map((job, index) => (
               <StyledTableRow key={index}>
-                <StyledTableCell>{doc.name}</StyledTableCell>
-                <StyledTableCell>{doc.source}</StyledTableCell>
-                <StyledTableCell>{doc.initiated}</StyledTableCell>
-                <StyledTableCell>{renderProgress(doc.progress)}</StyledTableCell>
+                <StyledTableCell>{job.name}</StyledTableCell>
+                <StyledTableCell>{job.source}</StyledTableCell>
+                <StyledTableCell>{job.initiated}</StyledTableCell>
+                {
+                  job.progress.status === 'Completed' ? (
+                    <StyledTableCell>{job.progress.status}</StyledTableCell>
+                  ) : (
+                    <StyledTableCell>
+                      {<LinearProgressBar value={job.progress.current && job.progress.total ? Math.round((job.progress.current / job.progress.total) * 100) : 0} left_value={`${job.progress.current}M`} right_value={`${job.progress.total}M`} />}
+                    </StyledTableCell>
+                  )
+                }
                 <StyledTableCell>
-                  <a href="#" className="view-link">
+                  <a href="#">
                     View
                   </a>
                 </StyledTableCell>
+              </StyledTableRow>
+            ))}
+            {emptyRows > 0 && Array(emptyRows).fill(0).map((_, index) => (
+              <StyledTableRow key={`empty-${index}`}>
+                <StyledTableCell component="th" scope="row">&nbsp;</StyledTableCell>
+                <StyledTableCell>&nbsp;</StyledTableCell>
+                <StyledTableCell>&nbsp;</StyledTableCell>
+                <StyledTableCell>&nbsp;</StyledTableCell>
+                <StyledTableCell>&nbsp;</StyledTableCell>
               </StyledTableRow>
             ))}
           </TableBody>
