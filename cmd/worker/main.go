@@ -15,15 +15,17 @@ import (
 )
 
 type WorkerConfig struct {
-	DatabaseURL       string `env:"DATABASE_URL,notEmpty,required"`
-	RabbitMQURL       string `env:"RABBITMQ_URL,notEmpty,required"`
-	S3EndpointURL     string `env:"S3_ENDPOINT_URL,notEmpty,required"`
-	S3AccessKeyID     string `env:"AWS_ACCESS_KEY_ID,notEmpty,required"`
-	S3SecretAccessKey string `env:"AWS_SECRET_ACCESS_KEY,notEmpty,required"`
-	S3Region          string `env:"AWS_REGION,notEmpty,required"`
-	ModelBucketName   string `env:"MODEL_BUCKET_NAME" envDefault:"models"`
-	QueueNames        string `env:"QUEUE_NAMES" envDefault:"inference_queue,training_queue,shard_data_queue"`
-	WorkerConcurrency int    `env:"CONCURRENCY" envDefault:"1"`
+	DatabaseURL                 string `env:"DATABASE_URL,notEmpty,required"`
+	RabbitMQURL                 string `env:"RABBITMQ_URL,notEmpty,required"`
+	S3EndpointURL               string `env:"S3_ENDPOINT_URL,notEmpty,required"`
+	S3AccessKeyID               string `env:"AWS_ACCESS_KEY_ID,notEmpty,required"`
+	S3SecretAccessKey           string `env:"AWS_SECRET_ACCESS_KEY,notEmpty,required"`
+	S3Region                    string `env:"AWS_REGION,notEmpty,required"`
+	ModelBucketName             string `env:"MODEL_BUCKET_NAME" envDefault:"models"`
+	QueueNames                  string `env:"QUEUE_NAMES" envDefault:"inference_queue,training_queue,shard_data_queue"`
+	WorkerConcurrency           int    `env:"CONCURRENCY" envDefault:"1"`
+	PythonExecutablePath        string `env:"PYTHON_EXECUTABLE_PATH" envDefault:"python"`
+	PythonModelPluginScriptPath string `env:"PYTHON_MODEL_PLUGIN_SCRIPT_PATH" envDefault:"plugin/plugin-python/plugin.py"`
 }
 
 func main() {
