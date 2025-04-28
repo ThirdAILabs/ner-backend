@@ -3,17 +3,15 @@
 .container {
     width: 100%;
     min-height: 100vh;
-    background-color: #ffffff;
+    background-color: $background-color;
     font-family: 'Segoe UI', Arial, sans-serif;
     color: $color-text-900;
     overflow: hidden;
-    // border: 2px solid red;
 }
 
 .main-content {
     display: flex;
     flex-direction: column;
-    background-color: #ffffff;
     width: 100%;
 }
 
@@ -22,7 +20,6 @@
     display: flex;
     justify-content: flex-end;
     margin-right: 5%;
-    background-color: #ffffff;
 }
 
 .new-button {
@@ -46,7 +43,6 @@
     margin: 0;
     padding: 10px 10px;
     overflow: auto;
-    background-color: white;
     width: 90%;
     margin-left: 5%;
     box-sizing: border-box;
