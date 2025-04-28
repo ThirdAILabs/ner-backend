@@ -6,22 +6,144 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"ner-backend/internal/core"
+	"ner-backend/internal/core/datagen"
+	"ner-backend/internal/core/types"
+	"ner-backend/internal/database"
+	"ner-backend/internal/s3"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"regexp"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/minio"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
+type regexModel struct {
+	patterns map[string]regexp.Regexp
+}
+
+func (m *regexModel) Predict(text string) ([]types.Entity, error) {
+	var entities []types.Entity
+	for label, pattern := range m.patterns {
+		matches := pattern.FindAllStringSubmatchIndex(text, -1)
+		for _, match := range matches {
+			if len(match) > 0 {
+				entities = append(entities, types.Entity{
+					Label: label,
+					Text:  text[match[0]:match[1]],
+					Start: match[0],
+					End:   match[1],
+				})
+			}
+		}
+	}
+	return entities, nil
+}
+
+func (m *regexModel) Finetune(taskPrompt string, tags []datagen.TagInfo, samples []datagen.Sample) error {
+	for _, tag := range tags {
+		pattern, err := regexp.Compile(tag.Name)
+		if err != nil {
+			return fmt.Errorf("error compiling regex pattern: %w", err)
+		}
+		m.patterns[tag.Name] = *pattern
+	}
+
+	return nil
+}
+
+func (m *regexModel) Save(path string) error {
+	data := make(map[string]string)
+	for label, pattern := range m.patterns {
+		data[label] = pattern.String()
+	}
+	file, err := os.Create(path)
+	if err != nil {
+		return fmt.Errorf("error saving model: %w", err)
+	}
+	defer file.Close()
+
+	if err := json.NewEncoder(file).Encode(data); err != nil {
+		return fmt.Errorf("error encoding model data: %w", err)
+	}
+
+	return nil
+}
+
+func (m *regexModel) Release() {}
+
+func loadRegexModel(path string) (core.Model, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	var patterns map[string]string
+
+	if err := json.NewDecoder(file).Decode(&patterns); err != nil {
+		return nil, err
+	}
+
+	compiledPatterns := make(map[string]regexp.Regexp)
+	for label, pattern := range patterns {
+		compiledPattern, err := regexp.Compile(pattern)
+		if err != nil {
+			return nil, err
+		}
+		compiledPatterns[label] = *compiledPattern
+	}
+
+	return &regexModel{patterns: compiledPatterns}, nil
+}
+
 const (
-	minioUsername = "admin"
-	minioPassword = "password"
+	modelBucket = "test-model-bucket"
 )
+
+func createModel(t *testing.T, s3Client *s3.Client, db *gorm.DB, modelBucket string) uuid.UUID {
+	modelData := `{"phone": "\\d{3}-\\d{3}-\\d{4}", "email": "\\w+@email\\.com"}`
+
+	require.NoError(t, s3Client.CreateBucket(context.Background(), modelBucket))
+
+	modelId := uuid.New()
+	_, err := s3Client.UploadObject(context.Background(), modelBucket, modelId.String()+"/model.bin", strings.NewReader(modelData))
+	require.NoError(t, err)
+
+	model := database.Model{
+		Id:           modelId,
+		Name:         "test-model",
+		Type:         "regex",
+		Status:       database.ModelTrained,
+		CreationTime: time.Now().UTC(),
+	}
+
+	require.NoError(t, db.Create(&model).Error)
+
+	core.RegisterModelLoader("regex", loadRegexModel)
+
+	return modelId
+}
+
+func createDB(t *testing.T) *gorm.DB {
+	db, err := gorm.Open(sqlite.Open("file::memory:"), &gorm.Config{})
+	require.NoError(t, err)
+
+	require.NoError(t, database.GetMigrator(db).Migrate())
+
+	return db
+}
 
 // func setupRabbitMQContainer(t *testing.T, ctx context.Context) string {
 // 	// Start RabbitMQ container
@@ -41,6 +163,11 @@ const (
 
 // 	return connStr
 // }
+
+const (
+	minioUsername = "admin"
+	minioPassword = "password"
+)
 
 func setupMinioContainer(t *testing.T, ctx context.Context) string {
 	minioContainer, err := minio.Run(
