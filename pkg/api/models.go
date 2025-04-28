@@ -85,3 +85,7 @@ type FinetuneRequest struct {
 type FinetuneResponse struct {
 	ModelId uuid.UUID
 }
+
+type SearchResponse struct {
+	Objects []string
+}

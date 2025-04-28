@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -313,4 +314,43 @@ func TestGetReport(t *testing.T) {
 		}, entities)
 
 	})
+}
+
+func TestReportSearch(t *testing.T) {
+	modelId, reportId := uuid.New(), uuid.New()
+	db := createDB(t,
+		&database.Model{Id: modelId, Name: "Model1", Type: "regex", Status: database.ModelTrained},
+		&database.Report{
+			Id:             reportId,
+			ModelId:        modelId,
+			SourceS3Bucket: "test-bucket",
+			SourceS3Prefix: sql.NullString{String: "test-prefix", Valid: true},
+		},
+		&database.ObjectEntity{ReportId: reportId, Object: "object1", Start: 1, End: 2, Label: "label1", Text: "text1"},
+		&database.ObjectEntity{ReportId: reportId, Object: "object2", Start: 1, End: 1, Label: "label2", Text: "text2"},
+		&database.ObjectEntity{ReportId: reportId, Object: "object3", Start: 2, End: 3, Label: "label3", Text: "abc"},
+		&database.ObjectEntity{ReportId: reportId, Object: "object1", Start: 2, End: 3, Label: "label3", Text: "text3"},
+		&database.ObjectEntity{ReportId: reportId, Object: "object1", Start: 4, End: 5, Label: "label4", Text: "12xyz34"},
+		&database.ObjectEntity{ReportId: reportId, Object: "object3", Start: 4, End: 5, Label: "label4", Text: "12xyz34"},
+		&database.ObjectEntity{ReportId: reportId, Object: "object4", Start: 4, End: 5, Label: "label3", Text: "12xyz34"},
+	)
+
+	service := backend.NewBackendService(db, messaging.NewInMemoryQueue(), 1024)
+	router := chi.NewRouter()
+	service.AddRoutes(router)
+
+	query := `label4 CONTAINS "xyz" AND (COUNT(label2) > 0 OR label3 = "abc")`
+	url := fmt.Sprintf("/reports/%s/search?query=%s", reportId.String(), url.QueryEscape(query))
+
+	fmt.Println(url)
+	req := httptest.NewRequest(http.MethodGet, url, nil)
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	var response api.SearchResponse
+	err := json.Unmarshal(rec.Body.Bytes(), &response)
+	assert.NoError(t, err)
+
+	assert.ElementsMatch(t, []string{"object1", "object3"}, response.Objects)
 }
