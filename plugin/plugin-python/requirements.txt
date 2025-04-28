@@ -3,4 +3,5 @@ grpcio-health-checking
 protobuf
 transformers
 torch
-optimum[onnxruntime]
+pydantic
+presidio-analyzer
