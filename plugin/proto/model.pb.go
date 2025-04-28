@@ -70,7 +70,7 @@ func (x *PredictRequest) GetSentence() string {
 
 type PredictResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Value         []byte                 `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
+	Entities      []*Entity              `protobuf:"bytes,1,rep,name=entities,proto3" json:"entities,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -105,11 +105,79 @@ func (*PredictResponse) Descriptor() ([]byte, []int) {
 	return file_proto_model_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *PredictResponse) GetValue() []byte {
+func (x *PredictResponse) GetEntities() []*Entity {
 	if x != nil {
-		return x.Value
+		return x.Entities
 	}
 	return nil
+}
+
+type Entity struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Label         string                 `protobuf:"bytes,1,opt,name=label,proto3" json:"label,omitempty"`
+	Text          string                 `protobuf:"bytes,2,opt,name=text,proto3" json:"text,omitempty"`
+	Start         int32                  `protobuf:"varint,3,opt,name=start,proto3" json:"start,omitempty"`
+	End           int32                  `protobuf:"varint,4,opt,name=end,proto3" json:"end,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Entity) Reset() {
+	*x = Entity{}
+	mi := &file_proto_model_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Entity) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Entity) ProtoMessage() {}
+
+func (x *Entity) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_model_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Entity.ProtoReflect.Descriptor instead.
+func (*Entity) Descriptor() ([]byte, []int) {
+	return file_proto_model_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *Entity) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+func (x *Entity) GetText() string {
+	if x != nil {
+		return x.Text
+	}
+	return ""
+}
+
+func (x *Entity) GetStart() int32 {
+	if x != nil {
+		return x.Start
+	}
+	return 0
+}
+
+func (x *Entity) GetEnd() int32 {
+	if x != nil {
+		return x.End
+	}
+	return 0
 }
 
 var File_proto_model_proto protoreflect.FileDescriptor
@@ -118,9 +186,14 @@ const file_proto_model_proto_rawDesc = "" +
 	"\n" +
 	"\x11proto/model.proto\x12\x05proto\",\n" +
 	"\x0ePredictRequest\x12\x1a\n" +
-	"\bsentence\x18\x01 \x01(\tR\bsentence\"'\n" +
-	"\x0fPredictResponse\x12\x14\n" +
-	"\x05value\x18\x01 \x01(\fR\x05value2A\n" +
+	"\bsentence\x18\x01 \x01(\tR\bsentence\"<\n" +
+	"\x0fPredictResponse\x12)\n" +
+	"\bentities\x18\x01 \x03(\v2\r.proto.EntityR\bentities\"Z\n" +
+	"\x06Entity\x12\x14\n" +
+	"\x05label\x18\x01 \x01(\tR\x05label\x12\x12\n" +
+	"\x04text\x18\x02 \x01(\tR\x04text\x12\x14\n" +
+	"\x05start\x18\x03 \x01(\x05R\x05start\x12\x10\n" +
+	"\x03end\x18\x04 \x01(\x05R\x03end2A\n" +
 	"\x05Model\x128\n" +
 	"\aPredict\x12\x15.proto.PredictRequest\x1a\x16.proto.PredictResponseB\tZ\a./protob\x06proto3"
 
@@ -136,19 +209,21 @@ func file_proto_model_proto_rawDescGZIP() []byte {
 	return file_proto_model_proto_rawDescData
 }
 
-var file_proto_model_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_proto_model_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_proto_model_proto_goTypes = []any{
 	(*PredictRequest)(nil),  // 0: proto.PredictRequest
 	(*PredictResponse)(nil), // 1: proto.PredictResponse
+	(*Entity)(nil),          // 2: proto.Entity
 }
 var file_proto_model_proto_depIdxs = []int32{
-	0, // 0: proto.Model.Predict:input_type -> proto.PredictRequest
-	1, // 1: proto.Model.Predict:output_type -> proto.PredictResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	2, // 0: proto.PredictResponse.entities:type_name -> proto.Entity
+	0, // 1: proto.Model.Predict:input_type -> proto.PredictRequest
+	1, // 2: proto.Model.Predict:output_type -> proto.PredictResponse
+	2, // [2:3] is the sub-list for method output_type
+	1, // [1:2] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_proto_model_proto_init() }
@@ -162,7 +237,7 @@ func file_proto_model_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_model_proto_rawDesc), len(file_proto_model_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

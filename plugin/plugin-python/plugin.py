@@ -15,8 +15,7 @@ class ModelServicer(model_pb2_grpc.ModelServicer):
 
     def Predict(self, request, context):
         sentence = request.sentence
-        result = model_pb2.PredictResponse()
-        result.value = b"prediction_result_bytes"
+        result = model_pb2.PredictResponse(entities=[{"label": "label", "text": "text", "start": 0, "end": 4}]*5000)
         return result
 
 def serve():

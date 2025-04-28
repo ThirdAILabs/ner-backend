@@ -13,7 +13,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x11proto/model.proto\x12\x05proto\",\n\x0ePredictRequest\x12\x1a\n\x08sentence\x18\x01 \x01(\tR\x08sentence\"\'\n\x0fPredictResponse\x12\x14\n\x05value\x18\x01 \x01(\x0cR\x05value2A\n\x05Model\x12\x38\n\x07Predict\x12\x15.proto.PredictRequest\x1a\x16.proto.PredictResponseB\tZ\x07./protob\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x11proto/model.proto\x12\x05proto\",\n\x0ePredictRequest\x12\x1a\n\x08sentence\x18\x01 \x01(\tR\x08sentence\"<\n\x0fPredictResponse\x12)\n\x08\x65ntities\x18\x01 \x03(\x0b\x32\r.proto.EntityR\x08\x65ntities\"Z\n\x06\x45ntity\x12\x14\n\x05label\x18\x01 \x01(\tR\x05label\x12\x12\n\x04text\x18\x02 \x01(\tR\x04text\x12\x14\n\x05start\x18\x03 \x01(\x05R\x05start\x12\x10\n\x03\x65nd\x18\x04 \x01(\x05R\x03\x65nd2A\n\x05Model\x12\x38\n\x07Predict\x12\x15.proto.PredictRequest\x1a\x16.proto.PredictResponseB\tZ\x07./protob\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -24,7 +24,9 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _globals['_PREDICTREQUEST']._serialized_start=28
   _globals['_PREDICTREQUEST']._serialized_end=72
   _globals['_PREDICTRESPONSE']._serialized_start=74
-  _globals['_PREDICTRESPONSE']._serialized_end=113
-  _globals['_MODEL']._serialized_start=115
-  _globals['_MODEL']._serialized_end=180
+  _globals['_PREDICTRESPONSE']._serialized_end=134
+  _globals['_ENTITY']._serialized_start=136
+  _globals['_ENTITY']._serialized_end=226
+  _globals['_MODEL']._serialized_start=228
+  _globals['_MODEL']._serialized_end=293
 # @@protoc_insertion_point(module_scope)

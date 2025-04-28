@@ -1,6 +1,3 @@
-// Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
-
 syntax = "proto3";
 package proto;
 option go_package = "./proto";
@@ -10,7 +7,14 @@ message PredictRequest {
 }
 
 message PredictResponse {
-    bytes value = 1;
+    repeated Entity entities = 1;
+}
+
+message Entity {
+    string label = 1;
+    string text = 2;
+    int32 start = 3;
+    int32 end = 4;
 }
 
 service Model {

@@ -1,6 +1,3 @@
-// Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
-
 package shared
 
 import (
@@ -12,7 +9,7 @@ import (
 // GRPCClient is an implementation of KV that talks over RPC.
 type GRPCClient struct{ client proto.ModelClient }
 
-func (m *GRPCClient) Predict(sentence string) ([]byte, error) {
+func (m *GRPCClient) Predict(sentence string) ([]*proto.Entity, error) {
 	resp, err := m.client.Predict(context.Background(), &proto.PredictRequest{
 		Sentence: sentence,
 	})
@@ -20,7 +17,7 @@ func (m *GRPCClient) Predict(sentence string) ([]byte, error) {
 		return nil, err
 	}
 
-	return resp.Value, nil
+	return resp.Entities, nil
 }
 
 // Here is the gRPC server that GRPCClient talks to.
@@ -33,5 +30,5 @@ func (m *GRPCServer) Predict(
 	ctx context.Context,
 	req *proto.PredictRequest) (*proto.PredictResponse, error) {
 	v, err := m.Impl.Predict(req.Sentence)
-	return &proto.PredictResponse{Value: v}, err
+	return &proto.PredictResponse{Entities: v}, err
 }
