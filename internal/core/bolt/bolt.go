@@ -9,7 +9,9 @@ package bolt
 import "C"
 import (
 	"errors"
+	"fmt"
 	"ner-backend/internal/core/types"
+	"ner-backend/pkg/api"
 	"strings"
 	"unsafe"
 )
@@ -62,6 +64,14 @@ func (ner *NER) Predict(text string) ([]types.Entity, error) {
 	}
 
 	return results, nil
+}
+
+func (ner *NER) Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sample) error {
+	return fmt.Errorf("Finetune not implemented")
+}
+
+func (ner *NER) Save(path string) error {
+	return fmt.Errorf("save not implemented")
 }
 
 func splitSentences(text string) []string {

@@ -2,13 +2,14 @@ package messaging
 
 import (
 	"context"
+	"ner-backend/pkg/api"
 	"time"
 
 	"github.com/google/uuid"
 )
 
 const (
-	TrainingQueue   = "training_queue"
+	FinetuneQueue   = "finetune_queue"
 	InferenceQueue  = "inference_queue"
 	ShardDataQueue  = "shard_data_queue"
 	RetryDelay      = 5 * time.Second
@@ -27,9 +28,13 @@ type Task interface {
 	Reject() error
 }
 
-type TrainTaskPayload struct {
-	ModelId          uuid.UUID
-	SourceS3PathTags string // Path to training data in S3/MinIO
+type FinetuneTaskPayload struct {
+	ModelId     uuid.UUID
+	BaseModelId uuid.UUID
+
+	TaskPrompt string
+	Tags       []api.TagInfo
+	Samples    []api.Sample
 }
 
 type ShardDataPayload struct {
@@ -42,7 +47,7 @@ type InferenceTaskPayload struct {
 }
 
 type Publisher interface {
-	PublishTrainTask(ctx context.Context, payload TrainTaskPayload) error
+	PublishFinetuneTask(ctx context.Context, payload FinetuneTaskPayload) error
 
 	PublishShardDataTask(ctx context.Context, payload ShardDataPayload) error
 

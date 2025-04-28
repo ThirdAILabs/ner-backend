@@ -3,11 +3,15 @@ package core
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
+	"ner-backend/internal/core/types"
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/s3"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -17,20 +21,22 @@ import (
 
 type TaskProcessor struct {
 	db        *gorm.DB
-	inference *InferenceJobProcessor
 	s3Client  *s3.Client
 	publisher messaging.Publisher
 	reciever  messaging.Reciever
+
+	localModelDir string
+	modelBucket   string
 }
 
 func NewTaskProcessor(db *gorm.DB, s3client *s3.Client, publisher messaging.Publisher, reciever messaging.Reciever, localModelDir string, modelBucket string) *TaskProcessor {
-	inference := NewInferenceJobProcessor(db, s3client, localModelDir, modelBucket)
 	return &TaskProcessor{
-		db:        db,
-		inference: inference,
-		s3Client:  s3client,
-		publisher: publisher,
-		reciever:  reciever,
+		db:            db,
+		s3Client:      s3client,
+		publisher:     publisher,
+		reciever:      reciever,
+		localModelDir: localModelDir,
+		modelBucket:   modelBucket,
 	}
 }
 
@@ -74,15 +80,15 @@ func (proc *TaskProcessor) ProcessTask(task messaging.Task) {
 		}
 		err = proc.processShardDataTask(ctx, payload) // Call new handler
 
-	case messaging.TrainingQueue:
-		var payload messaging.TrainTaskPayload
+	case messaging.FinetuneQueue:
+		var payload messaging.FinetuneTaskPayload
 		if err = json.Unmarshal(task.Payload(), &payload); err != nil {
-			slog.Error("error unmarshalling training task", "error", err)
+			slog.Error("error unmarshalling finetuning task", "error", err)
 			// Reject message (non-requeueable) as it's malformed
 			task.Reject()
 			return
 		}
-		err = proc.processTrainTask(ctx, payload)
+		err = proc.processFinetuneTask(ctx, payload)
 
 	default:
 		slog.Error("received unknown task type", "queue", task.Type())
@@ -117,7 +123,7 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 		groupToQuery[group.Id] = group.Query
 	}
 
-	workerErr := proc.inference.RunInferenceTask(task.ReportId, task.Report.Model.Id, task.Report.Model.Type, groupToQuery, task.SourceS3Bucket, s3Objects)
+	workerErr := proc.runInferenceOnBucket(task.ReportId, task.Report.Model.Id, task.Report.Model.Type, groupToQuery, task.SourceS3Bucket, s3Objects)
 	if workerErr != nil {
 		slog.Error("error running inference task", "report_id", reportId, "task_id", payload.TaskId, "error", workerErr)
 		database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobFailed)
@@ -129,6 +135,144 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 	}
 
 	return nil
+}
+
+func (proc *TaskProcessor) runInferenceOnBucket(
+	reportId uuid.UUID,
+	modelId uuid.UUID,
+	modelType string,
+	groupToQuery map[uuid.UUID]string,
+	bucket string,
+	objects []string,
+) error {
+	parser := NewDefaultParser()
+
+	model, err := proc.loadModel(modelId, modelType)
+	if err != nil {
+		return err
+	}
+
+	groupToFilter := make(map[uuid.UUID]Filter)
+	for groupId, query := range groupToQuery {
+		filter, err := ParseQuery(query)
+		if err != nil {
+			return fmt.Errorf("error loading model: %w", err)
+		}
+		groupToFilter[groupId] = filter
+	}
+
+	objectErrorCnt := 0
+
+	for _, object := range objects {
+		entities, groups, err := proc.runInferenceOnObject(reportId, parser, model, groupToFilter, bucket, object)
+		if err != nil {
+			slog.Error("error processing object", "object", object, "error", err)
+			objectErrorCnt++
+			continue
+		}
+
+		if err := proc.db.CreateInBatches(&entities, 100).Error; err != nil {
+			slog.Error("error saving entities to database", "object", object, "error", err)
+			objectErrorCnt++
+			continue
+		}
+
+		if err := proc.db.CreateInBatches(groups, 100).Error; err != nil {
+			slog.Error("error saving groups to database", "object", object, "error", err)
+			objectErrorCnt++
+			continue
+		}
+	}
+
+	if objectErrorCnt > 0 {
+		return fmt.Errorf("errors while processing %d/%d objects", objectErrorCnt, len(objects))
+	}
+
+	return nil
+}
+
+func (proc *TaskProcessor) localModelPath(modelId uuid.UUID) string {
+	return filepath.Join(proc.localModelDir, modelId.String(), "model.bin")
+}
+
+func (proc *TaskProcessor) loadModel(modelId uuid.UUID, modelType string) (Model, error) {
+	localPath := proc.localModelPath(modelId)
+
+	// Check if the model file exists locally
+	if _, err := os.Stat(localPath); os.IsNotExist(err) {
+		slog.Info("model not found locally, downloading from S3", "modelId", modelId)
+
+		modelObjectKey := filepath.Join(modelId.String(), "model.bin")
+
+		if err := proc.s3Client.DownloadFile(context.TODO(), proc.modelBucket, modelObjectKey, localPath); err != nil {
+			return nil, fmt.Errorf("failed to download model from S3: %w", err)
+		}
+	}
+
+	model, err := LoadModel(modelType, localPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load model: %w", err)
+	}
+
+	return model, nil
+}
+
+func (proc *TaskProcessor) runInferenceOnObject(
+	reportId uuid.UUID,
+	parser Parser,
+	model Model,
+	groupFilter map[uuid.UUID]Filter,
+	bucket string,
+	object string) (
+	[]database.ObjectEntity, []database.ObjectGroup, error) {
+
+	chunks := parser.Parse(object, proc.s3Client.DownloadFileStream(bucket, object))
+
+	labelToEntities := make(map[string][]types.Entity)
+
+	for chunk := range chunks {
+		if chunk.Error != nil {
+			return nil, nil, fmt.Errorf("error parsing document: %w", chunk.Error)
+		}
+
+		chunkEntities, err := model.Predict(chunk.Text)
+		if err != nil {
+			return nil, nil, fmt.Errorf("error running model inference: %w", err)
+		}
+
+		for _, entity := range chunkEntities {
+			entity.Start += chunk.Offset
+			entity.End += chunk.Offset
+			labelToEntities[entity.Label] = append(labelToEntities[entity.Label], entity)
+		}
+	}
+
+	groups := make([]database.ObjectGroup, 0)
+	for groupId, filter := range groupFilter {
+		if filter.Matches(labelToEntities) {
+			groups = append(groups, database.ObjectGroup{
+				ReportId: reportId,
+				GroupId:  groupId,
+				Object:   object,
+			})
+		}
+	}
+
+	allEntities := make([]database.ObjectEntity, 0)
+	for _, entities := range labelToEntities {
+		for _, entity := range entities {
+			allEntities = append(allEntities, database.ObjectEntity{
+				ReportId: reportId,
+				Label:    entity.Label,
+				Text:     entity.Text,
+				Start:    entity.Start,
+				End:      entity.End,
+				Object:   object,
+			})
+		}
+	}
+
+	return allEntities, groups, nil
 }
 
 func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload messaging.ShardDataPayload) error {
@@ -213,7 +357,64 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 	return nil
 }
 
-func (proc *TaskProcessor) processTrainTask(ctx context.Context, payload messaging.TrainTaskPayload) error {
-	slog.Error("train tasks are not implemented yet", "payload", payload)
+func (proc *TaskProcessor) getModel(ctx context.Context, modelId uuid.UUID) (database.Model, error) {
+	var model database.Model
+	if err := proc.db.WithContext(ctx).First(&model, "id = ?", modelId).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			slog.Error("model not found", "model_id", modelId)
+			return database.Model{}, fmt.Errorf("model not found: %w", err)
+		}
+		slog.Error("error getting model", "model_id", modelId, "error", err)
+		return database.Model{}, fmt.Errorf("error getting model: %w", err)
+	}
+	return model, nil
+}
+
+func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload messaging.FinetuneTaskPayload) error {
+	database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelTraining)
+
+	baseModel, err := proc.getModel(ctx, payload.BaseModelId)
+	if err != nil {
+		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed)
+		slog.Error("error getting base model", "base_model_id", payload.BaseModelId, "model_id", payload.ModelId, "error", err)
+		return err
+	}
+
+	model, err := proc.loadModel(payload.BaseModelId, baseModel.Type)
+	if err != nil {
+		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed)
+		slog.Error("error loading base model", "base_model_id", payload.BaseModelId, "model_id", payload.ModelId, "error", err)
+		return fmt.Errorf("error loading base model: %w", err)
+	}
+
+	if err := model.Finetune(payload.TaskPrompt, payload.Tags, payload.Samples); err != nil {
+		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed)
+		slog.Error("error finetuning model", "base_model_id", payload.BaseModelId, "model_id", payload.ModelId, "error", err)
+		return fmt.Errorf("error finetuning model: %w", err)
+	}
+
+	localPath := proc.localModelPath(payload.ModelId)
+	if err := os.MkdirAll(filepath.Dir(localPath), 0755); err != nil {
+		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed)
+		slog.Error("error creating local model directory", "model_id", payload.ModelId, "error", err)
+		return fmt.Errorf("error creating local model directory: %w", err)
+	}
+
+	if err := model.Save(localPath); err != nil {
+		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed)
+		slog.Error("error saving finetuned model locally", "model_id", payload.ModelId, "error", err)
+		return fmt.Errorf("error saving finetuned model: %w", err)
+	}
+
+	if _, err := proc.s3Client.UploadFile(ctx, localPath, proc.modelBucket, filepath.Join(payload.ModelId.String(), "model.bin")); err != nil {
+		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed)
+		slog.Error("error uploading finetuned model to S3", "model_id", payload.ModelId, "error", err)
+		return fmt.Errorf("error uploading model to S3: %w", err)
+	}
+
+	if err := database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelTrained); err != nil {
+		return fmt.Errorf("error updating model status after finetuning: %w", err)
+	}
+
 	return nil
 }

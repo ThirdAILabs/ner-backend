@@ -7,10 +7,11 @@ import (
 )
 
 type Model struct {
-	Id     uuid.UUID
-	Name   string
-	Type   string
-	Status string
+	Id          uuid.UUID
+	BaseModelId *uuid.UUID
+	Name        string
+	Type        string
+	Status      string
 }
 
 type Group struct {
@@ -60,4 +61,27 @@ type CreateReportRequest struct {
 
 type CreateReportResponse struct {
 	ReportId uuid.UUID
+}
+
+type TagInfo struct {
+	Name        string
+	Description string
+	Examples    []string
+}
+
+type Sample struct {
+	Tokens []string
+	Labels []string
+}
+
+type FinetuneRequest struct {
+	Name string
+
+	TaskPrompt string
+	Tags       []TagInfo
+	Samples    []Sample
+}
+
+type FinetuneResponse struct {
+	ModelId uuid.UUID
 }

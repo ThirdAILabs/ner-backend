@@ -9,14 +9,17 @@ require (
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.17.72
 	github.com/gen2brain/go-fitz v1.24.14
 	github.com/go-gormigrate/gormigrate/v2 v2.1.4
-	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-plugin v1.6.3
+	github.com/jaswdr/faker/v2 v2.3.3
 	github.com/knights-analytics/hugot v0.3.6
+	github.com/openai/openai-go v0.1.0-beta.10
 	github.com/stretchr/testify v1.10.0
 	github.com/testcontainers/testcontainers-go v0.36.0
 	github.com/testcontainers/testcontainers-go/modules/minio v0.36.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.36.0
 	github.com/testcontainers/testcontainers-go/modules/rabbitmq v0.30.0
+	google.golang.org/grpc v1.64.1
+	google.golang.org/protobuf v1.36.6
 	gorm.io/driver/postgres v1.5.11
 	gorm.io/driver/sqlite v1.5.7
 	gorm.io/gorm v1.25.12
@@ -51,6 +54,7 @@ require (
 	github.com/gomlx/gopjrt v0.6.3 // indirect
 	github.com/gomlx/onnx-gomlx v0.2.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0 // indirect
+	github.com/hashicorp/go-hclog v1.6.3 // indirect
 	github.com/hashicorp/yamux v0.1.1 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
@@ -79,6 +83,10 @@ require (
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/shirou/gopsutil/v4 v4.25.1 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
+	github.com/tidwall/gjson v1.14.4 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.1 // indirect
+	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/viant/afs v1.25.1 // indirect
@@ -94,8 +102,6 @@ require (
 	golang.org/x/net v0.36.0 // indirect
 	golang.org/x/sys v0.32.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240318140521-94a12d6c2237 // indirect
-	google.golang.org/grpc v1.64.1 // indirect
-	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 )

@@ -6,12 +6,16 @@ import (
 )
 
 func convertModel(m database.Model) api.Model {
-	return api.Model{
+	model := api.Model{
 		Id:     m.Id,
 		Name:   m.Name,
 		Type:   m.Type,
 		Status: m.Status,
 	}
+	if m.BaseModelId.Valid {
+		model.BaseModelId = &m.BaseModelId.UUID
+	}
+	return model
 }
 
 func convertModels(ms []database.Model) []api.Model {
