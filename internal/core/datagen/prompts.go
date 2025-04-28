@@ -24,6 +24,13 @@ VERY IMPORTANT:
 
 var tagValuePromptTmpl = template.Must(template.New("tagValuePrompt").Parse(tagValuePrompt))
 
+type tagInfoExtendedDescription struct {
+	Name                string
+	Description         string
+	ExtendedDescription string
+	Examples            []string
+}
+
 type templateFromTagPromptFields struct {
 	TaskPrompt   string
 	NumTemplates int

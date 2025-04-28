@@ -10,8 +10,8 @@ import "C"
 import (
 	"errors"
 	"fmt"
-	"ner-backend/internal/core/datagen"
 	"ner-backend/internal/core/types"
+	"ner-backend/pkg/api"
 	"strings"
 	"unsafe"
 )
@@ -66,7 +66,7 @@ func (ner *NER) Predict(text string) ([]types.Entity, error) {
 	return results, nil
 }
 
-func (ner *NER) Finetune(taskPrompt string, tags []datagen.TagInfo, samples []datagen.Sample) error {
+func (ner *NER) Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sample) error {
 	return fmt.Errorf("Finetune not implemented")
 }
 

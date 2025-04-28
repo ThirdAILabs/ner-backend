@@ -11,7 +11,6 @@ import (
 	"time"
 
 	backend "ner-backend/internal/api"
-	"ner-backend/internal/core/datagen"
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
 	"ner-backend/pkg/api"
@@ -101,7 +100,7 @@ func TestFinetuneModel(t *testing.T) {
 		payload := api.FinetuneRequest{
 			Name:       "FinetunedModel",
 			TaskPrompt: "Finetuning test",
-			Tags:       []datagen.TagInfo{{Name: "tag1"}},
+			Tags:       []api.TagInfo{{Name: "tag1"}},
 		}
 		body, err := json.Marshal(payload)
 		assert.NoError(t, err)

@@ -1,7 +1,6 @@
 package api
 
 import (
-	"ner-backend/internal/core/datagen"
 	"time"
 
 	"github.com/google/uuid"
@@ -64,12 +63,23 @@ type CreateReportResponse struct {
 	ReportId uuid.UUID
 }
 
+type TagInfo struct {
+	Name        string
+	Description string
+	Examples    []string
+}
+
+type Sample struct {
+	Tokens []string
+	Labels []string
+}
+
 type FinetuneRequest struct {
 	Name string
 
 	TaskPrompt string
-	Tags       []datagen.TagInfo
-	Samples    []datagen.Sample
+	Tags       []TagInfo
+	Samples    []Sample
 }
 
 type FinetuneResponse struct {
