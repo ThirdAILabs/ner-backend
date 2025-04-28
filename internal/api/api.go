@@ -33,7 +33,7 @@ func (s *BackendService) AddRoutes(r chi.Router) {
 	r.Route("/models", func(r chi.Router) {
 		r.Get("/", RestHandler(s.ListModels))
 		r.Get("/{model_id}", RestHandler(s.GetModel))
-		r.Post("/{model_id}/finetune", RestHandler(s.FineTuneModel))
+		r.Post("/{model_id}/finetune", RestHandler(s.FinetuneModel))
 	})
 	r.Route("/reports", func(r chi.Router) {
 		r.Get("/", RestHandler(s.ListReports))
@@ -75,7 +75,7 @@ func (s *BackendService) GetModel(r *http.Request) (any, error) {
 	return convertModel(model), nil
 }
 
-func (s *BackendService) FineTuneModel(r *http.Request) (any, error) {
+func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 	modelId, err := URLParamUUID(r, "model_id")
 	if err != nil {
 		return nil, err

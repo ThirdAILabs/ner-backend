@@ -394,13 +394,19 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 	}
 
 	localPath := proc.localModelPath(payload.ModelId)
+	if err := os.MkdirAll(filepath.Dir(localPath), 0755); err != nil {
+		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed)
+		slog.Error("error creating local model directory", "model_id", payload.ModelId, "error", err)
+		return fmt.Errorf("error creating local model directory: %w", err)
+	}
+
 	if err := model.Save(localPath); err != nil {
 		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed)
 		slog.Error("error saving finetuned model locally", "model_id", payload.ModelId, "error", err)
 		return fmt.Errorf("error saving finetuned model: %w", err)
 	}
 
-	if _, err := proc.s3Client.UploadFile(ctx, proc.modelBucket, filepath.Join(payload.ModelId.String(), "model.bin"), localPath); err != nil {
+	if _, err := proc.s3Client.UploadFile(ctx, localPath, proc.modelBucket, filepath.Join(payload.ModelId.String(), "model.bin")); err != nil {
 		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed)
 		slog.Error("error uploading finetuned model to S3", "model_id", payload.ModelId, "error", err)
 		return fmt.Errorf("error uploading model to S3: %w", err)

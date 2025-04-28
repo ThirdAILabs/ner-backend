@@ -8,10 +8,11 @@ import (
 )
 
 type Model struct {
-	Id     uuid.UUID
-	Name   string
-	Type   string
-	Status string
+	Id          uuid.UUID
+	BaseModelId *uuid.UUID
+	Name        string
+	Type        string
+	Status      string
 }
 
 type Group struct {
