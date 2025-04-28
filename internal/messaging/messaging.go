@@ -2,7 +2,7 @@ package messaging
 
 import (
 	"context"
-	"ner-backend/internal/core/datagen"
+	"ner-backend/pkg/api"
 	"time"
 
 	"github.com/google/uuid"
@@ -33,8 +33,8 @@ type FinetuneTaskPayload struct {
 	BaseModelId uuid.UUID
 
 	TaskPrompt string
-	Tags       []datagen.TagInfo
-	Samples    []datagen.Sample
+	Tags       []api.TagInfo
+	Samples    []api.Sample
 }
 
 type ShardDataPayload struct {

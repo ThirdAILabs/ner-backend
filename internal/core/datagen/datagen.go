@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"ner-backend/internal/core/utils"
+	"ner-backend/pkg/api"
 	"reflect"
 	"regexp"
 	"slices"
@@ -18,8 +19,8 @@ const maxConcurrentLLMCalls = 5
 
 type DatagenOpts struct {
 	TaskPrompt string
-	Tags       []TagInfo
-	Samples    []Sample
+	Tags       []api.TagInfo
+	Samples    []api.Sample
 
 	NumValuesPerTag    int // The number of values to generate for each tag
 	SamplesToGenerate  int // The total number of samples to create from templates
@@ -30,7 +31,7 @@ type DatagenOpts struct {
 	TestSplit float32
 }
 
-func GenerateData(opts DatagenOpts) ([]Sample, []Sample, error) {
+func GenerateData(opts DatagenOpts) ([]api.Sample, []api.Sample, error) {
 	llm := NewOpenAI(openai.ChatModelGPT4oMini, 0.8)
 
 	values, err := getTagValues(llm, opts.TaskPrompt, opts.Tags, opts.NumValuesPerTag, opts.GenerateAtOnce)
@@ -77,7 +78,7 @@ func GenerateData(opts DatagenOpts) ([]Sample, []Sample, error) {
 	return trainSamples, testSamples, nil
 }
 
-func getTagValues(llm LLM, taskPrompt string, tags []TagInfo, numValuesPerTag, generateAtOnce int) (map[string][]string, error) {
+func getTagValues(llm LLM, taskPrompt string, tags []api.TagInfo, numValuesPerTag, generateAtOnce int) (map[string][]string, error) {
 	faker := newFakerWrapper()
 
 	values := make(map[string][]string)
@@ -159,7 +160,7 @@ func (w *fakerWrapper) getTagValues(tag string, numValuesPerTag int) []string {
 	return nil
 }
 
-func getTagValuesFromLLM(llm LLM, taskPrompt string, tag TagInfo, numValuesPerTag int, generateAtOnce int) ([]string, error) {
+func getTagValuesFromLLM(llm LLM, taskPrompt string, tag api.TagInfo, numValuesPerTag int, generateAtOnce int) ([]string, error) {
 	prompts := make([]string, 0, numValuesPerTag/generateAtOnce)
 	for i := 0; i < numValuesPerTag; i += generateAtOnce {
 		prompt := new(strings.Builder)
@@ -235,7 +236,7 @@ func splitTrainTestValues(values map[string][]string, testSplit float32) (map[st
 }
 
 // This function generates a longer description of each tag using an LLM.
-func getExtendedDescriptions(tags []TagInfo, llm LLM) ([]tagInfoExtendedDescription, error) {
+func getExtendedDescriptions(tags []api.TagInfo, llm LLM) ([]tagInfoExtendedDescription, error) {
 	extendedTags := make([]tagInfoExtendedDescription, 0, len(tags))
 
 	for i, tag := range tags {
@@ -293,8 +294,20 @@ func createPromptsFromTags(taskPrompt string, tags []tagInfoExtendedDescription,
 	return prompts, nil
 }
 
+func sampleAsTemplate(s api.Sample) string {
+	output := make([]string, 0, len(s.Tokens))
+	for i, token := range s.Tokens {
+		if s.Labels[i] == "O" {
+			output = append(output, token)
+		} else {
+			output = append(output, fmt.Sprintf("[%s]", s.Labels[i]))
+		}
+	}
+	return strings.Join(output, " ")
+}
+
 // This function creates a set of prompts that can be used to generate templates based one each user provided sample.
-func createPromptsFromSamples(taskPrompt string, tags []tagInfoExtendedDescription, samples []Sample, templatesPerSample int) ([]string, error) {
+func createPromptsFromSamples(taskPrompt string, tags []tagInfoExtendedDescription, samples []api.Sample, templatesPerSample int) ([]string, error) {
 	var prompts []string
 
 	for _, sample := range samples {
@@ -306,7 +319,7 @@ func createPromptsFromSamples(taskPrompt string, tags []tagInfoExtendedDescripti
 				NumTemplates: templatesPerSample,
 				TagsInfo:     tags,
 			},
-			Sample: sample.asTemplate(),
+			Sample: sampleAsTemplate(sample),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("error rendering promptFromSample template: %w", err)
@@ -355,8 +368,8 @@ func generateTemplates(taskPrompt string, prompts []string, llm LLM) ([]string, 
 // This function takes in a set of templates and the sets of values foreach tag and generates a
 // set of samples by replacing every tag placeholder in each template with a random value from
 // the set of values for that tag.
-func renderTemplates(templates []string, values map[string][]string, samplesPerTemplate int) ([]Sample, error) {
-	samples := make([]Sample, 0, len(templates)*samplesPerTemplate)
+func renderTemplates(templates []string, values map[string][]string, samplesPerTemplate int) ([]api.Sample, error) {
+	samples := make([]api.Sample, 0, len(templates)*samplesPerTemplate)
 
 	for _, template := range templates {
 		renderedSamples, err := renderTemplate(template, values, samplesPerTemplate)
@@ -371,8 +384,8 @@ func renderTemplates(templates []string, values map[string][]string, samplesPerT
 
 var tagRe = regexp.MustCompile(`\[(\w+?)\]`)
 
-func renderTemplate(template string, values map[string][]string, samplesPerTemplate int) ([]Sample, error) {
-	samples := make([]Sample, samplesPerTemplate)
+func renderTemplate(template string, values map[string][]string, samplesPerTemplate int) ([]api.Sample, error) {
+	samples := make([]api.Sample, samplesPerTemplate)
 
 	tokens := strings.Fields(template)
 

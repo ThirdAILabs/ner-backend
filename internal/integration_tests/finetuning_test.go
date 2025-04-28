@@ -6,7 +6,6 @@ import (
 	"fmt"
 	backend "ner-backend/internal/api"
 	"ner-backend/internal/core"
-	"ner-backend/internal/core/datagen"
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/s3"
@@ -49,7 +48,7 @@ func TestFinetuning(t *testing.T) {
 
 	var res api.FinetuneResponse
 	err = httpRequest(router, "POST", fmt.Sprintf("/models/%s/finetune", baseModelId.String()), api.FinetuneRequest{
-		Name: "finetuned-model", TaskPrompt: "finetuning test", Tags: []datagen.TagInfo{{Name: "xyz"}},
+		Name: "finetuned-model", TaskPrompt: "finetuning test", Tags: []api.TagInfo{{Name: "xyz"}},
 	}, &res)
 	require.NoError(t, err)
 

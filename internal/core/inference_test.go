@@ -2,10 +2,10 @@ package core
 
 import (
 	"context"
-	"ner-backend/internal/core/datagen"
 	"ner-backend/internal/core/types"
 	"ner-backend/internal/database"
 	"ner-backend/internal/s3"
+	"ner-backend/pkg/api"
 	"regexp"
 	"strings"
 	"testing"
@@ -38,7 +38,7 @@ func (m *regexModel) Predict(text string) ([]types.Entity, error) {
 	return entities, nil
 }
 
-func (m *regexModel) Finetune(taskPrompt string, tags []datagen.TagInfo, samples []datagen.Sample) error {
+func (m *regexModel) Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sample) error {
 	return nil
 }
 

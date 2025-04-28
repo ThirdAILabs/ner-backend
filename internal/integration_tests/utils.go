@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"io"
 	"ner-backend/internal/core"
-	"ner-backend/internal/core/datagen"
 	"ner-backend/internal/core/types"
 	"ner-backend/internal/database"
 	"ner-backend/internal/s3"
+	"ner-backend/pkg/api"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -51,7 +51,7 @@ func (m *regexModel) Predict(text string) ([]types.Entity, error) {
 	return entities, nil
 }
 
-func (m *regexModel) Finetune(taskPrompt string, tags []datagen.TagInfo, samples []datagen.Sample) error {
+func (m *regexModel) Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sample) error {
 	for _, tag := range tags {
 		pattern, err := regexp.Compile(tag.Name)
 		if err != nil {
