@@ -3,6 +3,7 @@ package datagen
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"math/rand"
 	"ner-backend/internal/core/utils"
 	"ner-backend/pkg/api"
@@ -34,46 +35,71 @@ type DatagenOpts struct {
 func GenerateData(opts DatagenOpts) ([]api.Sample, []api.Sample, error) {
 	llm := NewOpenAI(openai.ChatModelGPT4oMini, 0.8)
 
+	slog.Info("Generating data", "taskPrompt", opts.TaskPrompt, "tags", opts.Tags, "numValuesPerTag", opts.NumValuesPerTag, "samplesToGenerate", opts.SamplesToGenerate, "samplesPerTemplate", opts.SamplesPerTemplate, "generateAtOnce", opts.GenerateAtOnce, "templatesPerSample", opts.TemplatesPerSample)
+
 	values, err := getTagValues(llm, opts.TaskPrompt, opts.Tags, opts.NumValuesPerTag, opts.GenerateAtOnce)
 	if err != nil {
+		slog.Error("error getting tag values", "error", err)
 		return nil, nil, err
 	}
+
+	slog.Info("generated tag values")
 
 	trainValues, testValues := splitTrainTestValues(values, opts.TestSplit)
 
-	tags, err := getExtendedDescriptions(opts.Tags, nil)
+	tags, err := getExtendedDescriptions(opts.Tags, llm)
 	if err != nil {
+		slog.Error("error getting extended descriptions", "error", err)
 		return nil, nil, err
 	}
+
+	slog.Info("generated extended descriptions")
 
 	nTemplates := opts.SamplesToGenerate / opts.SamplesPerTemplate
 
 	tagPrompts, err := createPromptsFromTags(opts.TaskPrompt, tags, nTemplates, opts.GenerateAtOnce)
 	if err != nil {
+		slog.Error("error creating prompts from tags", "error", err)
 		return nil, nil, err
 	}
+
+	slog.Info("generated prompts from tags")
 
 	samplePrompts, err := createPromptsFromSamples(opts.TaskPrompt, tags, opts.Samples, opts.TemplatesPerSample)
 	if err != nil {
+		slog.Error("error creating prompts from samples", "error", err)
 		return nil, nil, err
 	}
 
+	slog.Info("generated prompts from samples")
+
 	templates, err := generateTemplates(opts.TaskPrompt, slices.Concat(tagPrompts, samplePrompts), llm)
 	if err != nil {
+		slog.Error("error generating templates", "error", err)
 		return nil, nil, err
 	}
+
+	slog.Info("generated templates")
 
 	trainTemplates, testTemplates := trainTestSplit(templates, opts.TestSplit)
 
 	trainSamples, err := renderTemplates(trainTemplates, trainValues, opts.SamplesPerTemplate)
 	if err != nil {
+		slog.Error("error rendering train templates", "error", err)
 		return nil, nil, err
 	}
 
+	slog.Info("rendered train templates")
+
 	testSamples, err := renderTemplates(testTemplates, testValues, opts.SamplesPerTemplate)
 	if err != nil {
+		slog.Error("error rendering test templates", "error", err)
 		return nil, nil, err
 	}
+
+	slog.Info("rendered test templates")
+
+	slog.Info("generated data", "trainSamples", len(trainSamples), "testSamples", len(testSamples))
 
 	return trainSamples, testSamples, nil
 }
@@ -139,6 +165,7 @@ func newFakerWrapper() *fakerWrapper {
 				f, ok := domain.MethodByName(domainMethod.Name).Interface().(func() string)
 				if ok {
 					wrapper.methods[strings.ToLower(domainMethod.Name)] = f
+					wrapper.methods[strings.ToLower(method.Name+domainMethod.Name)] = f
 				}
 			}
 		}
@@ -148,7 +175,7 @@ func newFakerWrapper() *fakerWrapper {
 }
 
 func (w *fakerWrapper) getTagValues(tag string, numValuesPerTag int) []string {
-	cleanedTag := strings.ToLower(strings.Replace(tag, "_", "", -1))
+	cleanedTag := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(tag, "_", ""), "-", ""))
 
 	if f, ok := w.methods[cleanedTag]; ok {
 		values := make([]string, numValuesPerTag)
@@ -184,6 +211,7 @@ func getTagValuesFromLLM(llm LLM, taskPrompt string, tag api.TagInfo, numValuesP
 	for _, prompt := range prompts {
 		queue <- prompt
 	}
+	close(queue)
 	completed := make(chan utils.CompletedTask[string], len(prompts))
 
 	utils.RunInPool(worker, queue, completed, maxConcurrentLLMCalls)
@@ -239,7 +267,7 @@ func splitTrainTestValues(values map[string][]string, testSplit float32) (map[st
 func getExtendedDescriptions(tags []api.TagInfo, llm LLM) ([]tagInfoExtendedDescription, error) {
 	extendedTags := make([]tagInfoExtendedDescription, 0, len(tags))
 
-	for i, tag := range tags {
+	for _, tag := range tags {
 		prompt := new(strings.Builder)
 		err := extendedDescriptionPromptTmpl.Execute(prompt, extendedDescriptionPromptFields{
 			Name:        tag.Name,
@@ -255,12 +283,12 @@ func getExtendedDescriptions(tags []api.TagInfo, llm LLM) ([]tagInfoExtendedDesc
 			return nil, fmt.Errorf("error generating extended description: %w", err)
 		}
 
-		extendedTags[i] = tagInfoExtendedDescription{
+		extendedTags = append(extendedTags, tagInfoExtendedDescription{
 			Name:                tag.Name,
 			Description:         tag.Description,
 			ExtendedDescription: response,
 			Examples:            tag.Examples,
-		}
+		})
 	}
 
 	return extendedTags, nil
@@ -343,6 +371,7 @@ func generateTemplates(taskPrompt string, prompts []string, llm LLM) ([]string, 
 	for _, prompt := range prompts {
 		queue <- prompt
 	}
+	close(queue)
 	completed := make(chan utils.CompletedTask[string], len(prompts))
 
 	utils.RunInPool(worker, queue, completed, maxConcurrentLLMCalls)
@@ -407,7 +436,6 @@ func renderTemplate(template string, values map[string][]string, samplesPerTempl
 				for range len(valueTokens) {
 					samples[i].Labels = append(samples[i].Labels, tag)
 				}
-
 			}
 		} else {
 			for i := range samples {

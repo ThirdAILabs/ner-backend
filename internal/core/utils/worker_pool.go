@@ -7,7 +7,7 @@ type CompletedTask[T any] struct {
 	Error  error
 }
 
-func RunInPool[In any, Out any](worker func(In) (Out, error), queue chan In, completed chan CompletedTask[Out], maxWorkers int) {
+func RunInPool[In any, Out any](worker func(In) (Out, error), queue <-chan In, completed chan<- CompletedTask[Out], maxWorkers int) {
 	workers := min(len(queue), maxWorkers)
 
 	go func() {
