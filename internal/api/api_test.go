@@ -11,6 +11,7 @@ import (
 	"time"
 
 	backend "ner-backend/internal/api"
+	"ner-backend/internal/core/datagen"
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
 	"ner-backend/pkg/api"
@@ -83,6 +84,57 @@ func TestGetModel(t *testing.T) {
 	err := json.Unmarshal(rec.Body.Bytes(), &response)
 	assert.NoError(t, err)
 	assert.Equal(t, api.Model{Id: modelId, Name: "Model2", Type: "bolt", Status: database.ModelTraining}, response)
+}
+
+func TestFinetuneModel(t *testing.T) {
+	modelId := uuid.New()
+	db := createDB(t,
+		&database.Model{Id: modelId, Name: "Model1", Type: "regex", Status: database.ModelTrained},
+	)
+
+	service := backend.NewBackendService(db, messaging.NewInMemoryQueue(), 1024)
+	router := chi.NewRouter()
+	service.AddRoutes(router)
+
+	var response api.FinetuneResponse
+	t.Run("Finetuning", func(t *testing.T) {
+		payload := api.FinetuneRequest{
+			Name:       "FinetunedModel",
+			TaskPrompt: "Finetuning test",
+			Tags:       []datagen.TagInfo{{Name: "tag1"}},
+		}
+		body, err := json.Marshal(payload)
+		assert.NoError(t, err)
+
+		req := httptest.NewRequest(http.MethodPost, "/models/"+modelId.String()+"/finetune", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code, "recieved response: "+rec.Body.String())
+		err = json.Unmarshal(rec.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.NotEqual(t, uuid.Nil, response.ModelId)
+	})
+
+	t.Run("GetFinetunedModel", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/models/"+response.ModelId.String(), nil)
+		rec := httptest.NewRecorder()
+
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var model api.Model
+		err := json.Unmarshal(rec.Body.Bytes(), &model)
+		assert.NoError(t, err)
+
+		assert.Equal(t, response.ModelId, model.Id)
+		assert.Equal(t, "FinetunedModel", model.Name)
+		assert.Equal(t, "regex", model.Type)
+		assert.Equal(t, database.ModelQueued, model.Status)
+		assert.Equal(t, modelId, *model.BaseModelId)
+	})
 }
 
 func TestCreateReport(t *testing.T) {
