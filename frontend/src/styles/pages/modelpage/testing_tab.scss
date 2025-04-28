@@ -5,135 +5,135 @@ $primary-color: #1a73e8;
 $secondary-color: #5f6368;
 
 .testing-input-section {
-    flex: 3;
-    padding: 24px;
-    border-right: 1px solid $border-color;
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-    
-    input {
-      width: 100%;
-      margin-bottom: 0;
-      padding: 12px 0px 12px 10px;
-      border: 1px solid $border-color;
-      border-radius: 4px;
-      font-size: 16px;
-      transition: border-color 0.2s ease;
-      
-      &:focus {
-        outline: none;
-        border-color: $primary-color;
-        box-shadow: 0 0 0 1px rgba($primary-color, 0.2);
-      }
-      
-      &::placeholder {
-        color: #aaa;
-      }
+  flex: 3;
+  padding: 24px;
+  border-right: 1px solid $border-color;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+
+  input {
+    width: 100%;
+    margin-bottom: 0;
+    padding: 12px 0px 12px 10px;
+    border: 1px solid $border-color;
+    border-radius: 4px;
+    font-size: 16px;
+    transition: border-color 0.2s ease;
+
+    &:focus {
+      outline: none;
+      border-color: $primary-color;
+      box-shadow: 0 0 0 1px rgba($primary-color, 0.2);
     }
-  
-    .seperator {
-      padding-bottom: 0;
-    }
-  
-    .upload-area {
-      flex: 1;
-      min-height: 200px;
-      
-      .upload-box {
-        border: 2px dashed $border-color;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: $secondary-color;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        
-        p {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          font-size: 16px;
-          
-          svg {
-            margin-bottom: 12px;
-            color: $primary-color;
-          }
-        }
-        
-        &:hover {
-          background-color: $background-color;
-          border-color: $primary-color;
-        }
-        
-        &.dragging {
-          background-color: rgba($primary-color, 0.05);
-          border-color: $primary-color;
-          border-style: solid;
-        }
-      }
+
+    &::placeholder {
+      color: #aaa;
     }
   }
-  
-  .testing-api-section {
+
+  .seperator {
+    padding-bottom: 0;
+  }
+
+  .upload-area {
     flex: 1;
-    padding: 24px;
-    position: relative;
-    background-color: #f5f7fa;
-    
-    h3 {
-      margin-top: 0;
-      margin-bottom: 16px;
-      font-size: 18px;
-      font-weight: 500;
-      color: #202124;
-    }
-    
-    .api-command {
-      font-family: 'Roboto Mono', 'Courier New', monospace;
-      font-size: 14px;
-      line-height: 1.6;
-      margin-bottom: 16px;
-      background-color: #fff;
-      padding: 16px;
-      border-radius: 4px;
-      border: 1px solid $border-color;
-      overflow-x: auto;
-      white-space: pre;
-      color: #37474f;
-      position: relative;
-  
-      .copy-icon {
-        position: absolute;
-        top: 8px;
-        right: 8px;
-        cursor: pointer;
-        padding: 4px;
-        
-        &:hover {
+    min-height: 200px;
+
+    .upload-box {
+      border: 2px dashed $border-color;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: $secondary-color;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      p {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        font-size: 16px;
+
+        svg {
+          margin-bottom: 12px;
           color: $primary-color;
         }
-  
-        .tooltip {
-          position: absolute;
-          right: 100%;
-          top: 50%;
-          transform: translateY(-50%);
-          background-color: rgba(0, 0, 0, 0.7);
-          color: white;
-          padding: 4px 8px;
-          border-radius: 4px;
-          font-size: 12px;
-          margin-right: 8px;
-          white-space: nowrap;
-          animation: fadeIn 0.2s ease;
-          opacity: 1;
-          
-          &.fade-out {
-            animation: fadeOut 0.3s ease forwards;
-          }
+      }
+
+      &:hover {
+        background-color: $background-color;
+        border-color: $primary-color;
+      }
+
+      &.dragging {
+        background-color: rgba($primary-color, 0.05);
+        border-color: $primary-color;
+        border-style: solid;
+      }
+    }
+  }
+}
+
+.testing-api-section {
+  flex: 1;
+  padding: 24px;
+  position: relative;
+  background-color: #f5f7fa;
+
+  h3 {
+    margin-top: 0;
+    margin-bottom: 16px;
+    font-size: 18px;
+    font-weight: 500;
+    color: #202124;
+  }
+
+  .api-command {
+    font-family: 'Roboto Mono', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 16px;
+    background-color: #fff;
+    padding: 16px;
+    border-radius: 4px;
+    border: 1px solid $border-color;
+    overflow-x: auto;
+    white-space: pre;
+    color: #37474f;
+    position: relative;
+
+    .copy-icon {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      cursor: pointer;
+      padding: 4px;
+
+      &:hover {
+        color: $primary-color;
+      }
+
+      .tooltip {
+        position: absolute;
+        right: 100%;
+        top: 50%;
+        transform: translateY(-50%);
+        background-color: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        margin-right: 8px;
+        white-space: nowrap;
+        animation: fadeIn 0.2s ease;
+        opacity: 1;
+
+        &.fade-out {
+          animation: fadeOut 0.3s ease forwards;
         }
       }
     }
   }
+}

@@ -42,80 +42,81 @@ const StyledTableRow = styled(TableRow)(({ theme }) => ({
 }));
 
 const JobTab: React.FC = () => {
-    const documents: DocumentItem[] = [
-        {
-          name: 'Daniel Docs 1',
-          source: 'S3 Bucket - Daniel Docs 1',
-          initiated: '2 months ago',
-          progress: {
-            status: 'Completed',
-            completed: '2 months ago'
-          }
-        },
-        {
-          name: 'Daniel Docs 2',
-          source: 'S3 Bucket - Daniel Docs 2',
-          initiated: '3 days ago',
-          progress: {
-            status: 'InProgress',
-            current: 52,
-            total: 92
-          }
-        }
-      ];
+  const documents: DocumentItem[] = [
+    {
+      name: 'Daniel Docs 1',
+      source: 'S3 Bucket - Daniel Docs 1',
+      initiated: '2 months ago',
+      progress: {
+        status: 'Completed',
+        completed: '2 months ago',
+      },
+    },
+    {
+      name: 'Daniel Docs 2',
+      source: 'S3 Bucket - Daniel Docs 2',
+      initiated: '3 days ago',
+      progress: {
+        status: 'InProgress',
+        current: 52,
+        total: 92,
+      },
+    },
+  ];
 
-    const renderProgress = (progress: DocumentItem['progress']) => {
-        if (progress.status === 'Completed') {
-          return <span>Completed {progress.completed}</span>;
-        } else {
-          return (
-            <div className="progress-container">
-              <div className="progress-bar">
-                <div 
-                  className="progress-fill" 
-                  style={{ width: `${(progress.current! / progress.total!) * 100}%` }}
-                ></div>
-              </div>
-              <span className="progress-text">{progress.current}M / {progress.total}M</span>
-            </div>
-          );
-        }
-      };
+  const renderProgress = (progress: DocumentItem['progress']) => {
+    if (progress.status === 'Completed') {
+      return <span>Completed {progress.completed}</span>;
+    } else {
+      return (
+        <div className="progress-container">
+          <div className="progress-bar">
+            <div
+              className="progress-fill"
+              style={{ width: `${(progress.current! / progress.total!) * 100}%` }}
+            ></div>
+          </div>
+          <span className="progress-text">
+            {progress.current}M / {progress.total}M
+          </span>
+        </div>
+      );
+    }
+  };
 
-    return (
-      <div className='job-tab'>
-        <button>
-          New
-        </button>
-        <TableContainer component={Paper}>
-                <Table sx={{ minWidth: 700 }} aria-label="customized table">
-                    <TableHead>
-                        <TableRow>
-                            <StyledTableCell>Name</StyledTableCell>
-                            <StyledTableCell>Source</StyledTableCell>
-                            <StyledTableCell>Initiated</StyledTableCell>
-                            <StyledTableCell>Progress</StyledTableCell>
-                            <StyledTableCell>Action</StyledTableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {documents.map((doc, index) => (
-                            <StyledTableRow key={index}>
-                                <StyledTableCell>{doc.name}</StyledTableCell>
-                                <StyledTableCell>{doc.source}</StyledTableCell>
-                                <StyledTableCell>{doc.initiated}</StyledTableCell>
-                                <StyledTableCell>{renderProgress(doc.progress)}</StyledTableCell>
-                                <StyledTableCell>
-                                    <a href="#" className="view-link">View</a>
-                                </StyledTableCell>
-                            </StyledTableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </TableContainer>
-      </div>
-            
-    );
-}
+  return (
+    <div className="job-tab">
+      <button>New</button>
+      <TableContainer component={Paper}>
+        <Table sx={{ minWidth: 700 }} aria-label="customized table">
+          <TableHead>
+            <TableRow>
+              <StyledTableCell>Name</StyledTableCell>
+              <StyledTableCell>Source</StyledTableCell>
+              <StyledTableCell>Initiated</StyledTableCell>
+              <StyledTableCell>Progress</StyledTableCell>
+              <StyledTableCell>Action</StyledTableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {documents.map((doc, index) => (
+              <StyledTableRow key={index}>
+                <StyledTableCell>{doc.name}</StyledTableCell>
+                <StyledTableCell>{doc.source}</StyledTableCell>
+                <StyledTableCell>{doc.initiated}</StyledTableCell>
+                <StyledTableCell>{renderProgress(doc.progress)}</StyledTableCell>
+                <StyledTableCell>
+                  <a href="#" className="view-link">
+                    View
+                  </a>
+                </StyledTableCell>
+              </StyledTableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </div>
+  );
+};
 
 export default JobTab;

@@ -12,13 +12,12 @@ export default function App() {
 }
 
 function AppContent() {
-
   return (
     <Routes>
-      <Route path='/' element={<AppCatalog />} />
-      <Route path='/model-page' element={<ModelPage /> }/>
-      <Route path='/testing' />
-      <Route path='/error' />
+      <Route path="/" element={<AppCatalog />} />
+      <Route path="/model-page" element={<ModelPage />} />
+      <Route path="/testing" />
+      <Route path="/error" />
     </Routes>
   );
 }

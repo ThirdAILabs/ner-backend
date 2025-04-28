@@ -9,24 +9,24 @@ $shadow-color: rgba(0, 0, 0, 0.1);
   display: flex;
   font-family: 'Roboto', Arial, sans-serif;
   color: $text-color;
-  flex-direction: column; 
+  flex-direction: column;
   padding: 35px;
 }
 
 .breadcrumb {
   margin-bottom: 16px;
   font-size: 14px;
-  
+
   .home-link {
     color: $primary-color;
     text-decoration: none;
     font-weight: 500;
-    
+
     &:hover {
       text-decoration: underline;
     }
   }
-  
+
   .breadcrumb-separator {
     margin: 0 8px;
     color: $secondary-color;
@@ -47,7 +47,7 @@ $shadow-color: rgba(0, 0, 0, 0.1);
   border-radius: 8px;
   width: fit-content;
   overflow: hidden;
-  
+
   .tab {
     padding: 10px 36px;
     border: none;
@@ -57,16 +57,16 @@ $shadow-color: rgba(0, 0, 0, 0.1);
     cursor: pointer;
     transition: all 0.2s ease;
     position: relative;
-    
+
     &.active {
       background-color: $primary-color;
       color: white;
     }
-    
+
     &:not(.active):hover {
       background-color: #f1f3f4;
     }
-    
+
     &:not(:last-child)::after {
       content: '';
       position: absolute;
@@ -78,7 +78,7 @@ $shadow-color: rgba(0, 0, 0, 0.1);
       background-color: $border-color;
       transition: opacity 0.2s ease;
     }
-    
+
     &.active::after,
     &:has(+ .active)::after {
       opacity: 0;
@@ -93,8 +93,6 @@ $shadow-color: rgba(0, 0, 0, 0.1);
   display: flex;
   box-shadow: 0 2px 6px $shadow-color;
   overflow: hidden;
-  background-color: red;
   position: relative;
   width: 100%;
 }
-
