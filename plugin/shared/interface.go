@@ -3,7 +3,6 @@ package shared
 
 import (
 	"context"
-	"net/rpc"
 
 	"google.golang.org/grpc"
 
@@ -23,27 +22,11 @@ var Handshake = plugin.HandshakeConfig{
 // PluginMap is the map of plugins we can dispense.
 var PluginMap = map[string]plugin.Plugin{
 	"model_grpc": &ModelGRPCPlugin{},
-	"model":      &ModelPlugin{},
 }
 
 // KV is the interface that we're exposing as a plugin.
 type Model interface {
 	Predict(sentence string) ([]*proto.Entity, error)
-}
-
-// This is the implementation of plugin.Plugin so we can serve/consume this.
-type ModelPlugin struct {
-	// Concrete implementation, written in Go. This is only used for plugins
-	// that are written in Go.
-	Impl Model
-}
-
-func (p *ModelPlugin) Server(*plugin.MuxBroker) (interface{}, error) {
-	return &RPCServer{Impl: p.Impl}, nil
-}
-
-func (*ModelPlugin) Client(b *plugin.MuxBroker, c *rpc.Client) (interface{}, error) {
-	return &RPCClient{client: c}, nil
 }
 
 // This is the implementation of plugin.GRPCPlugin so we can serve/consume this.
