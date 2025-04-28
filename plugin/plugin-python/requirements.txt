@@ -1,0 +1,6 @@
+grpcio
+grpcio-health-checking
+protobuf
+transformers
+torch
+optimum[onnxruntime]
