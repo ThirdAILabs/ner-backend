@@ -1,0 +1,23 @@
+{
+  "name": "parcel-react-client-starter",
+  "private": true,
+  "version": "0.0.0",
+  "source": "src/index.html",
+  "scripts": {
+    "start": "parcel",
+    "build": "parcel build"
+  },
+  "dependencies": {
+    "bootstrap": "^5.3.5",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router": "^7.5.2",
+    "react-router-dom": "^6.22.0"
+  },
+  "devDependencies": {
+    "@parcel/transformer-sass": "^2.14.4",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "parcel": "^2.14.0"
+  }
+}

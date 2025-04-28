@@ -52,3 +52,9 @@ ehthumbs.db
 
 # Debugging related (e.g., delve)
 /__debug_bin
+
+frontend/node_modules/*
+
+frontend/.parcel-cache/*
+
+frontend/dist/*

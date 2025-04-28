@@ -1,0 +1,51 @@
+// Color Palette
+
+// Brand Colors
+$color-primary-900: #0b79d0;
+$color-primary-700: #2196f3;
+$color-primary-500: #64b6f7;
+$color-primary-300: #bbdefb;
+$color-primary-100: #e9f4fe;
+
+// Text Colors
+$color-text-900: #121b2e;
+$color-text-700: #333f54;
+$color-text-500: #6a798f;
+$color-text-300: #d0dae4;
+$color-text-100: #ffffff;
+
+// Semantic Colors
+$color-error-700: #b71d18;
+$color-error-500: #f44336;
+$color-error-300: #ef9a9a;
+$color-error-100: #ffdddd;
+
+$color-success-900: #2d9568;
+$color-success-700: #36b37e;
+$color-success-500: #57d397;
+$color-success-300: #84e3b4;
+$color-success-200: rgb(222, 244, 234);
+
+$color-warning-700: #ffab00;
+
+$color-info-700: #2196f3;
+$color-info-300: #c9cfd6;
+
+// Semantic Mappings
+$color-text-primary: $color-text-900;
+$color-text-secondary: $color-text-700;
+$color-text-muted: $color-text-500;
+$color-text-disabled: $color-text-300;
+
+$color-background-primary: $color-text-100;
+$color-background-secondary: $color-primary-100;
+
+// Component Specific
+$button-primary-bg: $color-primary-700;
+$button-primary-hover: $color-primary-900;
+$button-disabled: $color-text-300;
+
+$alert-error: $color-error-700;
+$alert-success: $color-success-700;
+$alert-warning: $color-warning-700;
+$alert-info: $color-info-700;
