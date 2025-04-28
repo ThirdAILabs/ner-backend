@@ -33,6 +33,7 @@ func (s *BackendService) AddRoutes(r chi.Router) {
 	r.Route("/models", func(r chi.Router) {
 		r.Get("/", RestHandler(s.ListModels))
 		r.Get("/{model_id}", RestHandler(s.GetModel))
+		r.Post("/{model_id}/finetune", RestHandler(s.FinetuneModel))
 	})
 	r.Route("/reports", func(r chi.Router) {
 		r.Get("/", RestHandler(s.ListReports))
@@ -72,6 +73,74 @@ func (s *BackendService) GetModel(r *http.Request) (any, error) {
 	}
 
 	return convertModel(model), nil
+}
+
+func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
+	modelId, err := URLParamUUID(r, "model_id")
+	if err != nil {
+		return nil, err
+	}
+	req, err := ParseRequest[api.FinetuneRequest](r)
+	if err != nil {
+		return nil, err
+	}
+
+	if req.Name == "" {
+		return nil, CodedErrorf(http.StatusUnprocessableEntity, "the following fields are required: Name")
+	}
+
+	ctx := r.Context()
+
+	var model database.Model
+
+	if err := s.db.WithContext(ctx).Transaction(func(txn *gorm.DB) error {
+		var baseModel database.Model
+		if err := txn.First(&baseModel, "id = ?", modelId).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return CodedErrorf(http.StatusNotFound, "base model not found")
+			}
+			slog.Error("error getting base model", "error", err)
+			return CodedErrorf(http.StatusInternalServerError, "error retrieving base model record")
+		}
+
+		if baseModel.Status != database.ModelTrained {
+			return CodedErrorf(http.StatusUnprocessableEntity, "base model is not ready for finetuning: model has status: %s", baseModel.Status)
+		}
+
+		model = database.Model{
+			Id:           uuid.New(),
+			BaseModelId:  uuid.NullUUID{UUID: baseModel.Id, Valid: true},
+			Name:         req.Name,
+			Type:         baseModel.Type,
+			Status:       database.ModelQueued,
+			CreationTime: time.Now().UTC(),
+		}
+
+		if err := txn.WithContext(ctx).Create(&model).Error; err != nil {
+			slog.Error("error creating model entry", "error", err)
+			return CodedErrorf(http.StatusInternalServerError, "failed to create model entry")
+		}
+
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	if err := s.publisher.PublishFinetuneTask(ctx, messaging.FinetuneTaskPayload{
+		ModelId:     model.Id,
+		BaseModelId: model.BaseModelId.UUID,
+		TaskPrompt:  req.TaskPrompt,
+		Tags:        req.Tags,
+		Samples:     req.Samples,
+	}); err != nil {
+		slog.Error("error queueing finetune task", "error", err)
+		_ = database.UpdateModelStatus(ctx, s.db, model.Id, database.ModelFailed)
+		return nil, CodedErrorf(http.StatusInternalServerError, "failed to queue finetune task")
+	}
+
+	slog.Info("created model", "model_id", model.Id, "base_model_id", model.BaseModelId, "name", model.Name)
+
+	return api.FinetuneResponse{ModelId: model.Id}, nil
 }
 
 func (s *BackendService) ListReports(r *http.Request) (any, error) {

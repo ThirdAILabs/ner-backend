@@ -53,8 +53,8 @@ func (q *InMemoryQueue) publishTaskInternal(queue string, payload interface{}) e
 	return nil
 }
 
-func (q *InMemoryQueue) PublishTrainTask(ctx context.Context, payload TrainTaskPayload) error {
-	return q.publishTaskInternal(TrainingQueue, payload)
+func (q *InMemoryQueue) PublishFinetuneTask(ctx context.Context, payload FinetuneTaskPayload) error {
+	return q.publishTaskInternal(FinetuneQueue, payload)
 }
 
 func (q *InMemoryQueue) PublishShardDataTask(ctx context.Context, payload ShardDataPayload) error {

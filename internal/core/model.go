@@ -4,11 +4,15 @@ import (
 	"fmt"
 	"ner-backend/internal/core/bolt"
 	"ner-backend/internal/core/types"
-	// "ner-backend/internal/core/bolt"
+	"ner-backend/pkg/api"
 )
 
 type Model interface {
 	Predict(text string) ([]types.Entity, error)
+
+	Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sample) error
+
+	Save(path string) error
 
 	Release()
 }
@@ -20,9 +24,6 @@ var modelLoaders map[string]modelLoader = map[string]modelLoader{
 }
 
 func RegisterModelLoader(modelType string, loader modelLoader) {
-	if _, exists := modelLoaders[modelType]; exists {
-		panic(fmt.Sprintf("model type %s already registered", modelType))
-	}
 	modelLoaders[modelType] = loader
 }
 
