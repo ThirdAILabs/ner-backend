@@ -150,7 +150,6 @@ const ModelPage: React.FC = () => {
         </div>
         
         <div className="content-area">
-          
           {activeTab === 'Testing' && (
             <>
               <div className="testing-input-section">
@@ -203,7 +202,6 @@ const ModelPage: React.FC = () => {
               </div>
             </>
           )}
-
           { activeTab === 'Monitoring' && (
             <div className="monitoring-section">
               <h3>Monitoring</h3>
@@ -212,7 +210,7 @@ const ModelPage: React.FC = () => {
           )}
           { activeTab === 'Jobs' && (
             <>
-                <button className="new-button">New</button>
+              <button className="new-button">New</button>
               <table className="documents-table">
                 <thead>
                   <tr>
@@ -238,7 +236,7 @@ const ModelPage: React.FC = () => {
             </>
           )}
         </div>
-    </div>
+      </div>
   );
 };
 

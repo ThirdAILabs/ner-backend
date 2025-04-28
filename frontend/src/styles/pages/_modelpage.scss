@@ -16,7 +16,6 @@ $shadow-color: rgba(0, 0, 0, 0.1);
 }
 
 .breadcrumb {
-  padding-top: 35px;
   margin-bottom: 16px;
   font-size: 14px;
   
@@ -95,9 +94,10 @@ $shadow-color: rgba(0, 0, 0, 0.1);
   flex: 1;
   display: flex;
   box-shadow: 0 2px 6px $shadow-color;
+  overflow: hidden;
   background-color: white;
   max-height: 300px;
-  position: relative; 
+  position: relative; // Add this
   width: 100%;
 }
 
@@ -288,6 +288,7 @@ $shadow-color: rgba(0, 0, 0, 0.1);
 }
 
 .documents-table {
+  width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
   
