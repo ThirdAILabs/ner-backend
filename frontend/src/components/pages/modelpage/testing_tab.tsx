@@ -77,10 +77,8 @@ const TestingTab: React.FC = () => {
       <div className="testing-api-section">
         <h3>API Reference</h3>
         <div className="api-command">
-          <CopyButton code={api_command} tooltipText='copied!'/>
-          <pre>
-            {api_command}
-          </pre>
+          <CopyButton code={api_command} tooltipText="copied!" />
+          <pre>{api_command}</pre>
         </div>
       </div>
     </div>

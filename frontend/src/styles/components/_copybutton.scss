@@ -13,7 +13,7 @@
   padding: 0;
   color: #666;
   transition: color 0.2s ease;
-  
+
   &:hover {
     color: #1a73e8;
   }
@@ -29,8 +29,10 @@
   padding: 4px 8px;
   border-radius: 4px;
   opacity: 1;
-  transition: opacity 0.3s ease, transform 0.3s ease;
-  
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
+
   &.fade-out {
     opacity: 0;
   }

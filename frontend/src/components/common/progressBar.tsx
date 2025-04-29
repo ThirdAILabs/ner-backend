@@ -3,27 +3,34 @@ import LinearProgress, { LinearProgressProps } from '@mui/material/LinearProgres
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 
-function LinearProgressWithLabel(props: LinearProgressProps & { value: number, left_value: string, right_value: string }) {
-
+function LinearProgressWithLabel(
+  props: LinearProgressProps & { value: number; displaytext: string }
+) {
+  const { displaytext } = props;
   return (
     <Box sx={{ display: 'flex', alignItems: 'center' }}>
       <Box sx={{ width: '80%', mr: 1 }}>
         <LinearProgress variant="determinate" {...props} />
       </Box>
       <Box sx={{ minWidth: 35 }}>
-        <Typography
-          variant="body2"
-          sx={{ color: 'text.secondary' }}
-        >{`${props.left_value}/${props.right_value}`}</Typography>
+        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+          {displaytext}
+        </Typography>
       </Box>
     </Box>
   );
 }
 
-export default function LinearProgressBar({ value, left_value, right_value }: { value: number, left_value: string, right_value: string }) {
+export default function LinearProgressBar({
+  value,
+  displaytext,
+}: {
+  value: number;
+  displaytext: string;
+}) {
   return (
     <Box sx={{ width: '80%' }}>
-      <LinearProgressWithLabel value={value} left_value={left_value} right_value={right_value} />
+      <LinearProgressWithLabel value={value} displaytext={displaytext} />
     </Box>
   );
 }

@@ -74,9 +74,7 @@ const ModelPage: React.FC = () => {
 
       <div className="content-area">
         {activeTab === 'Testing' && <TestingTab />}
-        {activeTab === 'Monitoring' && (
-          <MonitoringTab />
-        )}
+        {activeTab === 'Monitoring' && <MonitoringTab />}
         {activeTab === 'Jobs' && <JobTab jobEntries={repeatedJobEntries} />}
       </div>
     </div>
