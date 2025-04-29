@@ -16,6 +16,7 @@ import (
 	"github.com/caarlos0/env/v11"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/google/uuid"
 )
 
 type APIConfig struct {
@@ -45,6 +46,19 @@ func main() {
 	db, err := database.NewDatabase(cfg.DatabaseURL)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
+	}
+
+	presidioModel := &database.Model{
+		Id:           uuid.New(),
+		Name:         "presidio",
+		Type:         "presidio",
+		Status:       database.ModelTrained,
+		CreationTime: time.Now(),
+	}
+	if err := db.
+		FirstOrCreate(presidioModel, database.Model{Name: "presidio"}).
+		Error; err != nil {
+		log.Fatalf("Failed to seed presidio model record: %v", err)
 	}
 
 	// Initialize RabbitMQ Publisher

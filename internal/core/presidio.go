@@ -30,7 +30,7 @@ var entitiesMap = map[string]string{
 	"DATE_TIME":                       "DATE",
 	"EMAIL_ADDRESS":                   "EMAIL",
 	"CreditCardRecognizer":            "CARD_NUMBER",
-	"US_SSN":                          "SSN",
+	"UsSsnRecognizer":                 "SSN",
 	"URL":                             "URL",
 	"UsPassportRecognizer":            "ID_NUMBER",
 	"UsItinRecognizer":                "ID_NUMBER",
@@ -177,7 +177,10 @@ func (pr *PatternRecognizer) Recognize(text string, threshold float64) []Recogni
 				continue
 			}
 
-			mapped := entitiesMap[pr.EntityType]
+			mapped, ok := entitiesMap[pr.EntityType]
+			if !ok || mapped == "" {
+				mapped = pr.EntityType
+			}
 			results = append(results, RecognizerResult{
 				EntityType: mapped,
 				Match:      match,
