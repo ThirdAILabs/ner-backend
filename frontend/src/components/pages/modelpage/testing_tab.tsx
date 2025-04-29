@@ -60,7 +60,7 @@ const TestingTab: React.FC = () => {
     }, 700);
   };
   return (
-    <>
+    <div className="testing-container">
       <div className="testing-input-section">
         <input type="text" placeholder="Enter text here to test model..." />
 
@@ -107,7 +107,7 @@ const TestingTab: React.FC = () => {
           </pre>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
