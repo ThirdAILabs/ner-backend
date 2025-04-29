@@ -1,7 +1,5 @@
 @import '../../base/variables';
-$success: #22c55e;
-$warning: #f59e0b;
-$danger: #ef4444;
+@import '../../base/typography';
 
 .job-tab {
   display: flex;
@@ -11,18 +9,17 @@ $danger: #ef4444;
 }
 
 .new-job-button {
+  @include paragraph-5;
   margin-top: 12px;
   align-self: flex-end;
   padding: 8px 24px;
   margin-right: 16px;
-  background-color: #ffffff;
-  color: black;
-  border: 1px solid #ccc;
+  background-color: $color-text-100;
+  color: $color-text-900;
+  border: 1px solid $color-text-300;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: $background-color 0.2s ease;
+  transition: background-color 0.2s ease;
 
   &:hover {
     background-color: $background-color;
@@ -34,27 +31,5 @@ $danger: #ef4444;
 
   .MuiTableContainer-root {
     overflow-y: auto;
-
-    &::-webkit-scrollbar {
-      width: 8px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: #f1f1f1;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: #888;
-      border-radius: 4px;
-    }
-
-    &::-webkit-scrollbar-thumb:hover {
-      background: #555;
-    }
   }
-}
-
-.MuiTableCell-stickyHeader {
-  background-color: black !important;
-  z-index: 1;
 }

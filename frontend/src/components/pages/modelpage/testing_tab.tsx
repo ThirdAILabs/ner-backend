@@ -47,10 +47,8 @@ const TestingTab: React.FC = () => {
   return (
     <div className="testing-container">
       <div className="testing-input-section">
-        <input type="text" placeholder="Enter text here to test model..." />
-
+        <input type="text" placeholder="Enter text here" />
         <Divider className="seperator">or</Divider>
-
         <div className="upload-area">
           <div
             className={`upload-box ${isDragging ? 'dragging' : ''}`}
@@ -75,7 +73,7 @@ const TestingTab: React.FC = () => {
       </div>
 
       <div className="testing-api-section">
-        <h3>API Reference</h3>
+        <span className="testing-api-section-header">API Reference</span>
         <div className="api-command">
           <CopyButton code={api_command} tooltipText="copied!" />
           <pre>{api_command}</pre>
