@@ -1,8 +1,8 @@
 package core
 
 import (
+	_ "embed"
 	"fmt"
-	"io/ioutil"
 	"regexp"
 	"strings"
 
@@ -40,7 +40,10 @@ var entitiesMap = map[string]string{
 	"InVehicleRegistrationRecognizer": "VIN",
 }
 
-func loadPatterns(path string) ([]*PatternRecognizer, error) {
+//go:embed recognizers.yaml
+var recognizersYAML []byte
+
+func loadPatterns() ([]*PatternRecognizer, error) {
 	raw := struct {
 		Recognizers []struct {
 			Name     string `yaml:"name"`
@@ -51,11 +54,7 @@ func loadPatterns(path string) ([]*PatternRecognizer, error) {
 		} `yaml:"recognizers"`
 	}{}
 
-	data, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	if err := yaml.Unmarshal(data, &raw); err != nil {
+	if err := yaml.Unmarshal(recognizersYAML, &raw); err != nil {
 		return nil, err
 	}
 
@@ -71,11 +70,9 @@ func loadPatterns(path string) ([]*PatternRecognizer, error) {
 
 			// PAN (InPanRecognizer) low-strength lookahead
 			if rec.Name == "InPanRecognizer" && strings.Contains(rxText, "(?=") {
-				// Base: any 10-char alnum+symbols
 				base := `\b[\w@#$%^?~-]{10}\b`
-				rx, _ := regexp.Compile(base)
+				rx := regexp.MustCompile(base)
 				pr.Regexps = append(pr.Regexps, rx)
-				// Validate: ≥1 letter & ≥4 digits
 				pr.Validate = func(s string) bool {
 					letters, digits := 0, 0
 					for _, r := range s {
@@ -97,12 +94,10 @@ func loadPatterns(path string) ([]*PatternRecognizer, error) {
 			// Vehicle reg part 1: (I)(?!00000)\d{5}
 			if rec.Name == "InVehicleRegistrationRecognizer" && strings.Contains(rxText, "(?!00000)") {
 				base := `\bI[0-9]{5}\b`
-				rx, _ := regexp.Compile(base)
+				rx := regexp.MustCompile(base)
 				pr.Regexps = append(pr.Regexps, rx)
 				pr.Validate = func(s string) bool {
-					// tail = last 5 digits ≠ "00000"
-					tail := s[1:]
-					return tail != "00000"
+					return s[1:] != "00000"
 				}
 				if p.Score > pr.Score {
 					pr.Score = p.Score
@@ -110,14 +105,12 @@ func loadPatterns(path string) ([]*PatternRecognizer, error) {
 				continue
 			}
 
-			// Vehicle reg part 2: (?!00)\d{2}(A|B|C|D|E|F|H|K|P|R|X)\d{6}[A-Z]
+			// Vehicle reg part 2: (?!00)\d{2}[A-FH-KPRX]\d{6}[A-Z]
 			if rec.Name == "InVehicleRegistrationRecognizer" && strings.Contains(rxText, "(?!00)") {
-				// Base: two digits, one of allowed letters, six digits, one letter
 				base := `\b[0-9]{2}[A-FH-KPRX][0-9]{6}[A-Z]\b`
-				rx, _ := regexp.Compile(base)
+				rx := regexp.MustCompile(base)
 				pr.Regexps = append(pr.Regexps, rx)
 				pr.Validate = func(s string) bool {
-					// ensure first two chars != "00"
 					return s[0:2] != "00"
 				}
 				if p.Score > pr.Score {
@@ -177,7 +170,6 @@ func (pr *PatternRecognizer) Recognize(text string, threshold float64) []Recogni
 					continue
 				}
 			}
-
 			if score < threshold {
 				continue
 			}
@@ -199,8 +191,7 @@ func (pr *PatternRecognizer) Recognize(text string, threshold float64) []Recogni
 }
 
 func analyze(text string, threshold float64) []RecognizerResult {
-	var recs []*PatternRecognizer
-	recs, err := loadPatterns("recognizers.yaml")
+	recs, err := loadPatterns()
 	if err != nil {
 		fmt.Printf("⚠️ failed to load recognizers: %v\n", err)
 		return nil
