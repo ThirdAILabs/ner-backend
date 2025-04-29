@@ -1,12 +1,13 @@
 @import '../base/variables';
 
 .container {
-  width: 100%;
-  min-height: 100vh;
-  background-color: $background-color;
-  font-family: 'Segoe UI', Arial, sans-serif;
-  color: $color-text-900;
-  overflow: hidden;
+    width: 100%;
+    min-height: 90vh;
+    background-color: #ffffff;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    color: $color-text-900;
+    overflow: hidden;
+    // border: 2px solid red;
 }
 
 .main-content {
