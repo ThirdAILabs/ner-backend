@@ -74,11 +74,13 @@ func convertReports(rs []database.Report) []api.Report {
 
 func convertEntity(e database.ObjectEntity) api.Entity {
 	return api.Entity{
-		Object: e.Object,
-		Start:  e.Start,
-		End:    e.End,
-		Label:  e.Label,
-		Text:   e.Text,
+		Object:   e.Object,
+		Start:    e.Start,
+		End:      e.End,
+		Label:    e.Label,
+		Text:     e.Text,
+		LContext: e.LContext,
+		RContext: e.RContext,
 	}
 }
 

@@ -40,10 +40,12 @@ func (m *regexModel) Predict(text string) ([]types.Entity, error) {
 		for _, match := range matches {
 			if len(match) > 0 {
 				entities = append(entities, types.Entity{
-					Label: label,
-					Text:  text[match[0]:match[1]],
-					Start: match[0],
-					End:   match[1],
+					Label:    label,
+					Text:     text[match[0]:match[1]],
+					Start:    match[0],
+					End:      match[1],
+					LContext: text[max(0, match[0]-20):match[0]],
+					RContext: text[match[1]:min(len(text), match[1]+20)],
 				})
 			}
 		}

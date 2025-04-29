@@ -53,11 +53,15 @@ func (ner *NER) Predict(text string) ([]types.Entity, error) {
 		itemResultsLen := C.Results_len(cResults, i)
 
 		for j := C.uint(0); j < itemResultsLen; j++ {
+			start := int(C.Results_start(cResults, i, j))
+			end := int(C.Results_end(cResults, i, j))
 			entity := types.Entity{
-				Label: C.GoString(C.Results_label(cResults, i, j)),
-				Text:  C.GoString(C.Results_text(cResults, i, j)),
-				Start: int(C.Results_start(cResults, i, j)),
-				End:   int(C.Results_end(cResults, i, j)),
+				Label:    C.GoString(C.Results_label(cResults, i, j)),
+				Text:     C.GoString(C.Results_text(cResults, i, j)),
+				Start:    start,
+				End:      end,
+				LContext: sentences[i][max(start-20, 0):start],
+				RContext: sentences[i][end:min(len(sentences[i]), end+20)],
 			}
 			results = append(results, entity)
 		}

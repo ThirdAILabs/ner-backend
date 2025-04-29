@@ -268,6 +268,8 @@ func (proc *TaskProcessor) runInferenceOnObject(
 				Start:    entity.Start,
 				End:      entity.End,
 				Object:   object,
+				LContext: entity.LContext,
+				RContext: entity.RContext,
 			})
 		}
 	}
