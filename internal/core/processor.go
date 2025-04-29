@@ -151,6 +151,7 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 	if err != nil {
 		return err
 	}
+	defer model.Release()
 
 	groupToFilter := make(map[uuid.UUID]Filter)
 	for groupId, query := range groupToQuery {
@@ -388,6 +389,7 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 		slog.Error("error loading base model", "base_model_id", payload.BaseModelId, "model_id", payload.ModelId, "error", err)
 		return fmt.Errorf("error loading base model: %w", err)
 	}
+	defer model.Release()
 
 	if err := model.Finetune(payload.TaskPrompt, payload.Tags, payload.Samples); err != nil {
 		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed)
