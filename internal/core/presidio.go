@@ -1,0 +1,213 @@
+package core
+
+import (
+	"fmt"
+	"io/ioutil"
+	"regexp"
+	"strings"
+
+	"gopkg.in/yaml.v2"
+)
+
+type RecognizerResult struct {
+	EntityType string
+	Match      string
+	Score      float64
+	Start, End int
+}
+
+type PatternRecognizer struct {
+	EntityType string
+	Regexps    []*regexp.Regexp
+	Score      float64
+	Validate   func(string) bool
+}
+
+var entitiesMap = map[string]string{
+	"LOCATION":                        "ADDRESS",
+	"UsLicenseRecognizer":             "VIN", // AKA US_DRIVER_LICENSE
+	"PHONE_NUMBER":                    "PHONENUMBER",
+	"DATE_TIME":                       "DATE",
+	"EMAIL_ADDRESS":                   "EMAIL",
+	"CreditCardRecognizer":            "CARD_NUMBER",
+	"US_SSN":                          "SSN",
+	"URL":                             "URL",
+	"UsPassportRecognizer":            "ID_NUMBER",
+	"UsItinRecognizer":                "ID_NUMBER",
+	"UsBankRecognizer":                "ID_NUMBER",
+	"InPanRecognizer":                 "ID_NUMBER",
+	"InAadhaarRecognizer":             "ID_NUMBER",
+	"InVehicleRegistrationRecognizer": "VIN",
+}
+
+func loadPatterns(path string) ([]*PatternRecognizer, error) {
+	raw := struct {
+		Recognizers []struct {
+			Name     string `yaml:"name"`
+			Patterns []struct {
+				Regex string  `yaml:"regex"`
+				Score float64 `yaml:"score,omitempty"`
+			} `yaml:"patterns"`
+		} `yaml:"recognizers"`
+	}{}
+
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	if err := yaml.Unmarshal(data, &raw); err != nil {
+		return nil, err
+	}
+
+	var out []*PatternRecognizer
+	for _, rec := range raw.Recognizers {
+		pr := &PatternRecognizer{
+			EntityType: rec.Name,
+			Score:      0,
+			Validate:   nil,
+		}
+		for _, p := range rec.Patterns {
+			rxText := p.Regex
+
+			// PAN (InPanRecognizer) low-strength lookahead
+			if rec.Name == "InPanRecognizer" && strings.Contains(rxText, "(?=") {
+				// Base: any 10-char alnum+symbols
+				base := `\b[\w@#$%^?~-]{10}\b`
+				rx, _ := regexp.Compile(base)
+				pr.Regexps = append(pr.Regexps, rx)
+				// Validate: ≥1 letter & ≥4 digits
+				pr.Validate = func(s string) bool {
+					letters, digits := 0, 0
+					for _, r := range s {
+						switch {
+						case '0' <= r && r <= '9':
+							digits++
+						case ('a' <= r && r <= 'z') || ('A' <= r && r <= 'Z'):
+							letters++
+						}
+					}
+					return letters >= 1 && digits >= 4
+				}
+				if p.Score > pr.Score {
+					pr.Score = p.Score
+				}
+				continue
+			}
+
+			// Vehicle reg part 1: (I)(?!00000)\d{5}
+			if rec.Name == "InVehicleRegistrationRecognizer" && strings.Contains(rxText, "(?!00000)") {
+				base := `\bI[0-9]{5}\b`
+				rx, _ := regexp.Compile(base)
+				pr.Regexps = append(pr.Regexps, rx)
+				pr.Validate = func(s string) bool {
+					// tail = last 5 digits ≠ "00000"
+					tail := s[1:]
+					return tail != "00000"
+				}
+				if p.Score > pr.Score {
+					pr.Score = p.Score
+				}
+				continue
+			}
+
+			// Vehicle reg part 2: (?!00)\d{2}(A|B|C|D|E|F|H|K|P|R|X)\d{6}[A-Z]
+			if rec.Name == "InVehicleRegistrationRecognizer" && strings.Contains(rxText, "(?!00)") {
+				// Base: two digits, one of allowed letters, six digits, one letter
+				base := `\b[0-9]{2}[A-FH-KPRX][0-9]{6}[A-Z]\b`
+				rx, _ := regexp.Compile(base)
+				pr.Regexps = append(pr.Regexps, rx)
+				pr.Validate = func(s string) bool {
+					// ensure first two chars != "00"
+					return s[0:2] != "00"
+				}
+				if p.Score > pr.Score {
+					pr.Score = p.Score
+				}
+				continue
+			}
+
+			// Skip any other look-around patterns
+			if strings.Contains(rxText, "(?=") || strings.Contains(rxText, "(?!") || strings.Contains(rxText, "(?<") {
+				fmt.Printf("⚠️ skipping unsupported lookaround in %s: %s\n", rec.Name, rxText)
+				continue
+			}
+
+			// Compile normal regex
+			rx, err := regexp.Compile(rxText)
+			if err != nil {
+				fmt.Printf("⚠️ skip invalid regex for %s: %v\n", rec.Name, err)
+				continue
+			}
+			pr.Regexps = append(pr.Regexps, rx)
+			if p.Score > pr.Score {
+				pr.Score = p.Score
+			}
+		}
+		out = append(out, pr)
+	}
+	return out, nil
+}
+
+func isLuhnValid(d string) bool {
+	sum, alt := 0, false
+	for i := len(d) - 1; i >= 0; i-- {
+		n := int(d[i] - '0')
+		if alt {
+			n *= 2
+			if n > 9 {
+				n -= 9
+			}
+		}
+		sum += n
+		alt = !alt
+	}
+	return sum%10 == 0
+}
+
+func (pr *PatternRecognizer) Recognize(text string, threshold float64) []RecognizerResult {
+	var results []RecognizerResult
+	for _, rx := range pr.Regexps {
+		for _, loc := range rx.FindAllStringIndex(text, -1) {
+			match := text[loc[0]:loc[1]]
+			score := pr.Score
+
+			if pr.EntityType == "CreditCardRecognizer" {
+				digits := regexp.MustCompile(`\D`).ReplaceAllString(match, "")
+				if !isLuhnValid(digits) {
+					continue
+				}
+			}
+
+			if score < threshold {
+				continue
+			}
+			if pr.Validate != nil && !pr.Validate(match) {
+				continue
+			}
+
+			mapped := entitiesMap[pr.EntityType]
+			results = append(results, RecognizerResult{
+				EntityType: mapped,
+				Match:      match,
+				Score:      score,
+				Start:      loc[0],
+				End:        loc[1],
+			})
+		}
+	}
+	return results
+}
+
+func analyze(text string, threshold float64) []RecognizerResult {
+	var recs []*PatternRecognizer
+	recs, err := loadPatterns("recognizers.yaml")
+	if err != nil {
+		fmt.Printf("⚠️ failed to load recognizers: %v\n", err)
+		return nil
+	}
+	var out []RecognizerResult
+	for _, pr := range recs {
+		out = append(out, pr.Recognize(text, threshold)...)
+	}
+	return out
+}
