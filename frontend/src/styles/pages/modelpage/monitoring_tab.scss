@@ -16,6 +16,7 @@ $background: #f1f5f9;
   min-height: 100%;
   color: $text;
   width: 100%;
+  box-sizing: border-box;
 
   .monitoring-header {
     display: flex;

@@ -2,7 +2,10 @@ import React, { useState, useRef } from 'react';
 import TestingTab from './testing_tab';
 import JobTab from './job_tab';
 import MonitoringTab from './monitoring_tab';
+import CustomizedBreadcrumbs from '../../commons/breadCrumbs';
 import '../../../styles/pages/modelpage/_modelpage.scss';
+import HomeIcon from '@mui/icons-material/Home';
+import ExampleSegmentedControls from '../../commons/tabs';
 
 const ModelPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('Testing');
@@ -41,41 +44,33 @@ const ModelPage: React.FC = () => {
 
   return (
     <div className="main-container">
-      <div className="breadcrumb">
-        <a href="#" className="home-link">
-          Home
-        </a>
-        <span className="breadcrumb-separator"> &gt; </span>
-        <span>{modelName}</span>
-      </div>
+      <CustomizedBreadcrumbs
+        breadcrumbs={[
+          { label: 'Home', href: '/', icon: HomeIcon },
+          { label: modelName, href: `/model/${modelName}` },
+        ]}
+      />
 
       <h1 className="title">{modelName}</h1>
 
       <div className="tabs">
-        <button
-          className={`tab ${activeTab === 'Monitoring' ? 'active' : ''}`}
-          onClick={() => handleTabClick('Monitoring')}
-        >
-          Monitoring
-        </button>
-        <button
-          className={`tab ${activeTab === 'Testing' ? 'active' : ''}`}
-          onClick={() => handleTabClick('Testing')}
-        >
-          Testing
-        </button>
-        <button
-          className={`tab ${activeTab === 'Jobs' ? 'active' : ''}`}
-          onClick={() => handleTabClick('Jobs')}
-        >
-          Jobs
-        </button>
+        <ExampleSegmentedControls
+          tabs={['Monitoring', 'Testing', 'Jobs']}
+          value={activeTab}
+          onChange={handleTabClick}
+        />
       </div>
 
       <div className="content-area">
-        {activeTab === 'Testing' && <TestingTab />}
-        {activeTab === 'Monitoring' && <MonitoringTab />}
-        {activeTab === 'Jobs' && <JobTab jobEntries={repeatedJobEntries} />}
+        <div className={`tab-content ${activeTab === 'Testing' ? 'active' : ''}`}>
+          <TestingTab />
+        </div>
+        <div className={`tab-content ${activeTab === 'Monitoring' ? 'active' : ''}`}>
+          <MonitoringTab />
+        </div>
+        <div className={`tab-content ${activeTab === 'Jobs' ? 'active' : ''}`}>
+          <JobTab jobEntries={repeatedJobEntries} />
+        </div>
       </div>
     </div>
   );

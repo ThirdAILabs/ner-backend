@@ -1,7 +1,7 @@
 import React, { useState, useRef, DragEvent } from 'react';
 import { Divider } from '@mui/material';
 import { FiUpload } from 'react-icons/fi';
-import CopyButton from '../../common/copyButton';
+import CopyButton from '../../commons/copyButton';
 import '../../../styles/pages/modelpage/testing_tab.scss';
 
 const TestingTab: React.FC = () => {

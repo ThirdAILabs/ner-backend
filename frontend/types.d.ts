@@ -12,9 +12,11 @@ interface AppInfo {
 interface BreadCrumb {
     href: string,
     label: string,
-    icon?: any
+    icon?: React.ElementType
 }
 
 interface Tabs {
     tabs: string[],
+    onChange?: (value: string) => void,
+    value?: string
 }

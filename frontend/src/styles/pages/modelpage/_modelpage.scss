@@ -13,26 +13,6 @@ $shadow-color: rgba(0, 0, 0, 0.1);
   padding: 35px;
 }
 
-.breadcrumb {
-  margin-bottom: 16px;
-  font-size: 14px;
-
-  .home-link {
-    color: $primary-color;
-    text-decoration: none;
-    font-weight: 500;
-
-    &:hover {
-      text-decoration: underline;
-    }
-  }
-
-  .breadcrumb-separator {
-    margin: 0 8px;
-    color: $secondary-color;
-  }
-}
-
 .title {
   font-size: 28px;
   margin-bottom: 24px;
@@ -42,48 +22,8 @@ $shadow-color: rgba(0, 0, 0, 0.1);
 
 .tabs {
   display: flex;
+  justify-content: space-between;
   margin-bottom: 24px;
-  border: 1px solid $border-color;
-  border-radius: 8px;
-  width: fit-content;
-  overflow: hidden;
-
-  .tab {
-    padding: 10px 36px;
-    border: none;
-    background: none;
-    font-size: 15px;
-    border-radius: 0px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    position: relative;
-
-    &.active {
-      background-color: $primary-color;
-      color: white;
-    }
-
-    &:not(.active):hover {
-      background-color: #f1f3f4;
-    }
-
-    &:not(:last-child)::after {
-      content: '';
-      position: absolute;
-      right: 0;
-      top: 50%;
-      transform: translateY(-50%);
-      height: 20px;
-      width: 1px;
-      background-color: $border-color;
-      transition: opacity 0.2s ease;
-    }
-
-    &.active::after,
-    &:has(+ .active)::after {
-      opacity: 0;
-    }
-  }
 }
 
 .content-area {
@@ -95,4 +35,22 @@ $shadow-color: rgba(0, 0, 0, 0.1);
   overflow: hidden;
   position: relative;
   width: 100%;
+}
+
+.tab-content {
+  width: 100%;
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
+  position: absolute;
+  pointer-events: none;
+
+  &.active {
+    opacity: 1;
+    transform: translateY(0);
+    position: relative;
+    pointer-events: auto;
+  }
 }

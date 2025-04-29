@@ -18,9 +18,7 @@ const MonitoringTab: React.FC = () => {
           <div className="model-info">
             <div className="model-info-item">
               <div className="model-info-label">Deployment URL</div>
-              <div className="model-info-value with-copy">
-                <span>https://api.thirdai.com/token-classification</span>
-              </div>
+              <div className="model-info-value">https://api.thirdai.com/token-classification</div>
             </div>
             <div className="model-info-item">
               <div className="model-info-label">Last Updated</div>

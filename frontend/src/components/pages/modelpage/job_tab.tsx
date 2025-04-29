@@ -8,7 +8,7 @@ import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
 import '../../../styles/pages/modelpage/job_tab.scss';
-import LinearProgressBar from '../../common/progressBar';
+import LinearProgressBar from '../../commons/progressBar';
 
 interface JobEntry {
   name: string;
