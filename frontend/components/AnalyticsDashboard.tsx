@@ -49,14 +49,14 @@ const formatNumber = (num: number): string => {
   return num.toString();
 };
 
-export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
-  progress,
+export function AnalyticsDashboard({ 
+  progress, 
   tokensProcessed,
   latencyData,
   tokenTypes,
   tokenCounts,
-  clusterSpecs,
-}) => {
+  clusterSpecs
+}: AnalyticsDashboardProps) {
   // Convert token counts to chart data format
   const tokenChartData = Object.entries(tokenCounts).map(([type, count]) => ({
     type,
@@ -261,4 +261,4 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
       </Card>
     </div>
   );
-}; 
+} 

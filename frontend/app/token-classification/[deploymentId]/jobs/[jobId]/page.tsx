@@ -1,260 +1,413 @@
 'use client';
 
+import React from 'react';
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Container, Box, Typography, Breadcrumbs, Link as MuiLink, IconButton, Stack, Button, Tab, Tabs } from '@mui/material';
-import { RefreshRounded, PauseRounded, StopRounded, ArrowBack } from '@mui/icons-material';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { CheckCircle, ArrowLeft, RefreshCw, Pause, Square, Plus, Edit } from 'lucide-react';
+import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
+import { DatabaseTable } from './(database-table)/DatabaseTable';
+
+// Mock data for database table
+const mockGroups = ['Reject', 'Sensitive', 'Safe'];
+const mockTags = ['VIN', 'NAME', 'ORG', 'ADDRESS', 'EMAIL', 'SSN', 'PHONE', 'POLICY_ID', 'MED_REC_NO', 'LICENSE', 'EMPLOYER', 'ID', 'USERNAME', 'URL', 'IP_ADDR', 'ZIP_CODE', 'ACCOUNT', 'INS_PROV', 'PROCEDURE', 'DATE', 'NATIONALITY', 'SERIAL_NO', 'CRED_CARD_NUM', 'CVV'];
+
+const loadMoreMockObjectRecords = () => {
+  return Promise.resolve([
+    {
+      taggedTokens: [
+        ['My', 'O'] as [string, string],
+        ['name', 'O'] as [string, string],
+        ['is', 'O'] as [string, string],
+        ['John', 'NAME'] as [string, string],
+        ['Smith', 'NAME'] as [string, string],
+        ['and', 'O'] as [string, string],
+        ['my', 'O'] as [string, string],
+        ['social', 'O'] as [string, string],
+        ['is', 'O'] as [string, string],
+        ['123-45-6789', 'SSN'] as [string, string],
+      ],
+      sourceObject: 'call_transcript_1.txt',
+      groups: ['Sensitive'],
+    },
+    {
+      taggedTokens: [
+        ['Jane', 'NAME'] as [string, string],
+        ['Doe', 'NAME'] as [string, string],
+        ['at', 'O'] as [string, string],
+        ['123', 'ADDRESS'] as [string, string],
+        ['Main', 'ADDRESS'] as [string, string],
+        ['St', 'ADDRESS'] as [string, string],
+        ['with', 'O'] as [string, string],
+        ['vehicle', 'O'] as [string, string],
+        ['1HGCM82633A004352', 'VIN'] as [string, string],
+      ],
+      sourceObject: 'call_transcript_2.txt',
+      groups: ['Reject'],
+    },
+  ]);
+};
+
+const loadMoreMockClassifiedTokenRecords = () => {
+  return Promise.resolve([
+    {
+      token: 'John',
+      tag: 'NAME',
+      sourceObject: 'call_transcript_1.txt',
+      groups: ['Sensitive'],
+    },
+    {
+      token: 'Smith',
+      tag: 'NAME',
+      sourceObject: 'call_transcript_1.txt',
+      groups: ['Sensitive'],
+    },
+    {
+      token: '123-45-6789',
+      tag: 'SSN',
+      sourceObject: 'call_transcript_1.txt',
+      groups: ['Sensitive'],
+    },
+    {
+      token: 'Jane',
+      tag: 'NAME',
+      sourceObject: 'call_transcript_2.txt',
+      groups: ['Reject'],
+    },
+    {
+      token: 'Doe',
+      tag: 'NAME',
+      sourceObject: 'call_transcript_2.txt',
+      groups: ['Reject'],
+    },
+    {
+      token: '123 Main St',
+      tag: 'ADDRESS',
+      sourceObject: 'call_transcript_2.txt',
+      groups: ['Reject'],
+    },
+    {
+      token: '1HGCM82633A004352',
+      tag: 'VIN',
+      sourceObject: 'call_transcript_2.txt',
+      groups: ['Reject'],
+    },
+  ]);
+};
+
+// Source option card component
+interface SourceOptionProps {
+  title: string;
+  description: string;
+  isSelected?: boolean;
+  onClick: () => void;
+}
+
+const SourceOption: React.FC<SourceOptionProps> = ({ title, description, isSelected = false, onClick }) => (
+  <div 
+    className={`relative p-6 border rounded-md cursor-pointer transition-all
+      ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200 hover:border-blue-300'}
+    `}
+    onClick={onClick}
+  >
+    <h3 className="text-base font-medium">{title}</h3>
+    <p className="text-sm text-gray-500 mt-1">{description}</p>
+    
+    {isSelected && (
+      <div className="absolute top-3 right-3">
+        <Edit className="h-4 w-4 text-gray-500" />
+      </div>
+    )}
+  </div>
+);
+
+// Tag chip component
+interface TagProps {
+  tag: string;
+  selected?: boolean;
+  onClick?: () => void;
+}
+
+const Tag: React.FC<TagProps> = ({ tag, selected = true, onClick }) => (
+  <div 
+    className={`px-3 py-1.5 text-sm font-medium rounded-sm cursor-pointer
+      ${selected ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}
+    `}
+    onClick={onClick}
+  >
+    {tag}
+  </div>
+);
+
+// Group card component
+interface GroupProps {
+  name: string;
+  definition: string;
+}
+
+const GroupCard: React.FC<GroupProps> = ({ name, definition }) => (
+  <div className="border border-gray-200 rounded-md overflow-hidden">
+    <div className="p-4 border-b border-gray-200">
+      <h3 className="text-base font-medium">{name}</h3>
+    </div>
+    <div className="p-4">
+      <p className="text-sm font-mono">{definition}</p>
+    </div>
+  </div>
+);
 
 export default function JobDetail() {
   const params = useParams();
   const [lastUpdated, setLastUpdated] = useState(0);
-  const [tabValue, setTabValue] = useState('analytics');
+  const [tabValue, setTabValue] = useState('configuration');
+  const [selectedSource, setSelectedSource] = useState('s3');
+  const [selectedSaveLocation, setSelectedSaveLocation] = useState('s3');
+  const [selectedTags, setSelectedTags] = useState<string[]>(mockTags);
 
-  const handleTabChange = (_event: React.SyntheticEvent, newValue: string) => {
-    setTabValue(newValue);
+  const toggleTag = (tag: string) => {
+    if (selectedTags.includes(tag)) {
+      setSelectedTags(selectedTags.filter(t => t !== tag));
+    } else {
+      setSelectedTags([...selectedTags, tag]);
+    }
+  };
+
+  const selectAllTags = () => {
+    setSelectedTags(mockTags);
   };
 
   return (
-    <Container maxWidth="lg" sx={{ px: 4 }}>
-      <Box sx={{ py: 3 }}>
-        {/* Breadcrumbs */}
-        <Stack direction="row" spacing={2} alignItems="center" mb={3}>
-          <Breadcrumbs aria-label="breadcrumb">
-            <MuiLink component={Link} href={`/token-classification/${params.deploymentId}/jobs`}>
-              Jobs
-            </MuiLink>
-            <Typography color="text.primary">Customer Calls</Typography>
-          </Breadcrumbs>
-        </Stack>
+    <div className="container px-4 py-8 mx-auto">
+      {/* Breadcrumbs */}
+      <div className="mb-6">
+        <div className="flex items-center mb-2">
+          <Link href={`/token-classification/${params.deploymentId}/jobs`} className="text-blue-500 hover:underline">
+            Jobs
+          </Link>
+          <span className="mx-2 text-gray-400">/</span>
+          <span className="text-gray-700">Customer Calls</span>
+        </div>
+      </div>
 
-        {/* Title and Back Button */}
-        <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between" mb={3}>
-          <Typography variant="h5">Customer Calls</Typography>
-          <Button
-            variant="outlined"
-            startIcon={<ArrowBack />}
-            component={Link}
-            href={`/token-classification/${params.deploymentId}?tab=jobs`}
-          >
-            Back to Jobs
-          </Button>
-        </Stack>
+      {/* Title and Back Button */}
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-medium">Customer Calls</h1>
+        
+        <Button variant="outline" size="sm" asChild>
+          <Link href={`/token-classification/${params.deploymentId}?tab=jobs`} className="flex items-center">
+            <ArrowLeft className="mr-1 h-4 w-4" /> Back to Jobs
+          </Link>
+        </Button>
+      </div>
 
-        {/* Tabs, Controls and Content */}
-        <Tabs 
-          value={tabValue} 
-          onChange={handleTabChange}
-          aria-label="job detail tabs"
-          sx={{ mb: 3 }}
-        >
-          <Tab label="Configuration" value="configuration" />
-          <Tab label="Analytics" value="analytics" />
-          <Tab label="Output" value="output" />
-        </Tabs>
+      {/* Tabs and Controls */}
+      <Tabs value={tabValue} onValueChange={setTabValue} className="w-full">
+        <div className="flex items-center justify-between border-b mb-6">
+          <TabsList className="border-0 bg-transparent p-0">
+            <TabsTrigger 
+              value="configuration" 
+              className="data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:shadow-none rounded-none bg-transparent px-4 py-3 data-[state=active]:bg-transparent"
+            >
+              Configuration
+            </TabsTrigger>
+            <TabsTrigger 
+              value="analytics" 
+              className="data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:shadow-none rounded-none bg-transparent px-4 py-3 data-[state=active]:bg-transparent"
+            >
+              Analytics
+            </TabsTrigger>
+            <TabsTrigger 
+              value="output" 
+              className="data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:shadow-none rounded-none bg-transparent px-4 py-3 data-[state=active]:bg-transparent"
+            >
+              Output
+            </TabsTrigger>
+          </TabsList>
 
-        <Stack direction="row" spacing={2} alignItems="center" justifyContent="flex-end" mb={3}>
-          <Typography variant="body2" color="text.secondary">
-            Last updated: {lastUpdated} seconds ago
-          </Typography>
-          <IconButton onClick={() => setLastUpdated(0)} size="small">
-            <RefreshRounded />
-          </IconButton>
-          <IconButton size="small">
-            <PauseRounded />
-          </IconButton>
-          <IconButton size="small">
-            <StopRounded />
-          </IconButton>
-        </Stack>
+          <div className="flex items-center space-x-4">
+            <span className="text-sm text-gray-500">Last updated: {lastUpdated} seconds ago</span>
+            <Button variant="ghost" size="icon" onClick={() => setLastUpdated(0)}>
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon">
+              <Pause className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon">
+              <Square className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
 
-        {tabValue === 'configuration' && (
-          <Box sx={{ bgcolor: 'background.paper', p: 3, borderRadius: 1 }}>
-            <Typography variant="h6" gutterBottom>Configuration</Typography>
-            
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="subtitle1">Source</Typography>
-              <Box sx={{ bgcolor: '#f5f5f5', p: 2, borderRadius: 1, mt: 1 }}>
-                <Typography>s3://thirdai-dev/customer-calls/2025/</Typography>
-              </Box>
-            </Box>
-            
-            <Box sx={{ mt: 3 }}>
-              <Typography variant="subtitle1">Save Location</Typography>
-              <Box sx={{ bgcolor: '#f5f5f5', p: 2, borderRadius: 1, mt: 1 }}>
-                <Typography>thirdai-dev/sensitive/customer-calls/2025/</Typography>
-              </Box>
-            </Box>
-            
-            <Box sx={{ mt: 3 }}>
-              <Typography variant="subtitle1">Tags</Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-                {['NAME', 'VIN', 'ORG', 'ID', 'SSN', 'ADDRESS', 'EMAIL'].map(tag => (
-                  <Box key={tag} sx={{ bgcolor: '#e3f2fd', color: '#1976d2', px: 2, py: 0.5, borderRadius: 1 }}>
-                    {tag}
-                  </Box>
-                ))}
-              </Box>
-            </Box>
-            
-            <Box sx={{ mt: 3 }}>
-              <Typography variant="subtitle1">Groups</Typography>
-              <Box sx={{ mt: 1 }}>
-                <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, mb: 2 }}>
-                  <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0' }}>
-                    <Typography variant="subtitle2">Reject</Typography>
-                  </Box>
-                  <Box sx={{ p: 2 }}>
-                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>COUNT(tags) &gt; 5</Typography>
-                  </Box>
-                </Box>
-                
-                <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, mb: 2 }}>
-                  <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0' }}>
-                    <Typography variant="subtitle2">Sensitive</Typography>
-                  </Box>
-                  <Box sx={{ p: 2 }}>
-                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>COUNT(tags) &gt; 0</Typography>
-                  </Box>
-                </Box>
-                
-                <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1 }}>
-                  <Box sx={{ p: 2, borderBottom: '1px solid #e0e0e0' }}>
-                    <Typography variant="subtitle2">Safe</Typography>
-                  </Box>
-                  <Box sx={{ p: 2 }}>
-                    <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>COUNT(tags) = 0</Typography>
-                  </Box>
-                </Box>
-              </Box>
-            </Box>
-          </Box>
-        )}
-
-        {tabValue === 'analytics' && (
-          <Box sx={{ bgcolor: 'background.paper', p: 3, borderRadius: 1 }}>
-            <Typography variant="h6" gutterBottom>Analytics</Typography>
-            
-            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, mt: 2 }}>
-              <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 2, textAlign: 'center' }}>
-                <Typography variant="body2" color="text.secondary">Progress</Typography>
-                <Typography variant="h4" sx={{ mt: 1 }}>40%</Typography>
-              </Box>
-              
-              <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 2, textAlign: 'center' }}>
-                <Typography variant="body2" color="text.secondary">Tokens Processed</Typography>
-                <Typography variant="h4" sx={{ mt: 1 }}>1.2M</Typography>
-              </Box>
-              
-              <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 2, textAlign: 'center' }}>
-                <Typography variant="body2" color="text.secondary">Live Latency</Typography>
-                <Typography variant="h4" sx={{ mt: 1 }}>0.093ms</Typography>
-              </Box>
-              
-              <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 2 }}>
-                <Typography variant="body2" color="text.secondary">Cluster Specs</Typography>
-                <Box sx={{ mt: 1 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body2">CPUs:</Typography>
-                    <Typography variant="body2">48</Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body2">Vendor:</Typography>
-                    <Typography variant="body2">Intel</Typography>
-                  </Box>
-                </Box>
-              </Box>
-            </Box>
-            
-            <Box sx={{ mt: 3 }}>
-              <Typography variant="subtitle1" gutterBottom>Identified Tokens</Typography>
-              <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 2, mt: 1 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2">NAME</Typography>
-                  <Typography variant="body2">21.2M</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2">VIN</Typography>
-                  <Typography variant="body2">19.8M</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2">ORG</Typography>
-                  <Typography variant="body2">13.3M</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2">SSN</Typography>
-                  <Typography variant="body2">13.3M</Typography>
-                </Box>
-              </Box>
-            </Box>
-          </Box>
-        )}
-
-        {tabValue === 'output' && (
-          <Box sx={{ bgcolor: 'background.paper', p: 3, borderRadius: 1 }}>
-            <Typography variant="h6" gutterBottom>Output</Typography>
-            
-            <Box sx={{ mt: 2 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                <Box>
-                  <Typography variant="body2" color="text.secondary">Showing results for:</Typography>
-                  <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                    <Button variant="outlined" size="small">All Groups</Button>
-                    <Button variant="outlined" size="small">All Tags</Button>
-                  </Box>
-                </Box>
-                <Box>
-                  <Button variant="contained" color="primary" size="small">
-                    Download Results
-                  </Button>
-                </Box>
-              </Box>
-              
-              <div className="overflow-hidden border border-gray-200 rounded-md">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Group</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tags</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Preview</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    <tr>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">call_transcript_1.txt</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Sensitive</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex flex-wrap gap-1">
-                          <span className="px-2 py-1 text-xs rounded bg-blue-100 text-blue-800">NAME</span>
-                          <span className="px-2 py-1 text-xs rounded bg-green-100 text-green-800">SSN</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
-                        My name is <span className="bg-blue-100">John Smith</span> and my social is <span className="bg-green-100">123-45-6789</span>...
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">call_transcript_2.txt</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Reject</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex flex-wrap gap-1">
-                          <span className="px-2 py-1 text-xs rounded bg-blue-100 text-blue-800">NAME</span>
-                          <span className="px-2 py-1 text-xs rounded bg-purple-100 text-purple-800">ADDRESS</span>
-                          <span className="px-2 py-1 text-xs rounded bg-red-100 text-red-800">VIN</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
-                        <span className="bg-blue-100">Jane Doe</span> at <span className="bg-purple-100">123 Main St</span> with vehicle <span className="bg-red-100">1HGCM82633A004352</span>...
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+        <TabsContent value="configuration" className="mt-0">
+          <div className="space-y-8">
+            {/* Source section */}
+            <div>
+              <h2 className="text-lg font-medium mb-4">Source</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <SourceOption 
+                  title="S3 Bucket" 
+                  description="s3://thirdai-dev/customer-calls/2025/" 
+                  isSelected={selectedSource === 's3'}
+                  onClick={() => setSelectedSource('s3')}
+                />
+                <SourceOption 
+                  title="Local Storage" 
+                  description="Configure now" 
+                  isSelected={selectedSource === 'local'}
+                  onClick={() => setSelectedSource('local')}
+                />
+                <SourceOption 
+                  title="More options" 
+                  description="coming soon" 
+                  isSelected={selectedSource === 'more'}
+                  onClick={() => setSelectedSource('more')}
+                />
               </div>
-            </Box>
-          </Box>
-        )}
-      </Box>
-    </Container>
+            </div>
+
+            {/* Tags section */}
+            <div>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-medium">Tags</h2>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={selectAllTags}
+                  className="text-sm flex items-center"
+                >
+                  <span className="mr-1">Select All</span>
+                  <input 
+                    type="checkbox" 
+                    checked={selectedTags.length === mockTags.length} 
+                    onChange={selectAllTags}
+                    className="rounded border-gray-300"
+                  />
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {mockTags.map(tag => (
+                  <Tag
+                    key={tag}
+                    tag={tag}
+                    selected={selectedTags.includes(tag)}
+                    onClick={() => toggleTag(tag)}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Groups section */}
+            <div>
+              <h2 className="text-lg font-medium mb-4">Groups</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <GroupCard name="Reject" definition="COUNT(tags) > 5" />
+                <GroupCard name="Sensitive" definition="COUNT(tags) > 0" />
+                <GroupCard name="Safe" definition="COUNT(tags) = 0" />
+                
+                <div 
+                  className="border border-dashed border-gray-300 rounded-md flex items-center justify-center p-6 cursor-pointer hover:border-gray-400"
+                  onClick={() => console.log('Add new group')}
+                >
+                  <div className="flex flex-col items-center">
+                    <Plus className="h-8 w-8 text-gray-400 mb-2" />
+                    <span className="text-gray-600">Define new group</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Save Groups To section */}
+            <div>
+              <h2 className="text-lg font-medium mb-4">Save Groups To</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <SourceOption 
+                  title="S3 Bucket" 
+                  description="thirdai-dev/sensitive/customer-calls/2025/" 
+                  isSelected={selectedSaveLocation === 's3'}
+                  onClick={() => setSelectedSaveLocation('s3')}
+                />
+                <SourceOption 
+                  title="Local Storage" 
+                  description="local" 
+                  isSelected={selectedSaveLocation === 'local'}
+                  onClick={() => setSelectedSaveLocation('local')}
+                />
+                <SourceOption 
+                  title="No storage location" 
+                  description="You can still save groups" 
+                  isSelected={selectedSaveLocation === 'none'}
+                  onClick={() => setSelectedSaveLocation('none')}
+                />
+                <SourceOption 
+                  title="More options" 
+                  description="coming soon" 
+                  isSelected={selectedSaveLocation === 'more'}
+                  onClick={() => setSelectedSaveLocation('more')}
+                />
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="analytics">
+          <AnalyticsDashboard
+            progress={40}
+            tokensProcessed={1229000}
+            latencyData={[
+              { timestamp: '2024-03-10T12:00:00', latency: 0.096 },
+              { timestamp: '2024-03-10T12:00:01', latency: 0.09 },
+              { timestamp: '2024-03-10T12:00:02', latency: 0.082 },
+              { timestamp: '2024-03-10T12:00:03', latency: 0.101 },
+              { timestamp: '2024-03-10T12:00:04', latency: 0.098 },
+              { timestamp: '2024-03-10T12:00:05', latency: 0.095 },
+              { timestamp: '2024-03-10T12:00:06', latency: 0.097 },
+              { timestamp: '2024-03-10T12:00:07', latency: 0.099 },
+              { timestamp: '2024-03-10T12:00:08', latency: 0.094 },
+              { timestamp: '2024-03-10T12:00:09', latency: 0.093 },
+              { timestamp: '2024-03-10T12:00:10', latency: 0.088 }, 
+              { timestamp: '2024-03-10T12:00:11', latency: 0.082 },
+              { timestamp: '2024-03-10T12:00:12', latency: 0.079 },
+              { timestamp: '2024-03-10T12:00:13', latency: 0.087 },
+              { timestamp: '2024-03-10T12:00:14', latency: 0.083 },
+              { timestamp: '2024-03-10T12:00:15', latency: 0.084 },
+              { timestamp: '2024-03-10T12:00:16', latency: 0.086 },
+              { timestamp: '2024-03-10T12:00:17', latency: 0.083 },
+              { timestamp: '2024-03-10T12:00:18', latency: 0.089 },
+              { timestamp: '2024-03-10T12:00:19', latency: 0.091 },
+              { timestamp: '2024-03-10T12:00:20', latency: 0.083 },
+              { timestamp: '2024-03-10T12:00:21', latency: 0.092 },
+              { timestamp: '2024-03-10T12:00:22', latency: 0.094 },
+            ]}
+            tokenTypes={['NAME', 'VIN', 'ORG', 'ID', 'SSN', 'ADDRESS', 'EMAIL']}
+            tokenCounts={{
+              'NAME': 21200000,
+              'VIN': 19800000,
+              'ORG': 13300000,
+              'ID': 13300000,
+              'SSN': 13300000,
+              'ADDRESS': 5600000,
+              'EMAIL': 3800000
+            }}
+            clusterSpecs={{
+              cpus: 48,
+              vendorId: 'GenuineIntel',
+              modelName: 'Intel Xeon E5-2680',
+              cpuMhz: 1197.408
+            }}
+          />
+        </TabsContent>
+
+        <TabsContent value="output">
+          <DatabaseTable 
+            loadMoreObjectRecords={loadMoreMockObjectRecords}
+            loadMoreClassifiedTokenRecords={loadMoreMockClassifiedTokenRecords}
+            groups={mockGroups}
+            tags={mockTags}
+          />
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 } 

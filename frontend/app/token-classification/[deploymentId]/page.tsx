@@ -1,186 +1,188 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Tabs, Tab, Box } from '@mui/material';
+import { Breadcrumbs, Link as MuiLink, Typography } from '@mui/material';
+import * as _ from 'lodash';
 import { useParams, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { Box, Container, Typography, Tabs, Tab, Button } from '@mui/material';
+import { Card, CardContent } from '@mui/material';
+import { Alert } from '@mui/material';
 
-// Mock data for jobs
-const mockJobs = [
-  {
-    name: "Medical Records Review",
-    reportId: "tcr_123456789",
-    status: "completed", 
-    submittedAt: "2024-01-15T10:30:00Z",
-  },
-  {
-    name: "Insurance Claims Processing",
-    reportId: "tcr_987654321", 
-    status: "completed",
-    submittedAt: "2024-01-15T11:30:00Z",
-  },
-  {
-    name: "Customer Support Chat Logs",
-    reportId: "tcr_456789123",
-    status: "completed",
-    submittedAt: "2024-01-15T12:30:00Z",
-  },
-];
+// Import our implemented components
+import Interact from './interact';
+import Dashboard from './dashboard';
+import Jobs from './jobs';
 
-export default function TokenClassificationPage() {
+interface ModelUpdateProps {
+  username: string;
+  modelName: string;
+  deploymentUrl: string;
+  workflowNames: string[];
+  deployStatus: string;
+  modelId: string;
+}
+
+// Types included for completeness, but using Dashboard instead of ModelUpdate
+type LabelMetrics = {
+  [key: string]: {
+    precision: number;
+    recall: number;
+    fmeasure: number;
+  };
+};
+
+type ExampleCategories = {
+  true_positives: Record<string, any>;
+  false_positives: Record<string, any>;
+  false_negatives: Record<string, any>;
+};
+
+type TrainReportData = {
+  before_train_metrics: LabelMetrics;
+  after_train_metrics: LabelMetrics;
+  after_train_examples: ExampleCategories;
+};
+
+const emptyMetrics: LabelMetrics = {
+  'O': {
+    precision: 0,
+    recall: 0,
+    fmeasure: 0
+  }
+};
+
+const emptyExamples: ExampleCategories = {
+  true_positives: {},
+  false_positives: {},
+  false_negatives: {}
+};
+
+const emptyReport: TrainReportData = {
+  before_train_metrics: emptyMetrics,
+  after_train_metrics: emptyMetrics,
+  after_train_examples: emptyExamples
+};
+
+// Mock API function until we implement the real one
+const getTrainReport = async (workflowName: string) => {
+  return { data: emptyReport };
+};
+
+export default function Page() {
   const params = useParams();
+  const workflowName = params.deploymentId as string || 'PII';
   const searchParams = useSearchParams();
-  const [tabValue, setTabValue] = useState(searchParams.get('tab') || 'testing');
+  const defaultTab = searchParams.get('tab') || 'testing';
+  const [tabValue, setTabValue] = useState(defaultTab);
+  const [trainReport, setTrainReport] = useState<TrainReportData>(emptyReport);
+  const [isLoadingReport, setIsLoadingReport] = useState(false);
+  const [reportError, setReportError] = useState('');
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: string) => {
     setTabValue(newValue);
   };
 
+  // Fetch training report for monitoring tab
+  useEffect(() => {
+    const fetchReport = async () => {
+      try {
+        setIsLoadingReport(true);
+        setReportError('');
+        const response = await getTrainReport(workflowName);
+        setTrainReport(response.data);
+      } catch (error) {
+        setReportError(error instanceof Error ? error.message : 'Failed to fetch training report');
+        // Even on error, we want to show the TrainingResults component with empty data
+        setTrainReport(emptyReport);
+      } finally {
+        setIsLoadingReport(false);
+      }
+    };
+
+    fetchReport();
+  }, [workflowName]);
+
+  // Mock data for ModelUpdate component
+  const mockModelData: ModelUpdateProps = {
+    username: 'testuser',
+    modelName: 'token-classifier',
+    deploymentUrl: 'https://mock-deployment-url.com',
+    workflowNames: ['token-classifier', 'token-classifier-v2'],
+    deployStatus: 'complete',
+    modelId: 'mock-model-id-123'
+  };
+
   return (
-    <Container maxWidth="lg" sx={{ px: 4 }}>
-      <Box sx={{ py: 3 }}>
-        <Typography variant="h5" component="h1" gutterBottom>
-          Token Classification - {params.deploymentId}
-        </Typography>
+    <div style={{ backgroundColor: '#F5F7FA', minHeight: '100vh' }}>
+      <header style={{ width: '100%', padding: '16px', borderBottom: '1px solid #e0e0e0' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', marginBottom: '16px' }}>
+          <Typography 
+            variant="body1" 
+            color="textSecondary" 
+            gutterBottom
+            style={{ fontWeight: 500 }}
+          >
+            Token Classification
+          </Typography>
+          
+          <Typography 
+            variant="h5" 
+            style={{ 
+              fontWeight: 'bold', 
+              overflow: 'hidden', 
+              textOverflow: 'ellipsis', 
+              whiteSpace: 'nowrap' 
+            }} 
+            title={workflowName}
+          >
+            {workflowName}
+          </Typography>
+        </div>
+      </header>
 
-        <Tabs 
-          value={tabValue} 
-          onChange={handleTabChange}
-          aria-label="token classification tabs"
-          sx={{ mb: 3 }}
-        >
-          <Tab label="Monitoring" value="monitoring" />
-          <Tab label="Testing" value="testing" />
-          <Tab label="Jobs" value="jobs" />
-        </Tabs>
-
-        {tabValue === 'monitoring' && (
-          <Box sx={{ bgcolor: 'background.paper', p: 3, borderRadius: 1 }}>
-            <Typography variant="h6" gutterBottom>Monitoring Dashboard</Typography>
-            
-            <Box sx={{ mt: 3 }}>
-              <Typography variant="subtitle1">Model Status</Typography>
-              <Box sx={{ mt: 2, p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2">Status:</Typography>
-                  <Typography variant="body2" sx={{ color: 'green' }}>Active</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2">Deployment URL:</Typography>
-                  <Typography variant="body2">https://api.thirdai.com/token-classification</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2">Last updated:</Typography>
-                  <Typography variant="body2">April 28, 2024</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2">Model version:</Typography>
-                  <Typography variant="body2">v2.1.3</Typography>
-                </Box>
-              </Box>
-            </Box>
-
-            <Box sx={{ mt: 3 }}>
-              <Typography variant="subtitle1">Performance Metrics</Typography>
-              <Box sx={{ mt: 2, p: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2">Precision:</Typography>
-                  <Typography variant="body2">0.97</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                  <Typography variant="body2">Recall:</Typography>
-                  <Typography variant="body2">0.92</Typography>
-                </Box>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography variant="body2">F1 Score:</Typography>
-                  <Typography variant="body2">0.94</Typography>
-                </Box>
-              </Box>
-            </Box>
-          </Box>
-        )}
-
-        {tabValue === 'testing' && (
-          <Box sx={{ bgcolor: 'background.paper', p: 3, borderRadius: 1 }}>
-            <Typography variant="h6" gutterBottom>Testing Interface</Typography>
-            <Typography paragraph>Test token classification on your text inputs.</Typography>
-            
-            <Box component="form" sx={{ mt: 2 }}>
-              <textarea 
-                className="w-full p-2 border border-gray-300 rounded h-32"
-                placeholder="Enter text to classify tokens..."
-              />
-              <Button 
-                variant="contained" 
-                color="primary" 
-                sx={{ mt: 2 }}
-              >
-                Classify Tokens
-              </Button>
-            </Box>
-            
-            <Box sx={{ mt: 4 }}>
-              <Typography variant="subtitle1" gutterBottom>Results will appear here</Typography>
-              <Box sx={{ p: 3, bgcolor: '#f5f5f5', borderRadius: 1, minHeight: '100px' }}>
-                <Typography variant="body2" color="text.secondary">
-                  No results to display. Enter text and click "Classify Tokens" to see results.
-                </Typography>
-              </Box>
-            </Box>
-          </Box>
-        )}
-
-        {tabValue === 'jobs' && (
-          <Box sx={{ bgcolor: 'background.paper', p: 3, borderRadius: 1 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-              <Typography variant="h6">Jobs</Typography>
-              <Link 
-                href={`/token-classification/${params.deploymentId}/jobs/new`}
-                style={{ textDecoration: 'none' }}
-              >
-                <Button variant="contained" color="primary">
-                  New Job
-                </Button>
-              </Link>
-            </Box>
-
-            <div className="overflow-hidden border border-gray-200 rounded-md">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-100">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Report ID</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submitted At</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {mockJobs.map((job) => (
-                    <tr key={job.reportId}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{job.name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{job.reportId}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                          {job.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(job.submittedAt).toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-500">
-                        <Link href={`/token-classification/${params.deploymentId}/jobs/${job.reportId}`}>
-                          View
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Box>
-        )}
-      </Box>
-    </Container>
+      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px' }}>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+          <Tabs 
+            value={tabValue} 
+            onChange={handleTabChange}
+            aria-label="token classification tabs"
+            sx={{
+              '& .MuiTab-root': {
+                textTransform: 'none',
+                fontWeight: 500,
+                fontSize: '1rem',
+                color: '#5F6368',
+                minWidth: 100,
+                padding: '12px 16px',
+                '&.Mui-selected': {
+                  color: '#1a73e8',
+                  fontWeight: 500
+                }
+              },
+              '& .MuiTabs-indicator': {
+                backgroundColor: '#1a73e8'
+              }
+            }}
+          >
+            <Tab label="Monitoring" value="monitoring" />
+            <Tab label="Testing" value="testing" />
+            <Tab label="Jobs" value="jobs" />
+          </Tabs>
+        </Box>
+        
+        {/* Tab Content Sections */}
+        <div style={{ display: tabValue === 'monitoring' ? 'block' : 'none' }}>
+          <Dashboard />
+        </div>
+        
+        <div style={{ display: tabValue === 'testing' ? 'block' : 'none' }}>
+          <Interact />
+        </div>
+        
+        <div style={{ display: tabValue === 'jobs' ? 'block' : 'none' }}>
+          <Jobs />
+        </div>
+      </main>
+    </div>
   );
 } 
