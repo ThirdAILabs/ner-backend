@@ -1,23 +1,16 @@
-$primary-color: #1a73e8;
-$secondary-color: #5f6368;
-$border-color: #e0e0e0;
-$background-color: #f8f9fa;
-$text-color: #333;
-$shadow-color: rgba(0, 0, 0, 0.1);
+@import '../../base/variables';
+@import '../../base/typography';
 
 .main-container {
   display: flex;
-  font-family: 'Roboto', Arial, sans-serif;
-  color: $text-color;
+  font-family: $font-family-base;
   flex-direction: column;
   padding: 35px;
 }
 
 .title {
-  font-size: 28px;
-  margin-bottom: 24px;
-  font-weight: 500;
-  color: #202124;
+  padding: 8px 0;
+  @include sub-heading-1;
 }
 
 .tabs {
@@ -27,11 +20,11 @@ $shadow-color: rgba(0, 0, 0, 0.1);
 }
 
 .content-area {
-  border: 1px solid $border-color;
+  border: 1px solid $color-text-300;
   border-radius: 8px;
   flex: 1;
   display: flex;
-  box-shadow: 0 2px 6px $shadow-color;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   overflow: hidden;
   position: relative;
   width: 100%;
@@ -46,6 +39,7 @@ $shadow-color: rgba(0, 0, 0, 0.1);
     transform 0.3s ease;
   position: absolute;
   pointer-events: none;
+  background-color: $background-color;
 
   &.active {
     opacity: 1;
