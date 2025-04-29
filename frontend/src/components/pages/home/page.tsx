@@ -55,7 +55,7 @@ function AppCatalog() {
                             {detectionTools.map((tool, index) => (
                                 <tr
                                     key={index}
-                                    className={`row ${selectedRow === index ? 'selected' : index % 2 === 0 ? 'alternate' : ''}`}
+                                    className={`row ${index % 2 === 0 ? 'alternate' : ''}`}
                                     onClick={() => setSelectedRow(index)}
                                 >
                                     <td className="name-cell">{tool.name}</td>

@@ -1,5 +1,4 @@
-// This file contains types for the database layer.
-
+//DB Layer Types
 interface AppInfo {
     name: string,
     description: string,
@@ -7,4 +6,15 @@ interface AppInfo {
     modified: string,
     owner: string,
     deploymentLink?: string
+}
+
+//Nav Types
+interface BreadCrumb {
+    href: string,
+    label: string,
+    icon?: any
+}
+
+interface Tabs {
+    tabs: string[],
 }

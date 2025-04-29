@@ -1,6 +1,7 @@
 import './App.css';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import AppCatalog from './components/pages/home/page';
+import Jobs from './components/pages/jobs/page';
 
 export default function App() {
   return (
@@ -16,7 +17,7 @@ function AppContent() {
     <Routes>
       <Route path='/' element={<AppCatalog />} />
       <Route path='/model-page' />
-      <Route path='/testing' />
+      <Route path='/jobs' element={<Jobs />} />
       <Route path='/error' />
     </Routes>
   );

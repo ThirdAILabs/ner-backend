@@ -1,8 +1,4 @@
 html {
   color-scheme: light;
   font-family: system-ui;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
 }
