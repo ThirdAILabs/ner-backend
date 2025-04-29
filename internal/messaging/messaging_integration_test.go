@@ -146,7 +146,7 @@ func TestPublishConsumeInferenceTask(t *testing.T) {
 	testPayload := models.InferenceTaskPayload{
 		JobID:             "test-job-123",
 		ModelID:           "test-model-abc",
-		ModelArtifactPath: "s3://models/test-model-abc/model.bin",
+		ModelArtifactPath: "s3://models/test-model-abc",
 		SourceS3Bucket:    "test-input-bucket",
 		SourceS3Key:       "test/input/file.txt",
 		DestS3Bucket:      "test-output-bucket",

@@ -6,8 +6,8 @@ import (
 	"io"
 	"log"
 	"log/slog"
-	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -82,6 +82,40 @@ func NewFromClient(client S3Api, bucketName string) *Client {
 	}
 }
 
+func (c *Client) UploadDirectory(ctx context.Context, localDirPath, bucket, prefix string) (string, error) {
+	walkErr := filepath.Walk(localDirPath, func(filePath string, info os.FileInfo, err error) error {
+		if err != nil {
+			return fmt.Errorf("error accessing path %q: %w", filePath, err)
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		relPath, err := filepath.Rel(localDirPath, filePath)
+		if err != nil {
+			return fmt.Errorf("failed to get relative path for %s: %w", filePath, err)
+		}
+
+		s3Key := path.Join(prefix, filepath.ToSlash(relPath))
+
+		_, uploadErr := c.UploadFile(ctx, filePath, bucket, s3Key)
+		if uploadErr != nil {
+
+			return fmt.Errorf("upload failed for %s: %w", filePath, uploadErr)
+		}
+		return nil
+	})
+
+	if walkErr != nil {
+		return "", walkErr
+	}
+
+	s3PrefixPath := fmt.Sprintf("s3://%s/%s", bucket, prefix)
+	log.Printf("Successfully uploaded directory %s to %s", localDirPath, s3PrefixPath)
+	return s3PrefixPath, nil
+}
+
 func (c *Client) UploadFile(ctx context.Context, localPath, bucket, key string) (string, error) {
 	file, err := os.Open(localPath)
 	if err != nil {
@@ -135,6 +169,99 @@ func (c *Client) DownloadFile(ctx context.Context, bucket, key, localPath string
 	return nil
 }
 
+func (c *Client) DownloadDirectory(ctx context.Context, bucket, prefix, localDir string) error {
+	logArgs := []any{
+		slog.String("bucket", bucket),
+		slog.String("s3_prefix", prefix),
+		slog.String("local_dir", localDir),
+	}
+	slog.Info("Starting exact download of S3 directory", logArgs...)
+
+	// 1. Ensure the base local directory exists
+	if err := os.MkdirAll(localDir, 0755); err != nil {
+		slog.Error("Failed to create base local directory", append(logArgs, slog.Any("error", err))...)
+		return fmt.Errorf("failed to create base local directory %s: %w", localDir, err)
+	}
+
+	// 2. Ensure prefix format is consistent
+	originalPrefix := prefix
+	if prefix != "" && !strings.HasSuffix(prefix, "/") {
+		prefix += "/"
+		slog.Debug("Adjusted S3 prefix to end with '/'",
+			slog.String("original_prefix", originalPrefix),
+			slog.String("adjusted_prefix", prefix),
+		)
+		logArgs = []any{
+			slog.String("bucket", bucket),
+			slog.String("s3_prefix", prefix), // Use updated prefix
+			slog.String("local_dir", localDir),
+		}
+	}
+
+	// 3. List objects using a paginator
+	paginator := s3.NewListObjectsV2Paginator(c.s3Client, &s3.ListObjectsV2Input{
+		Bucket: aws.String(bucket),
+		Prefix: aws.String(prefix),
+	})
+
+	pageCount := 0
+	objectCount := 0
+	dirCount := 0
+	// 4. Iterate through pages of results
+	for paginator.HasMorePages() {
+		pageCount++
+		slog.Debug("Fetching S3 object list page", append(logArgs, slog.Int("page_number", pageCount))...)
+		page, err := paginator.NextPage(ctx)
+		if err != nil {
+			slog.Error("Failed to list objects page from S3", append(logArgs, slog.Int("page_number", pageCount), slog.Any("error", err))...)
+			return fmt.Errorf("failed to list objects page %d in s3://%s/%s: %w", pageCount, bucket, prefix, err)
+		}
+
+		// 5. Process each object in the current page
+		for _, obj := range page.Contents {
+			objectKey := aws.ToString(obj.Key)
+			objLogArgs := append(logArgs, slog.String("s3_key", objectKey), slog.Int64("size_bytes", *obj.Size))
+
+			// 6. Calculate the relative path and full local path
+			relativePath := filepath.FromSlash(strings.TrimPrefix(objectKey, prefix))
+			localPath := filepath.Join(localDir, relativePath)
+			objLogArgs = append(objLogArgs, slog.String("local_path", localPath))
+
+			// 7. Check if the S3 object represents a directory
+			if strings.HasSuffix(objectKey, "/") {
+				// It's an S3 directory object. Ensure the corresponding local directory exists.
+				if objectKey != prefix && *obj.Size == 0 { // Check size is 0 for directory markers
+					slog.Debug("Creating local directory for S3 directory object", objLogArgs...)
+					if err := os.MkdirAll(localPath, 0755); err != nil {
+						slog.Error("Failed to create local directory for S3 directory object", append(objLogArgs, slog.Any("error", err))...)
+						return fmt.Errorf("failed to create local directory %s for S3 directory %s: %w", localPath, objectKey, err)
+					}
+					dirCount++
+				} else if objectKey == prefix {
+					slog.Debug("Skipping explicit directory creation for base prefix", objLogArgs...)
+				} else {
+					slog.Warn("Skipping object ending in '/' but not a typical directory marker", objLogArgs...)
+				}
+			} else {
+				// It's an S3 file object. Download it.
+				objectCount++
+				err := c.DownloadFile(ctx, bucket, objectKey, localPath)
+				if err != nil {
+					return fmt.Errorf("failed during directory download (object: %s): %w", objectKey, err)
+				}
+			}
+		}
+	}
+
+	slog.Info("Finished S3 directory processing",
+		append(logArgs,
+			slog.Int("files_downloaded", objectCount),
+			slog.Int("directories_created", dirCount),
+			slog.Int("pages_processed", pageCount),
+		)...)
+	return nil
+}
+
 type s3ObjectStream struct {
 	client S3Api
 	bucket string
@@ -168,93 +295,6 @@ func (s *s3ObjectStream) Read(p []byte) (int, error) {
 
 func (c *Client) DownloadFileStream(bucket, key string) io.Reader {
 	return &s3ObjectStream{client: c.s3Client, bucket: bucket, key: key, offset: 0}
-}
-
-func (c *Client) ListFiles(ctx context.Context, bucket, prefix string) ([]string, error) {
-	var keys []string
-	paginator := s3.NewListObjectsV2Paginator(c.s3Client, &s3.ListObjectsV2Input{
-		Bucket: aws.String(bucket),
-		Prefix: aws.String(prefix),
-	})
-
-	log.Printf("Listing files in s3://%s/%s", bucket, prefix)
-	pageCount := 0
-	for paginator.HasMorePages() {
-		pageCount++
-		page, err := paginator.NextPage(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to list objects (page %d) in s3://%s/%s: %w", pageCount, bucket, prefix, err)
-		}
-		for _, obj := range page.Contents {
-			if obj.Key != nil && !strings.HasSuffix(*obj.Key, "/") { // Exclude "directories"
-				keys = append(keys, *obj.Key)
-			}
-		}
-	}
-	log.Printf("Found %d files in s3://%s/%s", len(keys), bucket, prefix)
-	return keys, nil
-}
-
-func ParseS3Path(s3Path string) (bucket, key string, err error) {
-	parsed, err := url.Parse(s3Path)
-	if err != nil {
-		return "", "", fmt.Errorf("invalid S3 path '%s': %w", s3Path, err)
-	}
-	if parsed.Scheme != "s3" {
-		return "", "", fmt.Errorf("invalid scheme in S3 path '%s', expected 's3'", s3Path)
-	}
-	bucket = parsed.Host
-	key = strings.TrimPrefix(parsed.Path, "/")
-	return bucket, key, nil
-}
-
-// --- Model Specific Wrappers ---
-
-func (c *Client) UploadModelArtifact(ctx context.Context, localPath string, modelId uuid.UUID, filename string) (string, error) {
-	key := fmt.Sprintf("%s/%s", modelId.String(), filename)
-	return c.UploadFile(ctx, localPath, c.bucketName, key)
-}
-
-func (c *Client) DownloadModelArtifact(ctx context.Context, modelId uuid.UUID, downloadDir, filename string) (string, error) {
-	key := fmt.Sprintf("%s/%s", modelId.String(), filename)
-	localPath := filepath.Join(downloadDir, filename)
-	err := c.DownloadFile(ctx, c.bucketName, key, localPath)
-	if err != nil {
-		return "", err // Error includes details already
-	}
-	return localPath, nil
-}
-
-func (c *Client) DownloadTrainingData(ctx context.Context, sourceS3Path, downloadDir string) ([]string, error) {
-	bucket, prefix, err := ParseS3Path(sourceS3Path)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := os.MkdirAll(downloadDir, 0755); err != nil {
-		return nil, fmt.Errorf("failed to create data directory %s: %w", downloadDir, err)
-	}
-
-	keys, err := c.ListFiles(ctx, bucket, prefix)
-	if err != nil {
-		return nil, err // Error includes details
-	}
-
-	var downloadedFiles []string
-	for _, key := range keys {
-		localFilename := filepath.Join(downloadDir, filepath.Base(key))
-		err := c.DownloadFile(ctx, bucket, key, localFilename)
-		if err != nil {
-			log.Printf("Failed to download training file %s: %v", key, err)
-		} else {
-			downloadedFiles = append(downloadedFiles, localFilename)
-		}
-	}
-
-	if len(downloadedFiles) == 0 && len(keys) > 0 {
-		return nil, fmt.Errorf("failed to download any training files from %s", sourceS3Path)
-	}
-	return downloadedFiles, nil
 }
 
 func (c *Client) ListAndChunkS3Objects(

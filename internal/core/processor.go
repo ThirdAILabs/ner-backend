@@ -193,26 +193,43 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 }
 
 func (proc *TaskProcessor) localModelPath(modelId uuid.UUID) string {
-	return filepath.Join(proc.localModelDir, modelId.String(), "model.bin")
+	return filepath.Join(proc.localModelDir, modelId.String())
 }
 
 func (proc *TaskProcessor) loadModel(modelId uuid.UUID, modelType string) (Model, error) {
 	localPath := proc.localModelPath(modelId)
+	modelObjectPrefix := filepath.Join(modelId.String())
+	var downloaded bool
 
 	// Check if the model file exists locally
 	if _, err := os.Stat(localPath); os.IsNotExist(err) {
 		slog.Info("model not found locally, downloading from S3", "modelId", modelId)
 
-		modelObjectKey := filepath.Join(modelId.String(), "model.bin")
-
-		if err := proc.s3Client.DownloadFile(context.TODO(), proc.modelBucket, modelObjectKey, localPath); err != nil {
+		if err := proc.s3Client.DownloadDirectory(context.TODO(), proc.modelBucket, modelObjectPrefix, localPath); err != nil {
 			return nil, fmt.Errorf("failed to download model from S3: %w", err)
 		}
+		downloaded = true
 	}
 
 	model, err := LoadModel(modelType, localPath)
-	if err != nil {
+	if err == nil {
+		return model, nil
+	}
+
+	// Retry logic if initial load failed
+	if downloaded {
 		return nil, fmt.Errorf("failed to load model: %w", err)
+	}
+
+	// Attempt to redownload and reload
+	os.RemoveAll(localPath)
+	if err := proc.s3Client.DownloadDirectory(context.TODO(), proc.modelBucket, modelObjectPrefix, localPath); err != nil {
+		return nil, fmt.Errorf("failed to redownload model from S3: %w", err)
+	}
+
+	model, err = LoadModel(modelType, localPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load model after redownload: %w", err)
 	}
 
 	return model, nil
@@ -410,7 +427,7 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 		return fmt.Errorf("error saving finetuned model: %w", err)
 	}
 
-	if _, err := proc.s3Client.UploadFile(ctx, localPath, proc.modelBucket, filepath.Join(payload.ModelId.String(), "model.bin")); err != nil {
+	if _, err := proc.s3Client.UploadDirectory(ctx, localPath, proc.modelBucket, filepath.Join(payload.ModelId.String())); err != nil {
 		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed)
 		slog.Error("error uploading finetuned model to S3", "model_id", payload.ModelId, "error", err)
 		return fmt.Errorf("error uploading model to S3: %w", err)
