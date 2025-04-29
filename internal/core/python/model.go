@@ -32,22 +32,16 @@ func LoadPythonModel(PythonExecutable, PluginScript, PluginModelName, KwargsJSON
 			plugin.ProtocolNetRPC, plugin.ProtocolGRPC},
 	})
 
-	fmt.Println("created client")
-
 	rpcClient, err := client.Client()
 	if err != nil {
 		return nil, fmt.Errorf("error establishing RPC connection: %w", err)
 	}
-
-	fmt.Println("connected via RPC")
 
 	raw, err := rpcClient.Dispense("model_grpc")
 	if err != nil {
 		client.Kill()
 		return nil, fmt.Errorf("error dispensing '%s': %w", "model_grpc", err)
 	}
-
-	fmt.Println("dispensed", "model_grpc")
 
 	model, ok := raw.(shared.Model)
 	if !ok {
@@ -86,7 +80,6 @@ func (ner *PythonModel) Release() {
 	ner.client.Kill()
 	ner.client = nil
 	ner.model = nil
-	fmt.Println("killed python model")
 }
 
 func convertProtoEntitiesToTypes(protoEntities []*proto.Entity) []types.Entity {
