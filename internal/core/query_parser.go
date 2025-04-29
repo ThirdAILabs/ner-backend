@@ -5,6 +5,7 @@ import (
 	"math"
 
 	"github.com/alecthomas/participle/v2"
+	"gorm.io/gorm"
 )
 
 /*
@@ -42,6 +43,20 @@ func ParseQuery(query string) (Filter, error) {
 	return filter, nil
 }
 
+func ToSql(db *gorm.DB, query string) (*gorm.DB, error) {
+	q, err := parser.ParseString("", query)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing query '%s': %w", query, err)
+	}
+
+	expr, err := q.Expr.ToSql(db)
+	if err != nil {
+		return nil, fmt.Errorf("error converting query '%s' to SQL: %w", query, err)
+	}
+
+	return expr, nil
+}
+
 type QueryExpr struct {
 	Expr *Expr `@@`
 }
@@ -77,6 +92,19 @@ func (q *Expr) ToFilter() (Filter, error) {
 	}
 
 	return &OrFilter{filters: filters}, nil
+}
+
+func (e *Expr) ToSql(db *gorm.DB) (*gorm.DB, error) {
+	expr := db
+	for _, cond := range e.Ors {
+		subexpr, err := cond.ToSql(db)
+		if err != nil {
+			return nil, err
+		}
+		expr = expr.Or(subexpr)
+	}
+
+	return expr, nil
 }
 
 func (e *Expr) String() string {
@@ -119,6 +147,19 @@ func (o *OrExpr) ToFilter() (Filter, error) {
 	}
 
 	return &AndFilter{filters: filters}, nil
+}
+
+func (o *OrExpr) ToSql(db *gorm.DB) (*gorm.DB, error) {
+	expr := db
+	for _, cond := range o.Ands {
+		subexpr, err := cond.ToSql(db)
+		if err != nil {
+			return nil, err
+		}
+		expr = expr.Where(subexpr)
+	}
+
+	return expr, nil
 }
 
 func (e *OrExpr) String() string {
@@ -164,6 +205,26 @@ func (c *Condition) ToFilter() (Filter, error) {
 	return filter, nil
 }
 
+func (c *Condition) ToSql(db *gorm.DB) (*gorm.DB, error) {
+	var expr *gorm.DB
+	var err error
+
+	if c.Filter != nil {
+		expr, err = c.Filter.ToSql(db)
+	} else {
+		expr, err = c.SubExpr.ToSql(db)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	if c.Not {
+		return db.Not(expr), nil
+	}
+	return expr, nil
+}
+
 func (c *Condition) String() string {
 	var out string
 	if c.SubExpr != nil {
@@ -187,6 +248,16 @@ func (f *FilterExpr) ToFilter() (Filter, error) {
 		return f.CountFilter.ToFilter()
 	} else if f.StringFilter != nil {
 		return f.StringFilter.ToFilter()
+	} else {
+		return nil, fmt.Errorf("invalid filter expression")
+	}
+}
+
+func (f *FilterExpr) ToSql(db *gorm.DB) (*gorm.DB, error) {
+	if f.CountFilter != nil {
+		return f.CountFilter.ToSql(db)
+	} else if f.StringFilter != nil {
+		return f.StringFilter.ToSql(db)
 	} else {
 		return nil, fmt.Errorf("invalid filter expression")
 	}
@@ -221,6 +292,21 @@ func (c *CountFilterExpr) ToFilter() (Filter, error) {
 	}
 }
 
+func (c *CountFilterExpr) ToSql(db *gorm.DB) (*gorm.DB, error) {
+	subquery := db.Table("object_entities as o").Select("COUNT(*)").Where("o.object = object AND o.label = ?", c.Label)
+
+	switch c.Op {
+	case "<":
+		return db.Where("(?) < ?", subquery, c.Value), nil
+	case ">":
+		return db.Where("(?) > ?", subquery, c.Value), nil
+	case "=":
+		return db.Where("(?) = ?", subquery, c.Value), nil
+	default:
+		return nil, fmt.Errorf("invalid operator %s used with string value", c.Op)
+	}
+}
+
 func (c *CountFilterExpr) String() string {
 	return fmt.Sprintf("COUNT(%s) %s %d", c.Label, c.Op, c.Value)
 }
@@ -241,6 +327,21 @@ func (s *StringFilterExpr) ToFilter() (Filter, error) {
 		return &StringGtFilter{label: s.Label, value: s.Value}, nil
 	case "=":
 		return &StringEqFilter{label: s.Label, value: s.Value}, nil
+	default:
+		return nil, fmt.Errorf("invalid operator %s used with string value", s.Op)
+	}
+}
+
+func (s *StringFilterExpr) ToSql(db *gorm.DB) (*gorm.DB, error) {
+	switch s.Op {
+	case "CONTAINS":
+		return db.Where("label = ? AND text LIKE ?", s.Label, "%"+s.Value+"%"), nil
+	case "<":
+		return db.Where("label = ? AND text < ?", s.Label, s.Value), nil
+	case ">":
+		return db.Where("label = ? AND text > ?", s.Label, s.Value), nil
+	case "=":
+		return db.Where("label = ? AND text = ?", s.Label, s.Value), nil
 	default:
 		return nil, fmt.Errorf("invalid operator %s used with string value", s.Op)
 	}

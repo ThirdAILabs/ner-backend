@@ -44,11 +44,13 @@ type Report struct {
 }
 
 type Entity struct {
-	Object string
-	Start  int
-	End    int
-	Label  string
-	Text   string
+	Object   string
+	Start    int
+	End      int
+	Label    string
+	Text     string
+	LContext string
+	RContext string
 }
 
 type CreateReportRequest struct {
@@ -84,4 +86,8 @@ type FinetuneRequest struct {
 
 type FinetuneResponse struct {
 	ModelId uuid.UUID
+}
+
+type SearchResponse struct {
+	Objects []string
 }

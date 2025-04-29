@@ -27,10 +27,12 @@ func (m *regexModel) Predict(text string) ([]types.Entity, error) {
 		for _, match := range matches {
 			if len(match) > 0 {
 				entities = append(entities, types.Entity{
-					Label: label,
-					Text:  text[match[0]:match[1]],
-					Start: match[0],
-					End:   match[1],
+					Label:    label,
+					Text:     text[match[0]:match[1]],
+					Start:    match[0],
+					End:      match[1],
+					LContext: text[max(0, match[0]-20):match[0]],
+					RContext: text[match[1]:min(len(text), match[1]+20)],
 				})
 			}
 		}
@@ -103,8 +105,8 @@ func TestInference(t *testing.T) {
 	phoneStart, emailStart := strings.Index(testDoc, phone), strings.Index(testDoc, email)
 
 	assert.ElementsMatch(t, allEntities, []database.ObjectEntity{
-		{ReportId: reportId, Object: object, Label: "phone", Text: phone, Start: phoneStart, End: phoneStart + len(phone)},
-		{ReportId: reportId, Object: object, Label: "email", Text: email, Start: emailStart, End: emailStart + len(email)},
+		{ReportId: reportId, Object: object, Label: "phone", Text: phone, Start: phoneStart, End: phoneStart + len(phone), LContext: testDoc[phoneStart-20 : phoneStart], RContext: testDoc[phoneStart+len(phone) : phoneStart+len(phone)+20]},
+		{ReportId: reportId, Object: object, Label: "email", Text: email, Start: emailStart, End: emailStart + len(email), LContext: testDoc[emailStart-20 : emailStart], RContext: testDoc[emailStart+len(email):]},
 	})
 
 	assert.ElementsMatch(t, groups, []database.ObjectGroup{

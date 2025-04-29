@@ -41,6 +41,7 @@ func (s *BackendService) AddRoutes(r chi.Router) {
 		r.Get("/{report_id}", RestHandler(s.GetReport))
 		r.Get("/{report_id}/groups/{group_id}", RestHandler(s.GetReportGroup))
 		r.Get("/{report_id}/entities", RestHandler(s.GetReportEntities))
+		r.Get("/{report_id}/search", RestHandler(s.ReportSearch))
 	})
 }
 
@@ -348,4 +349,30 @@ func (s *BackendService) GetReportEntities(r *http.Request) (any, error) {
 	}
 
 	return convertEntities(entities), nil
+}
+
+func (s *BackendService) ReportSearch(r *http.Request) (any, error) {
+	reportId, err := URLParamUUID(r, "report_id")
+	if err != nil {
+		return nil, err
+	}
+
+	queryStr := r.URL.Query().Get("query")
+	if queryStr == "" {
+		return nil, CodedErrorf(http.StatusBadRequest, "query parameter is required")
+	}
+
+	filter, err := core.ToSql(s.db, queryStr)
+	if err != nil {
+	}
+
+	ctx := r.Context()
+
+	var objects []string
+	if err := s.db.WithContext(ctx).Model(&database.ObjectEntity{}).Distinct("object").Where("report_id = ?", reportId).Where(filter).Find(&objects).Error; err != nil {
+		slog.Error("error getting job entities", "report_id", reportId, "error", err)
+		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving inference job entities")
+	}
+
+	return api.SearchResponse{Objects: objects}, nil
 }
