@@ -55,9 +55,7 @@ func main() {
 		Status:       database.ModelTrained,
 		CreationTime: time.Now(),
 	}
-	if err := db.
-		FirstOrCreate(presidioModel, database.Model{Name: "presidio"}).
-		Error; err != nil {
+	if err := db.Where("name = ?", "presidio").FirstOrCreate(presidioModel).Error; err != nil {
 		log.Fatalf("Failed to seed presidio model record: %v", err)
 	}
 

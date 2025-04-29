@@ -3,13 +3,14 @@ package core
 import (
 	"fmt"
 	"os"
-	"strconv"
 
 	"ner-backend/internal/core/bolt"
 	"ner-backend/internal/core/python"
 	"ner-backend/internal/core/types"
 	"ner-backend/pkg/api"
 )
+
+const defaultPresidioThreshold = 0.5
 
 type Model interface {
 	Predict(text string) ([]types.Entity, error)
@@ -40,12 +41,8 @@ var modelLoaders = map[string]modelLoader{
 	},
 
 	"presidio": func(arg string) (Model, error) {
-		// Interpret arg as a threshold value (e.g. "0.75")
-		threshold, err := strconv.ParseFloat(arg, 64)
-		if err != nil {
-			return nil, fmt.Errorf("invalid threshold %q: %w", arg, err)
-		}
-		return &presidioModel{threshold: threshold}, nil
+		// we ignore `path` (no checkpoint needed) and always use the default threshold
+		return &presidioModel{threshold: defaultPresidioThreshold}, nil
 	},
 }
 
@@ -61,31 +58,3 @@ func LoadModel(modelType, path string) (Model, error) {
 
 	return loader(path)
 }
-
-type presidioModel struct {
-	threshold float64
-}
-
-func (m *presidioModel) Predict(text string) ([]types.Entity, error) {
-	results := analyze(text, m.threshold)
-	out := make([]types.Entity, 0, len(results))
-	for _, r := range results {
-		out = append(out, types.Entity{
-			Text:  r.Match,
-			Label: r.EntityType,
-			Start: r.Start,
-			End:   r.End,
-		})
-	}
-	return out, nil
-}
-
-func (m *presidioModel) Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sample) error {
-	return fmt.Errorf("finetune not supported for presidio model")
-}
-
-func (m *presidioModel) Save(path string) error {
-	return fmt.Errorf("save not supported for presidio model")
-}
-
-func (m *presidioModel) Release() {}

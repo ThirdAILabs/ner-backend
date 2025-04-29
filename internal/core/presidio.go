@@ -3,6 +3,8 @@ package core
 import (
 	_ "embed"
 	"fmt"
+	"ner-backend/internal/core/types"
+	"ner-backend/pkg/api"
 	"regexp"
 	"strings"
 
@@ -205,3 +207,31 @@ func analyze(text string, threshold float64) []RecognizerResult {
 	}
 	return out
 }
+
+type presidioModel struct {
+	threshold float64
+}
+
+func (m *presidioModel) Predict(text string) ([]types.Entity, error) {
+	results := analyze(text, m.threshold)
+	out := make([]types.Entity, 0, len(results))
+	for _, r := range results {
+		out = append(out, types.Entity{
+			Text:  r.Match,
+			Label: r.EntityType,
+			Start: r.Start,
+			End:   r.End,
+		})
+	}
+	return out, nil
+}
+
+func (m *presidioModel) Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sample) error {
+	return fmt.Errorf("finetune not supported for presidio model")
+}
+
+func (m *presidioModel) Save(path string) error {
+	return fmt.Errorf("save not supported for presidio model")
+}
+
+func (m *presidioModel) Release() {}
