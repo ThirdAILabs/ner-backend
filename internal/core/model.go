@@ -23,6 +23,7 @@ type modelLoader func(string) (Model, error)
 
 var modelLoaders map[string]modelLoader = map[string]modelLoader{
 	"bolt": func(path string) (Model, error) { return bolt.LoadNER(path) },
+	// TODO: replace env vars with a passed-in config
 	"python_combined_ner_model": func(path string) (Model, error) {
 		configJSON := fmt.Sprintf("{\"model_path\":\"%s\",\"threshold\": 0.5}", path)
 		return python.LoadPythonModel(
