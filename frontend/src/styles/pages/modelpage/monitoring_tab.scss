@@ -1,141 +1,67 @@
-// Variables
-$primary: #3563e9;
-$success: #22c55e;
-$warning: #f59e0b;
-$danger: #ef4444;
-$dark: #1e293b;
-$light: #f8fafc;
-$border: #e2e8f0;
-$text: #334155;
-$text-secondary: #64748b;
-$background: #f1f5f9;
+@import '../../base/variables';
+@import '../../base/typography';
 
 .monitoring-tab {
-  padding: 1.5rem;
-  background-color: $background;
-  min-height: 100%;
-  color: $text;
+  padding: 20px;
   width: 100%;
   box-sizing: border-box;
 
   .monitoring-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-
-    h2 {
-      font-size: 1.5rem;
-      font-weight: 600;
-      color: $dark;
-      margin: 0;
-    }
+    margin-bottom: 20px;
+    @include sub-heading-2;
   }
 
-  // Card styles
   .dashboard-card {
-    background-color: white;
+    background-color: $color-text-100;
     border-radius: 0.75rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     padding: 1.5rem;
     position: relative;
     overflow: hidden;
-    margin-bottom: 1.5rem;
 
     .card-header {
+      @include sub-heading-5;
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1rem;
-
-      .card-title {
-        font-size: 0.875rem;
-        color: $text-secondary;
-        font-weight: 500;
-        margin: 0;
-        letter-spacing: 0.05em;
-      }
+      color: $color-text-500;
     }
 
     .metric-value {
-      font-size: 2.25rem;
-      font-weight: 700;
-      margin: 0.5rem 0;
-      color: $dark;
+      @include heading-4;
+      color: $color-text-900;
     }
   }
-
-  .badge {
-    padding: 0.25rem 0.75rem;
-    border-radius: 100px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    display: inline-block;
-
-    &.badge-success {
-      background-color: rgba($success, 0.1);
-      color: $success;
-    }
-
-    &.badge-warning {
-      background-color: rgba($warning, 0.1);
-      color: $warning;
-    }
-
-    &.badge-danger {
-      background-color: rgba($danger, 0.1);
-      color: $danger;
-    }
-  }
-
   .model-info {
     display: flex;
     justify-content: space-between;
     margin-top: 1rem;
 
-    .model-info-item {
+    &-item {
       flex: 1;
 
-      &:not(:last-child) {
-        margin-right: 1rem;
-      }
-
-      .model-info-label {
-        font-size: 0.75rem;
-        color: $text-secondary;
+      &-label {
+        @include sub-heading-6;
+        color: $color-text-500;
         margin-bottom: 0.25rem;
       }
 
-      .model-info-value {
-        font-size: 0.875rem;
-        font-weight: 500;
-        color: $dark;
-        word-break: break-all;
+      &-value {
+        @include label-6;
+        color: $color-text-700;
       }
     }
   }
 
-  // Grid layout
   .card-row {
-    margin-bottom: 1.5rem;
-
-    .status-card {
-      margin-bottom: 0;
-    }
+    margin-bottom: 24px;
   }
 
   .dashboard-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 1.5rem;
-    margin-bottom: 1.5rem;
-
-    .dashboard-card {
-      margin-bottom: 0;
-    }
   }
 
-  // Responsive styles
   @media (max-width: 1024px) {
     .dashboard-grid {
       grid-template-columns: repeat(2, 1fr);
@@ -147,15 +73,6 @@ $background: #f1f5f9;
       flex-direction: column;
       align-items: flex-start;
       gap: 1rem;
-
-      .header-actions {
-        width: 100%;
-        justify-content: space-between;
-      }
-    }
-
-    .dashboard-grid {
-      grid-template-columns: 1fr;
     }
 
     .model-info {

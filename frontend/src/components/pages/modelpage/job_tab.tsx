@@ -9,6 +9,7 @@ import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
 import '../../../styles/pages/modelpage/job_tab.scss';
 import LinearProgressBar from '../../commons/progressBar';
+import Badge from '../../commons/badge';
 
 interface JobEntry {
   name: string;
@@ -65,7 +66,7 @@ const JobTab: React.FC<{ jobEntries: JobEntry[] }> = ({ jobEntries }) => {
                 <StyledTableCell>{job.initiated}</StyledTableCell>
                 {job.progress.status === 'Completed' ? (
                   <StyledTableCell>
-                    <span className="badge badge-success">{job.progress.status}</span>
+                    <Badge text={job.progress.status} type="success" />
                   </StyledTableCell>
                 ) : (
                   <StyledTableCell>

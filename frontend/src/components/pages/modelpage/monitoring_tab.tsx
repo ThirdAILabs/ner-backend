@@ -1,32 +1,33 @@
 import React from 'react';
 import '../../../styles/pages/modelpage/monitoring_tab.scss';
+import Badge from '../../commons/badge';
 
 const MonitoringTab: React.FC = () => {
   return (
     <div className="monitoring-tab">
-      <div className="monitoring-header">
-        <h2>Dashboard</h2>
-      </div>
+      <div className="monitoring-header">Dashboard</div>
 
       <div className="card-row">
-        <div className="dashboard-card status-card">
+        <div className="dashboard-card">
           <div className="card-header">
-            <h3 className="card-title">MODEL STATUS</h3>
-            <span className="badge badge-success">Active</span>
+            MODEL STATUS
+            <Badge text="Active" type="success" />
           </div>
 
           <div className="model-info">
             <div className="model-info-item">
-              <div className="model-info-label">Deployment URL</div>
-              <div className="model-info-value">https://api.thirdai.com/token-classification</div>
+              <div className="model-info-item-label">Deployment URL</div>
+              <div className="model-info-item-value">
+                https://api.thirdai.com/token-classification
+              </div>
             </div>
             <div className="model-info-item">
-              <div className="model-info-label">Last Updated</div>
-              <div className="model-info-value">April 28, 2024</div>
+              <div className="model-info-item-label">Last Updated</div>
+              <div className="model-info-item-value">April 28, 2024</div>
             </div>
             <div className="model-info-item">
-              <div className="model-info-label">Model Version</div>
-              <div className="model-info-value">v2.1.3</div>
+              <div className="model-info-item-label">Model Version</div>
+              <div className="model-info-item-value">v2.1.3</div>
             </div>
           </div>
         </div>

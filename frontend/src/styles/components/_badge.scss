@@ -1,0 +1,26 @@
+@import '../base/variables';
+@import '../base/typography';
+
+.badge {
+  @include sub-heading-6;
+  padding: 0.25rem 0.75rem;
+  border-radius: 100px;
+
+  &.success {
+    background-color: rgba($color-success-900, 0.1);
+    color: $color-success-900;
+  }
+
+  &.warning {
+    background-color: rgba($color-warning-700, 0.1);
+    color: $color-warning-700;
+  }
+  &.error {
+    background-color: rgba($color-error-700, 0.1);
+    color: $color-error-700;
+  }
+  &.info {
+    background-color: rgba($color-info-700, 0.1);
+    color: $color-info-700;
+  }
+}
