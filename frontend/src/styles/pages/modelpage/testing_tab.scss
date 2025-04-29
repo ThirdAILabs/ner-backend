@@ -96,6 +96,7 @@ $secondary-color: #5f6368;
   }
 
   .api-command {
+    position: relative;
     font-family: 'Roboto Mono', 'Courier New', monospace;
     font-size: 14px;
     line-height: 1.6;
@@ -107,38 +108,10 @@ $secondary-color: #5f6368;
     overflow-x: auto;
     white-space: pre;
     color: #37474f;
-    position: relative;
 
-    .copy-icon {
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      cursor: pointer;
-      padding: 4px;
-
-      &:hover {
-        color: $primary-color;
-      }
-
-      .tooltip {
-        position: absolute;
-        right: 100%;
-        top: 50%;
-        transform: translateY(-50%);
-        background-color: rgba(0, 0, 0, 0.7);
-        color: white;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 12px;
-        margin-right: 8px;
-        white-space: nowrap;
-        animation: fadeIn 0.2s ease;
-        opacity: 1;
-
-        &.fade-out {
-          animation: fadeOut 0.3s ease forwards;
-        }
-      }
+    pre {
+      margin: 0;
+      padding-right: 40px;
     }
   }
 }

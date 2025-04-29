@@ -1,12 +1,10 @@
 import React, { useState, useRef, DragEvent } from 'react';
 import { Divider } from '@mui/material';
 import { FiUpload } from 'react-icons/fi';
-import { IoCopyOutline } from 'react-icons/io5';
+import CopyButton from '../../common/copyButton';
 import '../../../styles/pages/modelpage/testing_tab.scss';
 
 const TestingTab: React.FC = () => {
-  const [showCopyTooltip, setShowCopyTooltip] = useState(false);
-  const [isTooltipFading, setIsTooltipFading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const handleFileSelect = (files: FileList | null) => {
@@ -40,25 +38,12 @@ const TestingTab: React.FC = () => {
     fileInputRef.current?.click();
   };
 
-  const handleCopy = () => {
-    const code = `curl -X POST \\
+  const api_command = `curl -X POST \\
       https://platform.thirdai.com/Xxfa233zK/query \\
       -H "Content-Type: application/json" \\
-      -H "Authorization: Bearer YOUR_API_KEY" \\
+      -H "Authorization: Bearer YOUR_AUTHORIZATION_TOKEN" \\
       -d {"text": "Your query text here", "model": "HIPAA-25", "options": {"format": "json"}}`;
 
-    navigator.clipboard.writeText(code);
-    setShowCopyTooltip(true);
-    setIsTooltipFading(false);
-
-    setTimeout(() => {
-      setIsTooltipFading(true);
-      setTimeout(() => {
-        setShowCopyTooltip(false);
-        setIsTooltipFading(false);
-      }, 300); // matches animation duration
-    }, 700);
-  };
   return (
     <div className="testing-container">
       <div className="testing-input-section">
@@ -92,18 +77,9 @@ const TestingTab: React.FC = () => {
       <div className="testing-api-section">
         <h3>API Reference</h3>
         <div className="api-command">
-          <div className="copy-icon" onClick={handleCopy}>
-            <IoCopyOutline size={20} />
-            {showCopyTooltip && (
-              <div className={`tooltip ${isTooltipFading ? 'fade-out' : ''}`}>Copied!</div>
-            )}
-          </div>
+          <CopyButton code={api_command} tooltipText='copied!'/>
           <pre>
-            {`curl -X POST \\
-      https://platform.thirdai.com/Xxfa233zK/query \\
-      -H "Content-Type: application/json" \\
-      -H "Authorization: Bearer YOUR_API_KEY" \\
-      -d {"text": "Your query text here", "model": "HIPAA-25", "options": {"format": "json"}}`}
+            {api_command}
           </pre>
         </div>
       </div>

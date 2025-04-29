@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
 import TestingTab from './testing_tab';
-import '../../../styles/pages/modelpage/_modelpage.scss';
 import JobTab from './job_tab';
+import MonitoringTab from './monitoring_tab';
+import '../../../styles/pages/modelpage/_modelpage.scss';
 
 const ModelPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('Testing');
@@ -74,10 +75,7 @@ const ModelPage: React.FC = () => {
       <div className="content-area">
         {activeTab === 'Testing' && <TestingTab />}
         {activeTab === 'Monitoring' && (
-          <div className="monitoring-section">
-            <h3>Monitoring</h3>
-            <p>Monitoring content goes here...</p>
-          </div>
+          <MonitoringTab />
         )}
         {activeTab === 'Jobs' && <JobTab jobEntries={repeatedJobEntries} />}
       </div>

@@ -1,0 +1,37 @@
+.copy-button-container {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 1;
+}
+
+.copy-button {
+  cursor: pointer;
+  background: none;
+  border: none;
+  outline: none;
+  padding: 0;
+  color: #666;
+  transition: color 0.2s ease;
+  
+  &:hover {
+    color: #1a73e8;
+  }
+}
+
+.tooltip {
+  position: absolute;
+  top: 40%;
+  right: calc(100% + 8px);
+  transform: translateY(-50%);
+  background-color: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  opacity: 1;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  
+  &.fade-out {
+    opacity: 0;
+  }
+}
