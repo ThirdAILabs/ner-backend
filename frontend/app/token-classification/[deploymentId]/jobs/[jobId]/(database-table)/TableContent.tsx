@@ -118,7 +118,7 @@ export function TableContent({
   // Compute tag colors based on the provided tags
   const tagColors = useMemo(() => {
     const colors: Record<string, HighlightColor> = {};
-    
+
     // Filter out 'O' tag and assign colors to each tag
     tags
       .filter(tag => tag !== 'O')
@@ -128,7 +128,7 @@ export function TableContent({
           tag: DARKERS[index % DARKERS.length],
         };
       });
-    
+
     return colors;
   }, [tags]);
 
@@ -143,38 +143,33 @@ export function TableContent({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {objectRecords
-            .filter((record) => {
-              return (
-                record.groups.some((group) => groupFilters[group]) &&
-                record.taggedTokens
-                  .map((v) => v[1])
-                  .some((tag) => tagFilters[tag])
-              );
-            })
-            .map((record, index) => (
-              <TableRow key={index}>
-                <TableCell
-                  style={{
-                    maxWidth: '50%',
-                    whiteSpace: 'normal',
-                    wordBreak: 'break-word',
-                    overflowWrap: 'break-word',
-                  }}
-                >
-                  {record.taggedTokens.map((token, tokenIndex) => (
-                    <HighlightedToken
-                      key={`${index}-${tokenIndex}`}
-                      token={token[0]}
-                      tag={token[1]}
-                      tagColors={tagColors}
-                    />
-                  ))}
-                </TableCell>
-                <TableCell>{record.sourceObject}</TableCell>
-                <TableCell>{record.groups.join(', ')}</TableCell>
-              </TableRow>
-            ))}
+          {objectRecords.filter((record) => {
+            return (
+              record.groups.some((group) => groupFilters[group])
+            );
+          }).map((record, index) => (
+            <TableRow key={index}>
+              <TableCell
+                style={{
+                  maxWidth: '50%',
+                  whiteSpace: 'normal',
+                  wordBreak: 'break-word',
+                  overflowWrap: 'break-word',
+                }}
+              >
+                {record.taggedTokens.map((token, tokenIndex) => (
+                  <HighlightedToken
+                    key={`${index}-${tokenIndex}`}
+                    token={token[0]}
+                    tag={tagFilters[token[1]] ? token[1] : 'O'}
+                    tagColors={tagColors}
+                  />
+                ))}
+              </TableCell>
+              <TableCell>{record.sourceObject}</TableCell>
+              <TableCell>{record.groups.join(', ')}</TableCell>
+            </TableRow>
+          ))}
           {isLoadingObjectRecords && (
             <TableRow>
               <TableCell colSpan={3} className="text-center py-4 text-gray-500">

@@ -1,25 +1,16 @@
 'use client';
 
 import {
-  Container,
   Box,
   CircularProgress,
   Typography,
-  Switch,
-  FormControlLabel,
-  Alert,
-  Divider,
-  Paper,
 } from '@mui/material';
 import { Button } from '@mui/material';
 import React, {
-  CSSProperties,
-  ReactNode,
   useEffect,
   useRef,
   useState,
   ChangeEvent,
-  KeyboardEvent,
 } from 'react';
 import { Card, CardContent } from '@mui/material';
 import * as _ from 'lodash';
@@ -30,7 +21,7 @@ const useTokenClassificationEndpoints = () => {
     classifyText: async (text: string) => {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
       // Generate dummy tokens
       const words = text.split(/\s+/);
       return {
@@ -185,8 +176,8 @@ function TagSelector({ open, choices, onSelect, onNewLabel, currentTag, anchorEl
   }, [choices, currentTag]);
 
   const filteredChoices = query
-    ? searchableChoices.filter(choice => 
-        choice.toLowerCase().includes(query.toLowerCase()))
+    ? searchableChoices.filter(choice =>
+      choice.toLowerCase().includes(query.toLowerCase()))
     : searchableChoices;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -224,9 +215,9 @@ function TagSelector({ open, choices, onSelect, onNewLabel, currentTag, anchorEl
           sx={{ mb: 1 }}
         />
       </Box>
-      
+
       {filteredChoices.map((choice, index) => (
-        <MenuItem 
+        <MenuItem
           key={index}
           onClick={() => {
             const selectedTag = choice === 'Delete TAG' ? 'O' : choice;
@@ -236,9 +227,9 @@ function TagSelector({ open, choices, onSelect, onNewLabel, currentTag, anchorEl
           {choice}
         </MenuItem>
       ))}
-      
+
       {query && !filteredChoices.includes(query) && (
-        <MenuItem 
+        <MenuItem
           onClick={() => {
             onNewLabel(query).then(() => {
               onSelect(query);
@@ -268,8 +259,43 @@ export default function Interact() {
   const [dropdownPosition, setDropdownPosition] = useState<number | null>(null);
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
-  
+
   const API = useTokenClassificationEndpoints();
+
+  const [file, setFile] = useState<File | null>(null);
+  const [fileName, setFileName] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+
+      const selectedFile = event.target.files[0];
+      const fileType = selectedFile.name.split('.').pop()?.toLowerCase();
+
+      const allowedTypes = ['csv', 'pdf', 'txt'];
+      if (!fileType || !allowedTypes.includes(fileType)) {
+        alert('Please upload only CSV, PDF, or TXT files');
+        return;
+      }
+
+      setFile(selectedFile);
+      setFileName(selectedFile.name);
+      console.log(selectedFile);
+
+      // TODO: only for 'txt', for pdf and csv need to write.
+      if (fileType === 'txt') {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          if (e.target?.result) {
+            setInput(e.target.result as string);
+          }
+        };
+        reader.readAsText(selectedFile);
+      } else {
+        setInput(`File uploaded: ${selectedFile.name} (${fileType.toUpperCase()} format)`);
+      }
+    }
+  };
 
   // Load available labels on component mount
   useEffect(() => {
@@ -282,7 +308,7 @@ export default function Interact() {
         console.error('Failed to fetch labels', error);
       }
     }
-    
+
     fetchLabels();
   }, []);
 
@@ -315,7 +341,7 @@ export default function Interact() {
 
   const handleRun = async () => {
     if (!input.trim()) return;
-    
+
     try {
       setIsLoading(true);
       const response = await API.classifyText(input);
@@ -325,18 +351,19 @@ export default function Interact() {
     } finally {
       setIsLoading(false);
     }
-  };
 
-  const handleFileUpload = () => {
-    // This would be implemented to handle file uploads
-    console.log('File upload clicked');
+    // if (!file) {
+    //   alert('Please upload a file');
+    //   return;
+    // }
+    // setIsSubmitting(true);
   };
 
   const handleNewLabel = async (newLabel: string) => {
     try {
       await API.addLabel(newLabel);
       setAllLabels([...allLabels, newLabel]);
-      
+
       // Update colors for the new label
       const newTagColors = { ...tagColors };
       const colorIndex = allLabels.length % 7;
@@ -349,7 +376,7 @@ export default function Interact() {
         { tag: '#FFB74D', text: '#FFF3E0' }, // orange
         { tag: '#BA68C8', text: '#F3E5F5' }, // purple
       ];
-      
+
       newTagColors[newLabel] = tagColorPairs[colorIndex];
       setTagColors(newTagColors);
     } catch (error) {
@@ -374,7 +401,7 @@ export default function Interact() {
       // Sort selection range
       const start = Math.min(selectionStart, selectionEnd);
       const end = Math.max(selectionStart, selectionEnd);
-      
+
       // Show dropdown menu for tag selection
       setShowDropdown(true);
       setDropdownPosition(end);
@@ -461,7 +488,7 @@ export default function Interact() {
     }}>
       {/* Left Column: Input area */}
       <div>
-        <Card sx={{ 
+        <Card sx={{
           backgroundColor: '#fff',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
         }}>
@@ -470,19 +497,19 @@ export default function Interact() {
               placeholder="Enter text here..."
               value={input}
               onChange={handleInputChange}
-              style={{ 
+              style={{
                 width: '100%',
                 minHeight: '120px',
-                resize: 'none', 
+                resize: 'none',
                 backgroundColor: '#fff',
                 borderRadius: '4px',
                 border: '1px solid #ddd',
                 padding: '12px'
               }}
             />
-            
-            <Box 
-              sx={{ 
+
+            <Box
+              sx={{
                 position: 'relative',
                 my: 3,
                 '&::before': {
@@ -494,11 +521,11 @@ export default function Interact() {
                 }
               }}
             >
-              <Typography 
-                variant="body2" 
+              <Typography
+                variant="body2"
                 color="text.secondary"
                 align="center"
-                sx={{ 
+                sx={{
                   position: 'relative',
                   backgroundColor: '#fff',
                   display: 'inline-block',
@@ -510,32 +537,50 @@ export default function Interact() {
                 OR
               </Typography>
             </Box>
-            
-            <Box 
-              sx={{ 
-                border: '1px dashed #ccc', 
-                borderRadius: '4px', 
-                p: 3, 
-                textAlign: 'center',
-                cursor: 'pointer',
-                mb: 3,
-                '&:hover': {
-                  borderColor: '#aaa'
-                }
-              }}
-              onClick={handleFileUpload}
-            >
-              <Typography color="text.secondary">
-                Upload Document here
+
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Upload File
               </Typography>
+              <Box
+                sx={{
+                  border: '2px dashed #ccc',
+                  borderRadius: 1,
+                  p: 3,
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                  '&:hover': {
+                    borderColor: 'primary.main',
+                  },
+                }}
+                onClick={() => document.getElementById('files-input')?.click()}
+              >
+                <input
+                  type="file"
+                  id="files-input"
+                  multiple
+                  style={{ display: 'none' }}
+                  accept=".csv,.xlsx,.xls,.pdf,.txt"
+                  onChange={handleFileChange}
+                  disabled={isSubmitting}
+                />
+
+                {fileName ? (
+                  <Typography>{fileName}</Typography>
+                ) : (
+                  <Typography color="text.secondary">
+                    Click to select a file or drag and drop here
+                  </Typography>
+                )}
+              </Box>
             </Box>
-            
+
             <Box sx={{ display: 'flex', justifyContent: 'center' }}>
               <Button
                 variant="contained"
                 onClick={handleRun}
                 disabled={isLoading || !input.trim()}
-                sx={{ 
+                sx={{
                   backgroundColor: '#9E9E9E',
                   color: 'white',
                   '&:hover': {
@@ -554,7 +599,7 @@ export default function Interact() {
         </Card>
 
         {tokens.length > 0 && (
-          <Card sx={{ 
+          <Card sx={{
             backgroundColor: '#fff',
             boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
             mt: 3
@@ -567,10 +612,10 @@ export default function Interact() {
           </Card>
         )}
       </div>
-      
+
       {/* Right Column: Feedback Dashboard */}
       <div>
-        <Card sx={{ 
+        <Card sx={{
           backgroundColor: '#fff',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
         }}>
@@ -578,12 +623,12 @@ export default function Interact() {
             <Typography variant="h6" gutterBottom sx={{ fontWeight: 500 }}>
               Feedback from this session
             </Typography>
-            
+
             <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-start' }}>
-              <Button 
-                variant="contained" 
-                sx={{ 
-                  backgroundColor: '#EEEEEE', 
+              <Button
+                variant="contained"
+                sx={{
+                  backgroundColor: '#EEEEEE',
                   color: '#666',
                   '&:hover': {
                     backgroundColor: '#E0E0E0'
