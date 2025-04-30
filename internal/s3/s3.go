@@ -301,6 +301,8 @@ func (c *Client) ListAndChunkS3Objects(
 				continue
 			}
 
+			pageLogger.Info(objectKey, "sizeBytes", objectSize)
+
 			// Finalize previous chunk if needed
 			if len(currentChunkKeys) > 0 && (currentChunkSizeBytes+objectSize) > targetChunkBytes {
 				chunkNum := totalChunksProcessed + 1
