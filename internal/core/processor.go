@@ -198,16 +198,13 @@ func (proc *TaskProcessor) localModelPath(modelId uuid.UUID) string {
 
 func (proc *TaskProcessor) loadModel(modelId uuid.UUID, modelType string) (Model, error) {
 
-	statelessModelTypes := map[string]struct{}{
-		"presidio": {},
-	}
-
 	var localPath string
 
-	if _, isStateless := statelessModelTypes[modelType]; isStateless {
+	if IsStatelessModel(modelType) {
 		localPath = ""
 	} else {
 		localPath = proc.localModelPath(modelId)
+
 		// Check if the model file exists locally
 		if _, err := os.Stat(localPath); os.IsNotExist(err) {
 			slog.Info("model not found locally, downloading from S3", "modelId", modelId)
