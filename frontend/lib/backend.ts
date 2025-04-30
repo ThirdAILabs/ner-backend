@@ -17,7 +17,7 @@ export const nerService = {
     return response.data;
   },
 
-  getReports: async (): Promise<Report[]> => {
+  listReports: async (): Promise<Report[]> => {
     const response = await axiosInstance.get('/reports');
     return response.data;
   },
