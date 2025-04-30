@@ -17,6 +17,7 @@ import {
 import { Card, CardContent } from '@mui/material';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { format } from 'date-fns';
 
 // Report interface to match the original
 interface Report {
@@ -44,7 +45,7 @@ const mockReports: Report[] = [
   {
     name: "Medical Records Review",
     report_id: "tcr_123456789",
-    status: "completed", 
+    status: "completed",
     submitted_at: "2024-01-15T10:30:00Z",
     updated_at: "2024-01-15T10:35:00Z",
     documents: [
@@ -74,7 +75,7 @@ const mockReports: Report[] = [
   },
   {
     name: "Insurance Claims Processing",
-    report_id: "tcr_987654321", 
+    report_id: "tcr_987654321",
     status: "completed",
     submitted_at: "2024-01-15T11:30:00Z",
     updated_at: "2024-01-15T11:35:00Z",
@@ -160,18 +161,18 @@ export default function Jobs() {
     return (
       <Card sx={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)', bgcolor: 'white' }}>
         <CardContent sx={{ p: 3 }}>
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center', 
-            mb: 3 
+          <Box sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mb: 3
           }}>
             <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.125rem' }}>
               Jobs
             </Typography>
             <Link href={`/token-classification/${params.deploymentId}/jobs/new`} passHref>
-              <Button 
-                variant="contained" 
+              <Button
+                variant="contained"
                 color="primary"
                 sx={{
                   bgcolor: '#1976d2',
@@ -198,18 +199,18 @@ export default function Jobs() {
     return (
       <Card sx={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)', bgcolor: 'white' }}>
         <CardContent sx={{ p: 3 }}>
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center', 
-            mb: 3 
+          <Box sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mb: 3
           }}>
             <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.125rem' }}>
               Jobs
             </Typography>
             <Link href={`/token-classification/${params.deploymentId}/jobs/new`} passHref>
-              <Button 
-                variant="contained" 
+              <Button
+                variant="contained"
                 color="primary"
                 sx={{
                   bgcolor: '#1976d2',
@@ -235,18 +236,18 @@ export default function Jobs() {
   return (
     <Card sx={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)', bgcolor: 'white' }}>
       <CardContent sx={{ p: 3 }}>
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          mb: 3 
+        <Box sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 3
         }}>
           <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.125rem' }}>
             Jobs
           </Typography>
           <Link href={`/token-classification/${params.deploymentId}/jobs/new`} passHref>
-            <Button 
-              variant="contained" 
+            <Button
+              variant="contained"
               color="primary"
               sx={{
                 bgcolor: '#1976d2',
@@ -262,11 +263,11 @@ export default function Jobs() {
           </Link>
         </Box>
 
-        <TableContainer 
-          component={Paper} 
-          sx={{ 
-            boxShadow: 'none', 
-            border: '1px solid rgba(0, 0, 0, 0.12)', 
+        <TableContainer
+          component={Paper}
+          sx={{
+            boxShadow: 'none',
+            border: '1px solid rgba(0, 0, 0, 0.12)',
             borderRadius: '0.375rem',
             overflow: 'hidden'
           }}
@@ -295,11 +296,11 @@ export default function Jobs() {
                     <TableCell>{report.report_id}</TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <Box 
-                          sx={{ 
-                            flex: 1, 
-                            height: '8px', 
-                            bgcolor: '#f1f5f9', 
+                        <Box
+                          sx={{
+                            flex: 1,
+                            height: '8px',
+                            bgcolor: '#f1f5f9',
                             borderRadius: '9999px',
                             overflow: 'hidden'
                           }}
@@ -314,10 +315,10 @@ export default function Jobs() {
                             }}
                           />
                         </Box>
-                        <Typography 
-                          variant="body2" 
-                          sx={{ 
-                            color: 'text.secondary', 
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: 'text.secondary',
                             whiteSpace: 'nowrap',
                             fontSize: '0.875rem'
                           }}
@@ -326,8 +327,8 @@ export default function Jobs() {
                         </Typography>
                       </Box>
                     </TableCell>
-                    <TableCell>{new Date(report.submitted_at).toLocaleString()}</TableCell>
-                    <TableCell>{new Date(report.updated_at).toLocaleString()}</TableCell>
+                    <TableCell>{format(new Date(report.submitted_at), 'MM/dd/yyyy, hh:mm:ss a')}</TableCell>
+                    <TableCell>{format(new Date(report.updated_at), 'MM/dd/yyyy, hh:mm:ss a')}</TableCell>
                     <TableCell>
                       <Link
                         href={`/token-classification/${params.deploymentId}/jobs/${report.report_id}`}
@@ -336,11 +337,11 @@ export default function Jobs() {
                           textDecoration: 'none'
                         }}
                       >
-                        <Typography 
-                          sx={{ 
-                            '&:hover': { 
-                              textDecoration: 'underline' 
-                            } 
+                        <Typography
+                          sx={{
+                            '&:hover': {
+                              textDecoration: 'underline'
+                            }
                           }}
                         >
                           View
@@ -351,10 +352,10 @@ export default function Jobs() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell 
-                    colSpan={6} 
-                    sx={{ 
-                      textAlign: 'center', 
+                  <TableCell
+                    colSpan={6}
+                    sx={{
+                      textAlign: 'center',
                       py: 2,
                       color: 'text.secondary'
                     }}
