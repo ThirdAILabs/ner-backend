@@ -290,3 +290,37 @@ Searches for a the objects in a report that match a given query.
   ]
 }
 ```
+--- 
+
+### POST /uploads
+**Description:**  
+Upload files to the server.
+
+**Request Body:**  
+The request must be a `multipart/form-data` containing the files to upload. Each file should be included under the `files` form field.
+
+**Response:**  
+- `200 Created`: Returns the upload ID.
+- `400 Bad Request`: Invalid or missing `Content-Type` header or multipart boundary.
+- `422 Unprocessable Entity`: Invalid filename detected (e.g., empty filename).
+- `500 Internal Server Error`: Error saving the file.
+
+**Example Request:**  
+```http
+POST /uploads HTTP/1.1
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="files"; filename="example.txt"
+Content-Type: text/plain
+
+<file content>
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+```
+
+**Example Response:**  
+```json
+{
+  "Id": "123e4567-e89b-12d3-a456-426614174000",
+}
+```

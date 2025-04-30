@@ -2,6 +2,7 @@ package s3
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -16,6 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/google/uuid"
 )
 
@@ -363,6 +365,12 @@ func (c *Client) CreateBucket(ctx context.Context, bucketName string) error {
 		Bucket: aws.String(bucketName),
 	})
 	if err != nil {
+		var awsErr *types.BucketAlreadyExists
+		if errors.As(err, &awsErr) {
+			slog.Info("Bucket already exists", "bucketName", bucketName)
+			return nil
+		}
+
 		return fmt.Errorf("failed to create bucket %s: %w", bucketName, err)
 	}
 	log.Printf("Successfully created bucket %s", bucketName)
