@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"mime/multipart"
 	backend "ner-backend/internal/api"
 	"ner-backend/internal/core"
@@ -214,11 +213,6 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 		ModelId:  modelId,
 		UploadId: uploadId,
 	})
-
-	log.Println("here 1")
-
-	time.Sleep(10 * time.Second)
-	log.Println("here 2")
 
 	report := waitForReport(t, router, reportId)
 

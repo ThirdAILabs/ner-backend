@@ -12,6 +12,7 @@ import (
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/s3"
+
 	"ner-backend/pkg/api"
 	"net/http"
 	"path/filepath"
@@ -193,7 +194,7 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 	}
 
 	if sourceS3Bucket == "" {
-		return nil, CodedErrorf(http.StatusUnprocessableEntity, "the following fields are required: ModelId, SourceS3Bucket")
+		return nil, CodedErrorf(http.StatusUnprocessableEntity, "the following fields are required: SourceS3Bucket or UploadId")
 	}
 
 	report := database.Report{
