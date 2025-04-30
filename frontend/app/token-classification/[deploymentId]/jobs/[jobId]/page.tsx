@@ -183,7 +183,7 @@ export default function JobDetail() {
       {/* Breadcrumbs */}
       <div className="mb-6">
         <div className="flex items-center mb-2">
-          <Link href={`/token-classification/${params.deploymentId}/jobs`} className="text-blue-500 hover:underline">
+          <Link href={`/token-classification/${params.deploymentId}?tab=jobs`} className="text-blue-500 hover:underline">
             Jobs
           </Link>
           <span className="mx-2 text-gray-400">/</span>
