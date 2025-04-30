@@ -1,8 +1,10 @@
 package core
 
 import (
+	_ "embed"
 	"fmt"
-	"io/ioutil"
+	"ner-backend/internal/core/types"
+	"ner-backend/pkg/api"
 	"regexp"
 	"strings"
 
@@ -14,6 +16,8 @@ type RecognizerResult struct {
 	Match      string
 	Score      float64
 	Start, End int
+	LContext   string
+	RContext   string
 }
 
 type PatternRecognizer struct {
@@ -30,7 +34,7 @@ var entitiesMap = map[string]string{
 	"DATE_TIME":                       "DATE",
 	"EMAIL_ADDRESS":                   "EMAIL",
 	"CreditCardRecognizer":            "CARD_NUMBER",
-	"US_SSN":                          "SSN",
+	"UsSsnRecognizer":                 "SSN",
 	"URL":                             "URL",
 	"UsPassportRecognizer":            "ID_NUMBER",
 	"UsItinRecognizer":                "ID_NUMBER",
@@ -40,7 +44,10 @@ var entitiesMap = map[string]string{
 	"InVehicleRegistrationRecognizer": "VIN",
 }
 
-func loadPatterns(path string) ([]*PatternRecognizer, error) {
+//go:embed recognizers.yaml
+var recognizersYAML []byte
+
+func loadPatterns() ([]*PatternRecognizer, error) {
 	raw := struct {
 		Recognizers []struct {
 			Name     string `yaml:"name"`
@@ -51,11 +58,7 @@ func loadPatterns(path string) ([]*PatternRecognizer, error) {
 		} `yaml:"recognizers"`
 	}{}
 
-	data, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	if err := yaml.Unmarshal(data, &raw); err != nil {
+	if err := yaml.Unmarshal(recognizersYAML, &raw); err != nil {
 		return nil, err
 	}
 
@@ -71,11 +74,9 @@ func loadPatterns(path string) ([]*PatternRecognizer, error) {
 
 			// PAN (InPanRecognizer) low-strength lookahead
 			if rec.Name == "InPanRecognizer" && strings.Contains(rxText, "(?=") {
-				// Base: any 10-char alnum+symbols
 				base := `\b[\w@#$%^?~-]{10}\b`
-				rx, _ := regexp.Compile(base)
+				rx := regexp.MustCompile(base)
 				pr.Regexps = append(pr.Regexps, rx)
-				// Validate: ≥1 letter & ≥4 digits
 				pr.Validate = func(s string) bool {
 					letters, digits := 0, 0
 					for _, r := range s {
@@ -97,12 +98,10 @@ func loadPatterns(path string) ([]*PatternRecognizer, error) {
 			// Vehicle reg part 1: (I)(?!00000)\d{5}
 			if rec.Name == "InVehicleRegistrationRecognizer" && strings.Contains(rxText, "(?!00000)") {
 				base := `\bI[0-9]{5}\b`
-				rx, _ := regexp.Compile(base)
+				rx := regexp.MustCompile(base)
 				pr.Regexps = append(pr.Regexps, rx)
 				pr.Validate = func(s string) bool {
-					// tail = last 5 digits ≠ "00000"
-					tail := s[1:]
-					return tail != "00000"
+					return s[1:] != "00000"
 				}
 				if p.Score > pr.Score {
 					pr.Score = p.Score
@@ -110,14 +109,12 @@ func loadPatterns(path string) ([]*PatternRecognizer, error) {
 				continue
 			}
 
-			// Vehicle reg part 2: (?!00)\d{2}(A|B|C|D|E|F|H|K|P|R|X)\d{6}[A-Z]
+			// Vehicle reg part 2: (?!00)\d{2}[A-FH-KPRX]\d{6}[A-Z]
 			if rec.Name == "InVehicleRegistrationRecognizer" && strings.Contains(rxText, "(?!00)") {
-				// Base: two digits, one of allowed letters, six digits, one letter
 				base := `\b[0-9]{2}[A-FH-KPRX][0-9]{6}[A-Z]\b`
-				rx, _ := regexp.Compile(base)
+				rx := regexp.MustCompile(base)
 				pr.Regexps = append(pr.Regexps, rx)
 				pr.Validate = func(s string) bool {
-					// ensure first two chars != "00"
 					return s[0:2] != "00"
 				}
 				if p.Score > pr.Score {
@@ -165,10 +162,12 @@ func isLuhnValid(d string) bool {
 }
 
 func (pr *PatternRecognizer) Recognize(text string, threshold float64) []RecognizerResult {
+	const ctxLen = 20
 	var results []RecognizerResult
 	for _, rx := range pr.Regexps {
 		for _, loc := range rx.FindAllStringIndex(text, -1) {
-			match := text[loc[0]:loc[1]]
+			start, end := loc[0], loc[1]
+			match := text[start:end]
 			score := pr.Score
 
 			if pr.EntityType == "CreditCardRecognizer" {
@@ -177,7 +176,6 @@ func (pr *PatternRecognizer) Recognize(text string, threshold float64) []Recogni
 					continue
 				}
 			}
-
 			if score < threshold {
 				continue
 			}
@@ -185,13 +183,29 @@ func (pr *PatternRecognizer) Recognize(text string, threshold float64) []Recogni
 				continue
 			}
 
-			mapped := entitiesMap[pr.EntityType]
+			lctxStart := start - ctxLen
+			if lctxStart < 0 {
+				lctxStart = 0
+			}
+			rctxEnd := end + ctxLen
+			if rctxEnd > len(text) {
+				rctxEnd = len(text)
+			}
+			lctx := text[lctxStart:start]
+			rctx := text[end:rctxEnd]
+
+			mapped, ok := entitiesMap[pr.EntityType]
+			if !ok || mapped == "" {
+				mapped = pr.EntityType
+			}
 			results = append(results, RecognizerResult{
 				EntityType: mapped,
 				Match:      match,
 				Score:      score,
 				Start:      loc[0],
 				End:        loc[1],
+				LContext:   lctx,
+				RContext:   rctx,
 			})
 		}
 	}
@@ -199,8 +213,7 @@ func (pr *PatternRecognizer) Recognize(text string, threshold float64) []Recogni
 }
 
 func analyze(text string, threshold float64) []RecognizerResult {
-	var recs []*PatternRecognizer
-	recs, err := loadPatterns("recognizers.yaml")
+	recs, err := loadPatterns()
 	if err != nil {
 		fmt.Printf("⚠️ failed to load recognizers: %v\n", err)
 		return nil
@@ -211,3 +224,33 @@ func analyze(text string, threshold float64) []RecognizerResult {
 	}
 	return out
 }
+
+type presidioModel struct {
+	threshold float64
+}
+
+func (m *presidioModel) Predict(text string) ([]types.Entity, error) {
+	results := analyze(text, m.threshold)
+	out := make([]types.Entity, 0, len(results))
+	for _, r := range results {
+		out = append(out, types.Entity{
+			Text:     r.Match,
+			Label:    r.EntityType,
+			Start:    r.Start,
+			End:      r.End,
+			LContext: r.LContext,
+			RContext: r.RContext,
+		})
+	}
+	return out, nil
+}
+
+func (m *presidioModel) Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sample) error {
+	return fmt.Errorf("finetune not supported for presidio model")
+}
+
+func (m *presidioModel) Save(path string) error {
+	return fmt.Errorf("save not supported for presidio model")
+}
+
+func (m *presidioModel) Release() {}
