@@ -16,6 +16,8 @@ type RecognizerResult struct {
 	Match      string
 	Score      float64
 	Start, End int
+	LContext   string
+	RContext   string
 }
 
 type PatternRecognizer struct {
@@ -160,10 +162,12 @@ func isLuhnValid(d string) bool {
 }
 
 func (pr *PatternRecognizer) Recognize(text string, threshold float64) []RecognizerResult {
+	const ctxLen = 20
 	var results []RecognizerResult
 	for _, rx := range pr.Regexps {
 		for _, loc := range rx.FindAllStringIndex(text, -1) {
-			match := text[loc[0]:loc[1]]
+			start, end := loc[0], loc[1]
+			match := text[start:end]
 			score := pr.Score
 
 			if pr.EntityType == "CreditCardRecognizer" {
@@ -179,6 +183,17 @@ func (pr *PatternRecognizer) Recognize(text string, threshold float64) []Recogni
 				continue
 			}
 
+			lctxStart := start - ctxLen
+			if lctxStart < 0 {
+				lctxStart = 0
+			}
+			rctxEnd := end + ctxLen
+			if rctxEnd > len(text) {
+				rctxEnd = len(text)
+			}
+			lctx := text[lctxStart:start]
+			rctx := text[end:rctxEnd]
+
 			mapped, ok := entitiesMap[pr.EntityType]
 			if !ok || mapped == "" {
 				mapped = pr.EntityType
@@ -189,6 +204,8 @@ func (pr *PatternRecognizer) Recognize(text string, threshold float64) []Recogni
 				Score:      score,
 				Start:      loc[0],
 				End:        loc[1],
+				LContext:   lctx,
+				RContext:   rctx,
 			})
 		}
 	}
@@ -217,10 +234,12 @@ func (m *presidioModel) Predict(text string) ([]types.Entity, error) {
 	out := make([]types.Entity, 0, len(results))
 	for _, r := range results {
 		out = append(out, types.Entity{
-			Text:  r.Match,
-			Label: r.EntityType,
-			Start: r.Start,
-			End:   r.End,
+			Text:     r.Match,
+			Label:    r.EntityType,
+			Start:    r.Start,
+			End:      r.End,
+			LContext: r.LContext,
+			RContext: r.RContext,
 		})
 	}
 	return out, nil
