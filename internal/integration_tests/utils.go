@@ -25,7 +25,6 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/minio"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -139,10 +138,9 @@ func createModel(t *testing.T, s3Client *s3.Client, db *gorm.DB, modelBucket str
 }
 
 func createDB(t *testing.T) *gorm.DB {
-	db, err := gorm.Open(sqlite.Open("file::memory:"), &gorm.Config{})
+	uri := setupPostgresContainer(t, context.Background())
+	db, err := database.NewDatabase(uri)
 	require.NoError(t, err)
-
-	require.NoError(t, database.GetMigrator(db).Migrate())
 
 	return db
 }

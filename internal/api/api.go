@@ -1,14 +1,20 @@
 package api
 
 import (
+	"context"
 	"database/sql"
-	"errors" // Adjust import path
+	"errors"
+	"io"
 	"log/slog"
+	"mime"
+	"mime/multipart"
 	"ner-backend/internal/core"
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
+	"ner-backend/internal/s3"
 	"ner-backend/pkg/api"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -20,12 +26,22 @@ import (
 
 type BackendService struct {
 	db               *gorm.DB
+	s3               *s3.Client
 	publisher        messaging.Publisher
 	chunkTargetBytes int64
 }
 
-func NewBackendService(db *gorm.DB, pub messaging.Publisher, chunkTargetBytes int64) *BackendService {
-	return &BackendService{db: db, publisher: pub, chunkTargetBytes: chunkTargetBytes}
+const (
+	uploadBucket = "uploads"
+)
+
+func NewBackendService(db *gorm.DB, s3 *s3.Client, pub messaging.Publisher, chunkTargetBytes int64) *BackendService {
+	if err := s3.CreateBucket(context.Background(), uploadBucket); err != nil {
+		slog.Error("error creating upload bucket", "error", err)
+		panic("failed to create upload bucket")
+	}
+
+	return &BackendService{db: db, s3: s3, publisher: pub, chunkTargetBytes: chunkTargetBytes}
 }
 
 func (s *BackendService) AddRoutes(r chi.Router) {
@@ -42,6 +58,10 @@ func (s *BackendService) AddRoutes(r chi.Router) {
 		r.Get("/{report_id}/groups/{group_id}", RestHandler(s.GetReportGroup))
 		r.Get("/{report_id}/entities", RestHandler(s.GetReportEntities))
 		r.Get("/{report_id}/search", RestHandler(s.ReportSearch))
+	})
+
+	r.Route("/uploads", func(r chi.Router) {
+		r.Post("/", RestHandler(s.UploadFiles))
 	})
 }
 
@@ -161,15 +181,26 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		return nil, err
 	}
 
-	if req.ModelId == uuid.Nil || req.SourceS3Bucket == "" {
+	if req.ModelId == uuid.Nil {
+		return nil, CodedErrorf(http.StatusUnprocessableEntity, "the following fields are required: ModelId")
+	}
+
+	sourceS3Bucket, s3Prefix := req.SourceS3Bucket, req.SourceS3Prefix
+
+	if req.UploadId != uuid.Nil {
+		sourceS3Bucket = uploadBucket
+		s3Prefix = req.UploadId.String()
+	}
+
+	if sourceS3Bucket == "" {
 		return nil, CodedErrorf(http.StatusUnprocessableEntity, "the following fields are required: ModelId, SourceS3Bucket")
 	}
 
 	report := database.Report{
 		Id:             uuid.New(),
 		ModelId:        req.ModelId,
-		SourceS3Bucket: req.SourceS3Bucket,
-		SourceS3Prefix: sql.NullString{String: req.SourceS3Prefix, Valid: req.SourceS3Prefix != ""},
+		SourceS3Bucket: sourceS3Bucket,
+		SourceS3Prefix: sql.NullString{String: s3Prefix, Valid: s3Prefix != ""},
 		CreationTime:   time.Now().UTC(),
 	}
 
@@ -375,4 +406,68 @@ func (s *BackendService) ReportSearch(r *http.Request) (any, error) {
 	}
 
 	return api.SearchResponse{Objects: objects}, nil
+}
+
+func getMultipartBoundary(r *http.Request) (string, error) {
+	contentType := r.Header.Get("Content-Type")
+	if contentType == "" {
+		return "", CodedErrorf(http.StatusBadRequest, "missing 'Content-Type' header")
+	}
+	mediaType, params, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return "", CodedErrorf(http.StatusBadRequest, "error parsing media type in request: %w", err)
+	}
+	if mediaType != "multipart/form-data" {
+		return "", CodedErrorf(http.StatusBadRequest, "expected media type to be 'multipart/form-data'")
+	}
+
+	boundary, ok := params["boundary"]
+	if !ok {
+		return "", CodedErrorf(http.StatusBadRequest, "missing 'boundary' parameter in 'Content-Type' header")
+	}
+
+	return boundary, nil
+}
+
+func (s *BackendService) UploadFiles(r *http.Request) (any, error) {
+	boundary, err := getMultipartBoundary(r)
+	if err != nil {
+		return nil, err
+	}
+
+	uploadId := uuid.New()
+
+	reader := multipart.NewReader(r.Body, boundary)
+
+	var filenames []string
+
+	for {
+		part, err := reader.NextPart()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, CodedErrorf(http.StatusBadRequest, "error parsing multipart request: %v", err)
+		}
+		defer part.Close()
+
+		if part.FormName() == "files" {
+			if part.FileName() == "" {
+				return nil, CodedErrorf(http.StatusUnprocessableEntity, "invalid filename detected in upload files: filename cannot be empty")
+			}
+
+			filenames = append(filenames, part.FileName())
+
+			newFilepath := filepath.Join(uploadId.String(), part.FileName())
+
+			if _, err := s.s3.UploadObject(r.Context(), uploadBucket, newFilepath, part); err != nil {
+				slog.Error("error uploading file to S3", "error", err)
+				return nil, CodedErrorf(http.StatusInternalServerError, "error saving file")
+			}
+		}
+	}
+
+	slog.Info("created upload record", "upload_id", uploadId, "filenames", filenames)
+
+	return api.UploadResponse{Id: uploadId}, nil
 }
