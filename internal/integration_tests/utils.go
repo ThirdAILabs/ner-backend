@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -86,7 +87,7 @@ func (m *regexModel) Save(path string) error {
 func (m *regexModel) Release() {}
 
 func loadRegexModel(path string) (core.Model, error) {
-	file, err := os.Open(path)
+	file, err := os.Open(filepath.Join(path, "model.bin"))
 	if err != nil {
 		return nil, err
 	}

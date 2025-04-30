@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"ner-backend/internal/core/types"
 	"ner-backend/pkg/api"
+	"path/filepath"
 	"strings"
 	"unsafe"
 )
@@ -21,7 +22,8 @@ type NER struct {
 }
 
 func LoadNER(path string) (*NER, error) {
-	cPath := C.CString(path)
+	modelBinPath := filepath.Join(path, "model.bin")
+	cPath := C.CString(modelBinPath)
 	defer C.free(unsafe.Pointer(cPath))
 
 	var err *C.char
