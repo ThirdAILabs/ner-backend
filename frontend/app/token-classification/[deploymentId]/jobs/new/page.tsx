@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   Box,
@@ -19,43 +19,77 @@ import {
   Breadcrumbs,
   Link as MuiLink,
 } from '@mui/material';
+import { nerService } from '@/lib/backend';
+
+interface Model {
+  Id: string;
+  Name: string;
+  Type: string;
+  Status: string;
+}
 
 export default function NewJobPage() {
   const params = useParams();
   const router = useRouter();
   const deploymentId = params.deploymentId as string;
   
-  const [jobName, setJobName] = useState('');
-  const [fileType, setFileType] = useState('');
-  const [file, setFile] = useState<File | null>(null);
-  const [fileName, setFileName] = useState('');
+  const [models, setModels] = useState<Model[]>([]);
+  const [selectedModelId, setSelectedModelId] = useState('');
+  const [sourceS3Bucket, setSourceS3Bucket] = useState('');
+  const [sourceS3Prefix, setSourceS3Prefix] = useState('');
+  const [groups, setGroups] = useState<Record<string, string>>({});
+  const [newGroupName, setNewGroupName] = useState('');
+  const [newGroupQuery, setNewGroupQuery] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      const selectedFile = event.target.files[0];
-      setFile(selectedFile);
-      setFileName(selectedFile.name);
+
+  useEffect(() => {
+    const fetchModels = async () => {
+      try {
+        const modelsData = await nerService.listModels();
+        setModels(modelsData);
+      } catch (err) {
+        setError('Failed to fetch models');
+        console.error('Error fetching models:', err);
+      }
+    };
+
+    fetchModels();
+  }, []);
+
+  const handleAddGroup = () => {
+    if (newGroupName && newGroupQuery) {
+      setGroups(prev => ({
+        ...prev,
+        [newGroupName]: newGroupQuery
+      }));
+      setNewGroupName('');
+      setNewGroupQuery('');
     }
   };
-  
+
+  const handleRemoveGroup = (groupName: string) => {
+    const newGroups = { ...groups };
+    delete newGroups[groupName];
+    setGroups(newGroups);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!jobName.trim()) {
-      setError('Job name is required');
+    if (!selectedModelId) {
+      setError('Please select a model');
       return;
     }
     
-    if (!fileType) {
-      setError('File type is required');
+    if (!sourceS3Bucket) {
+      setError('S3 bucket is required');
       return;
     }
     
-    if (!file) {
-      setError('Please upload a file');
+    if (Object.keys(groups).length === 0) {
+      setError('At least one group is required');
       return;
     }
     
@@ -63,16 +97,21 @@ export default function NewJobPage() {
     setIsSubmitting(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const response = await nerService.createReport({
+        ModelId: selectedModelId,
+        SourceS3Bucket: sourceS3Bucket,
+        SourceS3Prefix: sourceS3Prefix || undefined,
+        Groups: groups
+      });
+      
       setSuccess(true);
       
       // Redirect after success
       setTimeout(() => {
-        router.push(`/token-classification/${deploymentId}/jobs/${jobName}`);
+        router.push(`/token-classification/${deploymentId}/jobs/${response.ReportId}`);
       }, 2000);
     } catch (err) {
-      setError('Failed to create job. Please try again.');
+      setError('Failed to create report. Please try again.');
       console.error(err);
     } finally {
       setIsSubmitting(false);
@@ -101,11 +140,11 @@ export default function NewJobPage() {
             >
               Jobs
             </MuiLink>
-            <Typography color="text.primary">New Job</Typography>
+            <Typography color="text.primary">New Report</Typography>
           </Breadcrumbs>
           
           <Typography variant="h5" className="font-bold">
-            Create New Classification Job
+            Create New Report
           </Typography>
         </div>
       </header>
@@ -115,7 +154,7 @@ export default function NewJobPage() {
           <CardContent>
             {success ? (
               <Alert severity="success" sx={{ mb: 2 }}>
-                Job created successfully! Redirecting...
+                Report created successfully! Redirecting...
               </Alert>
             ) : (
               <form onSubmit={handleSubmit}>
@@ -126,70 +165,94 @@ export default function NewJobPage() {
                 )}
                 
                 <Box sx={{ mb: 3 }}>
-                  <TextField
-                    label="Job Name"
-                    variant="outlined"
-                    fullWidth
-                    value={jobName}
-                    onChange={(e) => setJobName(e.target.value)}
-                    required
-                    disabled={isSubmitting}
-                  />
-                </Box>
-                
-                <Box sx={{ mb: 3 }}>
                   <FormControl fullWidth required>
-                    <InputLabel>File Type</InputLabel>
+                    <InputLabel>Model</InputLabel>
                     <Select
-                      value={fileType}
-                      onChange={(e) => setFileType(e.target.value)}
-                      label="File Type"
+                      value={selectedModelId}
+                      onChange={(e) => setSelectedModelId(e.target.value)}
+                      label="Model"
                       disabled={isSubmitting}
                     >
-                      <MenuItem value="csv">CSV</MenuItem>
-                      <MenuItem value="txt">TXT</MenuItem>
-                      <MenuItem value="excel">Excel</MenuItem>
-                      <MenuItem value="pdf">PDF</MenuItem>
+                      {models.map((model) => (
+                        <MenuItem key={model.Id} value={model.Id}>
+                          {model.Name} ({model.Type})
+                        </MenuItem>
+                      ))}
                     </Select>
                     <FormHelperText>
-                      Select the type of file you want to process
+                      Select the model to use for this report
                     </FormHelperText>
                   </FormControl>
                 </Box>
-                
-                <Box sx={{ mb: 4 }}>
+
+                <Box sx={{ mb: 3 }}>
+                  <TextField
+                    label="S3 Bucket"
+                    variant="outlined"
+                    fullWidth
+                    value={sourceS3Bucket}
+                    onChange={(e) => setSourceS3Bucket(e.target.value)}
+                    required
+                    disabled={isSubmitting}
+                    helperText="The S3 bucket containing the source data"
+                  />
+                </Box>
+
+                <Box sx={{ mb: 3 }}>
+                  <TextField
+                    label="S3 Prefix (Optional)"
+                    variant="outlined"
+                    fullWidth
+                    value={sourceS3Prefix}
+                    onChange={(e) => setSourceS3Prefix(e.target.value)}
+                    disabled={isSubmitting}
+                    helperText="The prefix within the S3 bucket (optional)"
+                  />
+                </Box>
+
+                <Box sx={{ mb: 3 }}>
                   <Typography variant="subtitle2" gutterBottom>
-                    Upload File
+                    Groups
                   </Typography>
-                  <Box
-                    sx={{
-                      border: '2px dashed #ccc',
-                      borderRadius: 1,
-                      p: 3,
-                      textAlign: 'center',
-                      cursor: 'pointer',
-                      '&:hover': {
-                        borderColor: 'primary.main',
-                      },
-                    }}
-                    onClick={() => document.getElementById('file-input')?.click()}
-                  >
-                    <input
-                      type="file"
-                      id="file-input"
-                      style={{ display: 'none' }}
-                      onChange={handleFileChange}
+                  <Box sx={{ mb: 2 }}>
+                    <TextField
+                      label="Group Name"
+                      variant="outlined"
+                      value={newGroupName}
+                      onChange={(e) => setNewGroupName(e.target.value)}
+                      sx={{ mr: 2, width: '200px' }}
                       disabled={isSubmitting}
                     />
-                    
-                    {fileName ? (
-                      <Typography>{fileName}</Typography>
-                    ) : (
-                      <Typography color="text.secondary">
-                        Click to select a file or drag and drop here
-                      </Typography>
-                    )}
+                    <TextField
+                      label="Query"
+                      variant="outlined"
+                      value={newGroupQuery}
+                      onChange={(e) => setNewGroupQuery(e.target.value)}
+                      sx={{ mr: 2, width: '300px' }}
+                      disabled={isSubmitting}
+                    />
+                    <Button
+                      variant="outlined"
+                      onClick={handleAddGroup}
+                      disabled={isSubmitting || !newGroupName || !newGroupQuery}
+                    >
+                      Add Group
+                    </Button>
                   </Box>
+
+                  {Object.entries(groups).map(([name, query]) => (
+                    <Box key={name} sx={{ mb: 1, display: 'flex', alignItems: 'center' }}>
+                      <Typography sx={{ mr: 2, fontWeight: 'bold' }}>{name}:</Typography>
+                      <Typography sx={{ flex: 1 }}>{query}</Typography>
+                      <Button
+                        color="error"
+                        onClick={() => handleRemoveGroup(name)}
+                        disabled={isSubmitting}
+                      >
+                        Remove
+                      </Button>
+                    </Box>
+                  ))}
                 </Box>
                 
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -207,7 +270,7 @@ export default function NewJobPage() {
                     disabled={isSubmitting}
                     startIcon={isSubmitting ? <CircularProgress size={20} /> : null}
                   >
-                    {isSubmitting ? 'Creating...' : 'Create Job'}
+                    {isSubmitting ? 'Creating...' : 'Create Report'}
                   </Button>
                 </Box>
               </form>
