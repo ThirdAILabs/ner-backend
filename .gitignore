@@ -52,3 +52,8 @@ ehthumbs.db
 
 # Debugging related (e.g., delve)
 /__debug_bin
+
+node_modules/
+package-lock.json
+package.json
+__pycache__/

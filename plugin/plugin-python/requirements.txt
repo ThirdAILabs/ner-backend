@@ -1,0 +1,7 @@
+grpcio
+grpcio-health-checking
+protobuf
+transformers
+torch
+pydantic
+presidio-analyzer

@@ -16,6 +16,8 @@ import (
 	"github.com/caarlos0/env/v11"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
+	"github.com/google/uuid"
 )
 
 type APIConfig struct {
@@ -47,6 +49,17 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
+	presidioModel := &database.Model{
+		Id:           uuid.New(),
+		Name:         "presidio",
+		Type:         "presidio",
+		Status:       database.ModelTrained,
+		CreationTime: time.Now(),
+	}
+	if err := db.Where("name = ?", "presidio").FirstOrCreate(presidioModel).Error; err != nil {
+		log.Fatalf("Failed to seed presidio model record: %v", err)
+	}
+
 	// Initialize RabbitMQ Publisher
 	publisher, err := messaging.NewRabbitMQPublisher(cfg.RabbitMQURL)
 	if err != nil {
@@ -58,8 +71,15 @@ func main() {
 	r := chi.NewRouter()
 
 	// Middleware
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"*"},                                       // Allow all origins (TODO: make this an env var)
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}, // Allow all HTTP methods
+		AllowedHeaders:   []string{"*"},                                       // Allow all headers
+		ExposedHeaders:   []string{"*"},                                       // Expose all headers
+		AllowCredentials: true,                                                // Allow cookies/auth headers
+		MaxAge:           300,                                                 // Cache preflight response for 5 minutes
+	}))
 	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)                    // Log requests
 	r.Use(middleware.Recoverer)                 // Recover from panics
 	r.Use(middleware.Timeout(60 * time.Second)) // Set request timeout

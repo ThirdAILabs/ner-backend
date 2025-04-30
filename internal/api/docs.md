@@ -264,3 +264,29 @@ Retrieve entities for a specific report.
 ]
 ```
 
+---
+
+### GET /reports/{report_id}/search?query=<...>
+**Description:**  
+Searches for a the objects in a report that match a given query.
+
+**Path Parameters:**  
+- `report_id` (UUID): The ID of the report.
+
+**Query Parameters:**  
+- `query` (string, required): The query to run to filter the objects in the report. 
+
+**Response:**  
+- `200 OK`: Returns a list of entities.
+- `400 Bad Request`: Invalid query parameters.
+- `500 Internal Server Error`: Error retrieving entities.
+
+**Example Response:**
+```json
+{
+  "Objects": [
+    "object 1", 
+    "object 2",
+  ]
+}
+```

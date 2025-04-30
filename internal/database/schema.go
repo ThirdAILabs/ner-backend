@@ -98,4 +98,6 @@ type ObjectEntity struct {
 	End      int       `gorm:"primaryKey"`
 	Label    string
 	Text     string
+	LContext string
+	RContext string
 }
