@@ -69,7 +69,7 @@ export default function NewJobPage() {
       
       // Redirect after success
       setTimeout(() => {
-        router.push(`/token-classification/${deploymentId}/jobs`);
+        router.push(`/token-classification/${deploymentId}/jobs/${jobName}`);
       }, 2000);
     } catch (err) {
       setError('Failed to create job. Please try again.');
@@ -95,7 +95,7 @@ export default function NewJobPage() {
               {deploymentId}
             </MuiLink>
             <MuiLink 
-              href={`/token-classification/${deploymentId}/jobs`} 
+              href={`/token-classification/${deploymentId}?tab=jobs`} 
               underline="hover" 
               color="inherit"
             >
@@ -195,7 +195,7 @@ export default function NewJobPage() {
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                   <Button
                     variant="outlined"
-                    onClick={() => router.push(`/token-classification/${deploymentId}/jobs`)}
+                    onClick={() => router.push(`/token-classification/${deploymentId}`)}
                     disabled={isSubmitting}
                   >
                     Cancel
