@@ -226,6 +226,31 @@ export default function Jobs() {
     }
 
     const { ShardDataTaskStatus, InferenceTaskStatuses } = report.detailedStatus;
+
+    // Check for ShardDataTask failure first
+    if (ShardDataTaskStatus === 'FAILED') {
+      return (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box sx={{
+            flex: 1,
+            height: '8px',
+            bgcolor: '#f1f5f9',
+            borderRadius: '9999px',
+            overflow: 'hidden'
+          }}>
+            <Box sx={{
+              height: '100%',
+              width: '100%',
+              bgcolor: '#ef4444', // red color for failure
+              borderRadius: '9999px',
+            }} />
+          </Box>
+          <Typography variant="body2" sx={{ color: '#ef4444', whiteSpace: 'nowrap', fontWeight: 'medium' }}>
+            Failed (Data Sharding Error)
+          </Typography>
+        </Box>
+      );
+    }
     
     // Add default values for each status
     const completed = InferenceTaskStatuses?.COMPLETED?.TotalTasks || 0;
@@ -236,6 +261,36 @@ export default function Jobs() {
     const totalTasks = completed + running + queued + failed;
     const completedTasks = completed;
     const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+
+    // If there are failed tasks, show failure status
+    if (failed > 0) {
+      return (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Box sx={{
+              flex: 1,
+              height: '8px',
+              bgcolor: '#f1f5f9',
+              borderRadius: '9999px',
+              overflow: 'hidden'
+            }}>
+              <Box sx={{
+                height: '100%',
+                width: '100%',
+                bgcolor: '#ef4444',
+                borderRadius: '9999px',
+              }} />
+            </Box>
+            <Typography variant="body2" sx={{ color: '#ef4444', whiteSpace: 'nowrap', fontWeight: 'medium' }}>
+              Failed
+            </Typography>
+          </Box>
+          <Typography variant="caption" sx={{ color: '#ef4444' }}>
+            {`${failed} task${failed > 1 ? 's' : ''} failed out of ${totalTasks} total`}
+          </Typography>
+        </Box>
+      );
+    }
 
     // If no tasks yet, show just the ShardDataTaskStatus
     if (totalTasks === 0) {
@@ -248,25 +303,31 @@ export default function Jobs() {
       );
     }
 
+    // Show progress for running tasks
     return (
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-        <Box sx={{
-          flex: 1,
-          height: '8px',
-          bgcolor: '#f1f5f9',
-          borderRadius: '9999px',
-          overflow: 'hidden'
-        }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
           <Box sx={{
-            height: '100%',
-            width: `${progress}%`,
-            bgcolor: ShardDataTaskStatus === 'COMPLETED' && progress === 100 ? '#4caf50' : '#1976d2',
+            flex: 1,
+            height: '8px',
+            bgcolor: '#f1f5f9',
             borderRadius: '9999px',
-            transition: 'all 0.2s'
-          }} />
+            overflow: 'hidden'
+          }}>
+            <Box sx={{
+              height: '100%',
+              width: `${progress}%`,
+              bgcolor: ShardDataTaskStatus === 'COMPLETED' && progress === 100 ? '#4caf50' : '#1976d2',
+              borderRadius: '9999px',
+              transition: 'all 0.2s'
+            }} />
+          </Box>
+          <Typography variant="body2" sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}>
+            {`${Math.round(progress)}%`}
+          </Typography>
         </Box>
-        <Typography variant="body2" sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}>
-          {`${Math.round(progress)}% (${completedTasks}/${totalTasks})`}
+        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+          {`${completedTasks} completed, ${running} running, ${queued} queued`}
         </Typography>
       </Box>
     );
