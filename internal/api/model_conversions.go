@@ -55,7 +55,6 @@ func convertReport(r database.Report) api.Report {
 		SourceS3Prefix: r.SourceS3Prefix.String,
 		CreationTime:   r.CreationTime,
 		Groups:         convertGroups(r.Groups),
-		Tags:           r.Tags,
 	}
 
 	if r.ShardDataTask != nil {
@@ -91,4 +90,12 @@ func convertEntities(es []database.ObjectEntity) []api.Entity {
 		entities = append(entities, convertEntity(e))
 	}
 	return entities
+}
+
+func convertTags(ts []database.Tags) []string {
+	var tags []string
+	for _, t := range ts {
+		tags = append(tags, t.Tag)
+	}
+	return tags
 }

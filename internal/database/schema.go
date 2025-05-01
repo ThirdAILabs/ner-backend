@@ -47,8 +47,6 @@ type Report struct {
 
 	Groups []Group `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
 
-	Tags []string
-
 	ShardDataTask  *ShardDataTask  `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
 	InferenceTasks []InferenceTask `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
 }
@@ -102,4 +100,11 @@ type ObjectEntity struct {
 	Text     string
 	LContext string
 	RContext string
+}
+
+type Tags struct {
+	TagId uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Tag   string
+
+	ModelId uuid.UUID `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
 }
