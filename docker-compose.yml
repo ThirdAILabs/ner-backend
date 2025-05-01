@@ -71,10 +71,12 @@ services:
     environment:
       - DATABASE_URL=${DATABASE_URL:-postgresql://user:password@postgres:5432/ner-backend?sslmode=disable}
       - RABBITMQ_URL=${RABBITMQ_URL:-amqp://user:password@rabbitmq:5672/}
-      - S3_ENDPOINT_URL=${S3_ENDPOINT_URL:-http://minio:9000}
+      - INTERNAL_S3_ENDPOINT_URL=${INTERNAL_S3_ENDPOINT_URL:-http://minio:9000}
+      - INTERNAL_AWS_ACCESS_KEY_ID=${INTERNAL_AWS_ACCESS_KEY_ID:-YOURACCESSKEY}
+      - INTERNAL_AWS_SECRET_ACCESS_KEY=${INTERNAL_AWS_SECRET_ACCESS_KEY:-YOURSECRETKEY}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-YOURACCESSKEY}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-YOURSECRETKEY}
-      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_REGION=${AWS_REGION:-us-east-2}
     volumes:
       # - .:/app # Mount code for development (requires Go toolchain in container or local build)
       - /etc/localtime:/etc/localtime:ro
@@ -97,10 +99,12 @@ services:
     environment:
       - DATABASE_URL=${DATABASE_URL:-postgresql://user:password@postgres:5432/ner-backend?sslmode=disable}
       - RABBITMQ_URL=${RABBITMQ_URL:-amqp://user:password@rabbitmq:5672/}
-      - S3_ENDPOINT_URL=${S3_ENDPOINT_URL:-http://minio:9000}
+      - INTERNAL_S3_ENDPOINT_URL=${INTERNAL_S3_ENDPOINT_URL:-http://minio:9000}
+      - INTERNAL_AWS_ACCESS_KEY_ID=${INTERNAL_AWS_ACCESS_KEY_ID:-YOURACCESSKEY}
+      - INTERNAL_AWS_SECRET_ACCESS_KEY=${INTERNAL_AWS_SECRET_ACCESS_KEY:-YOURSECRETKEY}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-YOURACCESSKEY}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-YOURSECRETKEY}
-      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_REGION=${AWS_REGION:-us-east-2}
     volumes:
       # - .:/app # Mount code for development (optional)
       - /etc/localtime:/etc/localtime:ro
