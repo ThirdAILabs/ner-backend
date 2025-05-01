@@ -2,6 +2,9 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import SaveButton from '../../../../../semantic-search/[deploymentId]/components/buttons/SaveButton';
 import { ViewMode } from './types';
+import { useState } from 'react';
+import { Loader2, Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface HeaderContentProps {
   viewMode: ViewMode;
@@ -9,6 +12,8 @@ interface HeaderContentProps {
   onQueryChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onViewModeChange: (value: ViewMode) => void;
   onSave: () => void;
+  onSearch?: (query: string) => Promise<void>;
+  searchLoading?: boolean;
 }
 
 export function HeaderContent({
@@ -17,10 +22,24 @@ export function HeaderContent({
   onQueryChange,
   onViewModeChange,
   onSave,
+  onSearch,
+  searchLoading = false,
 }: HeaderContentProps) {
   // Cast the ViewMode to string for compatibility with the Tabs component
   const handleViewModeChange = (value: string) => {
     onViewModeChange(value as ViewMode);
+  };
+
+  const handleSearch = () => {
+    if (onSearch) {
+      onSearch(query);
+    }
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter' && onSearch) {
+      onSearch(query);
+    }
   };
 
   return (
@@ -44,8 +63,21 @@ export function HeaderContent({
                 placeholder="Enter query..."
                 value={query}
                 onChange={onQueryChange}
+                onKeyDown={handleKeyDown}
               />
             </div>
+            <Button 
+              onClick={handleSearch} 
+              disabled={searchLoading || !onSearch}
+              className="h-10 w-10 p-2"
+              variant="outline"
+            >
+              {searchLoading ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Search className="h-5 w-5" />
+              )}
+            </Button>
             <SaveButton
               onClick={onSave}
               style={{

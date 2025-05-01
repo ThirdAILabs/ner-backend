@@ -56,6 +56,13 @@ export const nerService = {
     return response.data;
   },
 
+  searchReport: async (reportId: string, query: string): Promise<{ Objects: string[] }> => {
+    const response = await axiosInstance.get(`/reports/${reportId}/search`, {
+      params: { query }
+    });
+    return response.data;
+  },
+
   uploadFiles: async (files: File[]): Promise<{ Id: string }> => {
     const formData = new FormData();
     files.forEach(file => {

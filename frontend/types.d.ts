@@ -39,6 +39,8 @@ interface Entity {
     End: number;
     Label: string;
     Text: string;
+    LContext?: string;
+    RContext?: string;
 }
 
 interface CreateReportRequest {

@@ -205,8 +205,6 @@ const GroupCard: React.FC<GroupProps> = ({ name, definition }) => (
   </div>
 );
 
-
-
 export default function JobDetail() {
   const params = useParams();
   const reportId: string = params.jobId as string;
@@ -215,8 +213,29 @@ export default function JobDetail() {
   const [selectedSource, setSelectedSource] = useState('s3');
   const [selectedSaveLocation, setSelectedSaveLocation] = useState('s3');
   const [selectedTags, setSelectedTags] = useState<string[]>(mockTags);
+  const [dynamicTags, setDynamicTags] = useState<string[]>(mockTags);
 
   const [reportData, setReportData] = useState<Report | null>(null);
+  
+  // Gather unique entity types from API
+  const fetchAndProcessEntities = async () => {
+    try {
+      const entities = await nerService.getReportEntities(reportId, { limit: 200 });
+      if (entities && entities.length > 0) {
+        // Extract and deduplicate tag types
+        const apiTagTypes = Array.from(new Set(entities.map(e => e.Label)));
+        
+        // Combine with mockTags (for backward compatibility) and deduplicate
+        const combinedTags = Array.from(new Set([...mockTags, ...apiTagTypes]));
+        console.log("Combined tag types:", combinedTags);
+        
+        setDynamicTags(combinedTags);
+      }
+    } catch (error) {
+      console.error("Error fetching entity types:", error);
+    }
+  };
+  
   const fetchReportData = async () => {
     const response = await nerService.getReport(reportId);
     console.log(response);
@@ -225,7 +244,78 @@ export default function JobDetail() {
 
   useEffect(() => {
     fetchReportData();
-  }, [])
+    fetchAndProcessEntities();
+  }, []);
+
+  // Define real data loading functions for entities
+  const loadRealClassifiedTokenRecords = async (offset = 0, limit = 50) => {
+    try {
+      const entities = await nerService.getReportEntities(reportId, { offset, limit });
+      console.log("API entities response:", entities.length > 0 ? entities[0] : "No entities");
+      
+      // Extract unique entity types from the API response
+      const uniqueTypes = new Set(entities.map(entity => entity.Label));
+      console.log("Unique entity types in API response:", Array.from(uniqueTypes));
+      console.log("Tag filters available in UI:", mockTags);
+      
+      return entities.map(entity => {
+        const record = {
+          token: entity.Text,
+          tag: entity.Label,
+          sourceObject: entity.Object,
+          context: {
+            left: entity.LContext || '',
+            right: entity.RContext || ''
+          },
+          start: entity.Start,
+          end: entity.End,
+          groups: reportData?.Groups?.filter(group => group.Objects?.includes(entity.Object)).map(g => g.Name) || []
+        };
+        
+        // Log the first transformed record for debugging
+        if (entity === entities[0]) {
+          console.log("Transformed record:", record);
+        }
+        
+        return record;
+      });
+    } catch (error) {
+      console.error("Error loading entities:", error);
+      return [];
+    }
+  };
+
+  // This is a placeholder until we have an endpoint for full object data
+  const loadRealObjectRecords = async () => {
+    try {
+      // Group entities by object
+      const entities = await nerService.getReportEntities(reportId, { limit: 200 });
+      const objectMap = new Map<string, [string, string, string, string][]>();
+      
+      entities.forEach(entity => {
+        if (!objectMap.has(entity.Object)) {
+          objectMap.set(entity.Object, []);
+        }
+        // Store [text, label, left context, right context]
+        objectMap.get(entity.Object)?.push([
+          entity.Text, 
+          entity.Label,
+          entity.LContext || '',
+          entity.RContext || ''
+        ]);
+      });
+      
+      return Array.from(objectMap.entries()).map(([objectName, tokens]) => ({
+        taggedTokens: tokens.map(t => [t[0], t[1]]) as [string, string][],
+        tokenContexts: tokens.map(t => ({ left: t[2], right: t[3] })),
+        sourceObject: objectName,
+        groups: reportData?.Groups?.filter(group => group.Objects?.includes(objectName)).map(g => g.Name) || []
+      }));
+    } catch (error) {
+      console.error("Error loading object records:", error);
+      return [];
+    }
+  };
 
   const toggleTag = (tag: string) => {
     if (selectedTags.includes(tag)) {
@@ -463,10 +553,10 @@ export default function JobDetail() {
 
         <TabsContent value="output">
           <DatabaseTable
-            loadMoreObjectRecords={loadMoreMockObjectRecords}
-            loadMoreClassifiedTokenRecords={loadMoreMockClassifiedTokenRecords}
-            groups={mockGroups}
-            tags={mockTags}
+            loadMoreObjectRecords={loadRealObjectRecords}
+            loadMoreClassifiedTokenRecords={loadRealClassifiedTokenRecords}
+            groups={reportData?.Groups?.map(g => g.Name) || mockGroups}
+            tags={dynamicTags}
           />
         </TabsContent>
       </Tabs>

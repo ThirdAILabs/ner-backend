@@ -5,6 +5,8 @@ import { DatabaseTableProps, ViewMode, ClassifiedTokenDatabaseRecord, ObjectData
 import { FilterSection } from './FilterSection';
 import { HeaderContent } from './HeaderContent';
 import { TableContent } from './TableContent';
+import { nerService } from '@/lib/backend';
+import { useParams } from 'next/navigation';
 
 export function DatabaseTable({
   loadMoreObjectRecords,
@@ -12,9 +14,13 @@ export function DatabaseTable({
   groups,
   tags,
 }: DatabaseTableProps) {
+  const params = useParams();
+  const reportId: string = params.jobId as string;
+  
   // Loading states and refs
   const [isLoadingTokenRecords, setIsLoadingTokenRecords] = useState(false);
   const [isLoadingObjectRecords, setIsLoadingObjectRecords] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const loadedInitialTokenRecords = useRef(false);
   const loadedInitialObjectRecords = useRef(false);
   const tableScrollRef = useRef<HTMLDivElement>(null);
@@ -23,8 +29,9 @@ export function DatabaseTable({
   // Data states
   const [tokenRecords, setTokenRecords] = useState<ClassifiedTokenDatabaseRecord[]>([]);
   const [objectRecords, setObjectRecords] = useState<ObjectDatabaseRecord[]>([]);
-  const [viewMode, setViewMode] = useState<ViewMode>('object');
+  const [viewMode, setViewMode] = useState<ViewMode>('classified-token');
   const [query, setQuery] = useState('');
+  const [filteredObjects, setFilteredObjects] = useState<string[]>([]);
 
   // Filter states
   const [groupFilters, setGroupFilters] = useState<Record<string, boolean>>(
@@ -35,33 +42,92 @@ export function DatabaseTable({
   );
 
   // Load records functions
-  const loadTokenRecords = () => {
+  const loadTokenRecords = (objectFilter?: string) => {
+    console.log("Loading token records, objectFilter:", objectFilter);
     setIsLoadingTokenRecords(true);
-    loadMoreClassifiedTokenRecords().then((records) => {
-      setTokenRecords((prev) => [...prev, ...records]);
-      setIsLoadingTokenRecords(false);
-    });
+    loadMoreClassifiedTokenRecords()
+      .then((records) => {
+        console.log("Loaded token records:", records.length);
+        const filtered = objectFilter 
+          ? records.filter(record => objectFilter === record.sourceObject)
+          : records;
+        setTokenRecords((prev) => {
+          const newRecords = [...prev, ...filtered];
+          console.log("Total token records after update:", newRecords.length);
+          return newRecords;
+        });
+        setIsLoadingTokenRecords(false);
+      })
+      .catch(error => {
+        console.error("Error loading token records:", error);
+        setIsLoadingTokenRecords(false);
+      });
   };
 
-  const loadObjectRecords = () => {
+  const loadObjectRecords = (objectsFilter?: string[]) => {
     setIsLoadingObjectRecords(true);
     loadMoreObjectRecords().then((records) => {
-      setObjectRecords((prev) => [...prev, ...records]);
+      const filtered = objectsFilter?.length 
+        ? records.filter(record => objectsFilter.includes(record.sourceObject))
+        : records;
+      setObjectRecords((prev) => [...prev, ...filtered]);
       setIsLoadingObjectRecords(false);
     });
   };
 
+  // Search function
+  const handleSearch = async (searchQuery: string) => {
+    if (!searchQuery.trim()) {
+      // If empty query, reset filters and reload data
+      setFilteredObjects([]);
+      setTokenRecords([]);
+      setObjectRecords([]);
+      loadObjectRecords();
+      loadTokenRecords();
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const result = await nerService.searchReport(reportId, searchQuery);
+      setFilteredObjects(result.Objects || []);
+      
+      // Clear existing records and load new ones with filter
+      setTokenRecords([]);
+      setObjectRecords([]);
+      
+      // Load records filtered by the object names
+      if (result.Objects?.length) {
+        loadObjectRecords(result.Objects);
+        loadTokenRecords();
+      }
+    } catch (error) {
+      console.error("Error searching:", error);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
   // Initial load
   useEffect(() => {
-    if (!loadedInitialTokenRecords.current) {
-      loadTokenRecords();
-      loadedInitialTokenRecords.current = true;
-    }
-    if (!loadedInitialObjectRecords.current) {
-      loadObjectRecords();
-      loadedInitialObjectRecords.current = true;
-    }
+    // Force immediate loading of token records
+    console.log("Component mounted, loading initial data");
+    setTokenRecords([]);
+    setObjectRecords([]);
+    loadTokenRecords();
+    loadObjectRecords();
+    loadedInitialTokenRecords.current = true;
+    loadedInitialObjectRecords.current = true;
   }, []);
+
+  // Update filters when groups/tags change
+  useEffect(() => {
+    setGroupFilters(Object.fromEntries(groups.map((group) => [group, true])));
+  }, [groups]);
+
+  useEffect(() => {
+    setTagFilters(Object.fromEntries(tags.map((tag) => [tag, true])));
+  }, [tags]);
 
   // Scroll handler for infinite loading
   const handleTableScroll = () => {
@@ -75,7 +141,7 @@ export function DatabaseTable({
       if (scrollHeight - (scrollTop + clientHeight) < bottomThreshold) {
         // Load more records based on view mode
         if (viewMode === 'object' && !isLoadingObjectRecords) {
-          loadObjectRecords();
+          loadObjectRecords(filteredObjects.length ? filteredObjects : undefined);
         } else if (viewMode === 'classified-token' && !isLoadingTokenRecords) {
           loadTokenRecords();
         }
@@ -123,6 +189,14 @@ export function DatabaseTable({
     console.log('Saving...');
   };
 
+  // Add a debug effect to monitor record state
+  useEffect(() => {
+    console.log("Records updated:", {
+      tokenRecords: tokenRecords.length,
+      objectRecords: objectRecords.length
+    });
+  }, [tokenRecords, objectRecords]);
+
   return (
     <Card className="h-[70vh]">
       <CardContent className="p-0 h-full">
@@ -147,6 +221,8 @@ export function DatabaseTable({
               onQueryChange={handleQueryChange}
               onViewModeChange={setViewMode}
               onSave={handleSave}
+              onSearch={handleSearch}
+              searchLoading={isSearching}
             />
 
             <div

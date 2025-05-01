@@ -94,6 +94,29 @@ function HighlightedTag({ tag, tagColors }: { tag: string; tagColors: Record<str
   );
 }
 
+// Add a new component for context display
+interface TokenContextProps {
+  context?: { left: string; right: string };
+}
+
+function TokenContext({ context }: TokenContextProps) {
+  if (!context) return <span className="text-red-400 text-xs">No context available</span>;
+  
+  // Add debug information
+  const leftContent = context.left || '[empty left context]';
+  const rightContent = context.right || '[empty right context]';
+  
+  return (
+    <div className="font-mono text-xs border border-gray-200 p-2 rounded bg-gray-50">
+      <span className="text-gray-600">{leftContent}</span>
+      <span className="font-bold px-1 mx-1 text-black bg-yellow-200 rounded">
+        <span className="text-black">«TOKEN»</span>
+      </span>
+      <span className="text-gray-600">{rightContent}</span>
+    </div>
+  );
+}
+
 interface TableContentProps {
   viewMode: ViewMode;
   objectRecords: ObjectDatabaseRecord[];
@@ -115,6 +138,15 @@ export function TableContent({
   isLoadingTokenRecords,
   tags,
 }: TableContentProps) {
+  // Debug log for records
+  console.log("TableContent received:", { 
+    viewMode, 
+    tokenRecordsCount: tokenRecords.length, 
+    objectRecordsCount: objectRecords.length,
+    tagFilters,
+    groupFilters
+  });
+
   // Compute tag colors based on the provided tags
   const tagColors = useMemo(() => {
     const colors: Record<string, HighlightColor> = {};
@@ -132,6 +164,89 @@ export function TableContent({
     return colors;
   }, [tags]);
 
+  // For classified token view
+  if (viewMode === 'classified-token') {
+    // Filter records based on criteria
+    const filteredRecords = tokenRecords.filter((record) => {
+      // Check if the tag is in the filter or if filter is undefined for this tag type
+      // This handles the case where API returns tag types not in our mockTags list
+      const tagMatches = tagFilters[record.tag] !== false; // Consider it a match unless explicitly set to false
+      
+      // If there are no groups in the record, consider it a match
+      // Otherwise, check if at least one group matches the filter
+      const groupMatches = record.groups.length === 0 || 
+        record.groups.some((group) => groupFilters[group] !== false);
+      
+      return groupMatches && tagMatches;
+    });
+    
+    console.log("Filtered token records:", filteredRecords.length);
+    console.log("Sample record:", filteredRecords.length > 0 ? filteredRecords[0] : "No records match filters");
+
+    return (
+      <>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Token</TableHead>
+            <TableHead>Tag</TableHead>
+            <TableHead>Context</TableHead>
+            <TableHead>Source Object</TableHead>
+            <TableHead>Groups</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {filteredRecords.length > 0 ? (
+            filteredRecords.map((record, index) => (
+              <TableRow key={index}>
+                <TableCell>{record.token}</TableCell>
+                <TableCell>
+                  <HighlightedTag tag={record.tag} tagColors={tagColors} />
+                </TableCell>
+                <TableCell className="max-w-sm">
+                  {record.context ? (
+                    <TokenContext context={record.context} />
+                  ) : (
+                    <span className="text-red-400 text-xs">Missing context</span>
+                  )}
+                </TableCell>
+                <TableCell>{record.sourceObject}</TableCell>
+                <TableCell>{record.groups.join(', ')}</TableCell>
+              </TableRow>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={5} className="text-center py-8 text-gray-500">
+                {tokenRecords.length === 0 ? (
+                  isLoadingTokenRecords ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading records...
+                    </div>
+                  ) : (
+                    <div>No token records found. Check API response.</div>
+                  )
+                ) : (
+                  <div>No records match the current filters.</div>
+                )}
+              </TableCell>
+            </TableRow>
+          )}
+          {isLoadingTokenRecords && filteredRecords.length > 0 && (
+            <TableRow>
+              <TableCell colSpan={5} className="text-center py-4 text-gray-500">
+                <div className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading more records...
+                </div>
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </>
+    );
+  }
+
+  // For object view
   if (viewMode === 'object') {
     return (
       <>
@@ -145,12 +260,17 @@ export function TableContent({
         <TableBody>
           {objectRecords
             .filter((record) => {
-              return (
-                record.groups.some((group) => groupFilters[group]) &&
-                record.taggedTokens
-                  .map((v) => v[1])
-                  .some((tag) => tagFilters[tag])
-              );
+              // Check if any tag matches the filter
+              const tagMatches = record.taggedTokens
+                .map((v) => v[1])
+                .some((tag) => tagFilters[tag]);
+              
+              // If there are no groups in the record, consider it a match
+              // Otherwise, check if at least one group matches the filter
+              const groupMatches = record.groups.length === 0 || 
+                record.groups.some((group) => groupFilters[group]);
+              
+              return groupMatches && tagMatches;
             })
             .map((record, index) => (
               <TableRow key={index}>
@@ -196,6 +316,7 @@ export function TableContent({
         <TableRow>
           <TableHead>Token</TableHead>
           <TableHead>Tag</TableHead>
+          <TableHead>Context</TableHead>
           <TableHead>Source Object</TableHead>
           <TableHead>Groups</TableHead>
         </TableRow>
@@ -203,10 +324,15 @@ export function TableContent({
       <TableBody>
         {tokenRecords
           .filter((record) => {
-            return (
-              record.groups.some((group) => groupFilters[group]) &&
-              tagFilters[record.tag]
-            );
+            // Check if the tag is in the filter
+            const tagMatches = tagFilters[record.tag];
+            
+            // If there are no groups in the record, consider it a match
+            // Otherwise, check if at least one group matches the filter
+            const groupMatches = record.groups.length === 0 || 
+              record.groups.some((group) => groupFilters[group]);
+            
+            return groupMatches && tagMatches;
           })
           .map((record, index) => (
             <TableRow key={index}>
@@ -214,13 +340,20 @@ export function TableContent({
               <TableCell>
                 <HighlightedTag tag={record.tag} tagColors={tagColors} />
               </TableCell>
+              <TableCell className="max-w-sm">
+                {record.context ? (
+                  <TokenContext context={record.context} />
+                ) : (
+                  <span className="text-red-400 text-xs">Missing context</span>
+                )}
+              </TableCell>
               <TableCell>{record.sourceObject}</TableCell>
               <TableCell>{record.groups.join(', ')}</TableCell>
             </TableRow>
           ))}
         {isLoadingTokenRecords && (
           <TableRow>
-            <TableCell colSpan={4} className="text-center py-4 text-gray-500">
+            <TableCell colSpan={5} className="text-center py-4 text-gray-500">
               <div className="flex items-center justify-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Loading more records...
