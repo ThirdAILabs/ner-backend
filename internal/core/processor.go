@@ -108,6 +108,8 @@ func (proc *TaskProcessor) ProcessTask(task messaging.Task) {
 func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload messaging.InferenceTaskPayload) error {
 	reportId := payload.ReportId
 
+	slog.Info("processing inference task", "report_id", reportId, "task_id", payload.TaskId)
+
 	var task database.InferenceTask
 	if err := proc.db.Preload("Report").Preload("Report.Model").Preload("Report.Groups").First(&task, "report_id = ? AND task_id = ?", reportId, payload.TaskId).Error; err != nil {
 		slog.Error("error fetching inference task", "report_id", reportId, "task_id", payload.TaskId, "error", err)
@@ -133,6 +135,8 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 	if err := database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobCompleted); err != nil {
 		return fmt.Errorf("error updating inference task status to complete: %w", err)
 	}
+
+	slog.Info("inference task completed successfully", "report_id", reportId, "task_id", payload.TaskId)
 
 	return nil
 }
