@@ -35,7 +35,7 @@ func TestFinetuning(t *testing.T) {
 
 	queue := messaging.NewInMemoryQueue()
 
-	backend := backend.NewBackendService(db, queue, 120)
+	backend := backend.NewBackendService(db, s3, queue, 120)
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 

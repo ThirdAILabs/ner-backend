@@ -54,7 +54,9 @@ type Entity struct {
 }
 
 type CreateReportRequest struct {
-	ModelId        uuid.UUID
+	ModelId uuid.UUID
+
+	UploadId       uuid.UUID
 	SourceS3Bucket string
 	SourceS3Prefix string
 
@@ -90,4 +92,8 @@ type FinetuneResponse struct {
 
 type SearchResponse struct {
 	Objects []string
+}
+
+type UploadResponse struct {
+	Id uuid.UUID
 }

@@ -44,7 +44,7 @@ func TestListModels(t *testing.T) {
 		&database.Model{Id: id2, Name: "Model2", Type: "bolt", Status: database.ModelTraining, CreationTime: time.Now()},
 	)
 
-	service := backend.NewBackendService(db, messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, nil, messaging.NewInMemoryQueue(), 1024)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -70,7 +70,7 @@ func TestGetModel(t *testing.T) {
 		&database.Model{Id: modelId, Name: "Model2", Type: "bolt", Status: database.ModelTraining},
 	)
 
-	service := backend.NewBackendService(db, messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, nil, messaging.NewInMemoryQueue(), 1024)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -92,7 +92,7 @@ func TestFinetuneModel(t *testing.T) {
 		&database.Model{Id: modelId, Name: "Model1", Type: "regex", Status: database.ModelTrained},
 	)
 
-	service := backend.NewBackendService(db, messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, nil, messaging.NewInMemoryQueue(), 1024)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -143,7 +143,7 @@ func TestCreateReport(t *testing.T) {
 		&database.Model{Id: modelId, Name: "Model1", Type: "regex", Status: database.ModelTrained},
 	)
 
-	service := backend.NewBackendService(db, messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, nil, messaging.NewInMemoryQueue(), 1024)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -221,7 +221,7 @@ func TestGetReport(t *testing.T) {
 		&database.ObjectEntity{ReportId: reportId, Object: "object1", Start: 2, End: 3, Label: "label3", Text: "text3"},
 	)
 
-	service := backend.NewBackendService(db, messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, nil, messaging.NewInMemoryQueue(), 1024)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -335,7 +335,7 @@ func TestReportSearch(t *testing.T) {
 		&database.ObjectEntity{ReportId: reportId, Object: "object4", Start: 4, End: 5, Label: "label3", Text: "12xyz34"},
 	)
 
-	service := backend.NewBackendService(db, messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, nil, messaging.NewInMemoryQueue(), 1024)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
