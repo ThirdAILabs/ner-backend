@@ -18,6 +18,7 @@ import (
 
 type regexModel struct {
 	patterns map[string]regexp.Regexp
+	tags     []string
 }
 
 func (m *regexModel) Predict(text string) ([]types.Entity, error) {
@@ -42,6 +43,10 @@ func (m *regexModel) Predict(text string) ([]types.Entity, error) {
 
 func (m *regexModel) Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sample) error {
 	return nil
+}
+
+func (m *regexModel) Tags() []string {
+	return m.tags
 }
 
 func (m *regexModel) Save(path string) error {
