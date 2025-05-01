@@ -92,7 +92,7 @@ func convertEntities(es []database.ObjectEntity) []api.Entity {
 	return entities
 }
 
-func convertTags(ts []database.Tags) []string {
+func convertTags(ts []database.ModelTag) []string {
 	var tags []string
 	for _, t := range ts {
 		tags = append(tags, t.Tag)

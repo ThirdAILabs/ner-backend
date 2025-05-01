@@ -98,9 +98,6 @@ type UploadResponse struct {
 	Id uuid.UUID
 }
 
-type Tags struct {
-	TagId uuid.UUID
-	Tag   string
-
-	ModelId uuid.UUID
+type Tag struct {
+	Tag string
 }

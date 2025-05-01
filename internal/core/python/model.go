@@ -16,7 +16,6 @@ import (
 type PythonModel struct {
 	client *plugin.Client
 	model  shared.Model
-	tags   []string
 }
 
 func LoadPythonModel(PythonExecutable, PluginScript, PluginModelName, KwargsJSON string) (*PythonModel, error) {
@@ -67,10 +66,6 @@ func (ner *PythonModel) Predict(text string) ([]types.Entity, error) {
 
 func (ner *PythonModel) Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sample) error {
 	return fmt.Errorf("Finetune not implemented")
-}
-
-func (ner *PythonModel) Tags() []string {
-	return ner.tags
 }
 
 func (ner *PythonModel) Save(path string) error {

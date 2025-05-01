@@ -51,7 +51,6 @@ func (s *BackendService) AddRoutes(r chi.Router) {
 		r.Get("/", RestHandler(s.ListModels))
 		r.Get("/{model_id}", RestHandler(s.GetModel))
 		r.Post("/{model_id}/finetune", RestHandler(s.FinetuneModel))
-		r.Get("/{model_id}/tags", RestHandler(s.GetModelTags))
 	})
 	r.Route("/reports", func(r chi.Router) {
 		r.Get("/", RestHandler(s.ListReports))
@@ -95,7 +94,21 @@ func (s *BackendService) GetModel(r *http.Request) (any, error) {
 		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving model record")
 	}
 
-	return convertModel(model), nil
+	var tags []database.ModelTag
+	if err := s.db.WithContext(ctx).Where("model_id = ?", modelId).Find(&tags).Error; err != nil {
+		slog.Error("error retrieving tags", "error", err, "model_id", modelId)
+		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving model tags")
+	}
+
+	response := struct {
+		Model api.Model `json:"model"`
+		Tags  []string  `json:"tags"`
+	}{
+		Model: convertModel(model),
+		Tags:  convertTags(tags),
+	}
+
+	return response, nil
 }
 
 func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
@@ -164,23 +177,6 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 	slog.Info("created model", "model_id", model.Id, "base_model_id", model.BaseModelId, "name", model.Name)
 
 	return api.FinetuneResponse{ModelId: model.Id}, nil
-}
-
-func (s *BackendService) GetModelTags(r *http.Request) (any, error) {
-	modelId, err := URLParamUUID(r, "model_id")
-	if err != nil {
-		return nil, err
-	}
-
-	ctx := r.Context()
-
-	var tags []database.Tags
-	if err := s.db.WithContext(ctx).Where("model_id = ?", modelId).Find(&tags).Error; err != nil {
-		slog.Error("error retrieving tags", "error", err, "model_id", modelId)
-		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving model tags")
-	}
-
-	return convertTags(tags), nil
 }
 
 func (s *BackendService) ListReports(r *http.Request) (any, error) {

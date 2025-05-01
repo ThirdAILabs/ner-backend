@@ -102,9 +102,7 @@ type ObjectEntity struct {
 	RContext string
 }
 
-type Tags struct {
-	TagId uuid.UUID `gorm:"type:uuid;primaryKey"`
-	Tag   string
-
-	ModelId uuid.UUID `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
+type ModelTag struct {
+	ModelId uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Tag     string    `gorm:"primaryKey"`
 }

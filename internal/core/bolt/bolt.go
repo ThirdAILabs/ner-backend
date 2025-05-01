@@ -18,7 +18,6 @@ import (
 
 type NER struct {
 	model *C.NER_t
-	tags  []string
 }
 
 func LoadNER(path string) (*NER, error) {
@@ -73,10 +72,6 @@ func (ner *NER) Predict(text string) ([]types.Entity, error) {
 
 func (ner *NER) Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sample) error {
 	return fmt.Errorf("Finetune not implemented")
-}
-
-func (ner *NER) Tags() []string {
-	return ner.tags
 }
 
 func (ner *NER) Save(path string) error {
