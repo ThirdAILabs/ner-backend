@@ -201,16 +201,23 @@ func (proc *TaskProcessor) localModelPath(modelId uuid.UUID) string {
 }
 
 func (proc *TaskProcessor) loadModel(modelId uuid.UUID, modelType string) (Model, error) {
-	localPath := proc.localModelPath(modelId)
 
-	// Check if the model file exists locally
-	if _, err := os.Stat(localPath); os.IsNotExist(err) {
-		slog.Info("model not found locally, downloading from S3", "modelId", modelId)
+	var localPath string
 
-		modelObjectKey := filepath.Join(modelId.String(), "model.bin")
+	if IsStatelessModel(modelType) {
+		localPath = ""
+	} else {
+		localPath = proc.localModelPath(modelId)
 
-		if err := proc.s3Client.DownloadFile(context.TODO(), proc.modelBucket, modelObjectKey, localPath); err != nil {
-			return nil, fmt.Errorf("failed to download model from S3: %w", err)
+		// Check if the model file exists locally
+		if _, err := os.Stat(localPath); os.IsNotExist(err) {
+			slog.Info("model not found locally, downloading from S3", "modelId", modelId)
+
+			modelObjectKey := filepath.Join(modelId.String(), "model.bin")
+
+			if err := proc.s3Client.DownloadFile(context.TODO(), proc.modelBucket, modelObjectKey, localPath); err != nil {
+				return nil, fmt.Errorf("failed to download model from S3: %w", err)
+			}
 		}
 	}
 

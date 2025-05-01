@@ -12,6 +12,10 @@ import (
 
 const defaultPresidioThreshold = 0.5
 
+var statelessModelTypes = map[string]struct{}{
+	"presidio": {},
+}
+
 type Model interface {
 	Predict(text string) ([]types.Entity, error)
 
@@ -57,4 +61,9 @@ func LoadModel(modelType, path string) (Model, error) {
 	}
 
 	return loader(path)
+}
+
+func IsStatelessModel(modelType string) bool {
+	_, exists := statelessModelTypes[modelType]
+	return exists
 }
