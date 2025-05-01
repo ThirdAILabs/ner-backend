@@ -196,8 +196,11 @@ Retrieve details of a specific report by its ID.
       "TotalTasks": 1,
       "TotalSize": 100
     },
-    
-  }
+  },
+  "Errors": [
+    "error message 1",
+    "error message 2",
+  ]
 }
 ```
 

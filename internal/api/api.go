@@ -277,7 +277,7 @@ func (s *BackendService) GetReport(r *http.Request) (any, error) {
 	ctx := r.Context()
 
 	var report database.Report
-	if err := s.db.WithContext(ctx).Preload("Model").Preload("Groups").Preload("ShardDataTask").Find(&report, "id = ?", reportId).Error; err != nil {
+	if err := s.db.WithContext(ctx).Preload("Model").Preload("Groups").Preload("ShardDataTask").Preload("Errors").Find(&report, "id = ?", reportId).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, CodedErrorf(http.StatusNotFound, "inference job not found")
 		}

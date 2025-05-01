@@ -63,11 +63,6 @@ func (proc *TaskProcessor) Stop() {
 func (proc *TaskProcessor) ProcessTask(task messaging.Task) {
 	ctx := context.Background()
 
-	if err := proc.licensing.VerifyLicense(); err != nil {
-		slog.Error("license verification failed", "error", err)
-		return
-	}
-
 	var err error
 	switch task.Type() {
 
@@ -118,6 +113,12 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 	reportId := payload.ReportId
 
 	slog.Info("processing inference task", "report_id", reportId, "task_id", payload.TaskId)
+
+	if err := proc.licensing.VerifyLicense(); err != nil {
+		slog.Error("license verification failed", "error", err)
+		database.SaveReportError(ctx, proc.db, reportId, fmt.Sprintf("license verification failed: %s", err.Error()))
+		return err
+	}
 
 	var task database.InferenceTask
 	if err := proc.db.Preload("Report").Preload("Report.Model").Preload("Report.Groups").First(&task, "report_id = ? AND task_id = ?", reportId, payload.TaskId).Error; err != nil {
@@ -300,6 +301,12 @@ func (proc *TaskProcessor) runInferenceOnObject(
 
 func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload messaging.ShardDataPayload) error {
 	reportId := payload.ReportId
+
+	if err := proc.licensing.VerifyLicense(); err != nil {
+		slog.Error("license verification failed", "error", err)
+		database.SaveReportError(ctx, proc.db, reportId, fmt.Sprintf("license verification failed: %s", err.Error()))
+		return err
+	}
 
 	var task database.ShardDataTask
 	if err := proc.db.Preload("Report").First(&task, "report_id = ?", reportId).Error; err != nil {
