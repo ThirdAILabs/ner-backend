@@ -1,4 +1,5 @@
-import axiosInstance from './axios.config';
+import axiosInstance, { nerBaseUrl } from './axios.config';
+import axios from 'axios';
 
 export const nerService = {
 
@@ -55,4 +56,13 @@ export const nerService = {
     return response.data;
   },
 
+  uploadFiles: async (files: File[]): Promise<{ Id: string }> => {
+    const formData = new FormData();
+    files.forEach(file => {
+      formData.append('files', file);
+    });
+    
+    const response = await axios.post(`${nerBaseUrl}/uploads`, formData);
+    return response.data;
+  },
 };

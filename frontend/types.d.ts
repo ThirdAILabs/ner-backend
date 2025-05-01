@@ -43,6 +43,7 @@ interface Entity {
 
 interface CreateReportRequest {
     ModelId: string;
+    UploadId?: string;
     SourceS3Bucket: string;
     SourceS3Prefix?: string;
     Groups: Record<string, string>;
