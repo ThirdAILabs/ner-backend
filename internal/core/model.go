@@ -21,7 +21,7 @@ type Model interface {
 
 	Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sample) error
 
-	Tags() []api.TagInfo
+	Tags() []string
 
 	Save(path string) error
 

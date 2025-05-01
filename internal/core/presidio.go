@@ -227,7 +227,7 @@ func analyze(text string, threshold float64) []RecognizerResult {
 
 type presidioModel struct {
 	threshold float64
-	tags      []api.TagInfo
+	tags      []string
 }
 
 func (m *presidioModel) Predict(text string) ([]types.Entity, error) {
@@ -247,11 +247,10 @@ func (m *presidioModel) Predict(text string) ([]types.Entity, error) {
 }
 
 func (m *presidioModel) Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sample) error {
-	m.tags = tags
 	return fmt.Errorf("finetune not supported for presidio model")
 }
 
-func (m *presidioModel) Tags() []api.TagInfo {
+func (m *presidioModel) Tags() []string {
 	return m.tags
 }
 

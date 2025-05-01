@@ -39,7 +39,7 @@ type Report struct {
 
 	Groups []Group
 
-	Tags []TagInfo
+	Tags []string
 
 	ShardDataTaskStatus   string                        `json:"ShardDataTaskStatus,omitempty"`
 	InferenceTaskStatuses map[string]TaskStatusCategory `json:"InferenceTaskStatuses,omitempty"`
@@ -70,7 +70,6 @@ type CreateReportResponse struct {
 }
 
 type TagInfo struct {
-	Id          uuid.UUID
 	Name        string
 	Description string
 	Examples    []string
