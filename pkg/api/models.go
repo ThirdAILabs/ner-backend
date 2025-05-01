@@ -12,6 +12,7 @@ type Model struct {
 	Name        string
 	Type        string
 	Status      string
+	Tags        []string `json:"Tags,omitempty"`
 }
 
 type Group struct {

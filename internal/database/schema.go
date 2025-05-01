@@ -25,6 +25,8 @@ type Model struct {
 	Status         string `gorm:"size:20;not null"`
 	CreationTime   time.Time
 	CompletionTime sql.NullTime
+
+	Tags []string `gorm:"foreignKey:Tag"`
 }
 
 const (
@@ -47,7 +49,7 @@ type Report struct {
 
 	Groups []Group `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
 
-	Tags []string `gorm:"foreignKey:Tag;contraint:OnDelete:CASCADE"`
+	Tags []string `gorm:"foreignKey:Tag"`
 
 	ShardDataTask  *ShardDataTask  `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
 	InferenceTasks []InferenceTask `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
@@ -104,7 +106,6 @@ type ObjectEntity struct {
 	RContext string
 }
 
-type ModelTag struct {
-	ModelId uuid.UUID `gorm:"type:uuid;primaryKey"`
-	Tag     string    `gorm:"primaryKey"`
+type Tag struct {
+	Tag string `gorm:"primaryKey"`
 }

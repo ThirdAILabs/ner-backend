@@ -11,6 +11,7 @@ func convertModel(m database.Model) api.Model {
 		Name:   m.Name,
 		Type:   m.Type,
 		Status: m.Status,
+		Tags:   m.Tags,
 	}
 	if m.BaseModelId.Valid {
 		model.BaseModelId = &m.BaseModelId.UUID
@@ -91,12 +92,4 @@ func convertEntities(es []database.ObjectEntity) []api.Entity {
 		entities = append(entities, convertEntity(e))
 	}
 	return entities
-}
-
-func convertTags(ts []database.ModelTag) []string {
-	var tags []string
-	for _, t := range ts {
-		tags = append(tags, t.Tag)
-	}
-	return tags
 }

@@ -86,7 +86,7 @@ func (s *BackendService) GetModel(r *http.Request) (any, error) {
 	ctx := r.Context()
 
 	var model database.Model
-	if err := s.db.WithContext(ctx).First(&model, "id = ?", modelId).Error; err != nil {
+	if err := s.db.WithContext(ctx).Preload("Tags").First(&model, "id = ?", modelId).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, CodedErrorf(http.StatusNotFound, "model not found")
 		}
@@ -94,21 +94,7 @@ func (s *BackendService) GetModel(r *http.Request) (any, error) {
 		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving model record")
 	}
 
-	var tags []database.ModelTag
-	if err := s.db.WithContext(ctx).Where("model_id = ?", modelId).Find(&tags).Error; err != nil {
-		slog.Error("error retrieving tags", "error", err, "model_id", modelId)
-		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving model tags")
-	}
-
-	response := struct {
-		Model api.Model `json:"model"`
-		Tags  []string  `json:"tags"`
-	}{
-		Model: convertModel(model),
-		Tags:  convertTags(tags),
-	}
-
-	return response, nil
+	return convertModel(model), nil
 }
 
 func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
@@ -256,11 +242,11 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 			return CodedErrorf(http.StatusUnprocessableEntity, "model is not ready: model has status: %s", model.Status)
 		}
 
-		for _, tag := range req.Tags {
-			var modelTag database.ModelTag
-			if err := txn.First(&modelTag, "model_id = ? AND tag = ?", req.ModelId, tag).Error; err != nil {
+		for _, t := range req.Tags {
+			var tag database.Tag
+			if err := txn.First(&tag, "tag = ?", t).Error; err != nil {
 				if errors.Is(err, gorm.ErrRecordNotFound) {
-					return CodedErrorf(http.StatusBadRequest, "tag '%s' not found for model", tag)
+					return CodedErrorf(http.StatusBadRequest, "tag '%s' not found", t)
 				}
 				slog.Error("error checking model tag", "error", err)
 				return CodedErrorf(http.StatusInternalServerError, "error checking model tags")
