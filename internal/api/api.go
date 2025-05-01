@@ -188,9 +188,13 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 
 	sourceS3Bucket, s3Prefix := req.SourceS3Bucket, req.SourceS3Prefix
 
+	var sourceS3Location string
 	if req.UploadId != uuid.Nil {
 		sourceS3Bucket = uploadBucket
 		s3Prefix = req.UploadId.String()
+		sourceS3Location = "internal"
+	} else {
+		sourceS3Location = "external"
 	}
 
 	if sourceS3Bucket == "" {
@@ -198,11 +202,12 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 	}
 
 	report := database.Report{
-		Id:             uuid.New(),
-		ModelId:        req.ModelId,
-		SourceS3Bucket: sourceS3Bucket,
-		SourceS3Prefix: sql.NullString{String: s3Prefix, Valid: s3Prefix != ""},
-		CreationTime:   time.Now().UTC(),
+		Id:               uuid.New(),
+		ModelId:          req.ModelId,
+		SourceS3Bucket:   sourceS3Bucket,
+		SourceS3Prefix:   sql.NullString{String: s3Prefix, Valid: s3Prefix != ""},
+		SourceS3Location: sourceS3Location,
+		CreationTime:     time.Now().UTC(),
 	}
 
 	for name, query := range req.Groups {

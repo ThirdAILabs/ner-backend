@@ -50,7 +50,6 @@ func NewS3Client(cfg *Config) (*Client, error) {
 			return aws.Endpoint{
 				PartitionID:       "aws",
 				URL:               cfg.S3EndpointURL,
-				SigningRegion:     cfg.S3Region,
 				HostnameImmutable: true, // Important for MinIO
 			}, nil
 		}
@@ -58,11 +57,20 @@ func NewS3Client(cfg *Config) (*Client, error) {
 		return aws.Endpoint{}, &aws.EndpointNotFoundError{}
 	})
 
-	awsCfg, err := aws_config.LoadDefaultConfig(context.TODO(),
-		aws_config.WithRegion(cfg.S3Region),
-		aws_config.WithEndpointResolverWithOptions(resolver),
-		aws_config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(cfg.S3AccessKeyID, cfg.S3SecretAccessKey, "")),
-	)
+	var awsCfg aws.Config
+	var err error
+
+	if cfg.S3AccessKeyID != "" && cfg.S3SecretAccessKey != "" {
+		awsCfg, err = aws_config.LoadDefaultConfig(context.TODO(),
+			aws_config.WithEndpointResolverWithOptions(resolver),
+			aws_config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(cfg.S3AccessKeyID, cfg.S3SecretAccessKey, "")),
+		)
+	} else {
+		awsCfg, err = aws_config.LoadDefaultConfig(context.TODO(),
+			aws_config.WithEndpointResolverWithOptions(resolver),
+		)
+	}
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to load AWS config: %w", err)
 	}
@@ -365,8 +373,9 @@ func (c *Client) CreateBucket(ctx context.Context, bucketName string) error {
 		Bucket: aws.String(bucketName),
 	})
 	if err != nil {
-		var awsErr *types.BucketAlreadyExists
-		if errors.As(err, &awsErr) {
+		var awsExistsErr *types.BucketAlreadyExists
+		var awsOwnedErr *types.BucketAlreadyOwnedByYou
+		if errors.As(err, &awsExistsErr) || errors.As(err, &awsOwnedErr) {
 			slog.Info("Bucket already exists", "bucketName", bucketName)
 			return nil
 		}

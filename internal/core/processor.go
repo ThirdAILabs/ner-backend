@@ -20,23 +20,25 @@ import (
 )
 
 type TaskProcessor struct {
-	db        *gorm.DB
-	s3Client  *s3.Client
-	publisher messaging.Publisher
-	reciever  messaging.Reciever
+	db               *gorm.DB
+	internalS3Client *s3.Client
+	externalS3Client *s3.Client
+	publisher        messaging.Publisher
+	reciever         messaging.Reciever
 
 	localModelDir string
 	modelBucket   string
 }
 
-func NewTaskProcessor(db *gorm.DB, s3client *s3.Client, publisher messaging.Publisher, reciever messaging.Reciever, localModelDir string, modelBucket string) *TaskProcessor {
+func NewTaskProcessor(db *gorm.DB, internalS3Client, externalS3Client *s3.Client, publisher messaging.Publisher, reciever messaging.Reciever, localModelDir string, modelBucket string) *TaskProcessor {
 	return &TaskProcessor{
-		db:            db,
-		s3Client:      s3client,
-		publisher:     publisher,
-		reciever:      reciever,
-		localModelDir: localModelDir,
-		modelBucket:   modelBucket,
+		db:               db,
+		internalS3Client: internalS3Client,
+		externalS3Client: externalS3Client,
+		publisher:        publisher,
+		reciever:         reciever,
+		localModelDir:    localModelDir,
+		modelBucket:      modelBucket,
 	}
 }
 
@@ -125,7 +127,7 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 		groupToQuery[group.Id] = group.Query
 	}
 
-	workerErr := proc.runInferenceOnBucket(task.ReportId, task.Report.Model.Id, task.Report.Model.Type, groupToQuery, task.SourceS3Bucket, s3Objects)
+	workerErr := proc.runInferenceOnBucket(task.ReportId, task.Report.Model.Id, task.Report.Model.Type, groupToQuery, task.SourceS3Bucket, s3Objects, task.Report.SourceS3Location)
 	if workerErr != nil {
 		slog.Error("error running inference task", "report_id", reportId, "task_id", payload.TaskId, "error", workerErr)
 		database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobFailed)
@@ -148,6 +150,7 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 	groupToQuery map[uuid.UUID]string,
 	bucket string,
 	objects []string,
+	sourceS3Location string,
 ) error {
 	parser := NewDefaultParser()
 
@@ -169,7 +172,7 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 	objectErrorCnt := 0
 
 	for _, object := range objects {
-		entities, groups, err := proc.runInferenceOnObject(reportId, parser, model, groupToFilter, bucket, object)
+		entities, groups, err := proc.runInferenceOnObject(reportId, parser, model, groupToFilter, bucket, object, sourceS3Location)
 		if err != nil {
 			slog.Error("error processing object", "object", object, "error", err)
 			objectErrorCnt++
@@ -215,7 +218,7 @@ func (proc *TaskProcessor) loadModel(modelId uuid.UUID, modelType string) (Model
 
 			modelObjectKey := filepath.Join(modelId.String(), "model.bin")
 
-			if err := proc.s3Client.DownloadFile(context.TODO(), proc.modelBucket, modelObjectKey, localPath); err != nil {
+			if err := proc.internalS3Client.DownloadFile(context.TODO(), proc.modelBucket, modelObjectKey, localPath); err != nil {
 				return nil, fmt.Errorf("failed to download model from S3: %w", err)
 			}
 		}
@@ -235,10 +238,17 @@ func (proc *TaskProcessor) runInferenceOnObject(
 	model Model,
 	groupFilter map[uuid.UUID]Filter,
 	bucket string,
-	object string) (
+	object string,
+	sourceS3Location string) (
 	[]database.ObjectEntity, []database.ObjectGroup, error) {
 
-	chunks := parser.Parse(object, proc.s3Client.DownloadFileStream(bucket, object))
+	var s3Client *s3.Client
+	if sourceS3Location == "internal" {
+		s3Client = proc.internalS3Client
+	} else {
+		s3Client = proc.externalS3Client
+	}
+	chunks := parser.Parse(object, s3Client.DownloadFileStream(bucket, object))
 
 	labelToEntities := make(map[string][]types.Entity)
 
@@ -343,7 +353,13 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 		return nil
 	}
 
-	processedChunks, err := proc.s3Client.ListAndChunkS3Objects(
+	var s3Client *s3.Client
+	if task.Report.SourceS3Location == "internal" {
+		s3Client = proc.internalS3Client
+	} else {
+		s3Client = proc.externalS3Client
+	}
+	processedChunks, err := s3Client.ListAndChunkS3Objects(
 		ctx,
 		task.Report.SourceS3Bucket,
 		task.Report.SourceS3Prefix.String,
@@ -421,7 +437,7 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 		return fmt.Errorf("error saving finetuned model: %w", err)
 	}
 
-	if _, err := proc.s3Client.UploadFile(ctx, localPath, proc.modelBucket, filepath.Join(payload.ModelId.String(), "model.bin")); err != nil {
+	if _, err := proc.internalS3Client.UploadFile(ctx, localPath, proc.modelBucket, filepath.Join(payload.ModelId.String(), "model.bin")); err != nil {
 		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed)
 		slog.Error("error uploading finetuned model to S3", "model_id", payload.ModelId, "error", err)
 		return fmt.Errorf("error uploading model to S3: %w", err)

@@ -22,17 +22,16 @@ import (
 )
 
 type APIConfig struct {
-	DatabaseURL       string `env:"DATABASE_URL,notEmpty,required"`
-	RabbitMQURL       string `env:"RABBITMQ_URL,notEmpty,required"`
-	S3EndpointURL     string `env:"S3_ENDPOINT_URL,notEmpty,required"`
-	S3AccessKeyID     string `env:"AWS_ACCESS_KEY_ID,notEmpty,required"`
-	S3SecretAccessKey string `env:"AWS_SECRET_ACCESS_KEY,notEmpty,required"`
-	S3Region          string `env:"AWS_REGION,notEmpty,required"`
-	ModelBucketName   string `env:"MODEL_BUCKET_NAME" envDefault:"models"`
-	QueueNames        string `env:"QUEUE_NAMES" envDefault:"inference_queue,training_queue,shard_data_queue"`
-	WorkerConcurrency int    `env:"CONCURRENCY" envDefault:"1"`
-	APIPort           string `env:"API_PORT" envDefault:"8001"`
-	ChunkTargetBytes  int64  `env:"S3_CHUNK_TARGET_BYTES" envDefault:"10737418240"`
+	DatabaseURL               string `env:"DATABASE_URL,notEmpty,required"`
+	RabbitMQURL               string `env:"RABBITMQ_URL,notEmpty,required"`
+	InternalS3EndpointURL     string `env:"INTERNAL_S3_ENDPOINT_URL" envDefault:""`
+	InternalS3AccessKeyID     string `env:"INTERNAL_AWS_ACCESS_KEY_ID,notEmpty,required"`
+	InternalS3SecretAccessKey string `env:"INTERNAL_AWS_SECRET_ACCESS_KEY,notEmpty,required"`
+	ModelBucketName           string `env:"MODEL_BUCKET_NAME" envDefault:"models"`
+	QueueNames                string `env:"QUEUE_NAMES" envDefault:"inference_queue,training_queue,shard_data_queue"`
+	WorkerConcurrency         int    `env:"CONCURRENCY" envDefault:"1"`
+	APIPort                   string `env:"API_PORT" envDefault:"8001"`
+	ChunkTargetBytes          int64  `env:"S3_CHUNK_TARGET_BYTES" envDefault:"10737418240"`
 }
 
 func main() {
@@ -50,14 +49,13 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	s3Cfg := s3.Config{
-		S3EndpointURL:     cfg.S3EndpointURL,
-		S3AccessKeyID:     cfg.S3AccessKeyID,
-		S3SecretAccessKey: cfg.S3SecretAccessKey,
-		S3Region:          cfg.S3Region,
+	internalS3Cfg := s3.Config{
+		S3EndpointURL:     cfg.InternalS3EndpointURL,
+		S3AccessKeyID:     cfg.InternalS3AccessKeyID,
+		S3SecretAccessKey: cfg.InternalS3SecretAccessKey,
 		ModelBucketName:   cfg.ModelBucketName,
 	}
-	s3Client, err := s3.NewS3Client(&s3Cfg)
+	s3Client, err := s3.NewS3Client(&internalS3Cfg)
 	if err != nil {
 		log.Fatalf("Worker: Failed to create S3 client: %v", err)
 	}

@@ -79,7 +79,8 @@ func TestInference(t *testing.T) {
 	reportId := uuid.New()
 
 	inferenceJobProcessor := TaskProcessor{
-		s3Client: s3.NewFromClient(&mockS3Client{}, "test-bucket"),
+		internalS3Client: s3.NewFromClient(&mockS3Client{}, "test-bucket"),
+		externalS3Client: s3.NewFromClient(&mockS3Client{}, "test-bucket"),
 	}
 
 	groupId1, groupId2 := uuid.New(), uuid.New()
@@ -98,6 +99,7 @@ func TestInference(t *testing.T) {
 		map[uuid.UUID]Filter{groupId1: group1, groupId2: group2},
 		"",
 		object,
+		"internal",
 	)
 	assert.NoError(t, err)
 

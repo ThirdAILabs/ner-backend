@@ -40,8 +40,9 @@ type Report struct {
 	ModelId uuid.UUID `gorm:"type:uuid"`
 	Model   *Model    `gorm:"foreignKey:ModelId"`
 
-	SourceS3Bucket string
-	SourceS3Prefix sql.NullString
+	SourceS3Bucket   string
+	SourceS3Prefix   sql.NullString
+	SourceS3Location string `gorm:"default:internal"` // Whether the files are in the internal or external S3 bucket (uploaded to minio or aws s3)
 
 	CreationTime time.Time
 
