@@ -68,6 +68,10 @@ func (ner *PythonModel) Finetune(taskPrompt string, tags []api.TagInfo, samples 
 	return fmt.Errorf("Finetune not implemented")
 }
 
+func (ner *PythonModel) Tags() []api.TagInfo {
+	return []api.TagInfo{}
+}
+
 func (ner *PythonModel) Save(path string) error {
 	return fmt.Errorf("save not implemented")
 }

@@ -47,6 +47,19 @@ func convertGroups(gs []database.Group) []api.Group {
 	return groups
 }
 
+func convertTags(ts []database.TagInfo) []api.TagInfo {
+	var tags []api.TagInfo
+	for _, t := range ts {
+		tags = append(tags, api.TagInfo{
+			Id:          t.TagId,
+			Name:        t.Name,
+			Description: t.Description,
+			Examples:    t.Examples,
+		})
+	}
+	return tags
+}
+
 func convertReport(r database.Report) api.Report {
 	report := api.Report{
 		Id:             r.Id,
@@ -55,6 +68,7 @@ func convertReport(r database.Report) api.Report {
 		SourceS3Prefix: r.SourceS3Prefix.String,
 		CreationTime:   r.CreationTime,
 		Groups:         convertGroups(r.Groups),
+		Tags:           convertTags(r.Tags),
 	}
 
 	if r.ShardDataTask != nil {
