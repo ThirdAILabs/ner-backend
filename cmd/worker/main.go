@@ -73,7 +73,7 @@ func main() {
 	var licenseVerifier licensing.LicenseVerifier
 	if strings.HasPrefix(cfg.LicenseKey, "local: ") {
 		var err error
-		licenseVerifier, err = licensing.NewFileLicenseVerifier(nil, strings.TrimPrefix(cfg.LicenseKey, "local: "))
+		licenseVerifier, err = licensing.NewFileLicenseVerifier([]byte(licensing.FileLicensePublicKey), strings.TrimPrefix(cfg.LicenseKey, "local: "))
 		if err != nil {
 			log.Fatalf("Failed to create file license verifier: %v", err)
 		}
