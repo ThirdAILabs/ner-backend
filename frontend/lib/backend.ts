@@ -61,8 +61,12 @@ export const nerService = {
     files.forEach(file => {
       formData.append('files', file);
     });
-    
-    const response = await axios.post(`${nerBaseUrl}/uploads`, formData);
+
+    const response = await axiosInstance.post(`/uploads`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      }
+    });
     return response.data;
   },
 };
