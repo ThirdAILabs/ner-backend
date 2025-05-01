@@ -21,6 +21,14 @@ const nextConfig = {
 
     return config;
   },
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://192.168.1.7:8001/:path*',
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;
