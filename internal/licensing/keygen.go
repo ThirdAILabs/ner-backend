@@ -18,7 +18,7 @@ type KeygenVerifier struct {
 	licenseKey string
 }
 
-func NewLicenseVerifier(licenseKey string) (*KeygenVerifier, error) {
+func NewKeygenLicenseVerifier(licenseKey string) (*KeygenVerifier, error) {
 	verifier := &KeygenVerifier{
 		client:     resty.New().SetBaseURL("https://api.keygen.sh"),
 		licenseKey: licenseKey,

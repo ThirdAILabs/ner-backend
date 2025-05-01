@@ -7,6 +7,8 @@ import (
 	"gorm.io/gorm"
 )
 
+const DefaultFreeLicenseMaxBytes = 1 * 1024 * 1024 * 1024 // 1 GB
+
 type FreeLicenseVerifier struct {
 	db       *gorm.DB
 	maxBytes int

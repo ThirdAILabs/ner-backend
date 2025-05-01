@@ -15,7 +15,7 @@ const (
 
 func TestKeygenLicensing(t *testing.T) {
 	t.Run("GoodLicense", func(t *testing.T) {
-		verifier, err := licensing.NewLicenseVerifier(goodLicense)
+		verifier, err := licensing.NewKeygenLicenseVerifier(goodLicense)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -25,28 +25,28 @@ func TestKeygenLicensing(t *testing.T) {
 	})
 
 	t.Run("ExpiredLicense", func(t *testing.T) {
-		_, err := licensing.NewLicenseVerifier(expiredLicense)
+		_, err := licensing.NewKeygenLicenseVerifier(expiredLicense)
 		if err != licensing.ErrExpiredLicense {
 			t.Fatal(err)
 		}
 	})
 
 	t.Run("NonexistentLicense", func(t *testing.T) {
-		_, err := licensing.NewLicenseVerifier(nonexistentLicense)
+		_, err := licensing.NewKeygenLicenseVerifier(nonexistentLicense)
 		if err != licensing.ErrLicenseNotFound {
 			t.Fatal(err)
 		}
 	})
 
 	t.Run("SuspendedLicense", func(t *testing.T) {
-		_, err := licensing.NewLicenseVerifier(suspendedLicense)
+		_, err := licensing.NewKeygenLicenseVerifier(suspendedLicense)
 		if err != licensing.ErrExpiredLicense {
 			t.Fatal(err)
 		}
 	})
 
 	t.Run("MissingEntitlements", func(t *testing.T) {
-		_, err := licensing.NewLicenseVerifier(missingEntitlementsLicense)
+		_, err := licensing.NewKeygenLicenseVerifier(missingEntitlementsLicense)
 		if err != licensing.ErrInvalidLicense {
 			t.Fatal(err)
 		}
