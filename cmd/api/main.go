@@ -62,14 +62,14 @@ func main() {
 		log.Fatalf("Worker: Failed to create S3 client: %v", err)
 	}
 
-	presidioModel := &database.Model{
+	var model database.Model
+
+	if err := db.Where(database.Model{Name: "presidio"}).Attrs(database.Model{
 		Id:           uuid.New(),
-		Name:         "presidio",
 		Type:         "presidio",
 		Status:       database.ModelTrained,
 		CreationTime: time.Now(),
-	}
-	if err := db.Where("name = ?", "presidio").FirstOrCreate(presidioModel).Error; err != nil {
+	}).FirstOrCreate(&model).Error; err != nil {
 		log.Fatalf("Failed to seed presidio model record: %v", err)
 	}
 
