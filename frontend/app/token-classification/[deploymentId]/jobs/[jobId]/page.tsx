@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
@@ -9,6 +9,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { CheckCircle, ArrowLeft, RefreshCw, Pause, Square, Plus, Edit } from 'lucide-react';
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
 import { DatabaseTable } from './(database-table)/DatabaseTable';
+import { nerService } from '@/lib/backend';
+import { usePathname } from 'next/navigation';
 
 // Mock data for database table
 const mockGroups = ['Reject', 'Sensitive', 'Safe'];
@@ -106,7 +108,7 @@ interface SourceOptionProps {
 }
 
 const SourceOption: React.FC<SourceOptionProps> = ({ title, description, isSelected = false, onClick }) => (
-  <div 
+  <div
     className={`relative p-6 border rounded-md cursor-pointer transition-all
       ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200 hover:border-blue-300'}
     `}
@@ -114,7 +116,7 @@ const SourceOption: React.FC<SourceOptionProps> = ({ title, description, isSelec
   >
     <h3 className="text-base font-medium">{title}</h3>
     <p className="text-sm text-gray-500 mt-1">{description}</p>
-    
+
     {isSelected && (
       <div className="absolute top-3 right-3">
         <Edit className="h-4 w-4 text-gray-500" />
@@ -131,8 +133,8 @@ interface TagProps {
 }
 
 const Tag: React.FC<TagProps> = ({ tag, selected = true, onClick }) => (
-  <div 
-    className={`px-3 py-1.5 text-sm font-medium rounded-sm cursor-pointer
+  <div
+    className={`px-3 py-1.5 text-sm font-medium rounded-sm
       ${selected ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}
     `}
     onClick={onClick}
@@ -158,13 +160,27 @@ const GroupCard: React.FC<GroupProps> = ({ name, definition }) => (
   </div>
 );
 
+
+
 export default function JobDetail() {
   const params = useParams();
+  const reportId: string = params.jobId as string;
   const [lastUpdated, setLastUpdated] = useState(0);
   const [tabValue, setTabValue] = useState('configuration');
   const [selectedSource, setSelectedSource] = useState('s3');
   const [selectedSaveLocation, setSelectedSaveLocation] = useState('s3');
   const [selectedTags, setSelectedTags] = useState<string[]>(mockTags);
+
+  const [reportData, setReportData] = useState<Report | null>(null);
+  const fetchReportData = async () => {
+    const response = await nerService.getReport(reportId);
+    console.log(response);
+    setReportData(response);
+  }
+
+  useEffect(() => {
+    fetchReportData();
+  }, [])
 
   const toggleTag = (tag: string) => {
     if (selectedTags.includes(tag)) {
@@ -194,7 +210,7 @@ export default function JobDetail() {
       {/* Title and Back Button */}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-medium">Customer Calls</h1>
-        
+
         <Button variant="outline" size="sm" asChild>
           <Link href={`/token-classification/${params.deploymentId}?tab=jobs`} className="flex items-center">
             <ArrowLeft className="mr-1 h-4 w-4" /> Back to Jobs
@@ -206,20 +222,20 @@ export default function JobDetail() {
       <Tabs value={tabValue} onValueChange={setTabValue} className="w-full">
         <div className="flex items-center justify-between border-b mb-6">
           <TabsList className="border-0 bg-transparent p-0">
-            <TabsTrigger 
-              value="configuration" 
+            <TabsTrigger
+              value="configuration"
               className="data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:shadow-none rounded-none bg-transparent px-4 py-3 data-[state=active]:bg-transparent"
             >
               Configuration
             </TabsTrigger>
-            <TabsTrigger 
-              value="analytics" 
+            <TabsTrigger
+              value="analytics"
               className="data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:shadow-none rounded-none bg-transparent px-4 py-3 data-[state=active]:bg-transparent"
             >
               Analytics
             </TabsTrigger>
-            <TabsTrigger 
-              value="output" 
+            <TabsTrigger
+              value="output"
               className="data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:shadow-none rounded-none bg-transparent px-4 py-3 data-[state=active]:bg-transparent"
             >
               Output
@@ -246,21 +262,21 @@ export default function JobDetail() {
             <div>
               <h2 className="text-lg font-medium mb-4">Source</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <SourceOption 
-                  title="S3 Bucket" 
-                  description="s3://thirdai-dev/customer-calls/2025/" 
+                {(reportData?.SourceS3Bucket) && <SourceOption
+                  title="S3 Bucket"
+                  description={(reportData.SourceS3Bucket + "/" + reportData?.SourceS3Prefix) || "s3://thirdai-dev/customer-calls/2025/"}
                   isSelected={selectedSource === 's3'}
                   onClick={() => setSelectedSource('s3')}
-                />
-                <SourceOption 
-                  title="Local Storage" 
-                  description="Configure now" 
+                />}
+                <SourceOption
+                  title="Local Storage"
+                  description="Configure now"
                   isSelected={selectedSource === 'local'}
                   onClick={() => setSelectedSource('local')}
                 />
-                <SourceOption 
-                  title="More options" 
-                  description="coming soon" 
+                <SourceOption
+                  title="More options"
+                  description="coming soon"
                   isSelected={selectedSource === 'more'}
                   onClick={() => setSelectedSource('more')}
                 />
@@ -271,20 +287,20 @@ export default function JobDetail() {
             <div>
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-medium">Tags</h2>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                {/* <Button
+                  variant="outline"
+                  size="sm"
                   onClick={selectAllTags}
                   className="text-sm flex items-center"
                 >
                   <span className="mr-1">Select All</span>
-                  <input 
-                    type="checkbox" 
-                    checked={selectedTags.length === mockTags.length} 
+                  <input
+                    type="checkbox"
+                    checked={selectedTags.length === mockTags.length}
                     onChange={selectAllTags}
                     className="rounded border-gray-300"
                   />
-                </Button>
+                </Button> */}
               </div>
               <div className="flex flex-wrap gap-2">
                 {mockTags.map(tag => (
@@ -292,21 +308,23 @@ export default function JobDetail() {
                     key={tag}
                     tag={tag}
                     selected={selectedTags.includes(tag)}
-                    onClick={() => toggleTag(tag)}
+                  // onClick={() => toggleTag(tag)}
                   />
                 ))}
               </div>
             </div>
 
             {/* Groups section */}
-            <div>
+            {reportData?.Groups && <div>
               <h2 className="text-lg font-medium mb-4">Groups</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <GroupCard name="Reject" definition="COUNT(tags) > 5" />
-                <GroupCard name="Sensitive" definition="COUNT(tags) > 0" />
-                <GroupCard name="Safe" definition="COUNT(tags) = 0" />
-                
-                <div 
+                {reportData.Groups.map((group) => {
+                  return (
+                    <GroupCard key={group.Id} name={group.Name} definition={group.Query} />
+                  )
+                })}
+
+                <div
                   className="border border-dashed border-gray-300 rounded-md flex items-center justify-center p-6 cursor-pointer hover:border-gray-400"
                   onClick={() => console.log('Add new group')}
                 >
@@ -316,33 +334,33 @@ export default function JobDetail() {
                   </div>
                 </div>
               </div>
-            </div>
+            </div>}
 
             {/* Save Groups To section */}
             <div>
               <h2 className="text-lg font-medium mb-4">Save Groups To</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <SourceOption 
-                  title="S3 Bucket" 
-                  description="thirdai-dev/sensitive/customer-calls/2025/" 
+                {reportData?.SourceS3Bucket && <SourceOption
+                  title="S3 Bucket"
+                  description={(reportData.SourceS3Bucket + "/" + reportData?.SourceS3Prefix) || "s3://thirdai-dev/customer-calls/2025/"}
                   isSelected={selectedSaveLocation === 's3'}
                   onClick={() => setSelectedSaveLocation('s3')}
-                />
-                <SourceOption 
-                  title="Local Storage" 
-                  description="local" 
+                />}
+                <SourceOption
+                  title="Local Storage"
+                  description="local"
                   isSelected={selectedSaveLocation === 'local'}
                   onClick={() => setSelectedSaveLocation('local')}
                 />
-                <SourceOption 
-                  title="No storage location" 
-                  description="You can still save groups" 
+                <SourceOption
+                  title="No storage location"
+                  description="You can still save groups"
                   isSelected={selectedSaveLocation === 'none'}
                   onClick={() => setSelectedSaveLocation('none')}
                 />
-                <SourceOption 
-                  title="More options" 
-                  description="coming soon" 
+                <SourceOption
+                  title="More options"
+                  description="coming soon"
                   isSelected={selectedSaveLocation === 'more'}
                   onClick={() => setSelectedSaveLocation('more')}
                 />
@@ -366,7 +384,7 @@ export default function JobDetail() {
               { timestamp: '2024-03-10T12:00:07', latency: 0.099 },
               { timestamp: '2024-03-10T12:00:08', latency: 0.094 },
               { timestamp: '2024-03-10T12:00:09', latency: 0.093 },
-              { timestamp: '2024-03-10T12:00:10', latency: 0.088 }, 
+              { timestamp: '2024-03-10T12:00:10', latency: 0.088 },
               { timestamp: '2024-03-10T12:00:11', latency: 0.082 },
               { timestamp: '2024-03-10T12:00:12', latency: 0.079 },
               { timestamp: '2024-03-10T12:00:13', latency: 0.087 },
@@ -393,14 +411,14 @@ export default function JobDetail() {
             clusterSpecs={{
               cpus: 48,
               vendorId: 'GenuineIntel',
-              modelName: 'Intel Xeon E5-2680',
+              modelName: reportData?.Model?.Name || "Intel Xeon E5-2680",
               cpuMhz: 1197.408
             }}
           />
         </TabsContent>
 
         <TabsContent value="output">
-          <DatabaseTable 
+          <DatabaseTable
             loadMoreObjectRecords={loadMoreMockObjectRecords}
             loadMoreClassifiedTokenRecords={loadMoreMockClassifiedTokenRecords}
             groups={mockGroups}
