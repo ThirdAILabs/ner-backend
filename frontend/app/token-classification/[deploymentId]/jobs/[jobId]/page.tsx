@@ -12,6 +12,51 @@ import { DatabaseTable } from './(database-table)/DatabaseTable';
 import { nerService } from '@/lib/backend';
 import { usePathname } from 'next/navigation';
 
+// Calculate progress based on InferenceTaskStatuses
+const calculateProgress = (report: Report | null): number => {
+  if (!report || !report.InferenceTaskStatuses) return 0;
+  
+  const statuses = report.InferenceTaskStatuses;
+  
+  // Sum up all task sizes
+  let totalSize = 0;
+  let completedSize = 0;
+  
+  // Add completed tasks
+  if (statuses.COMPLETED) {
+    totalSize += statuses.COMPLETED.TotalSize;
+    completedSize += statuses.COMPLETED.TotalSize;
+  }
+  
+  // Add running tasks
+  if (statuses.RUNNING) {
+    totalSize += statuses.RUNNING.TotalSize;
+  }
+  
+  // Add queued tasks
+  if (statuses.QUEUED) {
+    totalSize += statuses.QUEUED.TotalSize;
+  }
+  
+  // Add failed tasks
+  if (statuses.FAILED) {
+    totalSize += statuses.FAILED.TotalSize;
+  }
+  
+  // Calculate percentage
+  if (totalSize === 0) return 0;
+  return Math.round((completedSize / totalSize) * 100);
+};
+
+// Get the total number of processed tokens
+const getProcessedTokens = (report: Report | null): number => {
+  if (!report || !report.InferenceTaskStatuses || !report.InferenceTaskStatuses.COMPLETED) {
+    return 0;
+  }
+  
+  return report.InferenceTaskStatuses.COMPLETED.TotalSize;
+};
+
 // Mock data for database table
 const mockGroups = ['Reject', 'Sensitive', 'Safe'];
 const mockTags = ['VIN', 'NAME', 'ORG', 'ADDRESS', 'EMAIL', 'SSN', 'PHONE', 'POLICY_ID', 'MED_REC_NO', 'LICENSE', 'EMPLOYER', 'ID', 'USERNAME', 'URL', 'IP_ADDR', 'ZIP_CODE', 'ACCOUNT', 'INS_PROV', 'PROCEDURE', 'DATE', 'NATIONALITY', 'SERIAL_NO', 'CRED_CARD_NUM', 'CVV'];
@@ -371,16 +416,14 @@ export default function JobDetail() {
 
         <TabsContent value="analytics">
           <AnalyticsDashboard
-            progress={40}
-            tokensProcessed={1229000}
             latencyData={[
-              { timestamp: '2024-03-10T12:00:00', latency: 0.096 },
-              { timestamp: '2024-03-10T12:00:01', latency: 0.09 },
-              { timestamp: '2024-03-10T12:00:02', latency: 0.082 },
-              { timestamp: '2024-03-10T12:00:03', latency: 0.101 },
-              { timestamp: '2024-03-10T12:00:04', latency: 0.098 },
-              { timestamp: '2024-03-10T12:00:05', latency: 0.095 },
-              { timestamp: '2024-03-10T12:00:06', latency: 0.097 },
+              { timestamp: '2024-03-10T12:00:00', latency: 0.120 },
+              { timestamp: '2024-03-10T12:00:01', latency: 0.115 },
+              { timestamp: '2024-03-10T12:00:02', latency: 0.112 },
+              { timestamp: '2024-03-10T12:00:03', latency: 0.108 },
+              { timestamp: '2024-03-10T12:00:04', latency: 0.105 },
+              { timestamp: '2024-03-10T12:00:05', latency: 0.103 },
+              { timestamp: '2024-03-10T12:00:06', latency: 0.100 },
               { timestamp: '2024-03-10T12:00:07', latency: 0.099 },
               { timestamp: '2024-03-10T12:00:08', latency: 0.094 },
               { timestamp: '2024-03-10T12:00:09', latency: 0.093 },
@@ -388,25 +431,26 @@ export default function JobDetail() {
               { timestamp: '2024-03-10T12:00:11', latency: 0.082 },
               { timestamp: '2024-03-10T12:00:12', latency: 0.079 },
               { timestamp: '2024-03-10T12:00:13', latency: 0.087 },
-              { timestamp: '2024-03-10T12:00:14', latency: 0.083 },
-              { timestamp: '2024-03-10T12:00:15', latency: 0.084 },
-              { timestamp: '2024-03-10T12:00:16', latency: 0.086 },
-              { timestamp: '2024-03-10T12:00:17', latency: 0.083 },
-              { timestamp: '2024-03-10T12:00:18', latency: 0.089 },
-              { timestamp: '2024-03-10T12:00:19', latency: 0.091 },
-              { timestamp: '2024-03-10T12:00:20', latency: 0.083 },
-              { timestamp: '2024-03-10T12:00:21', latency: 0.092 },
-              { timestamp: '2024-03-10T12:00:22', latency: 0.094 },
+              { timestamp: '2024-03-10T12:00:14', latency: 0.090 },
+              { timestamp: '2024-03-10T12:00:15', latency: 0.088 },
+              { timestamp: '2024-03-10T12:00:16', latency: 0.087 },
+              { timestamp: '2024-03-10T12:00:17', latency: 0.085 },
+              { timestamp: '2024-03-10T12:00:18', latency: 0.083 },
+              { timestamp: '2024-03-10T12:00:19', latency: 0.082 },
+              { timestamp: '2024-03-10T12:00:20', latency: 0.080 },
             ]}
-            tokenTypes={['NAME', 'VIN', 'ORG', 'ID', 'SSN', 'ADDRESS', 'EMAIL']}
+            progress={calculateProgress(reportData)}
+            tokensProcessed={getProcessedTokens(reportData)}
+            tokenTypes={mockTags}
             tokenCounts={{
-              'NAME': 21200000,
-              'VIN': 19800000,
-              'ORG': 13300000,
-              'ID': 13300000,
-              'SSN': 13300000,
-              'ADDRESS': 5600000,
-              'EMAIL': 3800000
+              'VIN': 450,
+              'NAME': 2300,
+              'SSN': 800,
+              'ADDRESS': 1200,
+              'EMAIL': 950,
+              'PHONE': 1100,
+              'POLICY_ID': 400,
+              'DATE': 780
             }}
             clusterSpecs={{
               cpus: 48,
