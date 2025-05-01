@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 )
 
 const (
@@ -100,4 +101,11 @@ type ObjectEntity struct {
 	Text     string
 	LContext string
 	RContext string
+}
+
+type ObjectPreview struct {
+	ReportId  uuid.UUID      `gorm:"type:uuid;primaryKey"`
+	Object    string         `gorm:"primaryKey;size:255"`
+	Preview   string         `gorm:"type:text"`           // first ~1 000 tokens
+	TokenTags datatypes.JSON `gorm:"type:jsonb;not null"` // [{"token":"…","tag":"…"},…]
 }

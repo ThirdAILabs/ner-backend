@@ -97,3 +97,14 @@ type SearchResponse struct {
 type UploadResponse struct {
 	Id uuid.UUID
 }
+
+type TokenPreview struct {
+	Token string `json:"token"`
+	Tag   string `json:"tag"`
+}
+
+type ObjectPreviewResponse struct {
+	Object    string         `json:"object"`
+	Preview   string         `json:"preview"`
+	TokenTags []TokenPreview `json:"token_tags"`
+}

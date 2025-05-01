@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -242,6 +243,11 @@ func (proc *TaskProcessor) runInferenceOnObject(
 
 	labelToEntities := make(map[string][]types.Entity)
 
+	const previewLimit = 1000
+
+	previewTokens := make([]string, 0, previewLimit)
+	havePreview := false
+
 	for chunk := range chunks {
 		if chunk.Error != nil {
 			return nil, nil, fmt.Errorf("error parsing document: %w", chunk.Error)
@@ -257,6 +263,39 @@ func (proc *TaskProcessor) runInferenceOnObject(
 			entity.End += chunk.Offset
 			labelToEntities[entity.Label] = append(labelToEntities[entity.Label], entity)
 		}
+
+		if !havePreview {
+			toks := strings.Fields(chunk.Text)
+			need := previewLimit - len(previewTokens)
+			if len(toks) >= need {
+				previewTokens = append(previewTokens, toks[:need]...)
+				havePreview = true
+			} else {
+				previewTokens = append(previewTokens, toks...)
+			}
+		}
+	}
+
+	previewText := strings.Join(previewTokens, " ")
+	pEnts, err := model.Predict(previewText)
+	if err != nil {
+		return nil, nil, fmt.Errorf("preview inference error: %w", err)
+	}
+
+	type tokenTag struct{ Token, Tag string }
+	ttList := make([]tokenTag, len(pEnts))
+	for i, e := range pEnts {
+		ttList[i] = tokenTag{Token: e.Text, Tag: e.Label}
+	}
+	jsonB, _ := json.Marshal(ttList)
+
+	if err := proc.db.Create(&database.ObjectPreview{
+		ReportId:  reportId,
+		Object:    object,
+		Preview:   previewText,
+		TokenTags: datatypes.JSON(jsonB),
+	}).Error; err != nil {
+		slog.Error("saving ObjectPreview failed", "object", object, "err", err)
 	}
 
 	groups := make([]database.ObjectGroup, 0)

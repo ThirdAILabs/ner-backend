@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"io"
 	"log/slog"
@@ -59,6 +60,7 @@ func (s *BackendService) AddRoutes(r chi.Router) {
 		r.Get("/{report_id}/groups/{group_id}", RestHandler(s.GetReportGroup))
 		r.Get("/{report_id}/entities", RestHandler(s.GetReportEntities))
 		r.Get("/{report_id}/search", RestHandler(s.ReportSearch))
+		r.Get("/{report_id}/previews", RestHandler(s.GetReportPreviews))
 	})
 
 	r.Route("/uploads", func(r chi.Router) {
@@ -381,6 +383,38 @@ func (s *BackendService) GetReportEntities(r *http.Request) (any, error) {
 	}
 
 	return convertEntities(entities), nil
+}
+
+func (s *BackendService) GetReportPreviews(r *http.Request) (any, error) {
+	reportId, err := URLParamUUID(r, "report_id")
+	if err != nil {
+		return nil, err
+	}
+
+	ctx := r.Context()
+	var rows []database.ObjectPreview
+	if err := s.db.WithContext(ctx).
+		Where("report_id = ?", reportId).
+		Find(&rows).Error; err != nil {
+		slog.Error("error fetching object previews", "report_id", reportId, "error", err)
+		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving object previews")
+	}
+
+	resp := make([]api.ObjectPreviewResponse, len(rows))
+	for i, row := range rows {
+		var tags []api.TokenPreview
+		if err := json.Unmarshal(row.TokenTags, &tags); err != nil {
+			slog.Error("error unmarshalling TokenTags JSON", "object", row.Object, "error", err)
+			tags = nil
+		}
+		resp[i] = api.ObjectPreviewResponse{
+			Object:    row.Object,
+			Preview:   row.Preview,
+			TokenTags: tags,
+		}
+	}
+
+	return resp, nil
 }
 
 func (s *BackendService) ReportSearch(r *http.Request) (any, error) {
