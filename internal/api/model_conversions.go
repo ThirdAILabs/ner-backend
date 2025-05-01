@@ -55,6 +55,7 @@ func convertReport(r database.Report) api.Report {
 		SourceS3Prefix: r.SourceS3Prefix.String,
 		CreationTime:   r.CreationTime,
 		Groups:         convertGroups(r.Groups),
+		Tags:           r.Tags,
 	}
 
 	if r.ShardDataTask != nil {

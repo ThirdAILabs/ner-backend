@@ -39,6 +39,8 @@ type Report struct {
 
 	Groups []Group
 
+	Tags []string
+
 	ShardDataTaskStatus   string                        `json:"ShardDataTaskStatus,omitempty"`
 	InferenceTaskStatuses map[string]TaskStatusCategory `json:"InferenceTaskStatuses,omitempty"`
 }
@@ -61,6 +63,8 @@ type CreateReportRequest struct {
 	SourceS3Prefix string
 
 	Groups map[string]string
+
+	Tags []string
 }
 
 type CreateReportResponse struct {

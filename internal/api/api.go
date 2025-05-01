@@ -256,6 +256,19 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 			return CodedErrorf(http.StatusUnprocessableEntity, "model is not ready: model has status: %s", model.Status)
 		}
 
+		for _, tag := range req.Tags {
+			var modelTag database.ModelTag
+			if err := txn.First(&modelTag, "model_id = ? AND tag = ?", req.ModelId, tag).Error; err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					return CodedErrorf(http.StatusBadRequest, "tag '%s' not found for model", tag)
+				}
+				slog.Error("error checking model tag", "error", err)
+				return CodedErrorf(http.StatusInternalServerError, "error checking model tags")
+			}
+		}
+
+		report.Tags = req.Tags
+
 		if err := txn.WithContext(ctx).Create(&report).Error; err != nil {
 			slog.Error("error creating report entry", "error", err)
 			return CodedErrorf(http.StatusInternalServerError, "failed to create report entry")
