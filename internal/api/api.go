@@ -19,7 +19,6 @@ import (
 	"strconv"
 	"time"
 
-	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -38,8 +37,7 @@ const (
 )
 
 func NewBackendService(db *gorm.DB, s3 *s3.Client, pub messaging.Publisher, chunkTargetBytes int64) *BackendService {
-	var apiErr *s3types.BucketAlreadyOwnedByYou
-	if err := s3.CreateBucket(context.Background(), uploadBucket); err != nil && !errors.As(err, &apiErr) {
+	if err := s3.CreateBucket(context.Background(), uploadBucket); err != nil {
 		slog.Error("error creating upload bucket", "error", err)
 		panic("failed to create upload bucket")
 	}

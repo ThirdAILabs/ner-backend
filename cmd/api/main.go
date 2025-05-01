@@ -63,7 +63,6 @@ func main() {
 	}
 
 	var model database.Model
-	model.Name = "presidio"
 
 	if err := db.Where(database.Model{Name: "presidio"}).Attrs(database.Model{
 		Id:           uuid.New(),
