@@ -92,6 +92,7 @@ func TestInference(t *testing.T) {
 	object := "test.txt"
 
 	allEntities, groups, err := inferenceJobProcessor.runInferenceOnObject(
+		context.Background(),
 		reportId,
 		NewDefaultParser(),
 		model,
