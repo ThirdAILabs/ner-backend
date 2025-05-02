@@ -4,8 +4,6 @@ import (
 	"math"
 	"reflect"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestParseQuery_SimpleFilter(t *testing.T) {
@@ -96,8 +94,6 @@ func TestParseQuery_ComplexExpression(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-
-	assert.Equal(t, filter, expected)
 
 	if !reflect.DeepEqual(filter, expected) {
 		t.Errorf("expected %v, got %v", expected, filter)
