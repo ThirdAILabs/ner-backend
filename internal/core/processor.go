@@ -258,6 +258,10 @@ func (proc *TaskProcessor) createObjectPreview(
 	previewText string,
 	model Model,
 ) error {
+	if proc.db == nil {
+		return nil
+	}
+
 	spans, err := model.Predict(previewText)
 	if err != nil {
 		return fmt.Errorf("preview inference error: %w", err)
