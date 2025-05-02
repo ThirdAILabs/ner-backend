@@ -1,6 +1,9 @@
 package licensing
 
-import "errors"
+import (
+	"context"
+	"errors"
+)
 
 var (
 	ErrLicenseVerificationFailed = errors.New("license verification failed")
@@ -11,5 +14,5 @@ var (
 )
 
 type LicenseVerifier interface {
-	VerifyLicense() error
+	VerifyLicense(ctx context.Context) error
 }

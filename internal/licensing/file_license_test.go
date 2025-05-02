@@ -2,6 +2,7 @@ package licensing_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/gob"
 	"encoding/json"
@@ -23,7 +24,7 @@ func TestFileLicensing(t *testing.T) {
 
 		verifier, err := licensing.NewFileLicenseVerifier([]byte(publicKey), goodLicense)
 		assert.NoError(t, err)
-		assert.NoError(t, verifier.VerifyLicense())
+		assert.NoError(t, verifier.VerifyLicense(context.Background()))
 	})
 
 	t.Run("expired license", func(t *testing.T) {
@@ -32,7 +33,7 @@ func TestFileLicensing(t *testing.T) {
 
 		verifier, err := licensing.NewFileLicenseVerifier([]byte(publicKey), expiredLicense)
 		assert.NoError(t, err)
-		assert.ErrorIs(t, licensing.ErrExpiredLicense, verifier.VerifyLicense())
+		assert.ErrorIs(t, licensing.ErrExpiredLicense, verifier.VerifyLicense(context.Background()))
 	})
 
 	t.Run("invalid license", func(t *testing.T) {

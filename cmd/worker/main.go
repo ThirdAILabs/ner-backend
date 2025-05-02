@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"log" // Adjust import path
+	"log/slog"
 	"ner-backend/cmd"
 	"ner-backend/internal/core"
 	"ner-backend/internal/database"
@@ -83,6 +85,7 @@ func main() {
 			log.Fatalf("Failed to create license verifier: %v", err)
 		}
 	} else {
+		slog.Warn(fmt.Sprintf("License key not provided. Using free license verifier with %.2fGB total file size limit", float64(licensing.DefaultFreeLicenseMaxBytes)/(1024*1024*1024)))
 		licenseVerifier = licensing.NewFreeLicenseVerifier(db, licensing.DefaultFreeLicenseMaxBytes)
 	}
 

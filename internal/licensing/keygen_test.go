@@ -1,6 +1,7 @@
 package licensing_test
 
 import (
+	"context"
 	"ner-backend/internal/licensing"
 	"testing"
 )
@@ -19,7 +20,7 @@ func TestKeygenLicensing(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := verifier.VerifyLicense(); err != nil {
+		if err := verifier.VerifyLicense(context.Background()); err != nil {
 			t.Fatal(err)
 		}
 	})

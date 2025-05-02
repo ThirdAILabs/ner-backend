@@ -1,6 +1,7 @@
 package licensing
 
 import (
+	"context"
 	"crypto/ed25519"
 	"crypto/sha256"
 	"crypto/x509"
@@ -9,6 +10,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/go-resty/resty/v2"
 )
@@ -24,7 +26,7 @@ func NewKeygenLicenseVerifier(licenseKey string) (*KeygenVerifier, error) {
 		licenseKey: licenseKey,
 	}
 
-	if err := verifier.VerifyLicense(); err != nil {
+	if err := verifier.VerifyLicense(context.Background()); err != nil {
 		return nil, err
 	}
 
@@ -39,18 +41,22 @@ type licenseVerifyResponse struct {
 	} `json:"meta"`
 }
 
-func (verifier *KeygenVerifier) VerifyLicense() error {
+func (verifier *KeygenVerifier) VerifyLicense(ctx context.Context) error {
 	rb := map[string]map[string]any{
 		"meta": {
 			"key": verifier.licenseKey,
 			"scope": map[string]any{
-				"entitlements": []string{"FULL_ACCESS", "PRISM"},
+				"entitlements": []string{"FULL_ACCESS"},
 			},
 		},
 	}
 
+	context, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
 	endpoint := "/v1/accounts/thirdai/licenses/actions/validate-key"
 	res, err := verifier.client.R().
+		SetContext(context).
 		SetHeader("Content-Type", "application/vnd.api+json").
 		SetHeader("Accept", "application/vnd.api+json").
 		SetBody(rb).
@@ -81,6 +87,7 @@ func (verifier *KeygenVerifier) VerifyLicense() error {
 		case "EXPIRED", "SUSPENDED":
 			return ErrExpiredLicense
 		default:
+			slog.Error("keygen verification error", "code", verified.Meta.Constant, "error", verified.Meta.Detail)
 			return ErrInvalidLicense
 		}
 	}

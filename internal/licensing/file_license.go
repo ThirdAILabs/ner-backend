@@ -2,6 +2,7 @@ package licensing
 
 import (
 	"bytes"
+	"context"
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
@@ -48,8 +49,8 @@ func NewFileLicenseVerifier(publicKeyPem []byte, licenseStr string) (*FileLicens
 	}, nil
 }
 
-func (v *FileLicenseVerifier) VerifyLicense() error {
-	if v.licensePayload.Expiration.Before(time.Now()) {
+func (v *FileLicenseVerifier) VerifyLicense(ctx context.Context) error {
+	if v.licensePayload.Expiration.Before(time.Now().UTC()) {
 		return ErrExpiredLicense
 	}
 

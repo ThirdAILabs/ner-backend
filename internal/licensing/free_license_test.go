@@ -1,6 +1,7 @@
 package licensing_test
 
 import (
+	"context"
 	"ner-backend/internal/database"
 	"ner-backend/internal/licensing"
 	"testing"
@@ -12,22 +13,21 @@ import (
 	"gorm.io/gorm"
 )
 
-func TestFreeLicensin(t *testing.T) {
+func TestFreeLicensing(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open("file::memory:"), &gorm.Config{})
 	require.NoError(t, err)
 	require.NoError(t, db.AutoMigrate(&database.InferenceTask{}))
 
-	require.NoError(t, db.Create(&database.InferenceTask{ReportId: uuid.New(), TotalSize: 200}).Error)
-
 	verifier := licensing.NewFreeLicenseVerifier(db, 300)
 
-	assert.NoError(t, verifier.VerifyLicense())
+	assert.NoError(t, verifier.VerifyLicense(context.Background()))
 
+	require.NoError(t, db.Create(&database.InferenceTask{ReportId: uuid.New(), TotalSize: 200}).Error)
 	require.NoError(t, db.Create(&database.InferenceTask{ReportId: uuid.New(), TotalSize: 50}).Error)
 
-	assert.NoError(t, verifier.VerifyLicense())
+	assert.NoError(t, verifier.VerifyLicense(context.Background()))
 
 	require.NoError(t, db.Create(&database.InferenceTask{ReportId: uuid.New(), TotalSize: 100}).Error)
 
-	assert.ErrorIs(t, licensing.ErrQuotaExceeded, verifier.VerifyLicense())
+	assert.ErrorIs(t, licensing.ErrQuotaExceeded, verifier.VerifyLicense(context.Background()))
 }

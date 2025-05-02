@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -53,7 +54,7 @@ func validateLicense(publicKeyPath, license string) {
 		log.Fatalf("Error verifying license: %v", err)
 	}
 
-	if err := verifier.VerifyLicense(); err != nil {
+	if err := verifier.VerifyLicense(context.Background()); err != nil {
 		log.Fatalf("License verification failed: %v", err)
 	}
 }
