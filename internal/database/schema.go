@@ -26,7 +26,7 @@ type Model struct {
 	CreationTime   time.Time
 	CompletionTime sql.NullTime
 
-	Tags []string `gorm:"foreignKey:Tag"`
+	Tags []Tag `gorm:"foreignKey:Tag"`
 }
 
 const (
@@ -49,7 +49,7 @@ type Report struct {
 
 	Groups []Group `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
 
-	Tags []string `gorm:"foreignKey:Tag"`
+	Tags []Tag `gorm:"foreignKey:Tag"`
 
 	ShardDataTask  *ShardDataTask  `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
 	InferenceTasks []InferenceTask `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`

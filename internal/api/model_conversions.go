@@ -11,7 +11,7 @@ func convertModel(m database.Model) api.Model {
 		Name:   m.Name,
 		Type:   m.Type,
 		Status: m.Status,
-		Tags:   m.Tags,
+		Tags:   convertTags(m.Tags),
 	}
 	if m.BaseModelId.Valid {
 		model.BaseModelId = &m.BaseModelId.UUID
@@ -56,7 +56,7 @@ func convertReport(r database.Report) api.Report {
 		SourceS3Prefix: r.SourceS3Prefix.String,
 		CreationTime:   r.CreationTime,
 		Groups:         convertGroups(r.Groups),
-		Tags:           r.Tags,
+		Tags:           convertTags(r.Tags),
 	}
 
 	if r.ShardDataTask != nil {
@@ -92,4 +92,12 @@ func convertEntities(es []database.ObjectEntity) []api.Entity {
 		entities = append(entities, convertEntity(e))
 	}
 	return entities
+}
+
+func convertTags(ts []database.Tag) []string {
+	tags := make([]string, 0, len(ts))
+	for _, t := range ts {
+		tags = append(tags, t.Tag)
+	}
+	return tags
 }

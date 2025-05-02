@@ -230,7 +230,7 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 	var model database.Model
 
 	if err := s.db.WithContext(ctx).Transaction(func(txn *gorm.DB) error {
-		if err := txn.First(&model, "id = ?", req.ModelId).Error; err != nil {
+		if err := txn.Preload("Tags").First(&model, "id = ?", req.ModelId).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return CodedErrorf(http.StatusNotFound, "model not found")
 			}
@@ -243,17 +243,24 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		}
 
 		for _, t := range req.Tags {
-			var tag database.Tag
-			if err := txn.First(&tag, "tag = ?", t).Error; err != nil {
-				if errors.Is(err, gorm.ErrRecordNotFound) {
-					return CodedErrorf(http.StatusBadRequest, "tag '%s' not found", t)
+			found := false
+			for _, tag := range model.Tags {
+				if t == tag.Tag {
+					found = true
+					break
 				}
-				slog.Error("error checking model tag", "error", err)
-				return CodedErrorf(http.StatusInternalServerError, "error checking model tags")
+			}
+			if !found {
+				return CodedErrorf(http.StatusNotFound, "model tag '%s' not found", t)
 			}
 		}
 
-		report.Tags = req.Tags
+		report.Tags = make([]database.Tag, len(req.Tags))
+		for i, t := range req.Tags {
+			report.Tags[i] = database.Tag{
+				Tag: t,
+			}
+		}
 
 		if err := txn.WithContext(ctx).Create(&report).Error; err != nil {
 			slog.Error("error creating report entry", "error", err)

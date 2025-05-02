@@ -125,7 +125,12 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 		groupToQuery[group.Id] = group.Query
 	}
 
-	workerErr := proc.runInferenceOnBucket(ctx, task.ReportId, task.Report.Model.Id, task.Report.Model.Type, groupToQuery, task.SourceS3Bucket, s3Objects)
+	tags := make(map[string]struct{})
+	for _, tag := range task.Report.Tags {
+		tags[tag.Tag] = struct{}{}
+	}
+
+	workerErr := proc.runInferenceOnBucket(task.ReportId, task.Report.Model.Id, task.Report.Model.Type, groupToQuery, task.SourceS3Bucket, s3Objects, tags)
 	if workerErr != nil {
 		slog.Error("error running inference task", "report_id", reportId, "task_id", payload.TaskId, "error", workerErr)
 		database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobFailed)
@@ -142,13 +147,13 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 }
 
 func (proc *TaskProcessor) runInferenceOnBucket(
-	ctx context.Context,
 	reportId uuid.UUID,
 	modelId uuid.UUID,
 	modelType string,
 	groupToQuery map[uuid.UUID]string,
 	bucket string,
 	objects []string,
+	tags map[string]struct{},
 ) error {
 	parser := NewDefaultParser()
 
@@ -170,7 +175,7 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 	objectErrorCnt := 0
 
 	for _, object := range objects {
-		entities, groups, err := proc.runInferenceOnObject(ctx, reportId, parser, model, groupToFilter, bucket, object)
+		entities, groups, err := proc.runInferenceOnObject(reportId, parser, model, groupToFilter, bucket, object, tags)
 		if err != nil {
 			slog.Error("error processing object", "object", object, "error", err)
 			objectErrorCnt++
@@ -230,37 +235,20 @@ func (proc *TaskProcessor) loadModel(modelId uuid.UUID, modelType string) (Model
 	return model, nil
 }
 
-func (proc *TaskProcessor) getReport(ctx context.Context, reportId uuid.UUID) (database.Report, error) {
-	var report database.Report
-	if err := proc.db.WithContext(ctx).First(&report, "id = ?", reportId).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			slog.Error("report not found", "report_id", reportId)
-			return database.Report{}, fmt.Errorf("report not found: %w", err)
-		}
-		slog.Error("error getting report", "report_id", reportId, "error", err)
-		return database.Report{}, fmt.Errorf("error getting report: %w", err)
-	}
-	return report, nil
-}
-
 func (proc *TaskProcessor) runInferenceOnObject(
-	ctx context.Context,
 	reportId uuid.UUID,
 	parser Parser,
 	model Model,
 	groupFilter map[uuid.UUID]Filter,
 	bucket string,
-	object string) (
+	object string,
+	tags map[string]struct{},
+) (
 	[]database.ObjectEntity, []database.ObjectGroup, error) {
 
 	chunks := parser.Parse(object, proc.s3Client.DownloadFileStream(bucket, object))
 
 	labelToEntities := make(map[string][]types.Entity)
-
-	report, err := proc.getReport(ctx, reportId)
-	if err != nil {
-		return nil, nil, fmt.Errorf("error getting report: %w", err)
-	}
 
 	for chunk := range chunks {
 		if chunk.Error != nil {
@@ -273,13 +261,10 @@ func (proc *TaskProcessor) runInferenceOnObject(
 		}
 
 		for _, entity := range chunkEntities {
-			for _, tag := range report.Tags {
-				if tag == entity.Label {
-					entity.Start += chunk.Offset
-					entity.End += chunk.Offset
-					labelToEntities[entity.Label] = append(labelToEntities[entity.Label], entity)
-					break
-				}
+			if _, ok := tags[entity.Label]; ok {
+				entity.Start += chunk.Offset
+				entity.End += chunk.Offset
+				labelToEntities[entity.Label] = append(labelToEntities[entity.Label], entity)
 			}
 		}
 	}
