@@ -109,7 +109,7 @@ func TestInference(t *testing.T) {
 		{ReportId: reportId, Object: object, Label: "email", Text: email, Start: emailStart, End: emailStart + len(email), LContext: testDoc[emailStart-20 : emailStart], RContext: testDoc[emailStart+len(email):]},
 	})
 
-	assert.Equal(t, tagCount, map[string]int{
+	assert.Equal(t, tagCount, api.TagCount{
 		"phone": 1,
 		"email": 1,
 	})
