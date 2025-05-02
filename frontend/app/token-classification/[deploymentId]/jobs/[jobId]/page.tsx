@@ -113,14 +113,15 @@ interface TagProps {
   onClick?: () => void;
   custom?: boolean;
   addNew?: boolean;
+  displayOnly?: boolean;
 }
 
-const Tag: React.FC<TagProps> = ({ tag, selected = true, onClick, custom = false, addNew = false }) => {
+const Tag: React.FC<TagProps> = ({ tag, selected = true, onClick, custom = false, addNew = false, displayOnly = false }) => {
   return (
     <div
-      className={`px-3 py-1 text-sm font-medium rounded-sm cursor-pointer ${selected ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+      className={`px-3 py-1 text-sm font-medium rounded-sm ${displayOnly ? "bg-blue-100 text-blue-800" : selected ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"} ${!displayOnly && onClick ? "cursor-pointer" : ""}`}
       style={{ userSelect: 'none' }}
-      onClick={onClick}
+      onClick={displayOnly ? undefined : onClick}
     >
       {tag}
     </div>
@@ -234,9 +235,8 @@ export default function JobDetail() {
   const [tabValue, setTabValue] = useState('configuration');
   const [selectedSource, setSelectedSource] = useState('s3');
   
-  // Initialize with empty array instead of mockTags
+  // Remove selectedTags state, just keep availableTags
   const [availableTags, setAvailableTags] = useState<string[]>([]);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   
   const [reportData, setReportData] = useState<Report | null>(null);
   const [customTags, setCustomTags] = useState<CustomTag[]>([]);
@@ -249,7 +249,7 @@ export default function JobDetail() {
     try {
       // 1. Get report data which includes model ID and report tags
       const report = await nerService.getReport(reportId);
-      setReportData(report);
+      setReportData(report as any);
       
       // 2. Get tags from the model used in this report
       let modelTags: string[] = [];
@@ -275,9 +275,8 @@ export default function JobDetail() {
       console.log("Tags from entities:", entityTags);
       console.log("Combined tags:", allTags);
       
-      // 6. Set available tags and initially select all
+      // 6. Set available tags
       setAvailableTags(allTags);
-      setSelectedTags(allTags);
       
       // 7. Set custom tags from report
       const customTagsList = Object.entries(reportTagsData.customTags || {}).map(
@@ -382,18 +381,6 @@ export default function JobDetail() {
     }
   };
 
-  const toggleTag = (tag: string) => {
-    if (selectedTags.includes(tag)) {
-      setSelectedTags(selectedTags.filter(t => t !== tag));
-    } else {
-      setSelectedTags([...selectedTags, tag]);
-    }
-  };
-
-  const selectAllTags = () => {
-    setSelectedTags(availableTags);
-  };
-
   return (
     <div className="container px-4 py-8 mx-auto">
       {/* Breadcrumbs */}
@@ -483,21 +470,6 @@ export default function JobDetail() {
             <div>
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-medium">Tags</h2>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={selectAllTags}
-                  className="text-sm flex items-center"
-                  disabled={selectedTags?.length === availableTags?.length || isLoading}
-                >
-                  <span className="mr-1">Select All</span>
-                  <input
-                    type="checkbox"
-                    checked={selectedTags.length === availableTags.length}
-                    onChange={selectAllTags}
-                    className="rounded border-gray-300"
-                  />
-                </Button>
               </div>
               
               {isLoading ? (
@@ -512,8 +484,7 @@ export default function JobDetail() {
                     <Tag
                       key={tag}
                       tag={tag}
-                      selected={selectedTags.includes(tag)}
-                      onClick={() => toggleTag(tag)}
+                      displayOnly={true}
                     />
                   ))}
                 </div>
@@ -533,7 +504,7 @@ export default function JobDetail() {
                     <div key={customTag.name} className="border border-gray-200 rounded-md overflow-hidden">
                       <div className="p-4 border-b border-gray-200 flex justify-between items-center">
                         <h3 className="text-base font-medium">{customTag.name}</h3>
-                        <Tag tag={customTag.name} custom selected />
+                        <Tag tag={customTag.name} custom displayOnly={true} />
                       </div>
                       <div className="p-4">
                         <p className="text-sm font-mono">{customTag.pattern}</p>
@@ -561,7 +532,6 @@ export default function JobDetail() {
               onSubmit={(newTag) => {
                 setCustomTags([...customTags, newTag]);
                 setAvailableTags([...availableTags, newTag.name]);
-                setSelectedTags([...selectedTags, newTag.name]);
               }}
               existingTags={availableTags}
             />
