@@ -10,8 +10,16 @@ import { CheckCircle, ArrowLeft, RefreshCw, Pause, Square, Plus, Edit } from 'lu
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
 import { DatabaseTable } from './(database-table)/DatabaseTable';
 import { nerService } from '@/lib/backend';
-import { usePathname } from 'next/navigation';
-import useOutsideClick from '@/hooks/useOutsideClick';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 // Calculate progress based on InferenceTaskStatuses
 const calculateProgress = (report: Report | null): number => {
@@ -111,22 +119,9 @@ interface TagProps {
 }
 
 const Tag: React.FC<TagProps> = ({ tag, selected = true, onClick, custom = false, addNew = false }) => {
-  function getCSS(): string {
-    if (selected) {
-      return custom
-        ? "bg-purple-500 text-white border border-purple-600"
-        : "bg-blue-500 text-white";
-    } else if (addNew) {
-      return "bg-white text-gray-700 border-dotted border border-gray-300 hover:border-blue-400";
-    } else if (custom) {
-      return "bg-purple-100 text-purple-700 border border-purple-200 hover:bg-purple-200";
-    } else {
-      return "bg-gray-100 text-gray-700 hover:bg-gray-200";
-    }
-  }
   return (
     <div
-      className={`px-3 py-1 text-sm font-medium rounded-sm cursor-pointer ${getCSS()}`}
+      className={`px-3 py-1 text-sm font-medium rounded-sm cursor-pointer ${selected ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
       style={{ userSelect: 'none' }}
       onClick={onClick}
     >
@@ -151,6 +146,89 @@ const GroupCard: React.FC<GroupProps> = ({ name, definition }) => (
     </div>
   </div>
 );
+
+interface CustomTag {
+  name: string;
+  pattern: string;
+}
+
+const NewTagDialog: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (tag: CustomTag) => void;
+  existingTags: string[];
+}> = ({ isOpen, onClose, onSubmit, existingTags }) => {
+  const [tagName, setTagName] = useState('');
+  const [pattern, setPattern] = useState('');
+  const [error, setError] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (existingTags.includes(tagName)) {
+      setError('Tag name already exists');
+      return;
+    }
+
+    if (!tagName || !pattern) {
+      setError('Both fields are required');
+      return;
+    }
+
+    onSubmit({ name: tagName, pattern });
+    setTagName('');
+    setPattern('');
+    setError('');
+    onClose();
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Create Custom Tag</DialogTitle>
+          <DialogDescription>
+            Define a new custom tag with a regex pattern.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="tagName">Tag Name</Label>
+              <Input
+                id="tagName"
+                value={tagName}
+                onChange={(e) => setTagName(e.target.value.toUpperCase())}
+                placeholder="CUSTOM_TAG_NAME"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="pattern">Regex Pattern</Label>
+              <Input
+                id="pattern"
+                value={pattern}
+                onChange={(e) => setPattern(e.target.value)}
+                placeholder="\b[A-Z]{2}\d{6}\b"
+              />
+              <p className="text-sm text-gray-500">
+                Example patterns:<br />
+                Phone: \d{3}[-.]?\d{3}[-.]?\d{4}<br />
+                Custom ID: [A-Z]{2}\d{6}
+              </p>
+            </div>
+            {error && <p className="text-red-500 text-sm">{error}</p>}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="default" className='bg-blue-400 hover:bg-blue-500'>Create Tag</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 export default function JobDetail() {
   const params = useParams();
@@ -276,6 +354,10 @@ export default function JobDetail() {
   };
   const [allTag, setAllTags] = useState<string[]>(mockTags);
 
+  const [customTags, setCustomTags] = useState<CustomTag[]>([
+    { name: "CREDIT_SCORE", pattern: "\\b[0-9]{3,4}\\b" }
+  ]);
+  const [isNewTagDialogOpen, setIsNewTagDialogOpen] = useState(false);
 
   return (
     <div className="container px-4 py-8 mx-auto">
@@ -393,6 +475,45 @@ export default function JobDetail() {
                 ))}
               </div>
             </div>
+
+            {/* Custom Tags section */}
+            <div>
+              <h2 className="text-lg font-medium mb-4">Custom Tags</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {customTags.map((customTag) => (
+                  <div key={customTag.name} className="border border-gray-200 rounded-md overflow-hidden">
+                    <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+                      <h3 className="text-base font-medium">{customTag.name}</h3>
+                      <Tag tag={customTag.name} custom selected />
+                    </div>
+                    <div className="p-4">
+                      <p className="text-sm font-mono">{customTag.pattern}</p>
+                    </div>
+                  </div>
+                ))}
+
+                <div
+                  className="border border-dashed border-gray-300 rounded-md flex items-center justify-center p-6 cursor-pointer hover:border-gray-400"
+                  onClick={() => setIsNewTagDialogOpen(true)}
+                >
+                  <div className="flex flex-col items-center">
+                    <Plus className="h-8 w-8 text-gray-400 mb-2" />
+                    <span className="text-gray-600">Define new tag</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Add the dialog component */}
+            <NewTagDialog
+              isOpen={isNewTagDialogOpen}
+              onClose={() => setIsNewTagDialogOpen(false)}
+              onSubmit={(newTag) => {
+                setCustomTags([...customTags, newTag]);
+                setAllTags([...allTag, newTag.name]);
+              }}
+              existingTags={allTag}
+            />
 
             {/* Groups section */}
             {reportData?.Groups && <div>
