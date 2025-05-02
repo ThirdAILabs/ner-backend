@@ -1,7 +1,5 @@
-from .impl import EmbeddingBagNERModel, HASH_DIMENSION, run_ner_inference
+from impl import EmbeddingBagNERModel, HASH_DIMENSION, run_ner_inference
 import torch
-import time
-from typing import List
 
 
 class EmbeddingBagWrappedNerModel:
@@ -12,7 +10,6 @@ class EmbeddingBagWrappedNerModel:
         tag2idx: dict,
         pad_token_idx: int = HASH_DIMENSION,
     ):
-        super().__init__(name)
         self.tag2idx = tag2idx
         self.model = EmbeddingBagNERModel(
             embedding_bag=None,
@@ -25,10 +22,9 @@ class EmbeddingBagWrappedNerModel:
 
     def predict(self, text: str):
 
-        feats = run_ner_inference(text.split())
-        seqs = [[[int(tok[i]) for i in range(len(tok))] for tok in feats]]
+        features = run_ner_inference(text.split())
+        seqs = [[[int(tok[i]) for i in range(len(tok))] for tok in features]]
         lengths = [len(seq) for seq in seqs]
 
         preds = self.model.predict_sequence(seqs, lengths)
-
-        return preds
+        return preds[0]

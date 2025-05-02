@@ -160,7 +160,7 @@ class CNNNERModelSentenceTokenized(nn.Module):
         emissions = self.hidden2tag(out)
         return emissions
 
-    def predict(self, text: str, use_presidio: bool = False):
+    def predict(self, text: str):
         txt = text.lower() if getattr(self.tokenizer, "do_lower_case", False) else text
         enc = self.tokenizer(txt, return_offsets_mapping=True, add_special_tokens=False)
         input_ids = torch.tensor(enc["input_ids"], dtype=torch.long).unsqueeze(0)

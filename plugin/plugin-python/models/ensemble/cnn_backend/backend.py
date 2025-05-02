@@ -1,7 +1,7 @@
 from transformers import AutoTokenizer
 import torch
 import torch.nn as nn
-from cnn_impl import CNNNERModelSentenceTokenized
+from impl import CNNNERModelSentenceTokenized
 
 
 class CNNModel:
@@ -30,6 +30,6 @@ class CNNModel:
         self.model.load_state_dict(state_dict)
         self.model.eval()
 
-    def predict(self, text: str, use_presidio: bool = False):
-        words, pred_tags = self.model.predict(text, use_presidio)
-        return [[[tag]] for tag in pred_tags]
+    def predict(self, text: str):
+        _, pred_tags = self.model.predict(text)
+        return [tag for tag in pred_tags]
