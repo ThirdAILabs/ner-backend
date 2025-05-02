@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"ner-backend/internal/core/types"
 	"ner-backend/internal/database"
+	"ner-backend/internal/licensing"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/s3"
 	"os"
@@ -25,16 +26,19 @@ type TaskProcessor struct {
 	publisher messaging.Publisher
 	reciever  messaging.Reciever
 
+	licensing licensing.LicenseVerifier
+
 	localModelDir string
 	modelBucket   string
 }
 
-func NewTaskProcessor(db *gorm.DB, s3client *s3.Client, publisher messaging.Publisher, reciever messaging.Reciever, localModelDir string, modelBucket string) *TaskProcessor {
+func NewTaskProcessor(db *gorm.DB, s3client *s3.Client, publisher messaging.Publisher, reciever messaging.Reciever, licenseVerifier licensing.LicenseVerifier, localModelDir string, modelBucket string) *TaskProcessor {
 	return &TaskProcessor{
 		db:            db,
 		s3Client:      s3client,
 		publisher:     publisher,
 		reciever:      reciever,
+		licensing:     licenseVerifier,
 		localModelDir: localModelDir,
 		modelBucket:   modelBucket,
 	}
@@ -109,6 +113,12 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 	reportId := payload.ReportId
 
 	slog.Info("processing inference task", "report_id", reportId, "task_id", payload.TaskId)
+
+	if err := proc.licensing.VerifyLicense(ctx); err != nil {
+		slog.Error("license verification failed", "error", err)
+		database.SaveReportError(ctx, proc.db, reportId, fmt.Sprintf("license verification failed: %s", err.Error()))
+		return err
+	}
 
 	var task database.InferenceTask
 	if err := proc.db.Preload("Report").Preload("Report.Model").Preload("Report.Groups").First(&task, "report_id = ? AND task_id = ?", reportId, payload.TaskId).Error; err != nil {
@@ -291,6 +301,12 @@ func (proc *TaskProcessor) runInferenceOnObject(
 
 func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload messaging.ShardDataPayload) error {
 	reportId := payload.ReportId
+
+	if err := proc.licensing.VerifyLicense(ctx); err != nil {
+		slog.Error("license verification failed", "error", err)
+		database.SaveReportError(ctx, proc.db, reportId, fmt.Sprintf("license verification failed: %s", err.Error()))
+		return err
+	}
 
 	var task database.ShardDataTask
 	if err := proc.db.Preload("Report").First(&task, "report_id = ?", reportId).Error; err != nil {
