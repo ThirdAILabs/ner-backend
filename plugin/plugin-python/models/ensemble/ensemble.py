@@ -3,7 +3,7 @@ from .cnn_backend.backend import CNNModel
 from .pytorch_embedding_backend.backend import EmbeddingBagWrappedNerModel
 from .udt_backend.backend import UDTModel
 
-from model_interface import Model, Predictions, Entities
+from ..model_interface import Model, Predictions, Entities
 from .utils import build_tag_vocab, clean_text
 from typing import List
 from time import time
