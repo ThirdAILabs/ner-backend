@@ -11,7 +11,7 @@ const (
 	expiredLicense             = "78BF4E-1EACCA-3432A5-D633E2-7B182B-V3"
 	nonexistentLicense         = "000000-000000-000000-000000-000000-V3"
 	suspendedLicense           = "9R3F-KLNJ-M3M4-KWLW-9E9E-7TNT-4FXH-V7R9"
-	missingEntitlementsLicense = "94TN-9LUT-KXWK-K4VE-CPEW-3U9K-3R7H-HREL"
+	missingEntitlementsLicense = "6E8D1E-B1AD6A-F8D318-5BDF53-02295A-V3"
 )
 
 func TestKeygenLicensing(t *testing.T) {
