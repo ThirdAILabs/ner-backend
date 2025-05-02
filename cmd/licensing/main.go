@@ -77,13 +77,19 @@ func main() {
 
 	switch os.Args[1] {
 	case "keys":
-		keysArgs.Parse(os.Args[2:])
+		if err := keysArgs.Parse(os.Args[2:]); err != nil {
+			log.Fatalf("Error parsing arguments: %v", err)
+		}
 		generateKeys(*output)
 	case "create":
-		createArgs.Parse(os.Args[2:])
+		if err := createArgs.Parse(os.Args[2:]); err != nil {
+			log.Fatalf("Error parsing arguments: %v", err)
+		}
 		createLicense(*privateKey, *days)
 	case "validate":
-		validateArgs.Parse(os.Args[2:])
+		if err := validateArgs.Parse(os.Args[2:]); err != nil {
+			log.Fatalf("Error parsing arguments: %v", err)
+		}
 		validateLicense(*publicKey, *license)
 	}
 }
