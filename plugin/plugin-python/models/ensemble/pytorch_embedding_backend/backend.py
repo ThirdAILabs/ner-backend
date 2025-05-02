@@ -1,0 +1,34 @@
+from .impl import EmbeddingBagNERModel, HASH_DIMENSION, run_ner_inference
+import torch
+import time
+from typing import List
+
+
+class EmbeddingBagWrappedNerModel:
+    def __init__(
+        self,
+        name: str,
+        checkpoint_path: str,
+        tag2idx: dict,
+        pad_token_idx: int = HASH_DIMENSION,
+    ):
+        super().__init__(name)
+        self.tag2idx = tag2idx
+        self.model = EmbeddingBagNERModel(
+            embedding_bag=None,
+            tag2idx=tag2idx,
+            pad_token_idx=pad_token_idx,
+        )
+        state = torch.load(checkpoint_path, map_location="cpu")
+        self.model.load_state_dict(state)
+        self.model.eval()
+
+    def predict(self, text: str):
+
+        feats = run_ner_inference(text.split())
+        seqs = [[[int(tok[i]) for i in range(len(tok))] for tok in feats]]
+        lengths = [len(seq) for seq in seqs]
+
+        preds = self.model.predict_sequence(seqs, lengths)
+
+        return preds
