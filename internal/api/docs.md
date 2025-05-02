@@ -64,7 +64,8 @@ Retrieve details of a specific model by its ID.
   "Id": "123e4567-e89b-12d3-a456-426614174000",
   "Name": "Model A",
   "Type": "bolt",
-  "Status": "TRAINED"
+  "Status": "TRAINED",
+  "Tags": ["PHONENUMBER", "SSN"]
 }
 ```
 
@@ -127,7 +128,8 @@ Create a new report.
   "Groups": {
     "Group1": "COUNT(label1) > 3 AND COUNT(label2) = 2",
     "Group2": "label3 CONTAINS 'xyz'"
-  }
+  },
+  "Tags": ["PHONENUMBER", "SSN"]
 }
 ```
 
