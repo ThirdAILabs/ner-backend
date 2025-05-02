@@ -51,18 +51,24 @@ We support 3 types of licensing
 The `cmd/licensing/main.go` cli tool provides utilities for creating an managing licensings.
 
 ### Creating Keys
-`go run cmd/licensing/main.go keys --output <output_name>`
+```bash
+go run cmd/licensing/main.go keys --output <output_name>
+```
 
 This command will generate `<output_name>_private_key.pem` and `<output_name>_public_key.pem` containing private/public keys that can be used for local licensing. Currently we use the keys saved in `/share/keys/ner_licensing` on blade. This command should not be run unless you are testing or want to change the keys. 
 
 ### Creating a license
 
-`go run cmd/licensing/main.go create --private-key <path to private key file> --days <int>`
+```bash
+go run cmd/licensing/main.go create --private-key <path to private key file> --days <int>
+```
 
 Creates a license using the private key at the specified path. The license will expire in the specified number of days. 
 
 ### Validating a license
 
-`go run cmd/licensing/main.go create --public-key <path to public key file> --license <license key string>`
+```bash
+go run cmd/licensing/main.go create --public-key <path to public key file> --license <license key string>
+```
 
 Validates a license and prints out information such as expiration date.
