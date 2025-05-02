@@ -65,7 +65,7 @@ type CreateReportRequest struct {
 
 	Groups map[string]string
 
-	Tags []string
+	Tags []string `json:"Tags" validate:"required,min=1"`
 }
 
 type CreateReportResponse struct {

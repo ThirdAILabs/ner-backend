@@ -187,11 +187,6 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		return nil, CodedErrorf(http.StatusUnprocessableEntity, "the following fields are required: ModelId")
 	}
 
-	// check if the requested tags exist
-	if len(req.Tags) == 0 {
-		return nil, CodedErrorf(http.StatusUnprocessableEntity, "the following fields are required: Tags")
-	}
-
 	sourceS3Bucket, s3Prefix := req.SourceS3Bucket, req.SourceS3Prefix
 
 	if req.UploadId != uuid.Nil {
