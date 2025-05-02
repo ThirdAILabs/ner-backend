@@ -5,6 +5,7 @@ import (
 	"log"
 	"ner-backend/cmd" // Adjust import path
 	"ner-backend/internal/api"
+	"ner-backend/internal/core"
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/s3"
@@ -19,6 +20,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type APIConfig struct {
@@ -33,6 +35,35 @@ type APIConfig struct {
 	WorkerConcurrency int    `env:"CONCURRENCY" envDefault:"1"`
 	APIPort           string `env:"API_PORT" envDefault:"8001"`
 	ChunkTargetBytes  int64  `env:"S3_CHUNK_TARGET_BYTES" envDefault:"10737418240"`
+}
+
+func initializePresidioModel(db *gorm.DB) {
+	presidio, err := core.NewPresidioModel()
+	if err != nil {
+		log.Fatalf("Failed to initialize model: %v", err)
+	}
+
+	modelId := uuid.New()
+
+	var tags []database.ModelTag
+	for _, tag := range presidio.GetTags() {
+		tags = append(tags, database.ModelTag{
+			ModelId: modelId,
+			Tag:     tag,
+		})
+	}
+
+	var model database.Model
+
+	if err := db.Where(database.Model{Name: "presidio"}).Attrs(database.Model{
+		Id:           modelId,
+		Type:         "presidio",
+		Status:       database.ModelTrained,
+		CreationTime: time.Now(),
+		Tags:         tags,
+	}).FirstOrCreate(&model).Error; err != nil {
+		log.Fatalf("Failed to create model record: %v", err)
+	}
 }
 
 func main() {
