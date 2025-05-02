@@ -22,10 +22,22 @@ interface ClusterSpecs {
 
 interface AnalyticsDashboardProps {
   progress: number;
-  tokensProcessed: number;
+  tokensProcessed: number; // This is actually bytes processed
   tokenCounts: Record<string, number>;
 }
 
+// Format file size in bytes to human-readable format
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 Bytes';
+  
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+// Format number for token counts
 const formatNumber = (num: number): string => {
   if (num >= 1000000) {
     return `${(num / 1000000).toFixed(2)}M`;
@@ -85,13 +97,13 @@ export function AnalyticsDashboard({
           </CardContent>
         </Card>
 
-        {/* Tokens Processed Widget */}
+        {/* Data Processed Widget (formerly Tokens Processed) */}
         <Card className="flex flex-col justify-between">
           <CardContent className="flex flex-col items-center pt-6 h-full">
             <div className="flex-1 flex items-center">
-              <span className="text-4xl font-semibold">{formatNumber(tokensProcessed)}</span>
+              <span className="text-4xl font-semibold">{formatFileSize(tokensProcessed)}</span>
             </div>
-            <h3 className="text-sm text-muted-foreground">Tokens Processed</h3>
+            <h3 className="text-sm text-muted-foreground">Data Processed</h3>
           </CardContent>
         </Card>
       </div>
