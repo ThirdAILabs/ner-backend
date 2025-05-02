@@ -244,14 +244,14 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 			return CodedErrorf(http.StatusUnprocessableEntity, "model is not ready: model has status: %s", model.Status)
 		}
 
-		tagNames := make([]string, 0)
+		modelTags := make([]string, 0)
 		for _, tag := range model.Tags {
-			tagNames = append(tagNames, tag.Name)
+			modelTags = append(modelTags, tag.Name)
 		}
 
 		erroneousTags := make([]string, 0)
 		for _, tag := range req.Tags {
-			if !slices.Contains(tagNames, tag) {
+			if !slices.Contains(modelTags, tag) {
 				erroneousTags = append(erroneousTags, tag)
 			}
 		}
