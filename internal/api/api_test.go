@@ -6,20 +6,18 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	backend "ner-backend/internal/api"
+	"ner-backend/internal/database"
+	"ner-backend/internal/messaging"
+	"ner-backend/internal/s3"
+	"ner-backend/pkg/api"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
 	"time"
 
-	backend "ner-backend/internal/api"
-	"ner-backend/internal/database"
-	"ner-backend/internal/messaging"
-	"ner-backend/internal/s3"
-	"ner-backend/pkg/api"
-
 	aws_s3 "github.com/aws/aws-sdk-go-v2/service/s3"
-
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -82,6 +80,8 @@ func TestGetModel(t *testing.T) {
 	db := createDB(t,
 		&database.Model{Id: uuid.New(), Name: "Model1", Type: "regex", Status: database.ModelTrained},
 		&database.Model{Id: modelId, Name: "Model2", Type: "bolt", Status: database.ModelTraining},
+		&database.ModelTag{ModelId: modelId, Tag: "name"},
+		&database.ModelTag{ModelId: modelId, Tag: "phone"},
 	)
 
 	service := backend.NewBackendService(db, mockS3(), messaging.NewInMemoryQueue(), 1024)
@@ -97,7 +97,7 @@ func TestGetModel(t *testing.T) {
 	var response api.Model
 	err := json.Unmarshal(rec.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	assert.Equal(t, api.Model{Id: modelId, Name: "Model2", Type: "bolt", Status: database.ModelTraining}, response)
+	assert.Equal(t, api.Model{Id: modelId, Name: "Model2", Type: "bolt", Status: database.ModelTraining, Tags: []string{"name", "phone"}}, response)
 }
 
 func TestFinetuneModel(t *testing.T) {
@@ -155,17 +155,22 @@ func TestCreateReport(t *testing.T) {
 	modelId := uuid.New()
 	db := createDB(t,
 		&database.Model{Id: modelId, Name: "Model1", Type: "regex", Status: database.ModelTrained},
+		&database.ModelTag{ModelId: modelId, Tag: "name"},
+		&database.ModelTag{ModelId: modelId, Tag: "email"},
+		&database.ModelTag{ModelId: modelId, Tag: "phone"},
 	)
 
 	service := backend.NewBackendService(db, mockS3(), messaging.NewInMemoryQueue(), 1024)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
-	payload := map[string]interface{}{
-		"ModelId":        modelId,
-		"SourceS3Bucket": "test-bucket",
-		"SourceS3Prefix": "test-prefix",
-		"Groups": map[string]string{
+	payload := api.CreateReportRequest{
+		ModelId:        modelId,
+		SourceS3Bucket: "test-bucket",
+		SourceS3Prefix: "test-prefix",
+		Tags:           []string{"name", "phone"},
+		CustomTags:     map[string]string{"tag1": "pattern1", "tag2": "pattern2"},
+		Groups: map[string]string{
 			"group1": `label1 CONTAINS "xyz"`,
 			"group2": `COUNT(label2) > 8`,
 		},
@@ -204,6 +209,8 @@ func TestCreateReport(t *testing.T) {
 	}, report.Model)
 	assert.Equal(t, "test-bucket", report.SourceS3Bucket)
 	assert.Equal(t, "test-prefix", report.SourceS3Prefix)
+	assert.ElementsMatch(t, []string{"name", "phone"}, report.Tags)
+	assert.Equal(t, map[string]string{"tag1": "pattern1", "tag2": "pattern2"}, report.CustomTags)
 	assert.Equal(t, 2, len(report.Groups))
 	assert.Equal(t, database.JobQueued, report.ShardDataTaskStatus)
 }
@@ -213,6 +220,9 @@ func TestGetReport(t *testing.T) {
 
 	db := createDB(t,
 		&database.Model{Id: modelId, Name: "Model1", Type: "regex", Status: database.ModelTrained},
+		&database.ModelTag{ModelId: modelId, Tag: "name"},
+		&database.ModelTag{ModelId: modelId, Tag: "email"},
+		&database.ModelTag{ModelId: modelId, Tag: "phone"},
 		&database.Report{
 			Id:             reportId,
 			ModelId:        modelId,
@@ -223,6 +233,9 @@ func TestGetReport(t *testing.T) {
 				{Id: group2, Name: "group_b", ReportId: reportId, Query: `label1 = "xyz"`},
 			},
 		},
+		&database.ReportTag{ReportId: reportId, Tag: "name"},
+		&database.ReportTag{ReportId: reportId, Tag: "phone"},
+		&database.CustomTag{ReportId: reportId, Tag: "tag1", Pattern: "pattern1"},
 		&database.ShardDataTask{ReportId: reportId, Status: database.JobCompleted},
 		&database.InferenceTask{ReportId: reportId, TaskId: 1, Status: database.JobCompleted},
 		&database.InferenceTask{ReportId: reportId, TaskId: 2, Status: database.JobRunning},
@@ -259,6 +272,8 @@ func TestGetReport(t *testing.T) {
 		}, report.Model)
 		assert.Equal(t, "test-bucket", report.SourceS3Bucket)
 		assert.Equal(t, "test-prefix", report.SourceS3Prefix)
+		assert.ElementsMatch(t, []string{"name", "phone"}, report.Tags)
+		assert.Equal(t, map[string]string{"tag1": "pattern1"}, report.CustomTags)
 		assert.Equal(t, 2, len(report.Groups))
 		assert.Equal(t, database.JobCompleted, report.ShardDataTaskStatus)
 	})
