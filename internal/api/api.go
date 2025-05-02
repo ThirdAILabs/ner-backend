@@ -204,7 +204,7 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		SourceS3Bucket: sourceS3Bucket,
 		SourceS3Prefix: sql.NullString{String: s3Prefix, Valid: s3Prefix != ""},
 		CreationTime:   time.Now().UTC(),
-		TokenCount:     []byte{},
+		TagCount:       []byte{},
 	}
 
 	for name, query := range req.Groups {
@@ -295,7 +295,7 @@ func (s *BackendService) GetReport(r *http.Request) (any, error) {
 	ctx := r.Context()
 
 	var report database.Report
-	if err := s.db.WithContext(ctx).Preload("Model").Preload("Groups").Preload("ShardDataTask").Preload("TagCount").Find(&report, "id = ?", reportId).Error; err != nil {
+	if err := s.db.WithContext(ctx).Preload("Model").Preload("Groups").Preload("ShardDataTask").Find(&report, "id = ?", reportId).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, CodedErrorf(http.StatusNotFound, "inference job not found")
 		}

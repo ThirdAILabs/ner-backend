@@ -53,8 +53,8 @@ func convertGroups(gs []database.Group) []api.Group {
 }
 
 func convertReport(r database.Report) api.Report {
-	tagCount := make(api.TagCount)
-	if err := json.Unmarshal(r.TokenCount, &tagCount); err != nil {
+	tagCountObj := make(api.TagCount)
+	if err := json.Unmarshal(r.TagCount, &tagCountObj); err != nil {
 		panic(err)
 	}
 
@@ -65,7 +65,7 @@ func convertReport(r database.Report) api.Report {
 		SourceS3Prefix: r.SourceS3Prefix.String,
 		CreationTime:   r.CreationTime,
 		Groups:         convertGroups(r.Groups),
-		TagCount:       tagCount,
+		TagCount:       tagCountObj,
 	}
 
 	if r.ShardDataTask != nil {

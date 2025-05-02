@@ -153,7 +153,7 @@ func (proc *TaskProcessor) updateTaggedTokenCount(reportId uuid.UUID, tagCount a
 		}
 
 		reportTagCount := make(api.TagCount)
-		if err := json.Unmarshal(report.TokenCount, &reportTagCount); err != nil {
+		if err := json.Unmarshal(report.TagCount, &reportTagCount); err != nil {
 			slog.Error("error unmarshalling current token count", "report_id", reportId, "error", err)
 			return fmt.Errorf("error unmarshalling current token count: %w", err)
 		}
