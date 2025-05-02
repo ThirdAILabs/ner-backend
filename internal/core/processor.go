@@ -13,6 +13,7 @@ import (
 	"ner-backend/internal/s3"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -136,19 +137,29 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 	}
 
 	var task database.InferenceTask
-	if err := proc.db.Preload("Report").Preload("Report.Model").Preload("Report.Groups").First(&task, "report_id = ? AND task_id = ?", reportId, payload.TaskId).Error; err != nil {
+	if err := proc.db.Preload("Report").Preload("Report.Model").Preload("Report.Tags").Preload("Report.CustomTags").Preload("Report.Groups").First(&task, "report_id = ? AND task_id = ?", reportId, payload.TaskId).Error; err != nil {
 		slog.Error("error fetching inference task", "report_id", reportId, "task_id", payload.TaskId, "error", err)
 		return fmt.Errorf("error getting inference task: %w", err)
 	}
 
 	s3Objects := strings.Split(task.SourceS3Keys, ";")
 
+	tags := make(map[string]struct{})
+	for _, tag := range task.Report.Tags {
+		tags[tag.Tag] = struct{}{}
+	}
+
+	customTags := make(map[string]string)
+	for _, tag := range task.Report.CustomTags {
+		customTags[tag.Tag] = tag.Pattern
+	}
+
 	groupToQuery := map[uuid.UUID]string{}
 	for _, group := range task.Report.Groups {
 		groupToQuery[group.Id] = group.Query
 	}
 
-	workerErr := proc.runInferenceOnBucket(task.ReportId, task.Report.Model.Id, task.Report.Model.Type, groupToQuery, task.SourceS3Bucket, s3Objects)
+	workerErr := proc.runInferenceOnBucket(task.ReportId, task.Report.Model.Id, task.Report.Model.Type, tags, customTags, groupToQuery, task.SourceS3Bucket, s3Objects)
 	if workerErr != nil {
 		slog.Error("error running inference task", "report_id", reportId, "task_id", payload.TaskId, "error", workerErr)
 		database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobFailed) // nolint:errcheck
@@ -168,6 +179,8 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 	reportId uuid.UUID,
 	modelId uuid.UUID,
 	modelType string,
+	tags map[string]struct{},
+	customTags map[string]string,
 	groupToQuery map[uuid.UUID]string,
 	bucket string,
 	objects []string,
@@ -189,10 +202,19 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 		groupToFilter[groupId] = filter
 	}
 
+	customTagsRe := make(map[string]*regexp.Regexp)
+	for tag, pat := range customTags {
+		re, err := regexp.Compile(pat)
+		if err != nil {
+			return fmt.Errorf("error compiling regex for tag %s: %w", tag, err)
+		}
+		customTagsRe[tag] = re
+	}
+
 	objectErrorCnt := 0
 
 	for _, object := range objects {
-		entities, groups, err := proc.runInferenceOnObject(reportId, parser, model, groupToFilter, bucket, object)
+		entities, groups, err := proc.runInferenceOnObject(reportId, parser, model, tags, customTagsRe, groupToFilter, bucket, object)
 		if err != nil {
 			slog.Error("error processing object", "object", object, "error", err)
 			objectErrorCnt++
@@ -312,6 +334,8 @@ func (proc *TaskProcessor) runInferenceOnObject(
 	reportId uuid.UUID,
 	parser Parser,
 	model Model,
+	tags map[string]struct{},
+	customTags map[string]*regexp.Regexp,
 	groupFilter map[uuid.UUID]Filter,
 	bucket string,
 	object string) (
@@ -336,9 +360,26 @@ func (proc *TaskProcessor) runInferenceOnObject(
 		}
 
 		for _, entity := range chunkEntities {
-			entity.Start += chunk.Offset
-			entity.End += chunk.Offset
-			labelToEntities[entity.Label] = append(labelToEntities[entity.Label], entity)
+			if _, ok := tags[entity.Label]; ok {
+				entity.Start += chunk.Offset
+				entity.End += chunk.Offset
+				labelToEntities[entity.Label] = append(labelToEntities[entity.Label], entity)
+			}
+		}
+
+		for tag, re := range customTags {
+			matches := re.FindAllStringIndex(chunk.Text, -1)
+			for _, match := range matches {
+				start, end := match[0], match[1]
+				labelToEntities[tag] = append(labelToEntities[tag], types.Entity{
+					Label:    tag,
+					Text:     chunk.Text[start:end],
+					Start:    start + chunk.Offset,
+					End:      end + chunk.Offset,
+					LContext: chunk.Text[max(0, start-20):start],
+					RContext: chunk.Text[end:min(len(chunk.Text), end+20)],
+				})
+			}
 		}
 
 		if len(previewTokens) < previewLimit {

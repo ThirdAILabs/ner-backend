@@ -13,6 +13,7 @@ import (
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/s3"
+	"regexp"
 
 	"ner-backend/pkg/api"
 	"net/http"
@@ -88,7 +89,7 @@ func (s *BackendService) GetModel(r *http.Request) (any, error) {
 	ctx := r.Context()
 
 	var model database.Model
-	if err := s.db.WithContext(ctx).First(&model, "id = ?", modelId).Error; err != nil {
+	if err := s.db.WithContext(ctx).Preload("Tags").First(&model, "id = ?", modelId).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, CodedErrorf(http.StatusNotFound, "model not found")
 		}
@@ -199,12 +200,39 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		return nil, CodedErrorf(http.StatusUnprocessableEntity, "the following fields are required: SourceS3Bucket or UploadId")
 	}
 
+	for _, tag := range req.Tags {
+		if _, ok := req.CustomTags[tag]; ok {
+			return nil, CodedErrorf(http.StatusUnprocessableEntity, "tag '%s' cannot be used as a regular and custom tag", tag)
+		}
+	}
+
+	for tag, pattern := range req.CustomTags {
+		if _, err := regexp.Compile(pattern); err != nil {
+			return nil, CodedErrorf(http.StatusUnprocessableEntity, "invalid regex pattern '%s' for custom tag '%s': %v", pattern, tag, err)
+		}
+	}
+
 	report := database.Report{
 		Id:             uuid.New(),
 		ModelId:        req.ModelId,
 		SourceS3Bucket: sourceS3Bucket,
 		SourceS3Prefix: sql.NullString{String: s3Prefix, Valid: s3Prefix != ""},
 		CreationTime:   time.Now().UTC(),
+	}
+
+	for _, tag := range req.Tags {
+		report.Tags = append(report.Tags, database.ReportTag{
+			ReportId: report.Id,
+			Tag:      tag,
+		})
+	}
+
+	for tag, pattern := range req.CustomTags {
+		report.CustomTags = append(report.CustomTags, database.CustomTag{
+			ReportId: report.Id,
+			Tag:      tag,
+			Pattern:  pattern,
+		})
 	}
 
 	for name, query := range req.Groups {
@@ -232,7 +260,7 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 	var model database.Model
 
 	if err := s.db.WithContext(ctx).Transaction(func(txn *gorm.DB) error {
-		if err := txn.First(&model, "id = ?", req.ModelId).Error; err != nil {
+		if err := txn.Preload("Tags").First(&model, "id = ?", req.ModelId).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return CodedErrorf(http.StatusNotFound, "model not found")
 			}
@@ -242,6 +270,17 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 
 		if model.Status != database.ModelTrained {
 			return CodedErrorf(http.StatusUnprocessableEntity, "model is not ready: model has status: %s", model.Status)
+		}
+
+		modelTags := make(map[string]struct{})
+		for _, tag := range model.Tags {
+			modelTags[tag.Tag] = struct{}{}
+		}
+
+		for _, tag := range req.Tags {
+			if _, ok := modelTags[tag]; !ok {
+				return CodedErrorf(http.StatusUnprocessableEntity, "model does not support tag '%s', either switch models, or add a custom tag", tag)
+			}
 		}
 
 		if err := txn.WithContext(ctx).Create(&report).Error; err != nil {
@@ -279,7 +318,7 @@ func (s *BackendService) GetReport(r *http.Request) (any, error) {
 	ctx := r.Context()
 
 	var report database.Report
-	if err := s.db.WithContext(ctx).Preload("Model").Preload("Groups").Preload("ShardDataTask").Preload("Errors").Find(&report, "id = ?", reportId).Error; err != nil {
+	if err := s.db.WithContext(ctx).Preload("Model").Preload("Tags").Preload("CustomTags").Preload("Groups").Preload("ShardDataTask").Preload("Errors").Find(&report, "id = ?", reportId).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, CodedErrorf(http.StatusNotFound, "inference job not found")
 		}
