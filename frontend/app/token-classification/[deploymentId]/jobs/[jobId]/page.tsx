@@ -179,9 +179,10 @@ interface TagProps {
 
 const Tag: React.FC<TagProps> = ({ tag, selected = true, onClick }) => (
   <div
-    className={`px-3 py-1.5 text-sm font-medium rounded-sm
+    className={`px-3 py-1.5 text-sm font-medium rounded-sm cursor-pointer
       ${selected ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}
     `}
+    style={{ userSelect: 'none' }}
     onClick={onClick}
   >
     {tag}
@@ -401,19 +402,13 @@ export default function JobDetail() {
                   title="S3 Bucket"
                   description={(reportData.SourceS3Bucket + "/" + reportData?.SourceS3Prefix) || "s3://thirdai-dev/customer-calls/2025/"}
                   isSelected={selectedSource === 's3'}
-                  onClick={() => setSelectedSource('s3')}
+                  onClick={() => { }}
                 />}
                 <SourceOption
-                  title="Local Storage"
+                  title="File Upload"
                   description="Configure now"
                   isSelected={selectedSource === 'local'}
-                  onClick={() => setSelectedSource('local')}
-                />
-                <SourceOption
-                  title="More options"
-                  description="coming soon"
-                  isSelected={selectedSource === 'more'}
-                  onClick={() => setSelectedSource('more')}
+                  onClick={() => { }}
                 />
               </div>
             </div>
@@ -422,11 +417,12 @@ export default function JobDetail() {
             <div>
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-medium">Tags</h2>
-                {/* <Button
+                <Button
                   variant="outline"
                   size="sm"
                   onClick={selectAllTags}
                   className="text-sm flex items-center"
+                  disabled={selectedTags?.length === mockTags?.length}
                 >
                   <span className="mr-1">Select All</span>
                   <input
@@ -435,7 +431,7 @@ export default function JobDetail() {
                     onChange={selectAllTags}
                     className="rounded border-gray-300"
                   />
-                </Button> */}
+                </Button>
               </div>
               <div className="flex flex-wrap gap-2">
                 {mockTags.map(tag => (
@@ -443,7 +439,7 @@ export default function JobDetail() {
                     key={tag}
                     tag={tag}
                     selected={selectedTags.includes(tag)}
-                  // onClick={() => toggleTag(tag)}
+                    onClick={() => toggleTag(tag)}
                   />
                 ))}
               </div>
