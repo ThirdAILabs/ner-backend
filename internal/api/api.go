@@ -12,6 +12,7 @@ import (
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/s3"
+	"regexp"
 
 	"ner-backend/pkg/api"
 	"net/http"
@@ -200,6 +201,12 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 	for _, tag := range req.Tags {
 		if _, ok := req.CustomTags[tag]; ok {
 			return nil, CodedErrorf(http.StatusUnprocessableEntity, "tag '%s' cannot be used as a a regular and custom tag", tag)
+		}
+	}
+
+	for tag, pattern := range req.CustomTags {
+		if _, err := regexp.Compile(pattern); err != nil {
+			return nil, CodedErrorf(http.StatusUnprocessableEntity, "invalid regex pattern '%s' for custom tag '%s': %v", pattern, tag, err)
 		}
 	}
 
