@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"path/filepath"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	aws_config "github.com/aws/aws-sdk-go-v2/config"
@@ -109,6 +110,9 @@ func (s *S3Provider) GetObject(ctx context.Context, bucket, key string) ([]byte,
 }
 
 func (s *S3Provider) DownloadObject(ctx context.Context, bucket, key, filename string) error {
+	if err := os.MkdirAll(filepath.Dir(filename), os.ModePerm); err != nil {
+		return fmt.Errorf("failed to create directory for download %s: %w", filepath.Dir(filename), err)
+	}
 	file, err := os.Create(filename)
 	if err != nil {
 		return fmt.Errorf("failed to create file %s: %w", filename, err)
