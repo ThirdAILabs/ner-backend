@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"ner-backend/internal/core/bolt"
 	"ner-backend/internal/core/python"
 	"ner-backend/internal/core/types"
 	"ner-backend/pkg/api"
@@ -29,9 +28,9 @@ type Model interface {
 type modelLoader func(string) (Model, error)
 
 var modelLoaders = map[string]modelLoader{
-	"bolt": func(path string) (Model, error) {
-		return bolt.LoadNER(path)
-	},
+	// "bolt": func(path string) (Model, error) {
+	// 	return bolt.LoadNER(path)
+	// },
 
 	// TODO: replace env vars with a passed-in config
 	"python_combined_ner_model": func(path string) (Model, error) {

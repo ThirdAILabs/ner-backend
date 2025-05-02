@@ -1,33 +1,25 @@
 # --- Build Stage ---
-    FROM golang:1.24 as builder
+# Consider specifying the platform explicitly if your build machine isn't ARM64
+# FROM --platform=linux/arm64 golang:1.24 as builder
+FROM golang:1.24 as builder
 
-    WORKDIR /app
-    
-    # Copy module files and download dependencies first for caching
-    COPY go.mod go.sum ./
-    RUN go mod download
-    
-    # Copy the rest of the application source code
-    COPY . .
-    
-    # Build the API server binary
-    RUN CGO_ENABLED=1 GOOS=linux go build -v -o /app/api ./cmd/api
-    
-    # Build the Worker binary
-    RUN CGO_ENABLED=1 GOOS=linux go build -v -o /app/worker ./cmd/worker
+WORKDIR /app
 
-    WORKDIR /app
-    
-    COPY ./entrypoint.sh /entrypoint.sh
-    
-    # Ensure entrypoint is executable
-    RUN chmod +x /entrypoint.sh
-    
-    # Expose API port
-    EXPOSE 8001
-    
-    # Set the entrypoint script
-    ENTRYPOINT ["/entrypoint.sh"]
-    
-    # Default command (starts as worker)
-    CMD ["--worker"]
+RUN apt-get update -y && apt-get install -y gcc-11 g++-11 cmake zlib1g-dev python3-dev
+ENV CC=gcc-11 CXX=g++-11
+
+
+# Copy module files and download dependencies first for caching
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy the rest of the application source code
+COPY . .
+
+# Build the API server binary for Linux ARM64
+RUN CGO_ENABLED=1 GOOS=linux go build -v -o /app/api ./cmd/api 
+
+# Build the Worker binary for Linux ARM64
+RUN CGO_ENABLED=1 GOOS=linux go build -v -o /app/worker ./cmd/worker 
+
+# ... rest of your Dockerfile
