@@ -426,10 +426,9 @@ func (s *BackendService) GetReportPreviews(r *http.Request) (any, error) {
 			slog.Error("unmarshal preview payload", "object", p.Object, "err", err)
 		}
 		resp[i] = api.ObjectPreviewResponse{
-			Object:  p.Object,
-			Preview: p.Preview,
-			Tokens:  payload.Tokens,
-			Tags:    payload.Tags,
+			Object: p.Object,
+			Tokens: payload.Tokens,
+			Tags:   payload.Tags,
 		}
 	}
 

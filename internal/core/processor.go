@@ -282,10 +282,7 @@ func (proc *TaskProcessor) createObjectPreview(
 			tokens = append(tokens, previewText[cursor:e.Start])
 			tags = append(tags, "O")
 		}
-		end := e.End
-		if end > length {
-			end = length
-		}
+		end := min(e.End, length)
 		tokens = append(tokens, previewText[e.Start:end])
 		tags = append(tags, e.Label)
 		cursor = end
@@ -307,7 +304,6 @@ func (proc *TaskProcessor) createObjectPreview(
 	return proc.db.Create(&database.ObjectPreview{
 		ReportId:  reportId,
 		Object:    object,
-		Preview:   previewText,
 		TokenTags: datatypes.JSON(b),
 	}).Error
 }

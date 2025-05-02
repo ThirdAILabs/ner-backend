@@ -101,8 +101,7 @@ type UploadResponse struct {
 }
 
 type ObjectPreviewResponse struct {
-	Object  string   `json:"object"`
-	Preview string   `json:"preview"`
-	Tokens  []string `json:"tokens"`
-	Tags    []string `json:"tags"`
+	Object string   `json:"object"`
+	Tokens []string `json:"tokens"`
+	Tags   []string `json:"tags"`
 }
