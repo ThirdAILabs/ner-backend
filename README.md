@@ -55,7 +55,7 @@ The `cmd/licensing/main.go` cli tool provides utilities for creating an managing
 go run cmd/licensing/main.go keys --output "test_key"
 ```
 
-This command will generate `<output>_private_key.pem` and `<output>_public_key.pem` containing private/public keys that can be used for local licensing. Currently we use the keys saved in `/share/keys/ner_licensing` on blade. This command should not be run unless you are testing or want to change the keys. 
+This command will generate `<output>_private_key.pem` and `<output>_public_key.pem` containing private/public keys that can be used for local licensing. Currently we use the keys saved in `/share/keys/ner_licensing` on blade. This command should not be run unless you are testing or want to change the keys. Note if keys are being changed, then the public key in `file_license.go` needs to updated as well.
 
 ### Creating a license
 
