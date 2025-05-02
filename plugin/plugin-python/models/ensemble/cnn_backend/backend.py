@@ -1,7 +1,7 @@
 from transformers import AutoTokenizer
 import torch
 import torch.nn as nn
-from impl import CNNNERModelSentenceTokenized
+from .impl import CNNNERModelSentenceTokenized
 
 
 class CNNModel:

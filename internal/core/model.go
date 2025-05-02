@@ -48,6 +48,16 @@ var modelLoaders = map[string]modelLoader{
 		// we ignore `path` (no checkpoint needed) and always use the default threshold
 		return &presidioModel{threshold: defaultPresidioThreshold}, nil
 	},
+
+	"python_ensemble_ner_model": func(path string) (Model, error) {
+		configJSON := fmt.Sprintf("{\"cnn\":{\"model_path\":\"%s/models/ensemble/best_cnn.pth\",\"tokenizer_name\":\"Qwen/Qwen2.5-0.5B\",\"embedding_path\":\"%s/models/ensemble/cnnwrapped_model.pt\"},\"embedding_bag\":{\"checkpoint_path\":\"%s/models/ensemble/bolttorch.pth\"},\"udt\":{\"model_path\":\"%s/models/ensemble/udt_complete.model\"}}", path, path, path, path)
+		return python.LoadPythonModel(
+			os.Getenv("PYTHON_EXECUTABLE_PATH"),
+			os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH"),
+			"python_ensemble_ner_model",
+			configJSON,
+		)
+	},
 }
 
 func RegisterModelLoader(modelType string, loader modelLoader) {

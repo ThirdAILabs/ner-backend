@@ -1,11 +1,10 @@
-from impl import EmbeddingBagNERModel, HASH_DIMENSION, run_ner_inference
+from .impl import EmbeddingBagNERModel, HASH_DIMENSION, run_ner_inference
 import torch
 
 
 class EmbeddingBagWrappedNerModel:
     def __init__(
         self,
-        name: str,
         checkpoint_path: str,
         tag2idx: dict,
         pad_token_idx: int = HASH_DIMENSION,
