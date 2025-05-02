@@ -102,7 +102,3 @@ type SearchResponse struct {
 type UploadResponse struct {
 	Id uuid.UUID
 }
-
-type Tag struct {
-	Tag string
-}

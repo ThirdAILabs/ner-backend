@@ -11,7 +11,10 @@ func convertModel(m database.Model) api.Model {
 		Name:   m.Name,
 		Type:   m.Type,
 		Status: m.Status,
-		Tags:   m.Tags,
+	}
+	model.Tags = make([]string, len(m.Tags))
+	for i, tag := range m.Tags {
+		model.Tags[i] = tag.Name
 	}
 	if m.BaseModelId.Valid {
 		model.BaseModelId = &m.BaseModelId.UUID
@@ -49,6 +52,10 @@ func convertGroups(gs []database.Group) []api.Group {
 }
 
 func convertReport(r database.Report) api.Report {
+	tags := make([]string, 0, len(r.Tags))
+	for _, tag := range r.Tags {
+		tags = append(tags, tag.Name)
+	}
 	report := api.Report{
 		Id:             r.Id,
 		Model:          convertModel(*r.Model),
@@ -56,7 +63,7 @@ func convertReport(r database.Report) api.Report {
 		SourceS3Prefix: r.SourceS3Prefix.String,
 		CreationTime:   r.CreationTime,
 		Groups:         convertGroups(r.Groups),
-		Tags:           r.Tags,
+		Tags:           tags,
 	}
 
 	if r.ShardDataTask != nil {

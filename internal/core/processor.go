@@ -232,7 +232,7 @@ func (proc *TaskProcessor) loadModel(modelId uuid.UUID, modelType string) (Model
 
 func (proc *TaskProcessor) getReport(ctx context.Context, reportId uuid.UUID) (database.Report, error) {
 	var report database.Report
-	if err := proc.db.WithContext(ctx).First(&report, "id = ?", reportId).Error; err != nil {
+	if err := proc.db.WithContext(ctx).Preload("Tags").First(&report, "id = ?", reportId).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			slog.Error("report not found", "report_id", reportId)
 			return database.Report{}, fmt.Errorf("report not found: %w", err)
@@ -274,7 +274,7 @@ func (proc *TaskProcessor) runInferenceOnObject(
 
 		for _, entity := range chunkEntities {
 			for _, tag := range report.Tags {
-				if tag == entity.Label {
+				if tag.Name == entity.Label {
 					entity.Start += chunk.Offset
 					entity.End += chunk.Offset
 					labelToEntities[entity.Label] = append(labelToEntities[entity.Label], entity)

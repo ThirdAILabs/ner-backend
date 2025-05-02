@@ -12,6 +12,7 @@ import (
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/s3"
+	"slices"
 
 	"ner-backend/pkg/api"
 	"net/http"
@@ -186,6 +187,11 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		return nil, CodedErrorf(http.StatusUnprocessableEntity, "the following fields are required: ModelId")
 	}
 
+	// check if the requested tags exist
+	if len(req.Tags) == 0 {
+		return nil, CodedErrorf(http.StatusUnprocessableEntity, "the following fields are required: Tags")
+	}
+
 	sourceS3Bucket, s3Prefix := req.SourceS3Bucket, req.SourceS3Prefix
 
 	if req.UploadId != uuid.Nil {
@@ -230,7 +236,7 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 	var model database.Model
 
 	if err := s.db.WithContext(ctx).Transaction(func(txn *gorm.DB) error {
-		if err := txn.First(&model, "id = ?", req.ModelId).Error; err != nil {
+		if err := txn.Preload("Tags").First(&model, "id = ?", req.ModelId).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return CodedErrorf(http.StatusNotFound, "model not found")
 			}
@@ -242,18 +248,28 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 			return CodedErrorf(http.StatusUnprocessableEntity, "model is not ready: model has status: %s", model.Status)
 		}
 
-		for _, t := range req.Tags {
-			var tag database.Tag
-			if err := txn.First(&tag, "tag = ?", t).Error; err != nil {
-				if errors.Is(err, gorm.ErrRecordNotFound) {
-					return CodedErrorf(http.StatusBadRequest, "tag '%s' not found", t)
-				}
-				slog.Error("error checking model tag", "error", err)
-				return CodedErrorf(http.StatusInternalServerError, "error checking model tags")
+		tagNames := make([]string, 0)
+		for _, tag := range model.Tags {
+			tagNames = append(tagNames, tag.Name)
+		}
+
+		erroneousTags := make([]string, 0)
+		for _, tag := range req.Tags {
+			if !slices.Contains(tagNames, tag) {
+				erroneousTags = append(erroneousTags, tag)
 			}
 		}
 
-		report.Tags = req.Tags
+		if len(erroneousTags) > 0 {
+			return CodedErrorf(http.StatusUnprocessableEntity, "model does not have the following tags: %s", erroneousTags)
+		}
+
+		report.Tags = make([]database.Tag, 0)
+		for _, tag := range req.Tags {
+			report.Tags = append(report.Tags, database.Tag{
+				Name: tag,
+			})
+		}
 
 		if err := txn.WithContext(ctx).Create(&report).Error; err != nil {
 			slog.Error("error creating report entry", "error", err)
