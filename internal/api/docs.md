@@ -300,7 +300,6 @@ Retrieve preview snippets and token-level tags for each object in a report. Each
 [
   {
     "object": "document1.txt",
-    "preview": "Call me at 123 456 7890 I live at 123 Main Street...",
     "tokens": [
       "Call me at ",
       "123 456 7890",
@@ -318,7 +317,6 @@ Retrieve preview snippets and token-level tags for each object in a report. Each
   },
   {
     "object": "notes.pdf",
-    "preview": "Project deadline is 2025-06-30. Please review by then.",
     "tokens": [
       "Project deadline is ",
       "2025-06-30",
