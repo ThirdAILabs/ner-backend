@@ -93,16 +93,7 @@ func main() {
 		log.Fatalf("Worker: Failed to create S3 client: %v", err)
 	}
 
-	var model database.Model
-
-	if err := db.Where(database.Model{Name: "presidio"}).Attrs(database.Model{
-		Id:           uuid.New(),
-		Type:         "presidio",
-		Status:       database.ModelTrained,
-		CreationTime: time.Now(),
-	}).FirstOrCreate(&model).Error; err != nil {
-		log.Fatalf("Failed to seed presidio model record: %v", err)
-	}
+	initializePresidioModel(db)
 
 	// Initialize RabbitMQ Publisher
 	publisher, err := messaging.NewRabbitMQPublisher(cfg.RabbitMQURL)
