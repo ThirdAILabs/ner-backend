@@ -518,12 +518,6 @@ export default function JobDetail() {
               'POLICY_ID': 400,
               'DATE': 780
             }}
-            clusterSpecs={{
-              cpus: 48,
-              vendorId: 'GenuineIntel',
-              modelName: reportData?.Model?.Name || "Intel Xeon E5-2680",
-              cpuMhz: 1197.408
-            }}
           />
         </TabsContent>
 
