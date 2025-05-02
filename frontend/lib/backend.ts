@@ -1,6 +1,62 @@
 import axiosInstance, { nerBaseUrl } from './axios.config';
 import axios from 'axios';
 
+// Type definitions for API responses
+interface Model {
+  Id: string;
+  Name: string;
+  Type: string;
+  Status: string;
+  BaseModelId?: string;
+  Tags?: string[];
+}
+
+interface Group {
+  Id: string;
+  Name: string;
+  Query: string;
+  Objects?: string[];
+}
+
+interface TaskStatusCategory {
+  TotalTasks: number;
+  TotalSize: number;
+}
+
+interface Report {
+  Id: string;
+  Model: Model;
+  SourceS3Bucket: string;
+  SourceS3Prefix: string;
+  CreationTime: string;
+  Tags?: string[];
+  CustomTags?: { [key: string]: string };
+  Groups?: Group[];
+  ShardDataTaskStatus?: string;
+  InferenceTaskStatuses?: { [key: string]: TaskStatusCategory };
+  Errors?: string[];
+}
+
+interface Entity {
+  Object: string;
+  Start: number;
+  End: number;
+  Label: string;
+  Text: string;
+  LContext?: string;
+  RContext?: string;
+}
+
+interface CreateReportRequest {
+  ModelId: string;
+  UploadId?: string;
+  SourceS3Bucket?: string;
+  SourceS3Prefix?: string;
+  Tags: string[];
+  CustomTags?: { [key: string]: string };
+  Groups?: { [key: string]: string };
+}
+
 export const nerService = {
 
   checkHealth: async () => {
@@ -18,6 +74,16 @@ export const nerService = {
     return response.data;
   },
 
+  getTagsFromModel: async (modelId: string): Promise<string[]> => {
+    try {
+      const model = await nerService.getModel(modelId);
+      return model.Tags || [];
+    } catch (error) {
+      console.error("Error fetching tags from model:", error);
+      return [];
+    }
+  },
+
   listReports: async (): Promise<Report[]> => {
     const response = await axiosInstance.get('/reports');
     return response.data;
@@ -31,6 +97,22 @@ export const nerService = {
   getReport: async (reportId: string): Promise<Report> => {
     const response = await axiosInstance.get(`/reports/${reportId}`);
     return response.data;
+  },
+
+  getTagsFromReport: async (reportId: string): Promise<{
+    regularTags: string[],
+    customTags: { [key: string]: string }
+  }> => {
+    try {
+      const report = await nerService.getReport(reportId);
+      return {
+        regularTags: report.Tags || [],
+        customTags: report.CustomTags || {}
+      };
+    } catch (error) {
+      console.error("Error fetching tags from report:", error);
+      return { regularTags: [], customTags: {} };
+    }
   },
 
   getReportGroup: async (reportId: string, groupId: string): Promise<Group> => {
@@ -54,6 +136,17 @@ export const nerService = {
       },
     });
     return response.data;
+  },
+
+  getUniqueTagsFromEntities: async (reportId: string, limit: number = 500): Promise<string[]> => {
+    try {
+      const entities = await nerService.getReportEntities(reportId, { limit });
+      // Extract and deduplicate tag types
+      return Array.from(new Set(entities.map(e => e.Label)));
+    } catch (error) {
+      console.error("Error fetching unique tags from entities:", error);
+      return [];
+    }
   },
 
   searchReport: async (reportId: string, query: string): Promise<{ Objects: string[] }> => {

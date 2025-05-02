@@ -68,9 +68,6 @@ const getProcessedTokens = (report: Report | null): number => {
 
 // Mock data for database table
 const mockGroups = ['Reject', 'Sensitive', 'Safe'];
-const mockTags = ['VIN', 'NAME', 'ORG', 'ADDRESS', 'EMAIL', 'SSN', 'PHONE', 'POLICY_ID', 'MED_REC_NO', 'LICENSE', 'EMPLOYER', 'ID', 'USERNAME', 'URL', 'IP_ADDR', 'ZIP_CODE', 'ACCOUNT', 'INS_PROV', 'PROCEDURE', 'DATE', 'NATIONALITY', 'SERIAL_NO', 'CRED_CARD_NUM', 'CVV'];
-
-
 
 // Source option card component
 interface SourceOptionProps {
@@ -236,40 +233,84 @@ export default function JobDetail() {
   const [lastUpdated, setLastUpdated] = useState(0);
   const [tabValue, setTabValue] = useState('configuration');
   const [selectedSource, setSelectedSource] = useState('s3');
-  const [selectedTags, setSelectedTags] = useState<string[]>(mockTags);
-  const [dynamicTags, setDynamicTags] = useState<string[]>(mockTags);
-
+  
+  // Initialize with empty array instead of mockTags
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  
   const [reportData, setReportData] = useState<Report | null>(null);
+  const [customTags, setCustomTags] = useState<CustomTag[]>([]);
+  const [isNewTagDialogOpen, setIsNewTagDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Gather unique entity types from API
-  const fetchAndProcessEntities = async () => {
+  // Comprehensive function to fetch tags from all sources
+  const fetchTags = async () => {
+    setIsLoading(true);
     try {
-      const entities = await nerService.getReportEntities(reportId, { limit: 200 });
-      if (entities && entities.length > 0) {
-        // Extract and deduplicate tag types
-        const apiTagTypes = Array.from(new Set(entities.map(e => e.Label)));
-
-        // Combine with mockTags (for backward compatibility) and deduplicate
-        const combinedTags = Array.from(new Set([...mockTags, ...apiTagTypes]));
-        console.log("Combined tag types:", combinedTags);
-
-        setDynamicTags(combinedTags);
+      // 1. Get report data which includes model ID and report tags
+      const report = await nerService.getReport(reportId);
+      setReportData(report);
+      
+      // 2. Get tags from the model used in this report
+      let modelTags: string[] = [];
+      if (report.Model?.Id) {
+        modelTags = await nerService.getTagsFromModel(report.Model.Id);
       }
+      
+      // 3. Get report tags
+      const reportTagsData = await nerService.getTagsFromReport(reportId);
+      
+      // 4. Get unique entity tags from actual data
+      const entityTags = await nerService.getUniqueTagsFromEntities(reportId, 1000);
+      
+      // 5. Combine and deduplicate all tags
+      const allTags = Array.from(new Set([
+        ...modelTags,
+        ...reportTagsData.regularTags,
+        ...entityTags
+      ]));
+      
+      console.log("Tags from model:", modelTags);
+      console.log("Tags from report:", reportTagsData.regularTags);
+      console.log("Tags from entities:", entityTags);
+      console.log("Combined tags:", allTags);
+      
+      // 6. Set available tags and initially select all
+      setAvailableTags(allTags);
+      setSelectedTags(allTags);
+      
+      // 7. Set custom tags from report
+      const customTagsList = Object.entries(reportTagsData.customTags || {}).map(
+        ([name, pattern]) => ({ name, pattern })
+      );
+      
+      setCustomTags(customTagsList.length ? customTagsList : [
+        // Fallback example if none exist
+        { name: "CREDIT_SCORE", pattern: "\\b[0-9]{3,4}\\b" }
+      ]);
     } catch (error) {
-      console.error("Error fetching entity types:", error);
+      console.error("Error fetching tags:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const fetchReportData = async () => {
-    const response = await nerService.getReport(reportId);
-    console.log(response);
-    setReportData(response);
-  }
-
   useEffect(() => {
-    fetchReportData();
-    fetchAndProcessEntities();
-  }, []);
+    fetchTags();
+    
+    // Set up refresh timer
+    const timer = setInterval(() => {
+      setLastUpdated(prev => prev + 1);
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, [reportId]);
+
+  // Optional: Add a refresh function that gets called when the refresh button is clicked
+  const handleRefresh = () => {
+    setLastUpdated(0);
+    fetchTags();
+  };
 
   // Define real data loading functions for entities
   const loadRealClassifiedTokenRecords = async (offset = 0, limit = 50) => {
@@ -280,7 +321,7 @@ export default function JobDetail() {
       // Extract unique entity types from the API response
       const uniqueTypes = new Set(entities.map(entity => entity.Label));
       console.log("Unique entity types in API response:", Array.from(uniqueTypes));
-      console.log("Tag filters available in UI:", mockTags);
+      console.log("Tag filters available in UI:", availableTags);
 
       return entities.map(entity => {
         const record = {
@@ -350,14 +391,8 @@ export default function JobDetail() {
   };
 
   const selectAllTags = () => {
-    setSelectedTags(allTag);
+    setSelectedTags(availableTags);
   };
-  const [allTag, setAllTags] = useState<string[]>(mockTags);
-
-  const [customTags, setCustomTags] = useState<CustomTag[]>([
-    { name: "CREDIT_SCORE", pattern: "\\b[0-9]{3,4}\\b" }
-  ]);
-  const [isNewTagDialogOpen, setIsNewTagDialogOpen] = useState(false);
 
   return (
     <div className="container px-4 py-8 mx-auto">
@@ -409,7 +444,7 @@ export default function JobDetail() {
 
           <div className="flex items-center space-x-4">
             <span className="text-sm text-gray-500">Last updated: {lastUpdated} seconds ago</span>
-            <Button variant="ghost" size="icon" onClick={() => setLastUpdated(0)}>
+            <Button variant="ghost" size="icon" onClick={handleRefresh}>
               <RefreshCw className="h-4 w-4" />
             </Button>
             <Button variant="ghost" size="icon">
@@ -453,55 +488,70 @@ export default function JobDetail() {
                   size="sm"
                   onClick={selectAllTags}
                   className="text-sm flex items-center"
-                  disabled={selectedTags?.length === allTag?.length}
+                  disabled={selectedTags?.length === availableTags?.length || isLoading}
                 >
                   <span className="mr-1">Select All</span>
                   <input
                     type="checkbox"
-                    checked={selectedTags.length === allTag.length}
+                    checked={selectedTags.length === availableTags.length}
                     onChange={selectAllTags}
                     className="rounded border-gray-300"
                   />
                 </Button>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {allTag.map(tag => (
-                  <Tag
-                    key={tag}
-                    tag={tag}
-                    selected={selectedTags.includes(tag)}
-                    onClick={() => toggleTag(tag)}
-                  />
-                ))}
-              </div>
+              
+              {isLoading ? (
+                <div className="flex justify-center py-4">
+                  <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
+                </div>
+              ) : availableTags.length === 0 ? (
+                <div className="text-gray-500 py-2">No tags available</div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {availableTags.map(tag => (
+                    <Tag
+                      key={tag}
+                      tag={tag}
+                      selected={selectedTags.includes(tag)}
+                      onClick={() => toggleTag(tag)}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Custom Tags section */}
             <div>
               <h2 className="text-lg font-medium mb-4">Custom Tags</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {customTags.map((customTag) => (
-                  <div key={customTag.name} className="border border-gray-200 rounded-md overflow-hidden">
-                    <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-                      <h3 className="text-base font-medium">{customTag.name}</h3>
-                      <Tag tag={customTag.name} custom selected />
+              {isLoading ? (
+                <div className="flex justify-center py-4">
+                  <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {customTags.map((customTag) => (
+                    <div key={customTag.name} className="border border-gray-200 rounded-md overflow-hidden">
+                      <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+                        <h3 className="text-base font-medium">{customTag.name}</h3>
+                        <Tag tag={customTag.name} custom selected />
+                      </div>
+                      <div className="p-4">
+                        <p className="text-sm font-mono">{customTag.pattern}</p>
+                      </div>
                     </div>
-                    <div className="p-4">
-                      <p className="text-sm font-mono">{customTag.pattern}</p>
-                    </div>
-                  </div>
-                ))}
+                  ))}
 
-                <div
-                  className="border border-dashed border-gray-300 rounded-md flex items-center justify-center p-6 cursor-pointer hover:border-gray-400"
-                  onClick={() => setIsNewTagDialogOpen(true)}
-                >
-                  <div className="flex flex-col items-center">
-                    <Plus className="h-8 w-8 text-gray-400 mb-2" />
-                    <span className="text-gray-600">Define new tag</span>
+                  <div
+                    className="border border-dashed border-gray-300 rounded-md flex items-center justify-center p-6 cursor-pointer hover:border-gray-400"
+                    onClick={() => setIsNewTagDialogOpen(true)}
+                  >
+                    <div className="flex flex-col items-center">
+                      <Plus className="h-8 w-8 text-gray-400 mb-2" />
+                      <span className="text-gray-600">Define new tag</span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Add the dialog component */}
@@ -510,9 +560,10 @@ export default function JobDetail() {
               onClose={() => setIsNewTagDialogOpen(false)}
               onSubmit={(newTag) => {
                 setCustomTags([...customTags, newTag]);
-                setAllTags([...allTag, newTag.name]);
+                setAvailableTags([...availableTags, newTag.name]);
+                setSelectedTags([...selectedTags, newTag.name]);
               }}
-              existingTags={allTag}
+              existingTags={availableTags}
             />
 
             {/* Groups section */}
@@ -561,7 +612,7 @@ export default function JobDetail() {
             loadMoreObjectRecords={loadRealObjectRecords}
             loadMoreClassifiedTokenRecords={loadRealClassifiedTokenRecords}
             groups={reportData?.Groups?.map(g => g.Name) || mockGroups}
-            tags={dynamicTags}
+            tags={availableTags}
           />
         </TabsContent>
       </Tabs>
