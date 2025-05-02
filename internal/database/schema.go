@@ -50,6 +50,8 @@ type Report struct {
 
 	ShardDataTask  *ShardDataTask  `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
 	InferenceTasks []InferenceTask `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
+
+	Errors []ReportError `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
 }
 
 type ShardDataTask struct {
@@ -108,4 +110,10 @@ type ObjectPreview struct {
 	Object    string         `gorm:"primaryKey;size:255"`
 	Preview   string         `gorm:"type:text"`           // first ~1 000 tokens
 	TokenTags datatypes.JSON `gorm:"type:jsonb;not null"` // [{"token":"…","tag":"…"},…]
+}
+
+type ReportError struct {
+	ReportId  uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Error     string
+	Timestamp time.Time
 }

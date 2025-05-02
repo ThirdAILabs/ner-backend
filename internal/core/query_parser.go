@@ -179,7 +179,7 @@ func (e *OrExpr) String() string {
 }
 
 type Condition struct {
-	Not     bool        `parser:"'NOT'?"`
+	Not     bool        `parser:"@'NOT'?"`
 	Filter  *FilterExpr `parser:"@@"`
 	SubExpr *Expr       `parser:"| '(' @@ ')'"`
 }

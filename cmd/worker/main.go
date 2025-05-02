@@ -1,14 +1,18 @@
 package main
 
 import (
+	"fmt"
 	"log" // Adjust import path
+	"log/slog"
 	"ner-backend/cmd"
 	"ner-backend/internal/core"
 	"ner-backend/internal/database"
+	"ner-backend/internal/licensing"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/s3"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/caarlos0/env/v11"
@@ -24,6 +28,7 @@ type WorkerConfig struct {
 	ModelBucketName             string `env:"MODEL_BUCKET_NAME" envDefault:"models"`
 	QueueNames                  string `env:"QUEUE_NAMES" envDefault:"inference_queue,training_queue,shard_data_queue"`
 	WorkerConcurrency           int    `env:"CONCURRENCY" envDefault:"1"`
+	LicenseKey                  string `env:"LICENSE_KEY" envDefault:""`
 	PythonExecutablePath        string `env:"PYTHON_EXECUTABLE_PATH" envDefault:"python"`
 	PythonModelPluginScriptPath string `env:"PYTHON_MODEL_PLUGIN_SCRIPT_PATH" envDefault:"plugin/plugin-python/plugin.py"`
 }
@@ -67,7 +72,24 @@ func main() {
 		log.Fatalf("Failed to connect to RabbitMQ: %v", err)
 	}
 
-	worker := core.NewTaskProcessor(db, s3Client, publisher, receiver, "./tmp_models_TODO", cfg.ModelBucketName)
+	var licenseVerifier licensing.LicenseVerifier
+	if strings.HasPrefix(cfg.LicenseKey, "local: ") {
+		var err error
+		licenseVerifier, err = licensing.NewFileLicenseVerifier([]byte(licensing.FileLicensePublicKey), strings.TrimPrefix(cfg.LicenseKey, "local: "))
+		if err != nil {
+			log.Fatalf("Failed to create file license verifier: %v", err)
+		}
+	} else if cfg.LicenseKey != "" {
+		licenseVerifier, err = licensing.NewKeygenLicenseVerifier(cfg.LicenseKey)
+		if err != nil {
+			log.Fatalf("Failed to create license verifier: %v", err)
+		}
+	} else {
+		slog.Warn(fmt.Sprintf("License key not provided. Using free license verifier with %.2fGB total file size limit", float64(licensing.DefaultFreeLicenseMaxBytes)/(1024*1024*1024)))
+		licenseVerifier = licensing.NewFreeLicenseVerifier(db, licensing.DefaultFreeLicenseMaxBytes)
+	}
+
+	worker := core.NewTaskProcessor(db, s3Client, publisher, receiver, licenseVerifier, "./tmp_models_TODO", cfg.ModelBucketName)
 
 	go worker.Start()
 

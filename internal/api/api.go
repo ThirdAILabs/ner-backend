@@ -279,7 +279,7 @@ func (s *BackendService) GetReport(r *http.Request) (any, error) {
 	ctx := r.Context()
 
 	var report database.Report
-	if err := s.db.WithContext(ctx).Preload("Model").Preload("Groups").Preload("ShardDataTask").Find(&report, "id = ?", reportId).Error; err != nil {
+	if err := s.db.WithContext(ctx).Preload("Model").Preload("Groups").Preload("ShardDataTask").Preload("Errors").Find(&report, "id = ?", reportId).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, CodedErrorf(http.StatusNotFound, "inference job not found")
 		}
@@ -449,6 +449,7 @@ func (s *BackendService) ReportSearch(r *http.Request) (any, error) {
 
 	filter, err := core.ToSql(s.db, queryStr)
 	if err != nil {
+		return nil, CodedErrorf(http.StatusUnprocessableEntity, "error parsing query: %v", err)
 	}
 
 	ctx := r.Context()
