@@ -1,8 +1,10 @@
 # --- Build Stage ---
 FROM ubuntu:24.04 as builder
 
-ARG GOLANG_DOWNLOAD_URL=https://go.dev/dl/go1.24.2.linux-arm64.tar.gz
-ARG GOLANG_DOWNLOAD_SHA256=756274ea4b68fa5535eb9fe2559889287d725a8da63c6aae4d5f23778c229f4b
+
+ARG GOLANG_VERSION=1.24.2
+ARG TARGETARCH
+ARG GOLANG_DOWNLOAD_URL="https://go.dev/dl/go${GOLANG_VERSION}.linux-${TARGETARCH}.tar.gz"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
@@ -11,8 +13,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-RUN curl -fsSL "${GOLANG_DOWNLOAD_URL}" -o golang.tar.gz \
-    && echo "${GOLANG_DOWNLOAD_SHA256} golang.tar.gz" | sha256sum -c - \
+RUN echo "Downloading Go ${GOLANG_VERSION} for ${TARGETARCH} from ${GOLANG_DOWNLOAD_URL}" \
+    && curl -fsSL "${GOLANG_DOWNLOAD_URL}" -o golang.tar.gz \
     && tar -C /usr/local -xzf golang.tar.gz \
     && rm golang.tar.gz
 
@@ -28,23 +30,34 @@ RUN go mod download
 COPY . .
 
 # Build the API server binary
-RUN CGO_ENABLED=1 GOOS=linux go build -v -o /app/api ./cmd/api
+RUN CGO_ENABLED=1 GOOS=linux GOARCH=${TARGETARCH} go build -v -o /app/api ./cmd/api
 
 # Build the Worker binary
-RUN CGO_ENABLED=1 GOOS=linux go build -v -o /app/worker ./cmd/worker
+RUN CGO_ENABLED=1 GOOS=linux GOARCH=${TARGETARCH} go build -v -o /app/worker ./cmd/worker
 
-WORKDIR /app
-
+# Copy and make entrypoint script executable in the builder stage
 COPY ./entrypoint.sh /entrypoint.sh
-
-# Ensure entrypoint is executable
 RUN chmod +x /entrypoint.sh
 
-# Expose API port
+# --- Final Stage ---
+FROM ubuntu:24.04
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+
+# Set working directory
+WORKDIR /app
+
+# Copy only the necessary artifacts from the builder stage
+COPY --from=builder /app/api /app/api
+COPY --from=builder /app/worker /app/worker
+COPY --from=builder /entrypoint.sh /entrypoint.sh
+
 EXPOSE 8001
 
-# Set the entrypoint script
 ENTRYPOINT ["/entrypoint.sh"]
 
-# Default command (starts as worker)
 CMD ["--worker"]
