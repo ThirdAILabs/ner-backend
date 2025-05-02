@@ -508,7 +508,6 @@ export default function JobDetail() {
           <AnalyticsDashboard
             progress={calculateProgress(reportData)}
             tokensProcessed={getProcessedTokens(reportData)}
-            tokenTypes={mockTags}
             tokenCounts={{
               'VIN': 450,
               'NAME': 2300,

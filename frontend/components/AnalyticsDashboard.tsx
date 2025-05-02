@@ -23,7 +23,6 @@ interface ClusterSpecs {
 interface AnalyticsDashboardProps {
   progress: number;
   tokensProcessed: number;
-  tokenTypes: string[];
   tokenCounts: Record<string, number>;
   clusterSpecs: ClusterSpecs;
 }
