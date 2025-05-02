@@ -62,6 +62,36 @@ func main() {
 		log.Fatalf("Worker: Failed to create S3 client: %v", err)
 	}
 
+	tags := []database.Tag{
+		{Name: "VIN"},
+		{Name: "NAME"},
+		{Name: "ORG"},
+		{Name: "ADDRESS"},
+		{Name: "EMAIL"},
+		{Name: "SSN"},
+		{Name: "PHONE"},
+		{Name: "POLICY_ID"},
+		{Name: "MED_REC_NO"},
+		{Name: "LICENSE"},
+		{Name: "EMPLOYER"},
+		{Name: "ID"},
+		{Name: "USERNAME"},
+		{Name: "URL"},
+		{Name: "IP_ADDR"},
+		{Name: "ZIP_CODE"},
+		{Name: "ACCOUNT"},
+		{Name: "INS_PROV"},
+		{Name: "PROCEDURE"},
+		{Name: "DATE"},
+		{Name: "NATIONALITY"},
+		{Name: "SERIAL_NO"},
+		{Name: "CRED_CARD_NUM"},
+		{Name: "CVV"},
+	}
+	if err := db.Save(&tags).Error; err != nil {
+		log.Fatalf("Failed to seed tags: %v", err)
+	}
+
 	var model database.Model
 
 	if err := db.Where(database.Model{Name: "presidio"}).Attrs(database.Model{
@@ -69,6 +99,7 @@ func main() {
 		Type:         "presidio",
 		Status:       database.ModelTrained,
 		CreationTime: time.Now(),
+		Tags:         tags,
 	}).FirstOrCreate(&model).Error; err != nil {
 		log.Fatalf("Failed to seed presidio model record: %v", err)
 	}
