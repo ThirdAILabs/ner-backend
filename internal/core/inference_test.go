@@ -91,8 +91,7 @@ func TestInference(t *testing.T) {
 
 	object := "test.txt"
 
-	allEntities, groups, err := inferenceJobProcessor.runInferenceOnObject(
-		context.Background(),
+	allEntities, groups, tagCount, err := inferenceJobProcessor.runInferenceOnObject(
 		reportId,
 		NewDefaultParser(),
 		model,
@@ -108,6 +107,11 @@ func TestInference(t *testing.T) {
 	assert.ElementsMatch(t, allEntities, []database.ObjectEntity{
 		{ReportId: reportId, Object: object, Label: "phone", Text: phone, Start: phoneStart, End: phoneStart + len(phone), LContext: testDoc[phoneStart-20 : phoneStart], RContext: testDoc[phoneStart+len(phone) : phoneStart+len(phone)+20]},
 		{ReportId: reportId, Object: object, Label: "email", Text: email, Start: emailStart, End: emailStart + len(email), LContext: testDoc[emailStart-20 : emailStart], RContext: testDoc[emailStart+len(email):]},
+	})
+
+	assert.Equal(t, tagCount, map[string]int{
+		"phone": 1,
+		"email": 1,
 	})
 
 	assert.ElementsMatch(t, groups, []database.ObjectGroup{

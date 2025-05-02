@@ -264,13 +264,6 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 			return CodedErrorf(http.StatusUnprocessableEntity, "model does not have the following tags: %s", erroneousTags)
 		}
 
-		report.Tags = make([]database.Tag, 0)
-		for _, tag := range req.Tags {
-			report.Tags = append(report.Tags, database.Tag{
-				Name: tag,
-			})
-		}
-
 		if err := txn.WithContext(ctx).Create(&report).Error; err != nil {
 			slog.Error("error creating report entry", "error", err)
 			return CodedErrorf(http.StatusInternalServerError, "failed to create report entry")
@@ -306,7 +299,7 @@ func (s *BackendService) GetReport(r *http.Request) (any, error) {
 	ctx := r.Context()
 
 	var report database.Report
-	if err := s.db.WithContext(ctx).Preload("Model").Preload("Groups").Preload("ShardDataTask").Find(&report, "id = ?", reportId).Error; err != nil {
+	if err := s.db.WithContext(ctx).Preload("Model").Preload("Groups").Preload("ShardDataTask").Preload("TagCount").Find(&report, "id = ?", reportId).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, CodedErrorf(http.StatusNotFound, "inference job not found")
 		}

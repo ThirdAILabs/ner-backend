@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"ner-backend/internal/database"
 	"ner-backend/pkg/api"
 )
@@ -52,10 +53,11 @@ func convertGroups(gs []database.Group) []api.Group {
 }
 
 func convertReport(r database.Report) api.Report {
-	tags := make([]string, 0, len(r.Tags))
-	for _, tag := range r.Tags {
-		tags = append(tags, tag.Name)
+	tagCount := make(api.TagCount)
+	if err := json.Unmarshal(r.TokenCount, &tagCount); err != nil {
+		panic(err)
 	}
+
 	report := api.Report{
 		Id:             r.Id,
 		Model:          convertModel(*r.Model),
@@ -63,7 +65,7 @@ func convertReport(r database.Report) api.Report {
 		SourceS3Prefix: r.SourceS3Prefix.String,
 		CreationTime:   r.CreationTime,
 		Groups:         convertGroups(r.Groups),
-		Tags:           tags,
+		TagCount:       tagCount,
 	}
 
 	if r.ShardDataTask != nil {

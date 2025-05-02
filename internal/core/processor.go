@@ -10,6 +10,7 @@ import (
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/s3"
+	"ner-backend/pkg/api"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type TaskProcessor struct {
@@ -125,7 +127,7 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 		groupToQuery[group.Id] = group.Query
 	}
 
-	workerErr := proc.runInferenceOnBucket(ctx, task.ReportId, task.Report.Model.Id, task.Report.Model.Type, groupToQuery, task.SourceS3Bucket, s3Objects)
+	workerErr := proc.runInferenceOnBucket(task.ReportId, task.Report.Model.Id, task.Report.Model.Type, groupToQuery, task.SourceS3Bucket, s3Objects)
 	if workerErr != nil {
 		slog.Error("error running inference task", "report_id", reportId, "task_id", payload.TaskId, "error", workerErr)
 		database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobFailed)
@@ -141,8 +143,42 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 	return nil
 }
 
+func (proc *TaskProcessor) updateTaggedTokenCount(reportId uuid.UUID, tagCount api.TagCount) error {
+	err := proc.db.Transaction(func(txn *gorm.DB) error {
+		var report database.Report
+		result := txn.Clauses(clause.Locking{Strength: "UPDATE"}).First(&report, "id = ?", reportId)
+		if result.Error != nil {
+			slog.Error("error fetching report", "report_id", reportId, "error", result.Error)
+			return fmt.Errorf("error fetching report: %w", result.Error)
+		}
+
+		reportTagCount := make(api.TagCount)
+		if err := json.Unmarshal(report.TokenCount, &reportTagCount); err != nil {
+			slog.Error("error unmarshalling current token count", "report_id", reportId, "error", err)
+			return fmt.Errorf("error unmarshalling current token count: %w", err)
+		}
+		for tag, count := range tagCount {
+			reportTagCount[tag] += count
+		}
+		updatedTokenCount, err := json.Marshal(reportTagCount)
+		if err != nil {
+			slog.Error("error marshalling updated token count", "report_id", reportId, "error", err)
+			return fmt.Errorf("error marshalling updated token count: %w", err)
+		}
+		if err := txn.Model(&report).Update("token_count", updatedTokenCount).Error; err != nil {
+			slog.Error("error updating token count in report", "report_id", reportId, "error", err)
+			return fmt.Errorf("error updating token count in report: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		slog.Error("error updating tagged token count", "report_id", reportId, "error", err)
+		return fmt.Errorf("error updating tagged token count: %w", err)
+	}
+	return nil
+}
+
 func (proc *TaskProcessor) runInferenceOnBucket(
-	ctx context.Context,
 	reportId uuid.UUID,
 	modelId uuid.UUID,
 	modelType string,
@@ -170,9 +206,15 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 	objectErrorCnt := 0
 
 	for _, object := range objects {
-		entities, groups, err := proc.runInferenceOnObject(ctx, reportId, parser, model, groupToFilter, bucket, object)
+		entities, groups, objectTagCount, err := proc.runInferenceOnObject(reportId, parser, model, groupToFilter, bucket, object)
 		if err != nil {
 			slog.Error("error processing object", "object", object, "error", err)
+			objectErrorCnt++
+			continue
+		}
+
+		if err := proc.updateTaggedTokenCount(reportId, objectTagCount); err != nil {
+			slog.Error("error updating tagged token count", "object", object, "error", err)
 			objectErrorCnt++
 			continue
 		}
@@ -193,7 +235,6 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 	if objectErrorCnt > 0 {
 		return fmt.Errorf("errors while processing %d/%d objects", objectErrorCnt, len(objects))
 	}
-
 	return nil
 }
 
@@ -230,57 +271,35 @@ func (proc *TaskProcessor) loadModel(modelId uuid.UUID, modelType string) (Model
 	return model, nil
 }
 
-func (proc *TaskProcessor) getReport(ctx context.Context, reportId uuid.UUID) (database.Report, error) {
-	var report database.Report
-	if err := proc.db.WithContext(ctx).Preload("Tags").First(&report, "id = ?", reportId).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			slog.Error("report not found", "report_id", reportId)
-			return database.Report{}, fmt.Errorf("report not found: %w", err)
-		}
-		slog.Error("error getting report", "report_id", reportId, "error", err)
-		return database.Report{}, fmt.Errorf("error getting report: %w", err)
-	}
-	return report, nil
-}
-
 func (proc *TaskProcessor) runInferenceOnObject(
-	ctx context.Context,
 	reportId uuid.UUID,
 	parser Parser,
 	model Model,
 	groupFilter map[uuid.UUID]Filter,
 	bucket string,
 	object string) (
-	[]database.ObjectEntity, []database.ObjectGroup, error) {
+	[]database.ObjectEntity, []database.ObjectGroup, api.TagCount, error) {
 
 	chunks := parser.Parse(object, proc.s3Client.DownloadFileStream(bucket, object))
 
 	labelToEntities := make(map[string][]types.Entity)
 
-	report, err := proc.getReport(ctx, reportId)
-	if err != nil {
-		return nil, nil, fmt.Errorf("error getting report: %w", err)
-	}
-
+	taggedTokenCount := make(api.TagCount)
 	for chunk := range chunks {
 		if chunk.Error != nil {
-			return nil, nil, fmt.Errorf("error parsing document: %w", chunk.Error)
+			return nil, nil, nil, fmt.Errorf("error parsing document: %w", chunk.Error)
 		}
 
 		chunkEntities, err := model.Predict(chunk.Text)
 		if err != nil {
-			return nil, nil, fmt.Errorf("error running model inference: %w", err)
+			return nil, nil, nil, fmt.Errorf("error running model inference: %w", err)
 		}
 
 		for _, entity := range chunkEntities {
-			for _, tag := range report.Tags {
-				if tag.Name == entity.Label {
-					entity.Start += chunk.Offset
-					entity.End += chunk.Offset
-					labelToEntities[entity.Label] = append(labelToEntities[entity.Label], entity)
-					break
-				}
-			}
+			taggedTokenCount[entity.Label]++
+			entity.Start += chunk.Offset
+			entity.End += chunk.Offset
+			labelToEntities[entity.Label] = append(labelToEntities[entity.Label], entity)
 		}
 	}
 
@@ -311,7 +330,7 @@ func (proc *TaskProcessor) runInferenceOnObject(
 		}
 	}
 
-	return allEntities, groups, nil
+	return allEntities, groups, taggedTokenCount, nil
 }
 
 func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload messaging.ShardDataPayload) error {

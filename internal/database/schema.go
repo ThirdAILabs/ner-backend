@@ -49,7 +49,7 @@ type Report struct {
 
 	Groups []Group `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
 
-	Tags []Tag `gorm:"foreignKey:Name"`
+	TokenCount []byte
 
 	ShardDataTask  *ShardDataTask  `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
 	InferenceTasks []InferenceTask `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`

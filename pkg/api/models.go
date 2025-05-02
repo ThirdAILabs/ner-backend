@@ -40,7 +40,7 @@ type Report struct {
 
 	Groups []Group
 
-	Tags []string
+	TagCount map[string]int `json:"TagCount,omitempty"`
 
 	ShardDataTaskStatus   string                        `json:"ShardDataTaskStatus,omitempty"`
 	InferenceTaskStatuses map[string]TaskStatusCategory `json:"InferenceTaskStatuses,omitempty"`
@@ -102,3 +102,5 @@ type SearchResponse struct {
 type UploadResponse struct {
 	Id uuid.UUID
 }
+
+type TagCount map[string]int
