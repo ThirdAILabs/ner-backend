@@ -11,6 +11,7 @@ import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
 import { DatabaseTable } from './(database-table)/DatabaseTable';
 import { nerService } from '@/lib/backend';
 import { usePathname } from 'next/navigation';
+import useOutsideClick from '@/hooks/useOutsideClick';
 
 // Calculate progress based on InferenceTaskStatuses
 const calculateProgress = (report: Report | null): number => {
@@ -61,108 +62,38 @@ const getProcessedTokens = (report: Report | null): number => {
 const mockGroups = ['Reject', 'Sensitive', 'Safe'];
 const mockTags = ['VIN', 'NAME', 'ORG', 'ADDRESS', 'EMAIL', 'SSN', 'PHONE', 'POLICY_ID', 'MED_REC_NO', 'LICENSE', 'EMPLOYER', 'ID', 'USERNAME', 'URL', 'IP_ADDR', 'ZIP_CODE', 'ACCOUNT', 'INS_PROV', 'PROCEDURE', 'DATE', 'NATIONALITY', 'SERIAL_NO', 'CRED_CARD_NUM', 'CVV'];
 
-const loadMoreMockObjectRecords = () => {
-  return Promise.resolve([
-    {
-      taggedTokens: [
-        ['My', 'O'] as [string, string],
-        ['name', 'O'] as [string, string],
-        ['is', 'O'] as [string, string],
-        ['John', 'NAME'] as [string, string],
-        ['Smith', 'NAME'] as [string, string],
-        ['and', 'O'] as [string, string],
-        ['my', 'O'] as [string, string],
-        ['social', 'O'] as [string, string],
-        ['is', 'O'] as [string, string],
-        ['123-45-6789', 'SSN'] as [string, string],
-      ],
-      sourceObject: 'call_transcript_1.txt',
-      groups: ['Sensitive'],
-    },
-    {
-      taggedTokens: [
-        ['Jane', 'NAME'] as [string, string],
-        ['Doe', 'NAME'] as [string, string],
-        ['at', 'O'] as [string, string],
-        ['123', 'ADDRESS'] as [string, string],
-        ['Main', 'ADDRESS'] as [string, string],
-        ['St', 'ADDRESS'] as [string, string],
-        ['with', 'O'] as [string, string],
-        ['vehicle', 'O'] as [string, string],
-        ['1HGCM82633A004352', 'VIN'] as [string, string],
-      ],
-      sourceObject: 'call_transcript_2.txt',
-      groups: ['Reject'],
-    },
-  ]);
-};
 
-const loadMoreMockClassifiedTokenRecords = () => {
-  return Promise.resolve([
-    {
-      token: 'John',
-      tag: 'NAME',
-      sourceObject: 'call_transcript_1.txt',
-      groups: ['Sensitive'],
-    },
-    {
-      token: 'Smith',
-      tag: 'NAME',
-      sourceObject: 'call_transcript_1.txt',
-      groups: ['Sensitive'],
-    },
-    {
-      token: '123-45-6789',
-      tag: 'SSN',
-      sourceObject: 'call_transcript_1.txt',
-      groups: ['Sensitive'],
-    },
-    {
-      token: 'Jane',
-      tag: 'NAME',
-      sourceObject: 'call_transcript_2.txt',
-      groups: ['Reject'],
-    },
-    {
-      token: 'Doe',
-      tag: 'NAME',
-      sourceObject: 'call_transcript_2.txt',
-      groups: ['Reject'],
-    },
-    {
-      token: '123 Main St',
-      tag: 'ADDRESS',
-      sourceObject: 'call_transcript_2.txt',
-      groups: ['Reject'],
-    },
-    {
-      token: '1HGCM82633A004352',
-      tag: 'VIN',
-      sourceObject: 'call_transcript_2.txt',
-      groups: ['Reject'],
-    },
-  ]);
-};
 
 // Source option card component
 interface SourceOptionProps {
   title: string;
   description: string;
   isSelected?: boolean;
+  disabled?: boolean;
   onClick: () => void;
 }
 
-const SourceOption: React.FC<SourceOptionProps> = ({ title, description, isSelected = false, onClick }) => (
+const SourceOption: React.FC<SourceOptionProps> = ({
+  title,
+  description,
+  isSelected = false,
+  disabled = false,
+  onClick
+}) => (
   <div
-    className={`relative p-6 border rounded-md cursor-pointer transition-all
-      ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200 hover:border-blue-300'}
+    className={`relative p-6 border rounded-md transition-all
+      ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200'}
+      ${disabled
+        ? 'opacity-50 cursor-not-allowed bg-gray-50'
+        : 'cursor-pointer hover:border-blue-300'
+      }
     `}
-    onClick={onClick}
+    onClick={() => !disabled && onClick()}
   >
     <h3 className="text-base font-medium">{title}</h3>
     <p className="text-sm text-gray-500 mt-1">{description}</p>
 
-    {isSelected && (
+    {isSelected && !disabled && (
       <div className="absolute top-3 right-3">
         <Edit className="h-4 w-4 text-gray-500" />
       </div>
@@ -175,19 +106,34 @@ interface TagProps {
   tag: string;
   selected?: boolean;
   onClick?: () => void;
+  custom?: boolean;
+  addNew?: boolean;
 }
 
-const Tag: React.FC<TagProps> = ({ tag, selected = true, onClick }) => (
-  <div
-    className={`px-3 py-1.5 text-sm font-medium rounded-sm cursor-pointer
-      ${selected ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}
-    `}
-    style={{ userSelect: 'none' }}
-    onClick={onClick}
-  >
-    {tag}
-  </div>
-);
+const Tag: React.FC<TagProps> = ({ tag, selected = true, onClick, custom = false, addNew = false }) => {
+  function getCSS(): string {
+    if (selected) {
+      return custom
+        ? "bg-purple-500 text-white border border-purple-600"
+        : "bg-blue-500 text-white";
+    } else if (addNew) {
+      return "bg-white text-gray-700 border-dotted border border-gray-300 hover:border-blue-400";
+    } else if (custom) {
+      return "bg-purple-100 text-purple-700 border border-purple-200 hover:bg-purple-200";
+    } else {
+      return "bg-gray-100 text-gray-700 hover:bg-gray-200";
+    }
+  }
+  return (
+    <div
+      className={`px-3 py-1 text-sm font-medium rounded-sm cursor-pointer ${getCSS()}`}
+      style={{ userSelect: 'none' }}
+      onClick={onClick}
+    >
+      {tag}
+    </div>
+  );
+}
 
 // Group card component
 interface GroupProps {
@@ -212,7 +158,6 @@ export default function JobDetail() {
   const [lastUpdated, setLastUpdated] = useState(0);
   const [tabValue, setTabValue] = useState('configuration');
   const [selectedSource, setSelectedSource] = useState('s3');
-  const [selectedSaveLocation, setSelectedSaveLocation] = useState('s3');
   const [selectedTags, setSelectedTags] = useState<string[]>(mockTags);
   const [dynamicTags, setDynamicTags] = useState<string[]>(mockTags);
 
@@ -327,8 +272,10 @@ export default function JobDetail() {
   };
 
   const selectAllTags = () => {
-    setSelectedTags(mockTags);
+    setSelectedTags(allTag);
   };
+  const [allTag, setAllTags] = useState<string[]>(mockTags);
+
 
   return (
     <div className="container px-4 py-8 mx-auto">
@@ -402,12 +349,14 @@ export default function JobDetail() {
                   title="S3 Bucket"
                   description={(reportData.SourceS3Bucket + "/" + reportData?.SourceS3Prefix) || "s3://thirdai-dev/customer-calls/2025/"}
                   isSelected={selectedSource === 's3'}
+                  disabled={selectedSource === 'local'}
                   onClick={() => { }}
                 />}
                 <SourceOption
                   title="File Upload"
                   description="Configure now"
                   isSelected={selectedSource === 'local'}
+                  disabled={selectedSource === "s3"}
                   onClick={() => { }}
                 />
               </div>
@@ -422,19 +371,19 @@ export default function JobDetail() {
                   size="sm"
                   onClick={selectAllTags}
                   className="text-sm flex items-center"
-                  disabled={selectedTags?.length === mockTags?.length}
+                  disabled={selectedTags?.length === allTag?.length}
                 >
                   <span className="mr-1">Select All</span>
                   <input
                     type="checkbox"
-                    checked={selectedTags.length === mockTags.length}
+                    checked={selectedTags.length === allTag.length}
                     onChange={selectAllTags}
                     className="rounded border-gray-300"
                   />
                 </Button>
               </div>
               <div className="flex flex-wrap gap-2">
-                {mockTags.map(tag => (
+                {allTag.map(tag => (
                   <Tag
                     key={tag}
                     tag={tag}
@@ -466,37 +415,6 @@ export default function JobDetail() {
                 </div>
               </div>
             </div>}
-
-            {/* Save Groups To section */}
-            <div>
-              <h2 className="text-lg font-medium mb-4">Save Groups To</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {reportData?.SourceS3Bucket && <SourceOption
-                  title="S3 Bucket"
-                  description={(reportData.SourceS3Bucket + "/" + reportData?.SourceS3Prefix) || "s3://thirdai-dev/customer-calls/2025/"}
-                  isSelected={selectedSaveLocation === 's3'}
-                  onClick={() => setSelectedSaveLocation('s3')}
-                />}
-                <SourceOption
-                  title="Local Storage"
-                  description="local"
-                  isSelected={selectedSaveLocation === 'local'}
-                  onClick={() => setSelectedSaveLocation('local')}
-                />
-                <SourceOption
-                  title="No storage location"
-                  description="You can still save groups"
-                  isSelected={selectedSaveLocation === 'none'}
-                  onClick={() => setSelectedSaveLocation('none')}
-                />
-                <SourceOption
-                  title="More options"
-                  description="coming soon"
-                  isSelected={selectedSaveLocation === 'more'}
-                  onClick={() => setSelectedSaveLocation('more')}
-                />
-              </div>
-            </div>
           </div>
         </TabsContent>
 
