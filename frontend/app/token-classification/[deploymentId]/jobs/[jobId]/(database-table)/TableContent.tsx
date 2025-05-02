@@ -101,11 +101,11 @@ interface TokenContextProps {
 
 function TokenContext({ context }: TokenContextProps) {
   if (!context) return <span className="text-red-400 text-xs">No context available</span>;
-  
+
   // Add debug information
   const leftContent = context.left || '[empty left context]';
   const rightContent = context.right || '[empty right context]';
-  
+
   return (
     <div className="font-mono text-xs border border-gray-200 p-2 rounded bg-gray-50">
       <span className="text-gray-600">{leftContent}</span>
@@ -139,9 +139,9 @@ export function TableContent({
   tags,
 }: TableContentProps) {
   // Debug log for records
-  console.log("TableContent received:", { 
-    viewMode, 
-    tokenRecordsCount: tokenRecords.length, 
+  console.log("TableContent received:", {
+    viewMode,
+    tokenRecordsCount: tokenRecords.length,
     objectRecordsCount: objectRecords.length,
     tagFilters,
     groupFilters
@@ -150,7 +150,7 @@ export function TableContent({
   // Compute tag colors based on the provided tags
   const tagColors = useMemo(() => {
     const colors: Record<string, HighlightColor> = {};
-    
+
     // Filter out 'O' tag and assign colors to each tag
     tags
       .filter(tag => tag !== 'O')
@@ -160,7 +160,7 @@ export function TableContent({
           tag: DARKERS[index % DARKERS.length],
         };
       });
-    
+
     return colors;
   }, [tags]);
 
@@ -171,15 +171,15 @@ export function TableContent({
       // Check if the tag is in the filter or if filter is undefined for this tag type
       // This handles the case where API returns tag types not in our mockTags list
       const tagMatches = tagFilters[record.tag] !== false; // Consider it a match unless explicitly set to false
-      
+
       // If there are no groups in the record, consider it a match
       // Otherwise, check if at least one group matches the filter
-      const groupMatches = record.groups.length === 0 || 
+      const groupMatches = record.groups.length === 0 ||
         record.groups.some((group) => groupFilters[group] !== false);
-      
+
       return groupMatches && tagMatches;
     });
-    
+
     console.log("Filtered token records:", filteredRecords.length);
     console.log("Sample record:", filteredRecords.length > 0 ? filteredRecords[0] : "No records match filters");
 
@@ -260,17 +260,12 @@ export function TableContent({
         <TableBody>
           {objectRecords
             .filter((record) => {
-              // Check if any tag matches the filter
-              const tagMatches = record.taggedTokens
-                .map((v) => v[1])
-                .some((tag) => tagFilters[tag]);
-              
               // If there are no groups in the record, consider it a match
               // Otherwise, check if at least one group matches the filter
-              const groupMatches = record.groups.length === 0 || 
+              const groupMatches = record.groups.length === 0 ||
                 record.groups.some((group) => groupFilters[group]);
-              
-              return groupMatches && tagMatches;
+
+              return groupMatches;
             })
             .map((record, index) => (
               <TableRow key={index}>
@@ -286,7 +281,7 @@ export function TableContent({
                     <HighlightedToken
                       key={`${index}-${tokenIndex}`}
                       token={token[0]}
-                      tag={token[1]}
+                      tag={tagFilters[token[1]] ? token[1] : "O"}
                       tagColors={tagColors}
                     />
                   ))}
@@ -326,12 +321,12 @@ export function TableContent({
           .filter((record) => {
             // Check if the tag is in the filter
             const tagMatches = tagFilters[record.tag];
-            
+
             // If there are no groups in the record, consider it a match
             // Otherwise, check if at least one group matches the filter
-            const groupMatches = record.groups.length === 0 || 
+            const groupMatches = record.groups.length === 0 ||
               record.groups.some((group) => groupFilters[group]);
-            
+
             return groupMatches && tagMatches;
           })
           .map((record, index) => (
