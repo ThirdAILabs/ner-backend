@@ -44,6 +44,9 @@ func createData(t *testing.T, s3Client *s3.Client) {
 		_, err = s3Client.UploadObject(context.Background(), dataBucket, emailPath, strings.NewReader(emailData))
 		require.NoError(t, err)
 	}
+
+	_, err := s3Client.UploadObject(context.Background(), dataBucket, "custom-token.txt", strings.NewReader("this is a custom token a1b2c3"))
+	require.NoError(t, err)
 }
 
 func createReport(t *testing.T, router http.Handler, req api.CreateReportRequest) uuid.UUID {
@@ -110,7 +113,7 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
-	worker := core.NewTaskProcessor(db, s3, s3, queue, queue, t.TempDir(), modelBucket)
+	worker := core.NewTaskProcessor(db, s3, queue, queue, &DummyLicenseVerifier{}, t.TempDir(), modelBucket)
 
 	go worker.Start()
 	defer worker.Stop()
@@ -122,7 +125,8 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 	reportId := createReport(t, router, api.CreateReportRequest{
 		ModelId:        modelId,
 		SourceS3Bucket: dataBucket,
-
+		Tags:           []string{"phone", "email"},
+		CustomTags:     map[string]string{"custom-token": `(\w\d){3}`},
 		Groups: map[string]string{
 			"phone": `COUNT(phone) > 0`,
 			"email": `COUNT(email) > 0`,
@@ -133,11 +137,11 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 
 	assert.Equal(t, modelId, report.Model.Id)
 	assert.Equal(t, dataBucket, report.SourceS3Bucket)
-	assert.Equal(t, 10, report.InferenceTaskStatuses[database.JobCompleted].TotalTasks)
+	assert.Equal(t, 11, report.InferenceTaskStatuses[database.JobCompleted].TotalTasks)
 	assert.Equal(t, 2, len(report.Groups))
 
 	entities := getReportEntities(t, router, reportId)
-	assert.Equal(t, 20, len(entities))
+	assert.Equal(t, 21, len(entities))
 
 	for _, group := range report.Groups {
 		group := getReportGroup(t, router, reportId, group.Id)
@@ -200,7 +204,7 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
-	worker := core.NewTaskProcessor(db, s3, s3, queue, queue, t.TempDir(), modelBucket)
+	worker := core.NewTaskProcessor(db, s3, queue, queue, &DummyLicenseVerifier{}, t.TempDir(), modelBucket)
 
 	go worker.Start()
 	defer worker.Stop()
@@ -212,6 +216,7 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 	reportId := createReport(t, router, api.CreateReportRequest{
 		ModelId:  modelId,
 		UploadId: uploadId,
+		Tags:     []string{"phone", "email"},
 	})
 
 	report := waitForReport(t, router, reportId)

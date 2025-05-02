@@ -15,6 +15,11 @@ func convertModel(m database.Model) api.Model {
 	if m.BaseModelId.Valid {
 		model.BaseModelId = &m.BaseModelId.UUID
 	}
+
+	for _, tag := range m.Tags {
+		model.Tags = append(model.Tags, tag.Tag)
+	}
+
 	return model
 }
 
@@ -57,8 +62,23 @@ func convertReport(r database.Report) api.Report {
 		Groups:         convertGroups(r.Groups),
 	}
 
+	for _, tag := range r.Tags {
+		report.Tags = append(report.Tags, tag.Tag)
+	}
+
+	if r.CustomTags != nil {
+		report.CustomTags = make(map[string]string)
+		for _, tag := range r.CustomTags {
+			report.CustomTags[tag.Tag] = tag.Pattern
+		}
+	}
+
 	if r.ShardDataTask != nil {
 		report.ShardDataTaskStatus = r.ShardDataTask.Status
+	}
+
+	for _, err := range r.Errors {
+		report.Errors = append(report.Errors, err.Error)
 	}
 
 	return report
