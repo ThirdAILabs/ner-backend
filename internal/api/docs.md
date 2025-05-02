@@ -274,6 +274,61 @@ Retrieve entities for a specific report.
 
 ---
 
+### GET /reports/{report_id}/objects
+**Description:**
+Retrieve preview snippets and token-level tags for each object in a report. Each entry includes the object name, a short text preview, and parallel arrays of text blocks (tokens) and their corresponding labels (tags).
+
+**Path Parameters:**
+- `report_id` (UUID): The ID of the report.
+
+**Query Parameters:**  
+- `offset` (integer, optional): Number of preview entries to skip (default: 0).
+- `limit` (integer, optional): Maximum number of preview entries to return (default: 100, max: 200).
+
+**Response:**  
+- `200 OK`: Returns a list of object previews.
+- `400 Bad Request`: Invalid offset or limit parameter.
+- `500 Internal Server Error`: Error retrieving previews.
+
+**Example Response:**
+```json
+[
+  {
+    "object": "document1.txt",
+    "preview": "Call me at 123 456 7890 I live at 123 Main Street...",
+    "tokens": [
+      "Call me at ",
+      "123 456 7890",
+      " I live at ",
+      "123 Main Street",
+      "..."
+    ],
+    "tags": [
+      "O",
+      "PHONE_NUMBER",
+      "O",
+      "ADDRESS",
+      "O"
+    ]
+  },
+  {
+    "object": "notes.pdf",
+    "preview": "Project deadline is 2025-06-30. Please review by then.",
+    "tokens": [
+      "Project deadline is ",
+      "2025-06-30",
+      ". Please review by then."
+    ],
+    "tags": [
+      "O",
+      "DATE",
+      "O"
+    ]
+  }
+]
+```
+
+
 ### GET /reports/{report_id}/search?query=<...>
 **Description:**  
 Searches for a the objects in a report that match a given query.
