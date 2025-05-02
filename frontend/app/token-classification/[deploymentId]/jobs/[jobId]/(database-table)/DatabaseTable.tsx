@@ -66,6 +66,8 @@ export function DatabaseTable({
 
   const loadObjectRecords = (objectsFilter?: string[]) => {
     setIsLoadingObjectRecords(true);
+    // This uses the updated loadMoreObjectRecords which fetches data from /reports/{report_id}/objects
+    // Now returning complete sentences with tagged tokens for better readability
     loadMoreObjectRecords().then((records) => {
       const filtered = objectsFilter?.length 
         ? records.filter(record => objectsFilter.includes(record.sourceObject))

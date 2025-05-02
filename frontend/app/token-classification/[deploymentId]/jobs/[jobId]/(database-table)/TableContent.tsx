@@ -28,10 +28,24 @@ interface HighlightedTokenProps {
 }
 
 function HighlightedToken({ token, tag, tagColors }: HighlightedTokenProps) {
-  // If tag is 'O', return the token with spacing but no highlighting
+  // Determine if the token needs a space before it based on token content
+  const needsSpaceBefore = !(
+    token.match(/^[.,;:!?)\]}"'%]/) || // Don't add space before punctuation
+    token.trim() === ''                // Don't add space before empty tokens
+  );
+  
+  // Determine if the token needs a space after it
+  const needsSpaceAfter = !(
+    token.match(/^[([{"'$]/) ||       // Don't add space after opening brackets
+    token.match(/[.,;:!?]$/) ||       // Don't add space after punctuation at the end
+    token.trim() === ''                // Don't add space after empty tokens
+  );
+  
+  // If tag is 'O', return the token with appropriate spacing but no highlighting
   if (tag === 'O') {
     return (
-      <span style={{ marginRight: '4px' }}>
+      <span>
+        {needsSpaceBefore && token !== '' && ' '}
         {token}
       </span>
     );
@@ -40,31 +54,33 @@ function HighlightedToken({ token, tag, tagColors }: HighlightedTokenProps) {
   const tagColor = tagColors[tag] || DEFAULT_COLOR;
 
   return (
-    <span
-      style={{
-        backgroundColor: tagColor.text,
-        padding: '2px',
-        borderRadius: '2px',
-        userSelect: 'none',
-        display: 'inline-flex',
-        alignItems: 'center',
-        marginRight: '4px',
-        wordBreak: 'break-word'
-      }}
-    >
-      {token}
+    <span>
+      {needsSpaceBefore && ' '}
       <span
         style={{
-          backgroundColor: tagColor.tag,
-          color: 'white',
-          fontSize: '11px',
-          fontWeight: 'bold',
+          backgroundColor: tagColor.text,
+          padding: '2px 4px',
           borderRadius: '2px',
-          marginLeft: '4px',
-          padding: '1px 3px',
+          userSelect: 'none',
+          display: 'inline-flex',
+          alignItems: 'center',
+          wordBreak: 'break-word'
         }}
       >
-        {tag}
+        {token}
+        <span
+          style={{
+            backgroundColor: tagColor.tag,
+            color: 'white',
+            fontSize: '11px',
+            fontWeight: 'bold',
+            borderRadius: '2px',
+            marginLeft: '4px',
+            padding: '1px 3px',
+          }}
+        >
+          {tag}
+        </span>
       </span>
     </span>
   );
@@ -257,49 +273,72 @@ export function TableContent({
 
   // For object view
   if (viewMode === 'object') {
+    // Filter records based on criteria
+    const filteredRecords = objectRecords.filter((record) => {
+      // If there are no groups in the record, consider it a match
+      // Otherwise, check if at least one group matches the filter
+      const groupMatches = record.groups.length === 0 ||
+        record.groups.some((group) => groupFilters[group]);
+
+      return groupMatches;
+    });
+    
     return (
       <>
         <TableHeader>
           <TableRow>
-            <TableHead>Tagged Tokens</TableHead>
+            <TableHead>Full Text with Tagged Tokens</TableHead>
             <TableHead>Source Object</TableHead>
             {/* <TableHead>Groups</TableHead> */}
           </TableRow>
         </TableHeader>
         <TableBody>
-          {objectRecords
-            .filter((record) => {
-              // If there are no groups in the record, consider it a match
-              // Otherwise, check if at least one group matches the filter
-              const groupMatches = record.groups.length === 0 ||
-                record.groups.some((group) => groupFilters[group]);
-
-              return groupMatches;
-            })
-            .map((record, index) => (
+          {filteredRecords.length > 0 ? (
+            filteredRecords.map((record, index) => (
               <TableRow key={index}>
                 <TableCell
                   style={{
-                    maxWidth: '50%',
+                    maxWidth: '60%',
                     whiteSpace: 'normal',
                     wordBreak: 'break-word',
                     overflowWrap: 'break-word',
+                    padding: '16px',
                   }}
                 >
-                  {record.taggedTokens.map((token, tokenIndex) => (
-                    <HighlightedToken
-                      key={`${index}-${tokenIndex}`}
-                      token={token[0]}
-                      tag={tagFilters[token[1]] ? token[1] : "O"}
-                      tagColors={tagColors}
-                    />
-                  ))}
+                  <div className="text-sm leading-relaxed bg-white p-3 rounded border border-gray-100 shadow-sm">
+                    {record.taggedTokens.map((token, tokenIndex) => (
+                      <HighlightedToken
+                        key={`${index}-${tokenIndex}`}
+                        token={token[0]}
+                        tag={tagFilters[token[1]] ? token[1] : "O"}
+                        tagColors={tagColors}
+                      />
+                    ))}
+                  </div>
                 </TableCell>
                 <TableCell>{record.sourceObject}</TableCell>
                 {/* <TableCell>{record.groups.join(', ')}</TableCell> */}
               </TableRow>
-            ))}
-          {isLoadingObjectRecords && (
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={3} className="text-center py-8 text-gray-500">
+                {objectRecords.length === 0 ? (
+                  isLoadingObjectRecords ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading records...
+                    </div>
+                  ) : (
+                    <div>No objects found. Please check the data source.</div>
+                  )
+                ) : (
+                  <div>No objects match the current filters.</div>
+                )}
+              </TableCell>
+            </TableRow>
+          )}
+          {isLoadingObjectRecords && filteredRecords.length > 0 && (
             <TableRow>
               <TableCell colSpan={3} className="text-center py-4 text-gray-500">
                 <div className="flex items-center justify-center gap-2">

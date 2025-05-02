@@ -47,6 +47,12 @@ interface Entity {
   RContext?: string;
 }
 
+interface ObjectPreview {
+  object: string;
+  tokens: string[];
+  tags: string[];
+}
+
 interface CreateReportRequest {
   ModelId: string;
   UploadId?: string;
@@ -136,6 +142,56 @@ export const nerService = {
       },
     });
     return response.data;
+  },
+
+  getReportObjects: async (
+    reportId: string,
+    params?: {
+      offset?: number;
+      limit?: number;
+    }
+  ): Promise<ObjectPreview[]> => {
+    // Since the /objects endpoint doesn't exist yet, we'll use entities endpoint
+    // and transform the data to the format we need
+    const entities = await nerService.getReportEntities(reportId, {
+      offset: params?.offset || 0,
+      limit: params?.limit || 100,
+    });
+    
+    // Group entities by object name
+    const objectMap = new Map<string, { tokens: string[], tags: string[] }>();
+    
+    entities.forEach(entity => {
+      if (!objectMap.has(entity.Object)) {
+        objectMap.set(entity.Object, { tokens: [], tags: [] });
+      }
+      
+      // For each entity, we add the text and its label
+      const obj = objectMap.get(entity.Object)!;
+      
+      // Add left context as regular text with "O" tag
+      if (entity.LContext) {
+        obj.tokens.push(entity.LContext);
+        obj.tags.push("O");
+      }
+      
+      // Add the entity text with its tag
+      obj.tokens.push(entity.Text);
+      obj.tags.push(entity.Label);
+      
+      // Add right context as regular text with "O" tag
+      if (entity.RContext) {
+        obj.tokens.push(entity.RContext);
+        obj.tags.push("O");
+      }
+    });
+    
+    // Convert map to array of ObjectPreview objects
+    return Array.from(objectMap.entries()).map(([objectName, data]) => ({
+      object: objectName,
+      tokens: data.tokens,
+      tags: data.tags
+    }));
   },
 
   getUniqueTagsFromEntities: async (reportId: string, limit: number = 500): Promise<string[]> => {

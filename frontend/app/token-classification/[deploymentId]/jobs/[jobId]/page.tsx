@@ -349,32 +349,30 @@ export default function JobDetail() {
     }
   };
 
-  // This is a placeholder until we have an endpoint for full object data
+  // Loads data for the Objects tab view, showing complete sentences with tagged tokens
+  // Uses the GET /reports/{report_id}/entities endpoint and transforms the data
+  // since the /objects endpoint doesn't exist yet in the backend
   const loadRealObjectRecords = async () => {
     try {
-      // Group entities by object
-      const entities = await nerService.getReportEntities(reportId, { limit: 200 });
-      const objectMap = new Map<string, [string, string, string, string][]>();
-
-      entities.forEach(entity => {
-        if (!objectMap.has(entity.Object)) {
-          objectMap.set(entity.Object, []);
-        }
-        // Store [text, label, left context, right context]
-        objectMap.get(entity.Object)?.push([
-          entity.Text,
-          entity.Label,
-          entity.LContext || '',
-          entity.RContext || ''
-        ]);
+      // Get object previews (transformed from entities)
+      const objectPreviews = await nerService.getReportObjects(reportId, { limit: 100 });
+      
+      return objectPreviews.map(preview => {
+        // Create tagged tokens array from the parallel tokens and tags arrays
+        const taggedTokens = preview.tokens.map((token, index) => [
+          token, 
+          preview.tags[index]
+        ]) as [string, string][];
+        
+        return {
+          taggedTokens,
+          sourceObject: preview.object,
+          // Get groups that include this object
+          groups: reportData?.Groups?.filter(group => 
+            group.Objects?.includes(preview.object)
+          ).map(g => g.Name) || []
+        };
       });
-
-      return Array.from(objectMap.entries()).map(([objectName, tokens]) => ({
-        taggedTokens: tokens.map(t => [t[0], t[1]]) as [string, string][],
-        tokenContexts: tokens.map(t => ({ left: t[2], right: t[3] })),
-        sourceObject: objectName,
-        groups: reportData?.Groups?.filter(group => group.Objects?.includes(objectName)).map(g => g.Name) || []
-      }));
     } catch (error) {
       console.error("Error loading object records:", error);
       return [];
