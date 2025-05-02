@@ -435,6 +435,7 @@ func (s *BackendService) ReportSearch(r *http.Request) (any, error) {
 
 	filter, err := core.ToSql(s.db, queryStr)
 	if err != nil {
+		return nil, CodedErrorf(http.StatusUnprocessableEntity, "error parsing query: %v", err)
 	}
 
 	ctx := r.Context()

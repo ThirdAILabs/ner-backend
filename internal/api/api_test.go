@@ -48,6 +48,8 @@ func (m *mockS3Client) CreateBucket(ctx context.Context, params *aws_s3.CreateBu
 	return &aws_s3.CreateBucketOutput{}, nil
 }
 
+func mockS3() *s3.Client { return s3.NewFromClient(&mockS3Client{}, "") }
+
 func TestListModels(t *testing.T) {
 	id1, id2 := uuid.New(), uuid.New()
 	db := createDB(t,
@@ -55,7 +57,7 @@ func TestListModels(t *testing.T) {
 		&database.Model{Id: id2, Name: "Model2", Type: "bolt", Status: database.ModelTraining, CreationTime: time.Now()},
 	)
 
-	service := backend.NewBackendService(db, s3.NewFromClient(&mockS3Client{}, ""), messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, mockS3(), messaging.NewInMemoryQueue(), 1024)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -83,7 +85,7 @@ func TestGetModel(t *testing.T) {
 		&database.ModelTag{ModelId: modelId, Tag: "phone"},
 	)
 
-	service := backend.NewBackendService(db, s3.NewFromClient(&mockS3Client{}, ""), messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, mockS3(), messaging.NewInMemoryQueue(), 1024)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -105,7 +107,7 @@ func TestFinetuneModel(t *testing.T) {
 		&database.Model{Id: modelId, Name: "Model1", Type: "regex", Status: database.ModelTrained},
 	)
 
-	service := backend.NewBackendService(db, s3.NewFromClient(&mockS3Client{}, ""), messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, mockS3(), messaging.NewInMemoryQueue(), 1024)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -159,7 +161,7 @@ func TestCreateReport(t *testing.T) {
 		&database.ModelTag{ModelId: modelId, Tag: "phone"},
 	)
 
-	service := backend.NewBackendService(db, s3.NewFromClient(&mockS3Client{}, ""), messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, mockS3(), messaging.NewInMemoryQueue(), 1024)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -247,7 +249,7 @@ func TestGetReport(t *testing.T) {
 		&database.ObjectEntity{ReportId: reportId, Object: "object1", Start: 2, End: 3, Label: "label3", Text: "text3"},
 	)
 
-	service := backend.NewBackendService(db, s3.NewFromClient(&mockS3Client{}, ""), messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, mockS3(), messaging.NewInMemoryQueue(), 1024)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -363,7 +365,7 @@ func TestReportSearch(t *testing.T) {
 		&database.ObjectEntity{ReportId: reportId, Object: "object4", Start: 4, End: 5, Label: "label3", Text: "12xyz34"},
 	)
 
-	service := backend.NewBackendService(db, s3.NewFromClient(&mockS3Client{}, ""), messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, mockS3(), messaging.NewInMemoryQueue(), 1024)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
