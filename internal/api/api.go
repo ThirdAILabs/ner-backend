@@ -209,6 +209,7 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		SourceS3Bucket: sourceS3Bucket,
 		SourceS3Prefix: sql.NullString{String: s3Prefix, Valid: s3Prefix != ""},
 		CreationTime:   time.Now().UTC(),
+		TokenCount:     []byte{},
 	}
 
 	for name, query := range req.Groups {
