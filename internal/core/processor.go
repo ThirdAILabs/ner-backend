@@ -14,10 +14,12 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -272,6 +274,62 @@ func (proc *TaskProcessor) loadModel(modelId uuid.UUID, modelType string) (Model
 	return model, nil
 }
 
+func (proc *TaskProcessor) createObjectPreview(
+	reportId uuid.UUID,
+	object string,
+	previewText string,
+	model Model,
+) error {
+	if proc.db == nil {
+		return nil
+	}
+
+	spans, err := model.Predict(previewText)
+	if err != nil {
+		return fmt.Errorf("preview inference error: %w", err)
+	}
+
+	sort.Slice(spans, func(i, j int) bool {
+		return spans[i].Start < spans[j].Start
+	})
+
+	var (
+		tokens []string
+		tags   []string
+		cursor = 0
+		length = len(previewText)
+	)
+	for _, e := range spans {
+		if e.Start > cursor {
+			tokens = append(tokens, previewText[cursor:e.Start])
+			tags = append(tags, "O")
+		}
+		end := min(e.End, length)
+		tokens = append(tokens, previewText[e.Start:end])
+		tags = append(tags, e.Label)
+		cursor = end
+	}
+	if cursor < length {
+		tokens = append(tokens, previewText[cursor:])
+		tags = append(tags, "O")
+	}
+
+	payload := struct {
+		Tokens []string `json:"tokens"`
+		Tags   []string `json:"tags"`
+	}{
+		Tokens: tokens,
+		Tags:   tags,
+	}
+	b, _ := json.Marshal(payload)
+
+	return proc.db.Create(&database.ObjectPreview{
+		ReportId:  reportId,
+		Object:    object,
+		TokenTags: datatypes.JSON(b),
+	}).Error
+}
+
 func (proc *TaskProcessor) runInferenceOnObject(
 	reportId uuid.UUID,
 	parser Parser,
@@ -286,6 +344,10 @@ func (proc *TaskProcessor) runInferenceOnObject(
 	chunks := parser.Parse(object, proc.s3Client.DownloadFileStream(bucket, object))
 
 	labelToEntities := make(map[string][]types.Entity)
+
+	const previewLimit = 1000
+
+	previewTokens := make([]string, 0, previewLimit)
 
 	for chunk := range chunks {
 		if chunk.Error != nil {
@@ -319,6 +381,21 @@ func (proc *TaskProcessor) runInferenceOnObject(
 				})
 			}
 		}
+
+		if len(previewTokens) < previewLimit {
+			toks := strings.Fields(chunk.Text)
+			need := previewLimit - len(previewTokens)
+			if len(toks) >= need {
+				previewTokens = append(previewTokens, toks[:need]...)
+			} else {
+				previewTokens = append(previewTokens, toks...)
+			}
+		}
+	}
+
+	previewText := strings.Join(previewTokens, " ")
+	if err := proc.createObjectPreview(reportId, object, previewText, model); err != nil {
+		slog.Error("saving ObjectPreview failed", "object", object, "err", err)
 	}
 
 	groups := make([]database.ObjectGroup, 0)
