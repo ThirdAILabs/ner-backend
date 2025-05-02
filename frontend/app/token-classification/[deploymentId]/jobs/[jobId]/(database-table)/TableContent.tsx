@@ -49,6 +49,7 @@ function HighlightedToken({ token, tag, tagColors }: HighlightedTokenProps) {
         display: 'inline-flex',
         alignItems: 'center',
         marginRight: '4px',
+        wordBreak: 'break-word'
       }}
     >
       {token}
@@ -96,22 +97,29 @@ function HighlightedTag({ tag, tagColors }: { tag: string; tagColors: Record<str
 
 // Add a new component for context display
 interface TokenContextProps {
-  context?: { left: string; right: string };
+  context?: { left: string; right: string; token: string; tag: string; };
+  tagColors: Record<string, HighlightColor>;
 }
 
-function TokenContext({ context }: TokenContextProps) {
+function TokenContext({ context, tagColors }: TokenContextProps) {
   if (!context) return <span className="text-red-400 text-xs">No context available</span>;
-
+  console.log("context", context);
   // Add debug information
   const leftContent = context.left || '[empty left context]';
   const rightContent = context.right || '[empty right context]';
-
+  const token = context.token || '[empty token]';
+  const tag = context.tag || '[empty tag]';
   return (
     <div className="font-mono text-xs border border-gray-200 p-2 rounded bg-gray-50">
       <span className="text-gray-600">{leftContent}</span>
-      <span className="font-bold px-1 mx-1 text-black bg-yellow-200 rounded">
+      {/* <span className="font-bold px-1 mx-1 text-black bg-yellow-200 rounded">
         <span className="text-black">«TOKEN»</span>
-      </span>
+      </span> */}
+      <HighlightedToken
+        token={token}
+        tag={tag}
+        tagColors={tagColors}
+      />
       <span className="text-gray-600">{rightContent}</span>
     </div>
   );
@@ -187,30 +195,31 @@ export function TableContent({
       <>
         <TableHeader>
           <TableRow>
-            <TableHead>Token</TableHead>
-            <TableHead>Tag</TableHead>
-            <TableHead>Context</TableHead>
+            <TableHead>Prediction</TableHead>
             <TableHead>Source Object</TableHead>
-            <TableHead>Groups</TableHead>
+            {/* <TableHead>Groups</TableHead> */}
           </TableRow>
         </TableHeader>
         <TableBody>
           {filteredRecords.length > 0 ? (
             filteredRecords.map((record, index) => (
               <TableRow key={index}>
-                <TableCell>{record.token}</TableCell>
-                <TableCell>
-                  <HighlightedTag tag={record.tag} tagColors={tagColors} />
-                </TableCell>
-                <TableCell className="max-w-sm">
+                <TableCell
+
+                >
                   {record.context ? (
-                    <TokenContext context={record.context} />
+                    <TokenContext context={{
+                      left: record.context?.left,
+                      right: record.context?.right,
+                      token: record.token,
+                      tag: record.tag
+                    }} tagColors={tagColors} />
                   ) : (
                     <span className="text-red-400 text-xs">Missing context</span>
                   )}
                 </TableCell>
-                <TableCell>{record.sourceObject}</TableCell>
-                <TableCell>{record.groups.join(', ')}</TableCell>
+                <TableCell >{record.sourceObject}</TableCell>
+                {/* <TableCell className="w-20 truncate">{record.groups.join(', ')}</TableCell> */}
               </TableRow>
             ))
           ) : (
@@ -254,7 +263,7 @@ export function TableContent({
           <TableRow>
             <TableHead>Tagged Tokens</TableHead>
             <TableHead>Source Object</TableHead>
-            <TableHead>Groups</TableHead>
+            {/* <TableHead>Groups</TableHead> */}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -287,7 +296,7 @@ export function TableContent({
                   ))}
                 </TableCell>
                 <TableCell>{record.sourceObject}</TableCell>
-                <TableCell>{record.groups.join(', ')}</TableCell>
+                {/* <TableCell>{record.groups.join(', ')}</TableCell> */}
               </TableRow>
             ))}
           {isLoadingObjectRecords && (
@@ -337,7 +346,12 @@ export function TableContent({
               </TableCell>
               <TableCell className="max-w-sm">
                 {record.context ? (
-                  <TokenContext context={record.context} />
+                  <TokenContext context={{
+                    left: record.context?.left,
+                    right: record.context?.right,
+                    token: record.token,
+                    tag: record.tag
+                  }} tagColors={tagColors} />
                 ) : (
                   <span className="text-red-400 text-xs">Missing context</span>
                 )}
