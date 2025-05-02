@@ -91,14 +91,19 @@ func TestInference(t *testing.T) {
 
 	object := "test.txt"
 
+	tags := map[string]struct{}{
+		"phone": {},
+		"email": {},
+	}
+
 	allEntities, groups, err := inferenceJobProcessor.runInferenceOnObject(
-		context.Background(),
 		reportId,
 		NewDefaultParser(),
 		model,
 		map[uuid.UUID]Filter{groupId1: group1, groupId2: group2},
 		"",
 		object,
+		tags,
 	)
 	assert.NoError(t, err)
 
