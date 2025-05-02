@@ -110,7 +110,7 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
-	worker := core.NewTaskProcessor(db, s3, queue, queue, t.TempDir(), modelBucket)
+	worker := core.NewTaskProcessor(db, s3, queue, queue, &DummyLicenseVerifier{}, t.TempDir(), modelBucket)
 
 	go worker.Start()
 	defer worker.Stop()
@@ -200,7 +200,7 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
-	worker := core.NewTaskProcessor(db, s3, queue, queue, t.TempDir(), modelBucket)
+	worker := core.NewTaskProcessor(db, s3, queue, queue, &DummyLicenseVerifier{}, t.TempDir(), modelBucket)
 
 	go worker.Start()
 	defer worker.Stop()

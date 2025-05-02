@@ -44,6 +44,8 @@ type Report struct {
 
 	ShardDataTaskStatus   string                        `json:"ShardDataTaskStatus,omitempty"`
 	InferenceTaskStatuses map[string]TaskStatusCategory `json:"InferenceTaskStatuses,omitempty"`
+
+	Errors []string `json:"Errors,omitempty"`
 }
 
 type Entity struct {

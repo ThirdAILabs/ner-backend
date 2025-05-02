@@ -63,6 +63,10 @@ func convertReport(r database.Report) api.Report {
 		report.ShardDataTaskStatus = r.ShardDataTask.Status
 	}
 
+	for _, err := range r.Errors {
+		report.Errors = append(report.Errors, err.Error)
+	}
+
 	return report
 }
 

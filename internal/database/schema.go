@@ -53,6 +53,8 @@ type Report struct {
 
 	ShardDataTask  *ShardDataTask  `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
 	InferenceTasks []InferenceTask `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
+
+	Errors []ReportError `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
 }
 
 type ShardDataTask struct {
@@ -104,6 +106,12 @@ type ObjectEntity struct {
 	Text     string
 	LContext string
 	RContext string
+}
+
+type ReportError struct {
+	ReportId  uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Error     string
+	Timestamp time.Time
 }
 
 type Tag struct {
