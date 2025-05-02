@@ -200,7 +200,7 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 
 	for _, tag := range req.Tags {
 		if _, ok := req.CustomTags[tag]; ok {
-			return nil, CodedErrorf(http.StatusUnprocessableEntity, "tag '%s' cannot be used as a a regular and custom tag", tag)
+			return nil, CodedErrorf(http.StatusUnprocessableEntity, "tag '%s' cannot be used as a regular and custom tag", tag)
 		}
 	}
 
