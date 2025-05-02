@@ -7,7 +7,11 @@ func Migration0(db *gorm.DB) error {
 		Name string `gorm:"primaryKey"`
 	}
 
-	if err := db.AutoMigrate(&Tag{}); err != nil {
+	type Model struct {
+		Tags []Tag `gorm:"foreignKey:Name"`
+	}
+
+	if err := db.AutoMigrate(&Tag{}, &Model{}); err != nil {
 		return err
 	}
 	return nil
@@ -15,6 +19,9 @@ func Migration0(db *gorm.DB) error {
 
 func Rollback0(db *gorm.DB) error {
 	if err := db.Migrator().DropTable("tags"); err != nil {
+		return err
+	}
+	if err := db.Migrator().DropColumn("models", "tags"); err != nil {
 		return err
 	}
 	return nil
