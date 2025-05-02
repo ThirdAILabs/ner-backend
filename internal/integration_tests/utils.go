@@ -9,7 +9,7 @@ import (
 	"ner-backend/internal/core"
 	"ner-backend/internal/core/types"
 	"ner-backend/internal/database"
-	"ner-backend/internal/s3"
+	"ner-backend/internal/storage"
 	"ner-backend/pkg/api"
 	"net/http"
 	"net/http/httptest"
@@ -113,13 +113,13 @@ const (
 	modelBucket = "test-model-bucket"
 )
 
-func createModel(t *testing.T, s3Client *s3.Client, db *gorm.DB, modelBucket string) uuid.UUID {
+func createModel(t *testing.T, storage storage.Provider, db *gorm.DB, modelBucket string) uuid.UUID {
 	modelData := `{"phone": "\\d{3}-\\d{3}-\\d{4}", "email": "\\w+@email\\.com"}`
 
-	require.NoError(t, s3Client.CreateBucket(context.Background(), modelBucket))
+	require.NoError(t, storage.CreateBucket(context.Background(), modelBucket))
 
 	modelId := uuid.New()
-	_, err := s3Client.UploadObject(context.Background(), modelBucket, modelId.String()+"/model.bin", strings.NewReader(modelData))
+	err := storage.PutObject(context.Background(), modelBucket, modelId.String()+"/model.bin", strings.NewReader(modelData))
 	require.NoError(t, err)
 
 	model := database.Model{

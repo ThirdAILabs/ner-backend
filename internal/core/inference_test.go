@@ -1,10 +1,10 @@
 package core
 
 import (
-	"context"
+	"io"
 	"ner-backend/internal/core/types"
 	"ner-backend/internal/database"
-	"ner-backend/internal/s3"
+	"ner-backend/internal/storage"
 	"ner-backend/pkg/api"
 	"regexp"
 	"strings"
@@ -12,7 +12,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	aws_s3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/google/uuid"
 )
 
@@ -50,8 +49,8 @@ func (m *regexModel) Save(path string) error {
 
 func (m *regexModel) Release() {}
 
-type mockS3Client struct {
-	s3.S3Api
+type mockStorage struct {
+	storage.Provider
 }
 
 type stringReadCloser struct{ *strings.Reader }
@@ -60,12 +59,8 @@ func (r *stringReadCloser) Close() error { return nil }
 
 const testDoc = "This is a test doc. It contains a phone number: 012-345-6789, an email: test@email.com, and a special token a1b2c3."
 
-func (m *mockS3Client) GetObject(context.Context, *aws_s3.GetObjectInput, ...func(*aws_s3.Options)) (*aws_s3.GetObjectOutput, error) {
-	return &aws_s3.GetObjectOutput{
-		Body: &stringReadCloser{
-			Reader: strings.NewReader(testDoc),
-		},
-	}, nil
+func (m *mockStorage) GetObjectStream(bucket, key string) (io.Reader, error) {
+	return strings.NewReader(testDoc), nil
 }
 
 func TestInference(t *testing.T) {
@@ -80,7 +75,7 @@ func TestInference(t *testing.T) {
 	reportId := uuid.New()
 
 	inferenceJobProcessor := TaskProcessor{
-		s3Client: s3.NewFromClient(&mockS3Client{}, "test-bucket"),
+		storage: &mockStorage{},
 	}
 
 	groupId1, groupId2 := uuid.New(), uuid.New()

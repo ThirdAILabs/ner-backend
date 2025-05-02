@@ -10,7 +10,7 @@ import (
 	"ner-backend/internal/core"
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
-	"ner-backend/internal/s3"
+	"ner-backend/internal/storage"
 	"ner-backend/pkg/api"
 	"net/http"
 	"net/http/httptest"
@@ -28,24 +28,24 @@ const (
 	dataBucket = "test-data"
 )
 
-func createData(t *testing.T, s3Client *s3.Client) {
-	require.NoError(t, s3Client.CreateBucket(context.Background(), dataBucket))
+func createData(t *testing.T, storage storage.Provider) {
+	require.NoError(t, storage.CreateBucket(context.Background(), dataBucket))
 
 	for i := 0; i < 10; i++ {
 		phonePath := fmt.Sprintf("phone-%d.txt", i)
 		phoneData := fmt.Sprintf("this file contains a phone number %d%d%d-123-4567", i, i, i)
 
-		_, err := s3Client.UploadObject(context.Background(), dataBucket, phonePath, strings.NewReader(phoneData))
+		err := storage.PutObject(context.Background(), dataBucket, phonePath, strings.NewReader(phoneData))
 		require.NoError(t, err)
 
 		emailPath := fmt.Sprintf("email-%d.txt", i)
 		emailData := fmt.Sprintf("this file contains a email address id-%d@email.com", i)
 
-		_, err = s3Client.UploadObject(context.Background(), dataBucket, emailPath, strings.NewReader(emailData))
+		err = storage.PutObject(context.Background(), dataBucket, emailPath, strings.NewReader(emailData))
 		require.NoError(t, err)
 	}
 
-	_, err := s3Client.UploadObject(context.Background(), dataBucket, "custom-token.txt", strings.NewReader("this is a custom token a1b2c3"))
+	err := storage.PutObject(context.Background(), dataBucket, "custom-token.txt", strings.NewReader("this is a custom token a1b2c3"))
 	require.NoError(t, err)
 }
 
@@ -98,7 +98,7 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 
 	minioUrl := setupMinioContainer(t, ctx)
 
-	s3, err := s3.NewS3Client(&s3.Config{
+	s3, err := storage.NewS3Provider(&storage.S3ProviderConfig{
 		S3EndpointURL:     minioUrl,
 		S3AccessKeyID:     minioUsername,
 		S3SecretAccessKey: minioPassword,
@@ -189,7 +189,7 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 
 	minioUrl := setupMinioContainer(t, ctx)
 
-	s3, err := s3.NewS3Client(&s3.Config{
+	s3, err := storage.NewS3Provider(&storage.S3ProviderConfig{
 		S3EndpointURL:     minioUrl,
 		S3AccessKeyID:     minioUsername,
 		S3SecretAccessKey: minioPassword,

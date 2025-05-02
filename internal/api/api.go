@@ -11,7 +11,7 @@ import (
 	"ner-backend/internal/core"
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
-	"ner-backend/internal/s3"
+	"ner-backend/internal/storage"
 	"regexp"
 
 	"ner-backend/pkg/api"
@@ -28,7 +28,7 @@ import (
 
 type BackendService struct {
 	db               *gorm.DB
-	s3               *s3.Client
+	storage          storage.Provider
 	publisher        messaging.Publisher
 	chunkTargetBytes int64
 }
@@ -37,13 +37,13 @@ const (
 	uploadBucket = "uploads"
 )
 
-func NewBackendService(db *gorm.DB, s3 *s3.Client, pub messaging.Publisher, chunkTargetBytes int64) *BackendService {
-	if err := s3.CreateBucket(context.Background(), uploadBucket); err != nil {
+func NewBackendService(db *gorm.DB, storage storage.Provider, pub messaging.Publisher, chunkTargetBytes int64) *BackendService {
+	if err := storage.CreateBucket(context.Background(), uploadBucket); err != nil {
 		slog.Error("error creating upload bucket", "error", err)
 		panic("failed to create upload bucket")
 	}
 
-	return &BackendService{db: db, s3: s3, publisher: pub, chunkTargetBytes: chunkTargetBytes}
+	return &BackendService{db: db, storage: storage, publisher: pub, chunkTargetBytes: chunkTargetBytes}
 }
 
 func (s *BackendService) AddRoutes(r chi.Router) {
@@ -501,7 +501,7 @@ func (s *BackendService) UploadFiles(r *http.Request) (any, error) {
 
 			newFilepath := filepath.Join(uploadId.String(), part.FileName())
 
-			if _, err := s.s3.UploadObject(r.Context(), uploadBucket, newFilepath, part); err != nil {
+			if err := s.storage.PutObject(r.Context(), uploadBucket, newFilepath, part); err != nil {
 				slog.Error("error uploading file to S3", "error", err)
 				return nil, CodedErrorf(http.StatusInternalServerError, "error saving file")
 			}

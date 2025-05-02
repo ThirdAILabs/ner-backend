@@ -9,7 +9,7 @@ import (
 	backend "ner-backend/internal/api"
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
-	"ner-backend/internal/s3"
+	"ner-backend/internal/storage"
 	"ner-backend/pkg/api"
 	"net/http"
 	"net/http/httptest"
@@ -17,7 +17,6 @@ import (
 	"testing"
 	"time"
 
-	aws_s3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -39,15 +38,13 @@ func createDB(t *testing.T, create ...any) *gorm.DB {
 	return db
 }
 
-type mockS3Client struct {
-	s3.S3Api
+type mockStorage struct {
+	storage.Provider
 }
 
-func (m *mockS3Client) CreateBucket(ctx context.Context, params *aws_s3.CreateBucketInput, optFns ...func(*aws_s3.Options)) (*aws_s3.CreateBucketOutput, error) {
-	return &aws_s3.CreateBucketOutput{}, nil
+func (m *mockStorage) CreateBucket(ctx context.Context, bucket string) error {
+	return nil
 }
-
-func mockS3() *s3.Client { return s3.NewFromClient(&mockS3Client{}, "") }
 
 func TestListModels(t *testing.T) {
 	id1, id2 := uuid.New(), uuid.New()
@@ -56,7 +53,7 @@ func TestListModels(t *testing.T) {
 		&database.Model{Id: id2, Name: "Model2", Type: "bolt", Status: database.ModelTraining, CreationTime: time.Now()},
 	)
 
-	service := backend.NewBackendService(db, mockS3(), messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -84,7 +81,7 @@ func TestGetModel(t *testing.T) {
 		&database.ModelTag{ModelId: modelId, Tag: "phone"},
 	)
 
-	service := backend.NewBackendService(db, mockS3(), messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -106,7 +103,7 @@ func TestFinetuneModel(t *testing.T) {
 		&database.Model{Id: modelId, Name: "Model1", Type: "regex", Status: database.ModelTrained},
 	)
 
-	service := backend.NewBackendService(db, mockS3(), messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -160,7 +157,7 @@ func TestCreateReport(t *testing.T) {
 		&database.ModelTag{ModelId: modelId, Tag: "phone"},
 	)
 
-	service := backend.NewBackendService(db, mockS3(), messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -248,7 +245,7 @@ func TestGetReport(t *testing.T) {
 		&database.ObjectEntity{ReportId: reportId, Object: "object1", Start: 2, End: 3, Label: "label3", Text: "text3"},
 	)
 
-	service := backend.NewBackendService(db, mockS3(), messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -364,7 +361,7 @@ func TestReportSearch(t *testing.T) {
 		&database.ObjectEntity{ReportId: reportId, Object: "object4", Start: 4, End: 5, Label: "label3", Text: "12xyz34"},
 	)
 
-	service := backend.NewBackendService(db, mockS3(), messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 

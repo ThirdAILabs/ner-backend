@@ -7,7 +7,7 @@ import (
 	"ner-backend/internal/api"
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
-	"ner-backend/internal/s3"
+	"ner-backend/internal/storage"
 	"net/http"
 	"os"
 	"os/signal"
@@ -50,14 +50,13 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	s3Cfg := s3.Config{
+	s3Cfg := &storage.S3ProviderConfig{
 		S3EndpointURL:     cfg.S3EndpointURL,
 		S3AccessKeyID:     cfg.S3AccessKeyID,
 		S3SecretAccessKey: cfg.S3SecretAccessKey,
 		S3Region:          cfg.S3Region,
-		ModelBucketName:   cfg.ModelBucketName,
 	}
-	s3Client, err := s3.NewS3Client(&s3Cfg)
+	s3Client, err := storage.NewS3Provider(s3Cfg)
 	if err != nil {
 		log.Fatalf("Worker: Failed to create S3 client: %v", err)
 	}
