@@ -74,7 +74,7 @@ Retrieve details of a specific model by its ID.
 
 ### GET /reports
 **Description:**  
-Retrieve a list of all reports.
+Retrieve a list of all reports. Either `UploadId` or `SourceS3Bucket` must be specified, where `UploadId` is the id returned from the `POST /uploads` endpoint.
 
 **Response:**  
 - `200 OK`: Returns a list of reports.
@@ -91,6 +91,7 @@ Retrieve a list of all reports.
       "Type": "bolt",
       "Status": "TRAINED"
     },
+    "UploadId": "123e4567-e89b-12d3-a456-426614174000",
     "SourceS3Bucket": "example-bucket",
     "SourceS3Prefix": "data/",
     "CreationTime": "2023-01-01T12:00:00Z",
@@ -252,14 +253,18 @@ Retrieve entities for a specific report.
     "Start": 0,
     "End": 5,
     "Label": "Person",
-    "Text": "John"
+    "Text": "John",
+    "LContext": "my name is",
+    "RContext": "and my",
   },
   {
     "Object": "Object2",
     "Start": 10,
     "End": 15,
     "Label": "Organization",
-    "Text": "Acme Corp"
+    "Text": "Acme Corp",
+    "LContext": "I work at",
+    "RContext": "in new york",
   }
 ]
 ```

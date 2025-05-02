@@ -373,9 +373,9 @@ func (c *Client) CreateBucket(ctx context.Context, bucketName string) error {
 		Bucket: aws.String(bucketName),
 	})
 	if err != nil {
-		var awsExistsErr *types.BucketAlreadyExists
-		var awsOwnedErr *types.BucketAlreadyOwnedByYou
-		if errors.As(err, &awsExistsErr) || errors.As(err, &awsOwnedErr) {
+		var existErr *types.BucketAlreadyExists
+		var ownedErr *types.BucketAlreadyOwnedByYou
+		if errors.As(err, &existErr) || errors.As(err, &ownedErr) {
 			slog.Info("Bucket already exists", "bucketName", bucketName)
 			return nil
 		}
