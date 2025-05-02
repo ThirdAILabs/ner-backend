@@ -60,7 +60,7 @@ func (s *BackendService) AddRoutes(r chi.Router) {
 		r.Get("/{report_id}/groups/{group_id}", RestHandler(s.GetReportGroup))
 		r.Get("/{report_id}/entities", RestHandler(s.GetReportEntities))
 		r.Get("/{report_id}/search", RestHandler(s.ReportSearch))
-		r.Get("/{report_id}/previews", RestHandler(s.GetReportPreviews))
+		r.Get("/{report_id}/objects", RestHandler(s.GetReportPreviews))
 	})
 
 	r.Route("/uploads", func(r chi.Router) {
@@ -391,26 +391,45 @@ func (s *BackendService) GetReportPreviews(r *http.Request) (any, error) {
 		return nil, err
 	}
 
-	ctx := r.Context()
-	var rows []database.ObjectPreview
-	if err := s.db.WithContext(ctx).
-		Where("report_id = ?", reportId).
-		Find(&rows).Error; err != nil {
-		slog.Error("error fetching object previews", "report_id", reportId, "error", err)
-		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving object previews")
+	params := r.URL.Query()
+	offset, limit := 0, 100
+	if os := params.Get("offset"); os != "" {
+		if offset, err = strconv.Atoi(os); err != nil || offset < 0 {
+			return nil, CodedErrorf(http.StatusBadRequest, "invalid offset")
+		}
+	}
+	if ls := params.Get("limit"); ls != "" {
+		if limit, err = strconv.Atoi(ls); err != nil || limit < 1 || limit > 200 {
+			return nil, CodedErrorf(http.StatusBadRequest, "invalid limit")
+		}
 	}
 
-	resp := make([]api.ObjectPreviewResponse, len(rows))
-	for i, row := range rows {
-		var tags []api.TokenPreview
-		if err := json.Unmarshal(row.TokenTags, &tags); err != nil {
-			slog.Error("error unmarshalling TokenTags JSON", "object", row.Object, "error", err)
-			tags = nil
+	ctx := r.Context()
+	var previews []database.ObjectPreview
+	if err := s.db.WithContext(ctx).
+		Where("report_id = ?", reportId).
+		Offset(offset).
+		Limit(limit).
+		Order("object").
+		Find(&previews).Error; err != nil {
+		slog.Error("error fetching previews", "report_id", reportId, "err", err)
+		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving previews")
+	}
+
+	resp := make([]api.ObjectPreviewResponse, len(previews))
+	for i, p := range previews {
+		var payload struct {
+			Tokens []string `json:"tokens"`
+			Tags   []string `json:"tags"`
+		}
+		if err := json.Unmarshal(p.TokenTags, &payload); err != nil {
+			slog.Error("unmarshal preview payload", "object", p.Object, "err", err)
 		}
 		resp[i] = api.ObjectPreviewResponse{
-			Object:    row.Object,
-			Preview:   row.Preview,
-			TokenTags: tags,
+			Object:  p.Object,
+			Preview: p.Preview,
+			Tokens:  payload.Tokens,
+			Tags:    payload.Tags,
 		}
 	}
 

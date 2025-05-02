@@ -12,6 +12,7 @@ import (
 	"ner-backend/internal/s3"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -230,6 +231,62 @@ func (proc *TaskProcessor) loadModel(modelId uuid.UUID, modelType string) (Model
 	return model, nil
 }
 
+func (proc *TaskProcessor) createObjectPreview(
+	reportId uuid.UUID,
+	object string,
+	previewText string,
+	model Model,
+) error {
+	spans, err := model.Predict(previewText)
+	if err != nil {
+		return fmt.Errorf("preview inference error: %w", err)
+	}
+
+	sort.Slice(spans, func(i, j int) bool {
+		return spans[i].Start < spans[j].Start
+	})
+
+	var (
+		tokens []string
+		tags   []string
+		cursor = 0
+		length = len(previewText)
+	)
+	for _, e := range spans {
+		if e.Start > cursor {
+			tokens = append(tokens, previewText[cursor:e.Start])
+			tags = append(tags, "O")
+		}
+		end := e.End
+		if end > length {
+			end = length
+		}
+		tokens = append(tokens, previewText[e.Start:end])
+		tags = append(tags, e.Label)
+		cursor = end
+	}
+	if cursor < length {
+		tokens = append(tokens, previewText[cursor:])
+		tags = append(tags, "O")
+	}
+
+	payload := struct {
+		Tokens []string `json:"tokens"`
+		Tags   []string `json:"tags"`
+	}{
+		Tokens: tokens,
+		Tags:   tags,
+	}
+	b, _ := json.Marshal(payload)
+
+	return proc.db.Create(&database.ObjectPreview{
+		ReportId:  reportId,
+		Object:    object,
+		Preview:   previewText,
+		TokenTags: datatypes.JSON(b),
+	}).Error
+}
+
 func (proc *TaskProcessor) runInferenceOnObject(
 	reportId uuid.UUID,
 	parser Parser,
@@ -246,7 +303,6 @@ func (proc *TaskProcessor) runInferenceOnObject(
 	const previewLimit = 1000
 
 	previewTokens := make([]string, 0, previewLimit)
-	havePreview := false
 
 	for chunk := range chunks {
 		if chunk.Error != nil {
@@ -264,12 +320,11 @@ func (proc *TaskProcessor) runInferenceOnObject(
 			labelToEntities[entity.Label] = append(labelToEntities[entity.Label], entity)
 		}
 
-		if !havePreview {
+		if len(previewTokens) < previewLimit {
 			toks := strings.Fields(chunk.Text)
 			need := previewLimit - len(previewTokens)
 			if len(toks) >= need {
 				previewTokens = append(previewTokens, toks[:need]...)
-				havePreview = true
 			} else {
 				previewTokens = append(previewTokens, toks...)
 			}
@@ -277,24 +332,7 @@ func (proc *TaskProcessor) runInferenceOnObject(
 	}
 
 	previewText := strings.Join(previewTokens, " ")
-	pEnts, err := model.Predict(previewText)
-	if err != nil {
-		return nil, nil, fmt.Errorf("preview inference error: %w", err)
-	}
-
-	type tokenTag struct{ Token, Tag string }
-	ttList := make([]tokenTag, len(pEnts))
-	for i, e := range pEnts {
-		ttList[i] = tokenTag{Token: e.Text, Tag: e.Label}
-	}
-	jsonB, _ := json.Marshal(ttList)
-
-	if err := proc.db.Create(&database.ObjectPreview{
-		ReportId:  reportId,
-		Object:    object,
-		Preview:   previewText,
-		TokenTags: datatypes.JSON(jsonB),
-	}).Error; err != nil {
+	if err := proc.createObjectPreview(reportId, object, previewText, model); err != nil {
 		slog.Error("saving ObjectPreview failed", "object", object, "err", err)
 	}
 
