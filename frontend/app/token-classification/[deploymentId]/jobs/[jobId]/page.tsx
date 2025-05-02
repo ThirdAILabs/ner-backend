@@ -15,34 +15,34 @@ import { usePathname } from 'next/navigation';
 // Calculate progress based on InferenceTaskStatuses
 const calculateProgress = (report: Report | null): number => {
   if (!report || !report.InferenceTaskStatuses) return 0;
-  
+
   const statuses = report.InferenceTaskStatuses;
-  
+
   // Sum up all task sizes
   let totalSize = 0;
   let completedSize = 0;
-  
+
   // Add completed tasks
   if (statuses.COMPLETED) {
     totalSize += statuses.COMPLETED.TotalSize;
     completedSize += statuses.COMPLETED.TotalSize;
   }
-  
+
   // Add running tasks
   if (statuses.RUNNING) {
     totalSize += statuses.RUNNING.TotalSize;
   }
-  
+
   // Add queued tasks
   if (statuses.QUEUED) {
     totalSize += statuses.QUEUED.TotalSize;
   }
-  
+
   // Add failed tasks
   if (statuses.FAILED) {
     totalSize += statuses.FAILED.TotalSize;
   }
-  
+
   // Calculate percentage
   if (totalSize === 0) return 0;
   return Math.round((completedSize / totalSize) * 100);
@@ -53,7 +53,7 @@ const getProcessedTokens = (report: Report | null): number => {
   if (!report || !report.InferenceTaskStatuses || !report.InferenceTaskStatuses.COMPLETED) {
     return 0;
   }
-  
+
   return report.InferenceTaskStatuses.COMPLETED.TotalSize;
 };
 
@@ -216,7 +216,7 @@ export default function JobDetail() {
   const [dynamicTags, setDynamicTags] = useState<string[]>(mockTags);
 
   const [reportData, setReportData] = useState<Report | null>(null);
-  
+
   // Gather unique entity types from API
   const fetchAndProcessEntities = async () => {
     try {
@@ -224,18 +224,18 @@ export default function JobDetail() {
       if (entities && entities.length > 0) {
         // Extract and deduplicate tag types
         const apiTagTypes = Array.from(new Set(entities.map(e => e.Label)));
-        
+
         // Combine with mockTags (for backward compatibility) and deduplicate
         const combinedTags = Array.from(new Set([...mockTags, ...apiTagTypes]));
         console.log("Combined tag types:", combinedTags);
-        
+
         setDynamicTags(combinedTags);
       }
     } catch (error) {
       console.error("Error fetching entity types:", error);
     }
   };
-  
+
   const fetchReportData = async () => {
     const response = await nerService.getReport(reportId);
     console.log(response);
@@ -252,12 +252,12 @@ export default function JobDetail() {
     try {
       const entities = await nerService.getReportEntities(reportId, { offset, limit });
       console.log("API entities response:", entities.length > 0 ? entities[0] : "No entities");
-      
+
       // Extract unique entity types from the API response
       const uniqueTypes = new Set(entities.map(entity => entity.Label));
       console.log("Unique entity types in API response:", Array.from(uniqueTypes));
       console.log("Tag filters available in UI:", mockTags);
-      
+
       return entities.map(entity => {
         const record = {
           token: entity.Text,
@@ -271,12 +271,12 @@ export default function JobDetail() {
           end: entity.End,
           groups: reportData?.Groups?.filter(group => group.Objects?.includes(entity.Object)).map(g => g.Name) || []
         };
-        
+
         // Log the first transformed record for debugging
         if (entity === entities[0]) {
           console.log("Transformed record:", record);
         }
-        
+
         return record;
       });
     } catch (error) {
@@ -291,20 +291,20 @@ export default function JobDetail() {
       // Group entities by object
       const entities = await nerService.getReportEntities(reportId, { limit: 200 });
       const objectMap = new Map<string, [string, string, string, string][]>();
-      
+
       entities.forEach(entity => {
         if (!objectMap.has(entity.Object)) {
           objectMap.set(entity.Object, []);
         }
         // Store [text, label, left context, right context]
         objectMap.get(entity.Object)?.push([
-          entity.Text, 
+          entity.Text,
           entity.Label,
           entity.LContext || '',
           entity.RContext || ''
         ]);
       });
-      
+
       return Array.from(objectMap.entries()).map(([objectName, tokens]) => ({
         taggedTokens: tokens.map(t => [t[0], t[1]]) as [string, string][],
         tokenContexts: tokens.map(t => ({ left: t[2], right: t[3] })),
@@ -506,29 +506,6 @@ export default function JobDetail() {
 
         <TabsContent value="analytics">
           <AnalyticsDashboard
-            latencyData={[
-              { timestamp: '2024-03-10T12:00:00', latency: 0.120 },
-              { timestamp: '2024-03-10T12:00:01', latency: 0.115 },
-              { timestamp: '2024-03-10T12:00:02', latency: 0.112 },
-              { timestamp: '2024-03-10T12:00:03', latency: 0.108 },
-              { timestamp: '2024-03-10T12:00:04', latency: 0.105 },
-              { timestamp: '2024-03-10T12:00:05', latency: 0.103 },
-              { timestamp: '2024-03-10T12:00:06', latency: 0.100 },
-              { timestamp: '2024-03-10T12:00:07', latency: 0.099 },
-              { timestamp: '2024-03-10T12:00:08', latency: 0.094 },
-              { timestamp: '2024-03-10T12:00:09', latency: 0.093 },
-              { timestamp: '2024-03-10T12:00:10', latency: 0.088 },
-              { timestamp: '2024-03-10T12:00:11', latency: 0.082 },
-              { timestamp: '2024-03-10T12:00:12', latency: 0.079 },
-              { timestamp: '2024-03-10T12:00:13', latency: 0.087 },
-              { timestamp: '2024-03-10T12:00:14', latency: 0.090 },
-              { timestamp: '2024-03-10T12:00:15', latency: 0.088 },
-              { timestamp: '2024-03-10T12:00:16', latency: 0.087 },
-              { timestamp: '2024-03-10T12:00:17', latency: 0.085 },
-              { timestamp: '2024-03-10T12:00:18', latency: 0.083 },
-              { timestamp: '2024-03-10T12:00:19', latency: 0.082 },
-              { timestamp: '2024-03-10T12:00:20', latency: 0.080 },
-            ]}
             progress={calculateProgress(reportData)}
             tokensProcessed={getProcessedTokens(reportData)}
             tokenTypes={mockTags}

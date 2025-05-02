@@ -13,16 +13,6 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import _ from 'lodash';
 
-interface TokenCount {
-  type: string;
-  count: number;
-}
-
-interface LatencyDataPoint {
-  timestamp: string;
-  latency: number;
-}
-
 interface ClusterSpecs {
   cpus: number;
   vendorId: string;
@@ -33,7 +23,6 @@ interface ClusterSpecs {
 interface AnalyticsDashboardProps {
   progress: number;
   tokensProcessed: number;
-  latencyData: LatencyDataPoint[];
   tokenTypes: string[];
   tokenCounts: Record<string, number>;
   clusterSpecs: ClusterSpecs;
@@ -49,11 +38,9 @@ const formatNumber = (num: number): string => {
   return num.toString();
 };
 
-export function AnalyticsDashboard({ 
-  progress, 
+export function AnalyticsDashboard({
+  progress,
   tokensProcessed,
-  latencyData,
-  tokenTypes,
   tokenCounts,
   clusterSpecs
 }: AnalyticsDashboardProps) {
@@ -62,12 +49,6 @@ export function AnalyticsDashboard({
     type,
     count,
   }));
-
-  // Calculate min and max latency for the y-axis domain
-  const latencies = latencyData.map(d => d.latency);
-  const minLatency = Math.min(...latencies);
-  const maxLatency = Math.max(...latencies);
-  const latencyPadding = (maxLatency - minLatency) * 0.1; // Add 10% padding
 
   return (
     <div className="space-y-6 w-full">
@@ -117,88 +98,6 @@ export function AnalyticsDashboard({
           </CardContent>
         </Card>
 
-        {/* Live Latency Widget */}
-        <Card className="flex flex-col justify-between">
-          <CardContent className="flex flex-col pt-6 h-full">
-            <div className="flex-1">
-              <div className="w-full h-[120px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={latencyData.slice(-20)}>
-                    <CartesianGrid 
-                      strokeDasharray="3 3" 
-                      horizontal={true}
-                      vertical={false}
-                      stroke="rgba(0,0,0,0.1)"
-                    />
-                    <XAxis 
-                      dataKey="timestamp"
-                      tickFormatter={(value) => {
-                        const date = new Date(value);
-                        return date.toLocaleTimeString([], { 
-                          hour: '2-digit', 
-                          minute: '2-digit',
-                          second: '2-digit',
-                          hour12: false 
-                        });
-                      }}
-                      tick={{ fontSize: 10 }}
-                      axisLine={false}
-                      tickLine={false}
-                      interval="preserveStartEnd"
-                      minTickGap={30}
-                    />
-                    <YAxis 
-                      domain={[
-                        Math.max(0, minLatency - latencyPadding), 
-                        maxLatency + latencyPadding
-                      ]} 
-                      tickFormatter={(value) => `${value.toFixed(1)}`}
-                      tick={{ fontSize: 10 }}
-                      axisLine={false}
-                      tickLine={false}
-                      style={{ fontSize: '10px' }}
-                      width={20}
-                    />
-                    <Tooltip
-                      formatter={(value: number) => `${value.toFixed(1)}ms`}
-                      labelFormatter={(timestamp) => {
-                        const date = new Date(timestamp as string);
-                        return date.toLocaleTimeString([], { 
-                          hour: '2-digit', 
-                          minute: '2-digit',
-                          second: '2-digit',
-                          hour12: false 
-                        });
-                      }}
-                      contentStyle={{
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        border: 'none',
-                        borderRadius: '4px',
-                        padding: '4px 8px',
-                      }}
-                      itemStyle={{ color: '#fff' }}
-                    />
-                    <Line
-                      type="linear"
-                      dataKey="latency"
-                      stroke="#3b82f6"
-                      strokeWidth={2}
-                      dot={false}
-                      isAnimationActive={false}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-            <div className="flex flex-col items-center">
-              <span className="text-sm text-muted-foreground">
-                {_.mean(latencyData.map(d => d.latency)).toFixed(3)}ms/token
-              </span>
-              <h3 className="text-sm text-muted-foreground">Live Latency</h3>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Cluster Specs Widget */}
         <Card className="flex flex-col justify-between">
           <CardContent className="flex flex-col pt-6 h-full">
@@ -239,10 +138,10 @@ export function AnalyticsDashboard({
                 margin={{ top: 20, right: 30, left: 50, bottom: 30 }}
               >
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  type="number" 
-                  label={{ 
-                    value: "Number of tokens", 
+                <XAxis
+                  type="number"
+                  label={{
+                    value: "Number of tokens",
                     position: "bottom",
                     offset: 15
                   }}
