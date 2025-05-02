@@ -52,15 +52,15 @@ The `cmd/licensing/main.go` cli tool provides utilities for creating an managing
 
 ### Creating Keys
 ```bash
-go run cmd/licensing/main.go keys --output <output_name>
+go run cmd/licensing/main.go keys --output "test_key"
 ```
 
-This command will generate `<output_name>_private_key.pem` and `<output_name>_public_key.pem` containing private/public keys that can be used for local licensing. Currently we use the keys saved in `/share/keys/ner_licensing` on blade. This command should not be run unless you are testing or want to change the keys. 
+This command will generate `<output>_private_key.pem` and `<output>_public_key.pem` containing private/public keys that can be used for local licensing. Currently we use the keys saved in `/share/keys/ner_licensing` on blade. This command should not be run unless you are testing or want to change the keys. 
 
 ### Creating a license
 
 ```bash
-go run cmd/licensing/main.go create --private-key <path to private key file> --days <int>
+go run cmd/licensing/main.go create --private-key "/share/keys/ner_licensing/ner_licensing_private_key.pem" --days 10
 ```
 
 Creates a license using the private key at the specified path. The license will expire in the specified number of days. 
@@ -68,7 +68,7 @@ Creates a license using the private key at the specified path. The license will 
 ### Validating a license
 
 ```bash
-go run cmd/licensing/main.go create --public-key <path to public key file> --license <license key string>
+go run cmd/licensing/main.go create --public-key "/share/keys/ner_licensing/ner_licensing_public_key.pem" --license "your license string"
 ```
 
 Validates a license and prints out information such as expiration date.
