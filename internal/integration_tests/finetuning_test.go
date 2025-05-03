@@ -24,7 +24,7 @@ func TestFinetuning(t *testing.T) {
 
 	minioUrl := setupMinioContainer(t, ctx)
 
-	s3, err := storage.NewS3Provider(&storage.S3ProviderConfig{
+	s3, err := storage.NewS3Provider(storage.S3ProviderConfig{
 		S3EndpointURL:     minioUrl,
 		S3AccessKeyID:     minioUsername,
 		S3SecretAccessKey: minioPassword,

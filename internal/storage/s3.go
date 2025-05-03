@@ -30,7 +30,7 @@ type S3ProviderConfig struct {
 	S3Region          string
 }
 
-func NewS3Provider(cfg *S3ProviderConfig) (*S3Provider, error) {
+func NewS3Provider(cfg S3ProviderConfig) (*S3Provider, error) {
 	resolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) { // nolint:staticcheck
 		if cfg.S3EndpointURL != "" {
 			return aws.Endpoint{ // nolint:staticcheck

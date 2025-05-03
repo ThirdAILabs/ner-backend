@@ -48,8 +48,7 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	// Initialize S3 Client
-	s3Cfg := &storage.S3ProviderConfig{
+	s3Cfg := storage.S3ProviderConfig{
 		S3EndpointURL:     cfg.S3EndpointURL,
 		S3AccessKeyID:     cfg.S3AccessKeyID,
 		S3SecretAccessKey: cfg.S3SecretAccessKey,
