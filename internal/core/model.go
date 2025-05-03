@@ -46,7 +46,7 @@ var modelLoaders = map[string]modelLoader{
 
 	"presidio": func(arg string) (Model, error) {
 		// we ignore `path` (no checkpoint needed) and always use the default threshold
-		return &presidioModel{threshold: defaultPresidioThreshold}, nil
+		return NewPresidioModel()
 	},
 }
 
