@@ -21,6 +21,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/datatypes"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -379,4 +380,58 @@ func TestReportSearch(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.ElementsMatch(t, []string{"object1", "object3"}, response.Objects)
+}
+
+func TestGetReportPreviews(t *testing.T) {
+	reportId := uuid.New()
+	payload := struct {
+		Tokens []string `json:"tokens"`
+		Tags   []string `json:"tags"`
+	}{
+		Tokens: []string{"foo", "bar", "baz"},
+		Tags:   []string{"O", "TAG1", "O"},
+	}
+	b, err := json.Marshal(payload)
+	require.NoError(t, err)
+
+	p1 := &database.ObjectPreview{
+		ReportId:  reportId,
+		Object:    "doc1.txt",
+		TokenTags: datatypes.JSON(b),
+	}
+	p2 := &database.ObjectPreview{
+		ReportId:  reportId,
+		Object:    "doc2.txt",
+		TokenTags: datatypes.JSON(b),
+	}
+	db := createDB(t, p1, p2)
+
+	service := backend.NewBackendService(db, mockS3(), messaging.NewInMemoryQueue(), 1024)
+	router := chi.NewRouter()
+	service.AddRoutes(router)
+
+	url := fmt.Sprintf("/reports/%s/objects?limit=10&offset=0", reportId.String())
+	req := httptest.NewRequest(http.MethodGet, url, nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	var resp []api.ObjectPreviewResponse
+	err = json.Unmarshal(rec.Body.Bytes(), &resp)
+	require.NoError(t, err)
+	assert.Len(t, resp, 2)
+
+	want := []api.ObjectPreviewResponse{
+		{
+			Object: "doc1.txt",
+			Tokens: []string{"foo", "bar", "baz"},
+			Tags:   []string{"O", "TAG1", "O"},
+		},
+		{
+			Object: "doc2.txt",
+			Tokens: []string{"foo", "bar", "baz"},
+			Tags:   []string{"O", "TAG1", "O"},
+		},
+	}
+	assert.ElementsMatch(t, want, resp)
 }

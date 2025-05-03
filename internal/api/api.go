@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"io"
 	"log/slog"
@@ -60,6 +61,7 @@ func (s *BackendService) AddRoutes(r chi.Router) {
 		r.Get("/{report_id}/groups/{group_id}", RestHandler(s.GetReportGroup))
 		r.Get("/{report_id}/entities", RestHandler(s.GetReportEntities))
 		r.Get("/{report_id}/search", RestHandler(s.ReportSearch))
+		r.Get("/{report_id}/objects", RestHandler(s.GetReportPreviews))
 	})
 
 	r.Route("/uploads", func(r chi.Router) {
@@ -420,6 +422,56 @@ func (s *BackendService) GetReportEntities(r *http.Request) (any, error) {
 	}
 
 	return convertEntities(entities), nil
+}
+
+func (s *BackendService) GetReportPreviews(r *http.Request) (any, error) {
+	reportId, err := URLParamUUID(r, "report_id")
+	if err != nil {
+		return nil, err
+	}
+
+	params := r.URL.Query()
+	offset, limit := 0, 100
+	if os := params.Get("offset"); os != "" {
+		if offset, err = strconv.Atoi(os); err != nil || offset < 0 {
+			return nil, CodedErrorf(http.StatusBadRequest, "invalid offset")
+		}
+	}
+	if ls := params.Get("limit"); ls != "" {
+		if limit, err = strconv.Atoi(ls); err != nil || limit < 1 || limit > 200 {
+			return nil, CodedErrorf(http.StatusBadRequest, "invalid limit")
+		}
+	}
+
+	ctx := r.Context()
+	var previews []database.ObjectPreview
+	if err := s.db.WithContext(ctx).
+		Where("report_id = ?", reportId).
+		Offset(offset).
+		Limit(limit).
+		Order("object").
+		Find(&previews).Error; err != nil {
+		slog.Error("error fetching previews", "report_id", reportId, "err", err)
+		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving previews")
+	}
+
+	resp := make([]api.ObjectPreviewResponse, len(previews))
+	for i, p := range previews {
+		var payload struct {
+			Tokens []string `json:"tokens"`
+			Tags   []string `json:"tags"`
+		}
+		if err := json.Unmarshal(p.TokenTags, &payload); err != nil {
+			slog.Error("unmarshal preview payload", "object", p.Object, "err", err)
+		}
+		resp[i] = api.ObjectPreviewResponse{
+			Object: p.Object,
+			Tokens: payload.Tokens,
+			Tags:   payload.Tags,
+		}
+	}
+
+	return resp, nil
 }
 
 func (s *BackendService) ReportSearch(r *http.Request) (any, error) {

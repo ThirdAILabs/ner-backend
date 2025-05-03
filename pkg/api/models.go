@@ -107,3 +107,9 @@ type SearchResponse struct {
 type UploadResponse struct {
 	Id uuid.UUID
 }
+
+type ObjectPreviewResponse struct {
+	Object string   `json:"object"`
+	Tokens []string `json:"tokens"`
+	Tags   []string `json:"tags"`
+}
