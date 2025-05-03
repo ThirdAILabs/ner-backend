@@ -53,10 +53,6 @@ type mockStorage struct {
 	storage.Provider
 }
 
-type stringReadCloser struct{ *strings.Reader }
-
-func (r *stringReadCloser) Close() error { return nil }
-
 const testDoc = "This is a test doc. It contains a phone number: 012-345-6789, an email: test@email.com, and a special token a1b2c3."
 
 func (m *mockStorage) GetObjectStream(bucket, key string) (io.Reader, error) {
