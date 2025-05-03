@@ -406,7 +406,7 @@ func TestGetReportPreviews(t *testing.T) {
 	}
 	db := createDB(t, p1, p2)
 
-	service := backend.NewBackendService(db, mockS3(), messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
