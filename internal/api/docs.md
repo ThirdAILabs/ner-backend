@@ -247,6 +247,7 @@ Retrieve entities for a specific report.
 - `offset` (int, optional): The starting point for pagination (default: 0).
 - `limit` (int, optional): The maximum number of entities to return (default: 100, max: 200).
 - `object` (string, optional): Filter entities by object.
+- `tags` (List[string], optional): If specified then the endpoint will only return entities where the label is one of the specified tags. The parameter can be specified multiple times to restrict to multiple tags. 
 
 **Response:**  
 - `200 OK`: Returns a list of entities.

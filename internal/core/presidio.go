@@ -212,28 +212,31 @@ func (pr *PatternRecognizer) Recognize(text string, threshold float64) []Recogni
 	return results
 }
 
-func analyze(text string, threshold float64) []RecognizerResult {
+type PresidioModel struct {
+	recognizers []*PatternRecognizer
+	threshold   float64
+}
+
+func NewPresidioModel() (*PresidioModel, error) {
 	recs, err := loadPatterns()
 	if err != nil {
-		fmt.Printf("⚠️ failed to load recognizers: %v\n", err)
-		return nil
+		return nil, err
 	}
-	var out []RecognizerResult
-	for _, pr := range recs {
-		out = append(out, pr.Recognize(text, threshold)...)
-	}
-	return out
+	return &PresidioModel{
+		recognizers: recs,
+		threshold:   defaultPresidioThreshold,
+	}, nil
 }
 
-type presidioModel struct {
-	threshold float64
-}
+func (m *PresidioModel) Predict(text string) ([]types.Entity, error) {
+	var results []RecognizerResult
+	for _, pr := range m.recognizers {
+		results = append(results, pr.Recognize(text, m.threshold)...)
+	}
 
-func (m *presidioModel) Predict(text string) ([]types.Entity, error) {
-	results := analyze(text, m.threshold)
-	out := make([]types.Entity, 0, len(results))
+	entities := make([]types.Entity, 0, len(results))
 	for _, r := range results {
-		out = append(out, types.Entity{
+		entities = append(entities, types.Entity{
 			Text:     r.Match,
 			Label:    r.EntityType,
 			Start:    r.Start,
@@ -242,15 +245,32 @@ func (m *presidioModel) Predict(text string) ([]types.Entity, error) {
 			RContext: r.RContext,
 		})
 	}
-	return out, nil
+	return entities, nil
 }
 
-func (m *presidioModel) Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sample) error {
+func (m *PresidioModel) Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sample) error {
 	return fmt.Errorf("finetune not supported for presidio model")
 }
 
-func (m *presidioModel) Save(path string) error {
+func (m *PresidioModel) Save(path string) error {
 	return fmt.Errorf("save not supported for presidio model")
 }
 
-func (m *presidioModel) Release() {}
+func (m *PresidioModel) Release() {}
+
+func (m *PresidioModel) GetTags() []string {
+	seen := make(map[string]struct{})
+	tags := make([]string, 0, len(m.recognizers))
+	for _, pr := range m.recognizers {
+		mapped, ok := entitiesMap[pr.EntityType]
+		if !ok || mapped == "" {
+			mapped = pr.EntityType
+		}
+
+		if _, ok := seen[mapped]; !ok {
+			tags = append(tags, mapped)
+		}
+	}
+
+	return tags
+}
