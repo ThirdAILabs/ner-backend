@@ -1,5 +1,23 @@
-# --- Build Stage ---
-FROM ubuntu:24.04 as builder
+# --- Frontend Build Stage ---
+FROM ubuntu:24.04 as frontend-builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    nodejs \
+    npm \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /frontend
+
+COPY ../frontend/package*.json ./
+RUN npm install --force
+
+COPY ../frontend .
+
+RUN npm run build
+
+
+# --- Backend Build Stage ---
+FROM ubuntu:24.04 as backend-builder
 
 
 ARG GOLANG_VERSION=1.24.2
@@ -45,16 +63,31 @@ FROM ubuntu:24.04
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     git \
+    nodejs \
+    npm \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
 
 # Copy only the necessary artifacts from the builder stage
-COPY --from=builder /app/api /app/api
-COPY --from=builder /app/worker /app/worker
-COPY --from=builder /entrypoint.sh /entrypoint.sh
+COPY --from=backend-builder /app/api /app/api
+COPY --from=backend-builder /app/worker /app/worker
+COPY --from=backend-builder /entrypoint.sh /entrypoint.sh
 
+# Copy necessary files for running 'next start'
+COPY --from=frontend-builder /frontend/package*.json ./
+COPY --from=frontend-builder /frontend/next.config.js ./
+# Copy the build output directory
+COPY --from=frontend-builder /frontend/.next ./.next
+
+# Install only production dependencies for Next.js runtime
+RUN npm install --production --ignore-scripts --prefer-offline --force
+
+# Set Node environment to production
+ENV NODE_ENV=production
+
+EXPOSE 3000
 EXPOSE 8001
 
 ENTRYPOINT ["/entrypoint.sh"]

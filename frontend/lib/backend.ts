@@ -1,4 +1,4 @@
-import axiosInstance, { nerBaseUrl } from './axios.config';
+import axiosInstance from './axios.config';
 import axios from 'axios';
 
 // Type definitions for API responses

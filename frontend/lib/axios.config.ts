@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Use the Next.js API proxy instead of direct server URL
-export const nerBaseUrl = '/api';
+const nerBaseUrl = '/api/v1'
 
 const axiosInstance = axios.create({
     baseURL: nerBaseUrl,

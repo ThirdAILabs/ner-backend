@@ -119,10 +119,12 @@ func main() {
 	r.Use(middleware.Recoverer)                 // Recover from panics
 	r.Use(middleware.Timeout(60 * time.Second)) // Set request timeout
 
-	// API Handlers (dependency injection)
 	apiHandler := api.NewBackendService(db, s3Client, publisher, cfg.ChunkTargetBytes)
 
-	apiHandler.AddRoutes(r)
+	// Your existing API routes should be prefixed with /api to avoid conflicts
+	r.Route("/api/v1", func(r chi.Router) {
+		apiHandler.AddRoutes(r)
+	})
 
 	// --- Start HTTP Server ---
 	server := &http.Server{
