@@ -68,7 +68,7 @@ func TestFinetuning(t *testing.T) {
 	assert.NotEqual(t, nil, model.BaseModelId)
 	assert.Equal(t, baseModelId, *model.BaseModelId)
 
-	stream, err := s3.GetObjectStream(modelBucket, fmt.Sprintf("%s/model.bin", model.Id))
+	stream, err := s3.GetObjectStream(modelBucket, fmt.Sprintf("%s/model.json", model.Id))
 	require.NoError(t, err)
 
 	var modelData map[string]string

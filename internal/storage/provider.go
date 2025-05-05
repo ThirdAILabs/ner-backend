@@ -17,13 +17,19 @@ type Provider interface {
 
 	GetObject(ctx context.Context, bucket, key string) ([]byte, error)
 
-	DownloadObject(ctx context.Context, bucket, key, filename string) error
-
 	GetObjectStream(bucket, key string) (io.Reader, error)
 
 	PutObject(ctx context.Context, bucket, key string, data io.Reader) error
 
+	DownloadDir(ctx context.Context, bucket, prefix, dest string) error
+
+	UploadDir(ctx context.Context, bucket, prefix, src string) error
+
 	ListObjects(ctx context.Context, bucket, prefix string) ([]Object, error)
 
 	IterObjects(ctx context.Context, bucket, prefix string) ObjectIterator
+
+	Location() (string, string)
+
+	Credentials() (string, string)
 }

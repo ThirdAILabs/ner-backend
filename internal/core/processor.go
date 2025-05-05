@@ -159,7 +159,17 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 		groupToQuery[group.Id] = group.Query
 	}
 
-	workerErr := proc.runInferenceOnBucket(ctx, task.ReportId, task.Report.Model.Id, task.Report.Model.Type, tags, customTags, groupToQuery, task.Report.S3Endpoint.String, task.Report.S3Region.String, task.Report.SourceS3Bucket, s3Objects)
+	storage, err := storage.NewS3Provider(storage.S3ProviderConfig{
+		S3EndpointURL:     task.Report.S3Endpoint.String,
+		S3AccessKeyID:     task.Report.S3AccessKeyID.String,
+		S3SecretAccessKey: task.Report.S3SecretAccessKey.String,
+		S3Region:          task.Report.S3Region.String,
+	})
+	if err != nil {
+		slog.Error("error connecting to S3", "s3_endpoint", task.Report.S3Endpoint.String, "region", task.Report.S3Region.String, "error", err)
+	}
+
+	workerErr := proc.runInferenceOnBucket(ctx, task.ReportId, storage, task.Report.Model.Id, task.Report.Model.Type, tags, customTags, groupToQuery, task.Report.SourceS3Bucket, s3Objects)
 	if workerErr != nil {
 		slog.Error("error running inference task", "report_id", reportId, "task_id", payload.TaskId, "error", workerErr)
 		database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobFailed) // nolint:errcheck
@@ -178,12 +188,13 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 func (proc *TaskProcessor) runInferenceOnBucket(
 	ctx context.Context,
 	reportId uuid.UUID,
+	storage storage.Provider,
 	modelId uuid.UUID,
 	modelType string,
 	tags map[string]struct{},
 	customTags map[string]string,
 	groupToQuery map[uuid.UUID]string,
-	s3Endpoint, s3Region, bucket string,
+	bucket string,
 	objects []string,
 ) error {
 	parser := NewDefaultParser()
@@ -214,14 +225,6 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 
 	objectErrorCnt := 0
 
-	storage, err := storage.NewS3Provider(storage.S3ProviderConfig{
-		S3EndpointURL: s3Endpoint,
-		S3Region:      s3Region,
-	})
-	if err != nil {
-		slog.Error("error connecting to S3", "s3_endpoint", s3Endpoint, "region", s3Region, "error", err)
-	}
-
 	for _, object := range objects {
 		entities, groups, err := proc.runInferenceOnObject(reportId, storage, parser, model, tags, customTagsRe, groupToFilter, bucket, object)
 		if err != nil {
@@ -250,32 +253,30 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 	return nil
 }
 
-func (proc *TaskProcessor) localModelPath(modelId uuid.UUID) string {
-	return filepath.Join(proc.localModelDir, modelId.String(), "model.bin")
+func (proc *TaskProcessor) getModelDir(modelId uuid.UUID) string {
+	return filepath.Join(proc.localModelDir, modelId.String())
 }
 
 func (proc *TaskProcessor) loadModel(ctx context.Context, modelId uuid.UUID, modelType string) (Model, error) {
 
-	var localPath string
+	var localDir string
 
 	if IsStatelessModel(modelType) {
-		localPath = ""
+		localDir = ""
 	} else {
-		localPath = proc.localModelPath(modelId)
+		localDir = proc.getModelDir(modelId)
 
 		// Check if the model file exists locally
-		if _, err := os.Stat(localPath); os.IsNotExist(err) {
+		if _, err := os.Stat(localDir); os.IsNotExist(err) {
 			slog.Info("model not found locally, downloading from S3", "modelId", modelId)
 
-			modelObjectKey := filepath.Join(modelId.String(), "model.bin")
-
-			if err := proc.storage.DownloadObject(ctx, proc.modelBucket, modelObjectKey, localPath); err != nil {
+			if err := proc.storage.DownloadDir(ctx, proc.modelBucket, modelId.String(), localDir); err != nil {
 				return nil, fmt.Errorf("failed to download model from S3: %w", err)
 			}
 		}
 	}
 
-	model, err := LoadModel(modelType, localPath)
+	model, err := LoadModel(modelType, localDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load model: %w", err)
 	}
@@ -499,8 +500,10 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 	}
 
 	storage, err := storage.NewS3Provider(storage.S3ProviderConfig{
-		S3EndpointURL: task.Report.S3Endpoint.String,
-		S3Region:      task.Report.S3Region.String,
+		S3EndpointURL:     task.Report.S3Endpoint.String,
+		S3AccessKeyID:     task.Report.S3AccessKeyID.String,
+		S3SecretAccessKey: task.Report.S3SecretAccessKey.String,
+		S3Region:          task.Report.S3Region.String,
 	})
 	if err != nil {
 		slog.Error("error connecting to S3", "s3_endpoint", task.Report.S3Endpoint.String, "region", task.Report.S3Region.String, "error", err)
@@ -582,26 +585,20 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 		return fmt.Errorf("error finetuning model: %w", err)
 	}
 
-	localPath := proc.localModelPath(payload.ModelId)
-	if err := os.MkdirAll(filepath.Dir(localPath), 0755); err != nil {
+	localDir := proc.getModelDir(payload.ModelId)
+	if err := os.MkdirAll(localDir, os.ModePerm); err != nil {
 		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint:errcheck
 		slog.Error("error creating local model directory", "model_id", payload.ModelId, "error", err)
 		return fmt.Errorf("error creating local model directory: %w", err)
 	}
 
-	if err := model.Save(localPath); err != nil {
+	if err := model.Save(localDir); err != nil {
 		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint:errcheck
 		slog.Error("error saving finetuned model locally", "model_id", payload.ModelId, "error", err)
 		return fmt.Errorf("error saving finetuned model: %w", err)
 	}
 
-	modelFile, err := os.Open(localPath)
-	if err != nil {
-		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint:errcheck
-		slog.Error("error opening finetuned model file", "model_id", payload.ModelId, "error", err)
-	}
-
-	if err := proc.storage.PutObject(ctx, proc.modelBucket, filepath.Join(payload.ModelId.String(), "model.bin"), modelFile); err != nil {
+	if err := proc.storage.UploadDir(ctx, proc.modelBucket, payload.ModelId.String(), localDir); err != nil {
 		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint:errcheck
 		slog.Error("error uploading finetuned model to S3", "model_id", payload.ModelId, "error", err)
 		return fmt.Errorf("error uploading model to S3: %w", err)

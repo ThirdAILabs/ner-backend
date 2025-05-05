@@ -123,10 +123,13 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 	createData(t, s3)
 
 	reportId := createReport(t, router, api.CreateReportRequest{
-		ModelId:        modelId,
-		SourceS3Bucket: dataBucket,
-		Tags:           []string{"phone", "email"},
-		CustomTags:     map[string]string{"custom-token": `(\w\d){3}`},
+		ModelId:           modelId,
+		S3Endpoint:        minioUrl,
+		S3AccessKeyID:     minioUsername,
+		S3SecretAccessKey: minioPassword,
+		SourceS3Bucket:    dataBucket,
+		Tags:              []string{"phone", "email"},
+		CustomTags:        map[string]string{"custom-token": `(\w\d){3}`},
 		Groups: map[string]string{
 			"phone": `COUNT(phone) > 0`,
 			"email": `COUNT(email) > 0`,

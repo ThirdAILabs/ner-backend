@@ -189,9 +189,18 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		return nil, CodedErrorf(http.StatusUnprocessableEntity, "the following fields are required: ModelId")
 	}
 
-	sourceS3Bucket, s3Prefix := req.SourceS3Bucket, req.SourceS3Prefix
+	var (
+		s3Endpoint        = req.S3Endpoint
+		s3Region          = req.S3Region
+		s3AccessKeyID     = req.S3AccessKeyID
+		s3SecretAccessKey = req.S3SecretAccessKey
+		sourceS3Bucket    = req.SourceS3Bucket
+		s3Prefix          = req.SourceS3Prefix
+	)
 
 	if req.UploadId != uuid.Nil {
+		s3Endpoint, s3Region = s.storage.Location()
+		s3AccessKeyID, s3SecretAccessKey = s.storage.Credentials()
 		sourceS3Bucket = uploadBucket
 		s3Prefix = req.UploadId.String()
 	}
@@ -213,13 +222,15 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 	}
 
 	report := database.Report{
-		Id:             uuid.New(),
-		ModelId:        req.ModelId,
-		S3Endpoint:     sql.NullString{String: req.S3Endpoint, Valid: req.S3Endpoint != ""},
-		S3Region:       sql.NullString{String: req.S3Region, Valid: req.S3Region != ""},
-		SourceS3Bucket: sourceS3Bucket,
-		SourceS3Prefix: sql.NullString{String: s3Prefix, Valid: s3Prefix != ""},
-		CreationTime:   time.Now().UTC(),
+		Id:                uuid.New(),
+		ModelId:           req.ModelId,
+		S3Endpoint:        sql.NullString{String: s3Endpoint, Valid: s3Endpoint != ""},
+		S3Region:          sql.NullString{String: s3Region, Valid: s3Region != ""},
+		S3AccessKeyID:     sql.NullString{String: s3AccessKeyID, Valid: s3AccessKeyID != ""},
+		S3SecretAccessKey: sql.NullString{String: s3SecretAccessKey, Valid: s3SecretAccessKey != ""},
+		SourceS3Bucket:    sourceS3Bucket,
+		SourceS3Prefix:    sql.NullString{String: s3Prefix, Valid: s3Prefix != ""},
+		CreationTime:      time.Now().UTC(),
 	}
 
 	for _, tag := range req.Tags {
