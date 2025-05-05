@@ -20,7 +20,7 @@ A distributed system in Go for processing asynchronous Machine Learning tasks (t
 
 ## Setting models for downloading using MinIO 
 
-1. Get your **Access Key** and **Secret Key** from the MinIO web UI (typically at `http://localhost:9000`).  
+1. Get your **Access Key** and **Secret Key** from the MinIO web UI (typically at `http://localhost:9090`).  
 2. Run:  
 ```bash
 AWS_ACCESS_KEY_ID=minioadmin AWS_SECRET_ACCESS_KEY=minioadmin aws s3 --endpoint-url http://localhost:9000 cp s3://ner-models s3://ner-models --recursive

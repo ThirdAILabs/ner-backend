@@ -56,10 +56,13 @@ func LoadPythonModel(PythonExecutable, PluginScript, PluginModelName, KwargsJSON
 }
 
 func (ner *PythonModel) Predict(text string) ([]types.Entity, error) {
+	fmt.Println("PythonModel Predict called, text:", text)
 	result, err := ner.model.Predict(text)
 	if err != nil {
+		fmt.Println("PythonModel Predict error:", err)
 		return nil, err
 	}
+	fmt.Println("PythonModel Predict result:", result)
 
 	return convertProtoEntitiesToTypes(result), nil
 }
@@ -83,7 +86,10 @@ func (ner *PythonModel) Release() {
 }
 
 func convertProtoEntitiesToTypes(protoEntities []*proto.Entity) []types.Entity {
+	fmt.Println("Initializing conversion of proto entities to types entities")
 	typesEntities := make([]types.Entity, len(protoEntities))
+	fmt.Println("Converting proto entities to types entities, length:", len(protoEntities))
+	fmt.Println("Proto entities:", protoEntities)
 
 	for i, pe := range protoEntities {
 		if pe != nil {
@@ -94,5 +100,6 @@ func convertProtoEntitiesToTypes(protoEntities []*proto.Entity) []types.Entity {
 		}
 	}
 
+	fmt.Println("Conversion completed, types entities:", typesEntities)
 	return typesEntities
 }

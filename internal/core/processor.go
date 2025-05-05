@@ -215,6 +215,8 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 
 	for _, object := range objects {
 		entities, groups, err := proc.runInferenceOnObject(reportId, parser, model, tags, customTagsRe, groupToFilter, bucket, object)
+		fmt.Println("entities", entities)
+		fmt.Println("groups", groups)
 		if err != nil {
 			slog.Error("error processing object", "object", object, "error", err)
 			objectErrorCnt++
@@ -360,12 +362,14 @@ func (proc *TaskProcessor) runInferenceOnObject(
 
 	previewTokens := make([]string, 0, previewLimit)
 
+	fmt.Println("chunks", chunks)
 	for chunk := range chunks {
 		if chunk.Error != nil {
 			return nil, nil, fmt.Errorf("error parsing document: %w", chunk.Error)
 		}
 
 		chunkEntities, err := model.Predict(chunk.Text)
+		fmt.Println("chunkEntities", chunkEntities)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error running model inference: %w", err)
 		}
@@ -377,6 +381,7 @@ func (proc *TaskProcessor) runInferenceOnObject(
 				labelToEntities[entity.Label] = append(labelToEntities[entity.Label], entity)
 			}
 		}
+		fmt.Println("chunkEntities after adding offset", chunkEntities)
 
 		for tag, re := range customTags {
 			matches := re.FindAllStringIndex(chunk.Text, -1)
@@ -392,6 +397,7 @@ func (proc *TaskProcessor) runInferenceOnObject(
 				})
 			}
 		}
+		fmt.Println("labelToEntities", labelToEntities)
 
 		if len(previewTokens) < previewLimit {
 			toks := strings.Fields(chunk.Text)
@@ -419,6 +425,7 @@ func (proc *TaskProcessor) runInferenceOnObject(
 			})
 		}
 	}
+	fmt.Println("labelToEntities", labelToEntities)
 
 	allEntities := make([]database.ObjectEntity, 0)
 	for _, entities := range labelToEntities {
@@ -435,6 +442,7 @@ func (proc *TaskProcessor) runInferenceOnObject(
 			})
 		}
 	}
+	fmt.Println("allEntities", allEntities)
 
 	return allEntities, groups, nil
 }
