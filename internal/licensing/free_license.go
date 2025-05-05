@@ -22,7 +22,7 @@ func NewFreeLicenseVerifier(db *gorm.DB, maxBytes int) *FreeLicenseVerifier {
 
 func (verifier *FreeLicenseVerifier) VerifyLicense(ctx context.Context) error {
 	var totalBytes sql.NullInt64
-	if err := verifier.db.WithContext(ctx).Model(&database.InferenceTask{}).Select("SUM(total_size)").First(&totalBytes).Error; err != nil {
+	if err := verifier.db.Debug().WithContext(ctx).Model(&database.InferenceTask{}).Select("SUM(total_size)").Scan(&totalBytes).Error; err != nil {
 		slog.Error("error getting total usage", "error", err)
 		return ErrLicenseVerificationFailed
 	}
