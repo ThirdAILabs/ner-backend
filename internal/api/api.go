@@ -428,6 +428,10 @@ func (s *BackendService) GetReportEntities(r *http.Request) (any, error) {
 		query = query.Where("object = ?", object)
 	}
 
+	if tags := params["tags"]; len(tags) > 0 {
+		query = query.Where("label IN ?", tags)
+	}
+
 	var entities []database.ObjectEntity
 	if err := query.Find(&entities, "report_id = ?", reportId).Error; err != nil {
 		slog.Error("error getting job entities", "report_id", reportId, "error", err)
