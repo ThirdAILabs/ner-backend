@@ -1,6 +1,16 @@
-# --- Build Stage ---
-FROM ubuntu:24.04 as builder
+# --- Frontend Build Stage ---
+FROM node:20-alpine as frontend-builder
 
+WORKDIR /frontend
+# Assuming frontend directory is at the same level as backend
+COPY ../frontend/package*.json ./
+RUN npm install --force
+
+COPY ../frontend .
+RUN npm run build
+
+# --- Backend Build Stage ---
+FROM ubuntu:24.04 as backend-builder
 
 ARG GOLANG_VERSION=1.24.2
 ARG TARGETARCH
@@ -50,10 +60,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Set working directory
 WORKDIR /app
 
-# Copy only the necessary artifacts from the builder stage
-COPY --from=builder /app/api /app/api
-COPY --from=builder /app/worker /app/worker
-COPY --from=builder /entrypoint.sh /entrypoint.sh
+# Copy only the necessary artifacts from the builder stages
+COPY --from=backend-builder /app/api /app/api
+COPY --from=backend-builder /app/worker /app/worker
+COPY --from=backend-builder /entrypoint.sh /entrypoint.sh
+# Copy the built frontend files to a static directory
+COPY --from=frontend-builder /frontend/dist /app/static
 
 EXPOSE 8001
 
