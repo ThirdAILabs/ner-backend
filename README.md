@@ -50,7 +50,7 @@ aws s3 sync s3://ner-models/ ./ner-models/
 # 2) Sync back up to MinIO
 AWS_ACCESS_KEY_ID=$MINIO_ACCESS_KEY \
 AWS_SECRET_ACCESS_KEY=$MINIO_SECRET_KEY \
-aws --endpoint-url http://minio:9000 s3 sync ./ner-models/ s3://ner-models/
+aws --endpoint-url http://localhost:9000 s3 sync ./ner-models/ s3://ner-models/
 ```
 
 # API Endpoints
