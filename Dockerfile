@@ -25,11 +25,17 @@ COPY --from=builder /app/api          /app/api
 COPY --from=builder /app/worker       /app/worker
 COPY --from=builder /app/entrypoint.sh /app/entrypoint.sh
 
+# TODO(pratik): remove this when the thirdai wheel is available with APIs in PYPI
+COPY --from=builder /app/cmd/thirdai-0.9.29-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl /app/thirdai-0.9.29-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+
 COPY --from=builder /app/plugin/plugin-python \
     /app/plugin/plugin-python
 
 RUN pip install --no-cache-dir \
     -r plugin/plugin-python/requirements.txt
+
+RUN pip install --no-cache-dir \
+    thirdai-0.9.29-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 
 RUN chmod +x /app/entrypoint.sh
 

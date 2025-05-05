@@ -6,4 +6,3 @@ torch
 pydantic
 presidio-analyzer
 pytorch-crf
-thirdai

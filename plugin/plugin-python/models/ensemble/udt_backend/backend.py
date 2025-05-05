@@ -1,10 +1,6 @@
 from thirdai import bolt
-import thirdai
 
 from typing import List
-
-# TODO(pratik): remove this dependency on license
-thirdai.licensing.activate("EUKX-7FXA-4WAX-XMYT-VWWY-MJPR-XTC3-7F9V")
 
 
 class UDTModel:
