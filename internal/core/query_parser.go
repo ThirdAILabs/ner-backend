@@ -16,10 +16,9 @@ Expr        := OrExpr ( "OR" OrExpr )*
 OrExpr      := AndExpr ( "AND" AndExpr )*
 AndExpr     := Condition | "NOT" Condition
 Condition   := Filter | "(" Expr ")"
-Filter 			:= "COUNT(" <identifier> ")" IntOp <int> | <identifier> StrOp <string>
+Filter      := "COUNT(" <identifier> ")" IntOp <int> | <identifier> StrOp <string>
 IntOp       := "<" | ">" | "="
 StrOp       := "CONTAINS" | "<" | ">" | "="
-
 */
 
 var (
@@ -58,7 +57,7 @@ func ToSql(db *gorm.DB, query string) (*gorm.DB, error) {
 }
 
 type QueryExpr struct {
-	Expr *Expr `@@`
+	Expr *Expr `parser:"@@"`
 }
 
 func (q *QueryExpr) ToFilter() (Filter, error) {
@@ -70,7 +69,7 @@ func (q *QueryExpr) String() string {
 }
 
 type Expr struct {
-	Ors []*OrExpr `@@ ( "OR" @@ )*`
+	Ors []*OrExpr `parser:"@@ ('OR' @@)*"`
 }
 
 func (q *Expr) ToFilter() (Filter, error) {
@@ -125,7 +124,7 @@ func (e *Expr) String() string {
 }
 
 type OrExpr struct {
-	Ands []*Condition `@@ ( "AND" @@ )*`
+	Ands []*Condition `parser:"@@ ('AND' @@)*"`
 }
 
 func (o *OrExpr) ToFilter() (Filter, error) {
@@ -180,9 +179,9 @@ func (e *OrExpr) String() string {
 }
 
 type Condition struct {
-	Not     bool        `@"NOT"?`
-	Filter  *FilterExpr ` @@`
-	SubExpr *Expr       `| "(" @@ ")" `
+	Not     bool        `parser:"@'NOT'?"`
+	Filter  *FilterExpr `parser:"@@"`
+	SubExpr *Expr       `parser:"| '(' @@ ')'"`
 }
 
 func (c *Condition) ToFilter() (Filter, error) {
@@ -239,8 +238,8 @@ func (c *Condition) String() string {
 }
 
 type FilterExpr struct {
-	CountFilter  *CountFilterExpr  `"COUNT" @@`
-	StringFilter *StringFilterExpr `| @@`
+	CountFilter  *CountFilterExpr  `parser:"'COUNT' @@"`
+	StringFilter *StringFilterExpr `parser:"| @@"`
 }
 
 func (f *FilterExpr) ToFilter() (Filter, error) {
@@ -274,9 +273,9 @@ func (f *FilterExpr) String() string {
 }
 
 type CountFilterExpr struct {
-	Label string `"(" @Ident")"`
-	Op    string `@("<" | ">" | "=" )`
-	Value int    `@Int`
+	Label string `parser:"'(' @Ident ')'"`
+	Op    string `parser:"@('<' | '>' | '=')"`
+	Value int    `parser:"@Int"`
 }
 
 func (c *CountFilterExpr) ToFilter() (Filter, error) {
@@ -312,9 +311,9 @@ func (c *CountFilterExpr) String() string {
 }
 
 type StringFilterExpr struct {
-	Label string `@Ident`
-	Op    string `@("CONTAINS" | "<" | ">" | "=" )`
-	Value string `@String`
+	Label string `parser:"@Ident"`
+	Op    string `parser:"@('CONTAINS' | '<' | '>' | '=')"`
+	Value string `parser:"@String"`
 }
 
 func (s *StringFilterExpr) ToFilter() (Filter, error) {

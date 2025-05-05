@@ -2,12 +2,19 @@ package core
 
 import (
 	"fmt"
+	"os"
+
 	"ner-backend/internal/core/bolt"
 	"ner-backend/internal/core/python"
 	"ner-backend/internal/core/types"
 	"ner-backend/pkg/api"
-	"os"
 )
+
+const defaultPresidioThreshold = 0.5
+
+var statelessModelTypes = map[string]struct{}{
+	"presidio": {},
+}
 
 type Model interface {
 	Predict(text string) ([]types.Entity, error)
@@ -21,8 +28,11 @@ type Model interface {
 
 type modelLoader func(string) (Model, error)
 
-var modelLoaders map[string]modelLoader = map[string]modelLoader{
-	"bolt": func(path string) (Model, error) { return bolt.LoadNER(path) },
+var modelLoaders = map[string]modelLoader{
+	"bolt": func(path string) (Model, error) {
+		return bolt.LoadNER(path)
+	},
+
 	// TODO: replace env vars with a passed-in config
 	"python_combined_ner_model": func(path string) (Model, error) {
 		configJSON := fmt.Sprintf("{\"model_path\":\"%s\",\"threshold\": 0.5}", path)
@@ -32,6 +42,11 @@ var modelLoaders map[string]modelLoader = map[string]modelLoader{
 			"python_combined_ner_model",
 			configJSON,
 		)
+	},
+
+	"presidio": func(arg string) (Model, error) {
+		// we ignore `path` (no checkpoint needed) and always use the default threshold
+		return &presidioModel{threshold: defaultPresidioThreshold}, nil
 	},
 }
 
@@ -48,22 +63,7 @@ func LoadModel(modelType, path string) (Model, error) {
 	return loader(path)
 }
 
-type presidioModel struct {
-	threshold float64
+func IsStatelessModel(modelType string) bool {
+	_, exists := statelessModelTypes[modelType]
+	return exists
 }
-
-func (m *presidioModel) Predict(text string) ([]types.Entity, error) {
-	results := analyze(text, m.threshold)
-	out := make([]types.Entity, 0, len(results))
-	for _, r := range results {
-		out = append(out, types.Entity{
-			Text:  r.Match,
-			Label: r.EntityType,
-			Start: r.Start,
-			End:   r.End,
-		})
-	}
-	return out, nil
-}
-
-func (m *presidioModel) Release() {}

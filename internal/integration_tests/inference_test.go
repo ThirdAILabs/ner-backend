@@ -1,8 +1,11 @@
 package integrationtests
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"mime/multipart"
 	backend "ner-backend/internal/api"
 	"ner-backend/internal/core"
 	"ner-backend/internal/database"
@@ -10,6 +13,7 @@ import (
 	"ner-backend/internal/s3"
 	"ner-backend/pkg/api"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -40,6 +44,9 @@ func createData(t *testing.T, s3Client *s3.Client) {
 		_, err = s3Client.UploadObject(context.Background(), dataBucket, emailPath, strings.NewReader(emailData))
 		require.NoError(t, err)
 	}
+
+	_, err := s3Client.UploadObject(context.Background(), dataBucket, "custom-token.txt", strings.NewReader("this is a custom token a1b2c3"))
+	require.NoError(t, err)
 }
 
 func createReport(t *testing.T, router http.Handler, req api.CreateReportRequest) uuid.UUID {
@@ -56,9 +63,8 @@ func reportIsComplete(report api.Report) bool {
 }
 
 func waitForReport(t *testing.T, router http.Handler, jobId uuid.UUID) api.Report {
-	var report api.Report
-
 	for i := 0; i < 20; i++ {
+		var report api.Report
 		time.Sleep(500 * time.Millisecond)
 		err := httpRequest(router, "GET", fmt.Sprintf("/reports/%s", jobId), nil, &report)
 		require.NoError(t, err)
@@ -69,7 +75,7 @@ func waitForReport(t *testing.T, router http.Handler, jobId uuid.UUID) api.Repor
 	}
 
 	t.Fatal("timeout reached before report completed")
-	return report
+	return api.Report{}
 }
 
 func getReportGroup(t *testing.T, router http.Handler, jobId, groupId uuid.UUID) api.Group {
@@ -86,7 +92,7 @@ func getReportEntities(t *testing.T, router http.Handler, jobId uuid.UUID) []api
 	return res
 }
 
-func TestInferenceWorklow(t *testing.T) {
+func TestInferenceWorkflowOnBucket(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
@@ -103,11 +109,11 @@ func TestInferenceWorklow(t *testing.T) {
 
 	queue := messaging.NewInMemoryQueue()
 
-	backend := backend.NewBackendService(db, queue, 120)
+	backend := backend.NewBackendService(db, s3, queue, 120)
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
-	worker := core.NewTaskProcessor(db, s3, queue, queue, t.TempDir(), modelBucket)
+	worker := core.NewTaskProcessor(db, s3, queue, queue, &DummyLicenseVerifier{}, t.TempDir(), modelBucket)
 
 	go worker.Start()
 	defer worker.Stop()
@@ -119,7 +125,8 @@ func TestInferenceWorklow(t *testing.T) {
 	reportId := createReport(t, router, api.CreateReportRequest{
 		ModelId:        modelId,
 		SourceS3Bucket: dataBucket,
-
+		Tags:           []string{"phone", "email"},
+		CustomTags:     map[string]string{"custom-token": `(\w\d){3}`},
 		Groups: map[string]string{
 			"phone": `COUNT(phone) > 0`,
 			"email": `COUNT(email) > 0`,
@@ -130,11 +137,11 @@ func TestInferenceWorklow(t *testing.T) {
 
 	assert.Equal(t, modelId, report.Model.Id)
 	assert.Equal(t, dataBucket, report.SourceS3Bucket)
-	assert.Equal(t, 10, report.InferenceTaskStatuses[database.JobCompleted].TotalTasks)
+	assert.Equal(t, 11, report.InferenceTaskStatuses[database.JobCompleted].TotalTasks)
 	assert.Equal(t, 2, len(report.Groups))
 
 	entities := getReportEntities(t, router, reportId)
-	assert.Equal(t, 20, len(entities))
+	assert.Equal(t, 21, len(entities))
 
 	for _, group := range report.Groups {
 		group := getReportGroup(t, router, reportId, group.Id)
@@ -144,4 +151,80 @@ func TestInferenceWorklow(t *testing.T) {
 			assert.Contains(t, obj, group.Name)
 		}
 	}
+}
+
+func createUpload(t *testing.T, router http.Handler) uuid.UUID {
+	buf := new(bytes.Buffer)
+	writer := multipart.NewWriter(buf)
+
+	f1, err := writer.CreateFormFile("files", "file1.txt")
+	require.NoError(t, err)
+	_, err = f1.Write([]byte("this is a test file with a phone number 123-456-7890"))
+	require.NoError(t, err)
+
+	f2, err := writer.CreateFormFile("files", "file2.txt")
+	require.NoError(t, err)
+	_, err = f2.Write([]byte("this is a test file with an email address abc@email.com"))
+	require.NoError(t, err)
+
+	require.NoError(t, writer.Close())
+
+	req := httptest.NewRequest(http.MethodPost, "/uploads", buf)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, req)
+
+	require.Equal(t, http.StatusOK, rr.Code)
+
+	var res api.UploadResponse
+	require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &res))
+
+	return res.Id
+}
+
+func TestInferenceWorkflowOnUpload(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	minioUrl := setupMinioContainer(t, ctx)
+
+	s3, err := s3.NewS3Client(&s3.Config{
+		S3EndpointURL:     minioUrl,
+		S3AccessKeyID:     minioUsername,
+		S3SecretAccessKey: minioPassword,
+	})
+	require.NoError(t, err)
+
+	db := createDB(t)
+
+	queue := messaging.NewInMemoryQueue()
+
+	backend := backend.NewBackendService(db, s3, queue, 120)
+	router := chi.NewRouter()
+	backend.AddRoutes(router)
+
+	worker := core.NewTaskProcessor(db, s3, queue, queue, &DummyLicenseVerifier{}, t.TempDir(), modelBucket)
+
+	go worker.Start()
+	defer worker.Stop()
+
+	modelId := createModel(t, s3, db, modelBucket)
+
+	uploadId := createUpload(t, router)
+
+	reportId := createReport(t, router, api.CreateReportRequest{
+		ModelId:  modelId,
+		UploadId: uploadId,
+		Tags:     []string{"phone", "email"},
+	})
+
+	report := waitForReport(t, router, reportId)
+
+	assert.Equal(t, modelId, report.Model.Id)
+	assert.Equal(t, "uploads", report.SourceS3Bucket)
+	assert.Equal(t, uploadId.String(), report.SourceS3Prefix)
+
+	entities := getReportEntities(t, router, reportId)
+	assert.Equal(t, 2, len(entities))
 }

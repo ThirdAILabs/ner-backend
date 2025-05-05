@@ -7,6 +7,7 @@ import (
 	"ner-backend/internal/api"
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
+	"ner-backend/internal/s3"
 	"net/http"
 	"os"
 	"os/signal"
@@ -16,6 +17,8 @@ import (
 	"github.com/caarlos0/env/v11"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
+	"github.com/google/uuid"
 )
 
 type APIConfig struct {
@@ -47,6 +50,29 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
+	s3Cfg := s3.Config{
+		S3EndpointURL:     cfg.S3EndpointURL,
+		S3AccessKeyID:     cfg.S3AccessKeyID,
+		S3SecretAccessKey: cfg.S3SecretAccessKey,
+		S3Region:          cfg.S3Region,
+		ModelBucketName:   cfg.ModelBucketName,
+	}
+	s3Client, err := s3.NewS3Client(&s3Cfg)
+	if err != nil {
+		log.Fatalf("Worker: Failed to create S3 client: %v", err)
+	}
+
+	var model database.Model
+
+	if err := db.Where(database.Model{Name: "presidio"}).Attrs(database.Model{
+		Id:           uuid.New(),
+		Type:         "presidio",
+		Status:       database.ModelTrained,
+		CreationTime: time.Now(),
+	}).FirstOrCreate(&model).Error; err != nil {
+		log.Fatalf("Failed to seed presidio model record: %v", err)
+	}
+
 	// Initialize RabbitMQ Publisher
 	publisher, err := messaging.NewRabbitMQPublisher(cfg.RabbitMQURL)
 	if err != nil {
@@ -58,14 +84,21 @@ func main() {
 	r := chi.NewRouter()
 
 	// Middleware
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"*"},                                       // Allow all origins (TODO: make this an env var)
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}, // Allow all HTTP methods
+		AllowedHeaders:   []string{"*"},                                       // Allow all headers
+		ExposedHeaders:   []string{"*"},                                       // Expose all headers
+		AllowCredentials: true,                                                // Allow cookies/auth headers
+		MaxAge:           300,                                                 // Cache preflight response for 5 minutes
+	}))
 	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)                    // Log requests
 	r.Use(middleware.Recoverer)                 // Recover from panics
 	r.Use(middleware.Timeout(60 * time.Second)) // Set request timeout
 
 	// API Handlers (dependency injection)
-	apiHandler := api.NewBackendService(db, publisher, cfg.ChunkTargetBytes)
+	apiHandler := api.NewBackendService(db, s3Client, publisher, cfg.ChunkTargetBytes)
 
 	apiHandler.AddRoutes(r)
 

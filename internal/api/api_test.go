@@ -2,24 +2,27 @@ package api_test
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	backend "ner-backend/internal/api"
+	"ner-backend/internal/database"
+	"ner-backend/internal/messaging"
+	"ner-backend/internal/s3"
+	"ner-backend/pkg/api"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
 	"time"
 
-	backend "ner-backend/internal/api"
-	"ner-backend/internal/database"
-	"ner-backend/internal/messaging"
-	"ner-backend/pkg/api"
-
+	aws_s3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/datatypes"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -37,6 +40,16 @@ func createDB(t *testing.T, create ...any) *gorm.DB {
 	return db
 }
 
+type mockS3Client struct {
+	s3.S3Api
+}
+
+func (m *mockS3Client) CreateBucket(ctx context.Context, params *aws_s3.CreateBucketInput, optFns ...func(*aws_s3.Options)) (*aws_s3.CreateBucketOutput, error) {
+	return &aws_s3.CreateBucketOutput{}, nil
+}
+
+func mockS3() *s3.Client { return s3.NewFromClient(&mockS3Client{}, "") }
+
 func TestListModels(t *testing.T) {
 	id1, id2 := uuid.New(), uuid.New()
 	db := createDB(t,
@@ -44,7 +57,7 @@ func TestListModels(t *testing.T) {
 		&database.Model{Id: id2, Name: "Model2", Type: "bolt", Status: database.ModelTraining, CreationTime: time.Now()},
 	)
 
-	service := backend.NewBackendService(db, messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, mockS3(), messaging.NewInMemoryQueue(), 1024)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -68,9 +81,11 @@ func TestGetModel(t *testing.T) {
 	db := createDB(t,
 		&database.Model{Id: uuid.New(), Name: "Model1", Type: "regex", Status: database.ModelTrained},
 		&database.Model{Id: modelId, Name: "Model2", Type: "bolt", Status: database.ModelTraining},
+		&database.ModelTag{ModelId: modelId, Tag: "name"},
+		&database.ModelTag{ModelId: modelId, Tag: "phone"},
 	)
 
-	service := backend.NewBackendService(db, messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, mockS3(), messaging.NewInMemoryQueue(), 1024)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -83,7 +98,7 @@ func TestGetModel(t *testing.T) {
 	var response api.Model
 	err := json.Unmarshal(rec.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	assert.Equal(t, api.Model{Id: modelId, Name: "Model2", Type: "bolt", Status: database.ModelTraining}, response)
+	assert.Equal(t, api.Model{Id: modelId, Name: "Model2", Type: "bolt", Status: database.ModelTraining, Tags: []string{"name", "phone"}}, response)
 }
 
 func TestFinetuneModel(t *testing.T) {
@@ -92,7 +107,7 @@ func TestFinetuneModel(t *testing.T) {
 		&database.Model{Id: modelId, Name: "Model1", Type: "regex", Status: database.ModelTrained},
 	)
 
-	service := backend.NewBackendService(db, messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, mockS3(), messaging.NewInMemoryQueue(), 1024)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -141,17 +156,22 @@ func TestCreateReport(t *testing.T) {
 	modelId := uuid.New()
 	db := createDB(t,
 		&database.Model{Id: modelId, Name: "Model1", Type: "regex", Status: database.ModelTrained},
+		&database.ModelTag{ModelId: modelId, Tag: "name"},
+		&database.ModelTag{ModelId: modelId, Tag: "email"},
+		&database.ModelTag{ModelId: modelId, Tag: "phone"},
 	)
 
-	service := backend.NewBackendService(db, messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, mockS3(), messaging.NewInMemoryQueue(), 1024)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
-	payload := map[string]interface{}{
-		"ModelId":        modelId,
-		"SourceS3Bucket": "test-bucket",
-		"SourceS3Prefix": "test-prefix",
-		"Groups": map[string]string{
+	payload := api.CreateReportRequest{
+		ModelId:        modelId,
+		SourceS3Bucket: "test-bucket",
+		SourceS3Prefix: "test-prefix",
+		Tags:           []string{"name", "phone"},
+		CustomTags:     map[string]string{"tag1": "pattern1", "tag2": "pattern2"},
+		Groups: map[string]string{
 			"group1": `label1 CONTAINS "xyz"`,
 			"group2": `COUNT(label2) > 8`,
 		},
@@ -190,6 +210,8 @@ func TestCreateReport(t *testing.T) {
 	}, report.Model)
 	assert.Equal(t, "test-bucket", report.SourceS3Bucket)
 	assert.Equal(t, "test-prefix", report.SourceS3Prefix)
+	assert.ElementsMatch(t, []string{"name", "phone"}, report.Tags)
+	assert.Equal(t, map[string]string{"tag1": "pattern1", "tag2": "pattern2"}, report.CustomTags)
 	assert.Equal(t, 2, len(report.Groups))
 	assert.Equal(t, database.JobQueued, report.ShardDataTaskStatus)
 }
@@ -199,6 +221,9 @@ func TestGetReport(t *testing.T) {
 
 	db := createDB(t,
 		&database.Model{Id: modelId, Name: "Model1", Type: "regex", Status: database.ModelTrained},
+		&database.ModelTag{ModelId: modelId, Tag: "name"},
+		&database.ModelTag{ModelId: modelId, Tag: "email"},
+		&database.ModelTag{ModelId: modelId, Tag: "phone"},
 		&database.Report{
 			Id:             reportId,
 			ModelId:        modelId,
@@ -209,6 +234,9 @@ func TestGetReport(t *testing.T) {
 				{Id: group2, Name: "group_b", ReportId: reportId, Query: `label1 = "xyz"`},
 			},
 		},
+		&database.ReportTag{ReportId: reportId, Tag: "name"},
+		&database.ReportTag{ReportId: reportId, Tag: "phone"},
+		&database.CustomTag{ReportId: reportId, Tag: "tag1", Pattern: "pattern1"},
 		&database.ShardDataTask{ReportId: reportId, Status: database.JobCompleted},
 		&database.InferenceTask{ReportId: reportId, TaskId: 1, Status: database.JobCompleted},
 		&database.InferenceTask{ReportId: reportId, TaskId: 2, Status: database.JobRunning},
@@ -221,7 +249,7 @@ func TestGetReport(t *testing.T) {
 		&database.ObjectEntity{ReportId: reportId, Object: "object1", Start: 2, End: 3, Label: "label3", Text: "text3"},
 	)
 
-	service := backend.NewBackendService(db, messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, mockS3(), messaging.NewInMemoryQueue(), 1024)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -245,6 +273,8 @@ func TestGetReport(t *testing.T) {
 		}, report.Model)
 		assert.Equal(t, "test-bucket", report.SourceS3Bucket)
 		assert.Equal(t, "test-prefix", report.SourceS3Prefix)
+		assert.ElementsMatch(t, []string{"name", "phone"}, report.Tags)
+		assert.Equal(t, map[string]string{"tag1": "pattern1"}, report.CustomTags)
 		assert.Equal(t, 2, len(report.Groups))
 		assert.Equal(t, database.JobCompleted, report.ShardDataTaskStatus)
 	})
@@ -335,7 +365,7 @@ func TestReportSearch(t *testing.T) {
 		&database.ObjectEntity{ReportId: reportId, Object: "object4", Start: 4, End: 5, Label: "label3", Text: "12xyz34"},
 	)
 
-	service := backend.NewBackendService(db, messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, mockS3(), messaging.NewInMemoryQueue(), 1024)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -353,4 +383,58 @@ func TestReportSearch(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.ElementsMatch(t, []string{"object1", "object3"}, response.Objects)
+}
+
+func TestGetReportPreviews(t *testing.T) {
+	reportId := uuid.New()
+	payload := struct {
+		Tokens []string `json:"tokens"`
+		Tags   []string `json:"tags"`
+	}{
+		Tokens: []string{"foo", "bar", "baz"},
+		Tags:   []string{"O", "TAG1", "O"},
+	}
+	b, err := json.Marshal(payload)
+	require.NoError(t, err)
+
+	p1 := &database.ObjectPreview{
+		ReportId:  reportId,
+		Object:    "doc1.txt",
+		TokenTags: datatypes.JSON(b),
+	}
+	p2 := &database.ObjectPreview{
+		ReportId:  reportId,
+		Object:    "doc2.txt",
+		TokenTags: datatypes.JSON(b),
+	}
+	db := createDB(t, p1, p2)
+
+	service := backend.NewBackendService(db, mockS3(), messaging.NewInMemoryQueue(), 1024)
+	router := chi.NewRouter()
+	service.AddRoutes(router)
+
+	url := fmt.Sprintf("/reports/%s/objects?limit=10&offset=0", reportId.String())
+	req := httptest.NewRequest(http.MethodGet, url, nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	var resp []api.ObjectPreviewResponse
+	err = json.Unmarshal(rec.Body.Bytes(), &resp)
+	require.NoError(t, err)
+	assert.Len(t, resp, 2)
+
+	want := []api.ObjectPreviewResponse{
+		{
+			Object: "doc1.txt",
+			Tokens: []string{"foo", "bar", "baz"},
+			Tags:   []string{"O", "TAG1", "O"},
+		},
+		{
+			Object: "doc2.txt",
+			Tokens: []string{"foo", "bar", "baz"},
+			Tags:   []string{"O", "TAG1", "O"},
+		},
+	}
+	assert.ElementsMatch(t, want, resp)
 }
