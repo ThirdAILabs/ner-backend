@@ -1,126 +1,67 @@
-import type { TrainReportData, LabelMetrics, ExampleCategories, TrainingExample } from '@/lib/backend';
+import type { TrainReportData, LabelMetrics, ExampleCategories, TrainingExample } from '@/lib/types';
 import { useState, useEffect } from 'react';
 
 // Mock data for training reports
-const mockMetrics: LabelMetrics = {
+const mockMetrics: Record<string, LabelMetrics> = {
   'O': {
     precision: 0.95,
     recall: 0.92,
-    fmeasure: 0.93
+    f1: 0.93,
+    support: 100
   },
   'NAME': {
     precision: 0.88,
     recall: 0.85,
-    fmeasure: 0.86
+    f1: 0.86,
+    support: 50
   },
   'PHONE': {
     precision: 0.91,
     recall: 0.89,
-    fmeasure: 0.90
+    f1: 0.90,
+    support: 30
   },
   'EMAIL': {
     precision: 0.94,
     recall: 0.93,
-    fmeasure: 0.94
+    f1: 0.94,
+    support: 25
   },
   'ADDRESS': {
     precision: 0.87,
     recall: 0.86,
-    fmeasure: 0.87
+    f1: 0.87,
+    support: 40
   }
 };
 
 const mockExamples: ExampleCategories = {
-  true_positives: {
-    'NAME': [
-      { source: 'John Smith', target: 'NAME', predictions: 'NAME', index: 0 },
-      { source: 'Jane Doe', target: 'NAME', predictions: 'NAME', index: 1 },
-      { source: 'Robert Johnson', target: 'NAME', predictions: 'NAME', index: 2 }
-    ],
-    'PHONE': [
-      { source: '555-123-4567', target: 'PHONE', predictions: 'PHONE', index: 0 },
-      { source: '(555) 123-4567', target: 'PHONE', predictions: 'PHONE', index: 1 },
-      { source: '555.123.4567', target: 'PHONE', predictions: 'PHONE', index: 2 }
-    ],
-    'EMAIL': [
-      { source: 'john.smith@example.com', target: 'EMAIL', predictions: 'EMAIL', index: 0 },
-      { source: 'jane.doe@example.com', target: 'EMAIL', predictions: 'EMAIL', index: 1 },
-      { source: 'robert.johnson@example.com', target: 'EMAIL', predictions: 'EMAIL', index: 2 }
-    ],
-    'ADDRESS': [
-      { source: '123 Main St', target: 'ADDRESS', predictions: 'ADDRESS', index: 0 },
-      { source: '456 Oak Ave', target: 'ADDRESS', predictions: 'ADDRESS', index: 1 },
-      { source: '789 Pine Rd', target: 'ADDRESS', predictions: 'ADDRESS', index: 2 }
-    ]
-  },
-  false_positives: {
-    'NAME': [
-      { source: 'John', target: 'O', predictions: 'NAME', index: 0 },
-      { source: 'Smith', target: 'O', predictions: 'NAME', index: 1 }
-    ],
-    'PHONE': [
-      { source: '123-4567', target: 'O', predictions: 'PHONE', index: 0 },
-      { source: '555-123', target: 'O', predictions: 'PHONE', index: 1 }
-    ],
-    'EMAIL': [
-      { source: 'john.smith@', target: 'O', predictions: 'EMAIL', index: 0 },
-      { source: '@example.com', target: 'O', predictions: 'EMAIL', index: 1 }
-    ],
-    'ADDRESS': [
-      { source: 'Main St', target: 'O', predictions: 'ADDRESS', index: 0 },
-      { source: 'Oak Ave', target: 'O', predictions: 'ADDRESS', index: 1 }
-    ]
-  },
-  false_negatives: {
-    'NAME': [
-      { source: 'Michael Brown', target: 'NAME', predictions: 'O', index: 0 },
-      { source: 'Sarah Wilson', target: 'NAME', predictions: 'O', index: 1 }
-    ],
-    'PHONE': [
-      { source: '555-987-6543', target: 'PHONE', predictions: 'O', index: 0 },
-      { source: '(555) 987-6543', target: 'PHONE', predictions: 'O', index: 1 }
-    ],
-    'EMAIL': [
-      { source: 'michael.brown@example.com', target: 'EMAIL', predictions: 'O', index: 0 },
-      { source: 'sarah.wilson@example.com', target: 'EMAIL', predictions: 'O', index: 1 }
-    ],
-    'ADDRESS': [
-      { source: '321 Elm St', target: 'ADDRESS', predictions: 'O', index: 0 },
-      { source: '654 Maple Ave', target: 'ADDRESS', predictions: 'O', index: 1 }
-    ]
-  }
+  true_positives: [
+    { id: "1", text: "John Smith", tokens: ["John", "Smith"], labels: ["NAME", "NAME"], predictions: ["NAME", "NAME"] },
+    { id: "2", text: "555-123-4567", tokens: ["555-123-4567"], labels: ["PHONE"], predictions: ["PHONE"] },
+    { id: "3", text: "john.smith@example.com", tokens: ["john.smith@example.com"], labels: ["EMAIL"], predictions: ["EMAIL"] }
+  ],
+  false_positives: [
+    { id: "4", text: "John", tokens: ["John"], labels: ["O"], predictions: ["NAME"] },
+    { id: "5", text: "123-4567", tokens: ["123-4567"], labels: ["O"], predictions: ["PHONE"] }
+  ],
+  false_negatives: [
+    { id: "6", text: "Michael Brown", tokens: ["Michael", "Brown"], labels: ["NAME", "NAME"], predictions: ["O", "O"] },
+    { id: "7", text: "555-987-6543", tokens: ["555-987-6543"], labels: ["PHONE"], predictions: ["O"] }
+  ]
 };
 
 const mockTrainReport: TrainReportData = {
-  before_train_metrics: {
-    'O': {
-      precision: 0.90,
-      recall: 0.88,
-      fmeasure: 0.89
-    },
-    'NAME': {
-      precision: 0.82,
-      recall: 0.80,
-      fmeasure: 0.81
-    },
-    'PHONE': {
-      precision: 0.85,
-      recall: 0.83,
-      fmeasure: 0.84
-    },
-    'EMAIL': {
-      precision: 0.88,
-      recall: 0.87,
-      fmeasure: 0.88
-    },
-    'ADDRESS': {
-      precision: 0.80,
-      recall: 0.78,
-      fmeasure: 0.79
-    }
+  timestamp: "2023-10-05T12:00:00Z",
+  duration: 3600,
+  metrics: {
+    accuracy: 0.90,
+    precision: 0.88,
+    recall: 0.86,
+    f1: 0.87,
+    label_metrics: mockMetrics
   },
-  after_train_metrics: mockMetrics,
-  after_train_examples: mockExamples
+  examples: mockExamples
 };
 
 // Mock implementation of retrainTokenClassifier

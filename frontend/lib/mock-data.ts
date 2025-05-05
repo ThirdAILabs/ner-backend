@@ -1,4 +1,4 @@
-import type { TrainReportData, LabelMetrics, ExampleCategories, TrainingExample } from '@/lib/backend';
+import type { TrainReportData, LabelMetrics, ExampleCategories, TrainingExample } from '@/lib/types';
 import { ObjectDatabaseRecord, ClassifiedTokenDatabaseRecord } from '@/app/token-classification/[deploymentId]/jobs/[jobId]/(database-table)/types';
 
 // ===== WORKFLOWS =====
@@ -242,145 +242,90 @@ export const mockLabels = [
 ];
 
 // ===== TRAINING REPORTS =====
-export const mockMetrics: LabelMetrics = {
+export const mockMetrics: Record<string, LabelMetrics> = {
   'O': {
     precision: 0.95,
     recall: 0.92,
-    fmeasure: 0.93
+    f1: 0.93,
+    support: 100
   },
   'NAME': {
     precision: 0.88,
     recall: 0.85,
-    fmeasure: 0.86
+    f1: 0.86,
+    support: 50
   },
   'SSN': {
     precision: 0.91,
     recall: 0.89,
-    fmeasure: 0.90
+    f1: 0.90,
+    support: 30
   },
   'DOB': {
     precision: 0.94,
     recall: 0.93,
-    fmeasure: 0.94
+    f1: 0.94,
+    support: 25
   },
   'PHONE': {
     precision: 0.87,
     recall: 0.86,
-    fmeasure: 0.87
+    f1: 0.87,
+    support: 40
   },
   'EMAIL': {
     precision: 0.92,
     recall: 0.91,
-    fmeasure: 0.92
+    f1: 0.92,
+    support: 35
   },
   'ADDRESS': {
     precision: 0.89,
     recall: 0.88,
-    fmeasure: 0.89
+    f1: 0.89,
+    support: 45
   },
   'POLICY_NUMBER': {
     precision: 0.93,
     recall: 0.92,
-    fmeasure: 0.93
+    f1: 0.93,
+    support: 20
   },
   'CLAIM_ID': {
     precision: 0.90,
     recall: 0.89,
-    fmeasure: 0.90
+    f1: 0.90,
+    support: 15
   }
 };
 
 export const mockExamples: ExampleCategories = {
-  true_positives: {
-    'NAME': [
-      { source: 'John Smith', target: 'NAME', predictions: 'NAME', index: 0 },
-      { source: 'Jane Doe', target: 'NAME', predictions: 'NAME', index: 1 },
-      { source: 'Dr. Robert Johnson', target: 'NAME', predictions: 'NAME', index: 2 }
-    ],
-    'SSN': [
-      { source: '123-45-6789', target: 'SSN', predictions: 'SSN', index: 0 },
-      { source: '(123) 45-6789', target: 'SSN', predictions: 'SSN', index: 1 },
-      { source: '123.45.6789', target: 'SSN', predictions: 'SSN', index: 2 }
-    ],
-    'DOB': [
-      { source: '01/15/1980', target: 'DOB', predictions: 'DOB', index: 0 },
-      { source: '1980-01-15', target: 'DOB', predictions: 'DOB', index: 1 },
-      { source: 'January 15, 1980', target: 'DOB', predictions: 'DOB', index: 2 }
-    ],
-    'PHONE': [
-      { source: '(555) 123-4567', target: 'PHONE', predictions: 'PHONE', index: 0 },
-      { source: '555-123-4567', target: 'PHONE', predictions: 'PHONE', index: 1 },
-      { source: '555.123.4567', target: 'PHONE', predictions: 'PHONE', index: 2 }
-    ]
-  },
-  false_positives: {
-    'NAME': [
-      { source: 'John', target: 'O', predictions: 'NAME', index: 0 },
-      { source: 'Smith', target: 'O', predictions: 'NAME', index: 1 }
-    ],
-    'SSN': [
-      { source: '123-4567', target: 'O', predictions: 'SSN', index: 0 },
-      { source: '555-123', target: 'O', predictions: 'SSN', index: 1 }
-    ],
-    'DOB': [
-      { source: '01/15', target: 'O', predictions: 'DOB', index: 0 },
-      { source: '1980', target: 'O', predictions: 'DOB', index: 1 }
-    ],
-    'PHONE': [
-      { source: '123-4567', target: 'O', predictions: 'PHONE', index: 0 },
-      { source: '555-123', target: 'O', predictions: 'PHONE', index: 1 }
-    ]
-  },
-  false_negatives: {
-    'NAME': [
-      { source: 'Michael Brown', target: 'NAME', predictions: 'O', index: 0 },
-      { source: 'Sarah Wilson', target: 'NAME', predictions: 'O', index: 1 }
-    ],
-    'SSN': [
-      { source: '987-65-4321', target: 'SSN', predictions: 'O', index: 0 },
-      { source: '(987) 65-4321', target: 'SSN', predictions: 'O', index: 1 }
-    ],
-    'DOB': [
-      { source: '03/22/1975', target: 'DOB', predictions: 'O', index: 0 },
-      { source: '1975-03-22', target: 'DOB', predictions: 'O', index: 1 }
-    ],
-    'PHONE': [
-      { source: '(987) 654-3210', target: 'PHONE', predictions: 'O', index: 0 },
-      { source: '987-654-3210', target: 'PHONE', predictions: 'O', index: 1 }
-    ]
-  }
+  true_positives: [
+    { id: "1", text: "John Smith", tokens: ["John", "Smith"], labels: ["NAME", "NAME"], predictions: ["NAME", "NAME"] },
+    { id: "2", text: "Jane Doe", tokens: ["Jane", "Doe"], labels: ["NAME", "NAME"], predictions: ["NAME", "NAME"] },
+    { id: "3", text: "123-45-6789", tokens: ["123-45-6789"], labels: ["SSN"], predictions: ["SSN"] }
+  ],
+  false_positives: [
+    { id: "4", text: "John", tokens: ["John"], labels: ["O"], predictions: ["NAME"] },
+    { id: "5", text: "Smith", tokens: ["Smith"], labels: ["O"], predictions: ["NAME"] }
+  ],
+  false_negatives: [
+    { id: "6", text: "Michael Brown", tokens: ["Michael", "Brown"], labels: ["NAME", "NAME"], predictions: ["O", "O"] },
+    { id: "7", text: "987-65-4321", tokens: ["987-65-4321"], labels: ["SSN"], predictions: ["O"] }
+  ]
 };
 
 export const mockTrainReport: TrainReportData = {
-  before_train_metrics: {
-    'O': {
-      precision: 0.90,
-      recall: 0.88,
-      fmeasure: 0.89
-    },
-    'NAME': {
-      precision: 0.82,
-      recall: 0.80,
-      fmeasure: 0.81
-    },
-    'SSN': {
-      precision: 0.85,
-      recall: 0.83,
-      fmeasure: 0.84
-    },
-    'DOB': {
-      precision: 0.88,
-      recall: 0.87,
-      fmeasure: 0.88
-    },
-    'PHONE': {
-      precision: 0.80,
-      recall: 0.78,
-      fmeasure: 0.79
-    }
+  timestamp: "2023-11-05T12:00:00Z",
+  duration: 3600,
+  metrics: {
+    accuracy: 0.92,
+    precision: 0.90,
+    recall: 0.88,
+    f1: 0.89,
+    label_metrics: mockMetrics
   },
-  after_train_metrics: mockMetrics,
-  after_train_examples: mockExamples
+  examples: mockExamples
 };
 
 // ===== TOKEN CLASSIFICATION DATA =====

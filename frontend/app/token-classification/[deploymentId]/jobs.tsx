@@ -20,44 +20,43 @@ import { useParams } from 'next/navigation';
 import { format } from 'date-fns';
 import { nerService } from '@/lib/backend';
 
-// Report interface to match the backend API
-interface Report {
+// Import the TaskStatusCategory from backend.ts
+interface TaskStatusCategory {
+  TotalTasks: number;
+  TotalSize: number;
+}
+
+// Using the Report interface from backend.ts
+interface ReportWithStatus {
   Id: string;
   Model: {
     Id: string;
     Name: string;
     Type: string;
     Status: string;
+    BaseModelId?: string;
+    Tags?: string[];
   };
   SourceS3Bucket: string;
   SourceS3Prefix?: string;
   CreationTime: string;
-  Groups: Array<{
+  Tags?: string[];
+  CustomTags?: { [key: string]: string };
+  Groups?: {
     Id: string;
     Name: string;
     Query: string;
-  }>;
-  ShardDataTaskStatus: string;
-  InferenceTaskStatuses: {
-    COMPLETED: { TotalTasks: number; TotalSize: number };
-    RUNNING: { TotalTasks: number; TotalSize: number };
-    QUEUED: { TotalTasks: number; TotalSize: number };
-    FAILED: { TotalTasks: number; TotalSize: number };
+    Objects?: string[];
+  }[];
+  ShardDataTaskStatus?: string;
+  InferenceTaskStatuses?: { [key: string]: TaskStatusCategory };
+  Errors?: string[];
+  
+  // Additional fields for UI
+  detailedStatus?: {
+    ShardDataTaskStatus?: string;
+    InferenceTaskStatuses?: { [key: string]: TaskStatusCategory };
   };
-}
-
-interface ReportStatus {
-  ShardDataTaskStatus: string;
-  InferenceTaskStatuses: {
-    COMPLETED: { TotalTasks: number; TotalSize: number };
-    RUNNING: { TotalTasks: number; TotalSize: number };
-    QUEUED: { TotalTasks: number; TotalSize: number };
-    FAILED: { TotalTasks: number; TotalSize: number };
-  };
-}
-
-interface ReportWithStatus extends Report {
-  detailedStatus?: ReportStatus;
   isLoadingStatus?: boolean;
 }
 
@@ -67,7 +66,7 @@ export default function Jobs() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchReportStatus = async (report: Report) => {
+  const fetchReportStatus = async (report: ReportWithStatus) => {
     try {
       setReports(prev => 
         prev.map(r => 

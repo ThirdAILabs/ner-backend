@@ -11,13 +11,33 @@ export interface MetricsData {
   after: number;
 }
 
-interface MetricsChartProps {
-  title: string;
-  data: MetricsData[];
-  color: string;
+interface EntityMetrics {
+  [entity: string]: number;
 }
 
-export const MetricsChart: React.FC<MetricsChartProps> = ({ title, data, color }) => {
+export interface MetricsChartProps {
+  metrics: {
+    before: EntityMetrics;
+    after: EntityMetrics;
+  };
+  metricType: 'precision' | 'recall' | 'f1';
+  title?: string;
+  color?: string;
+}
+
+export const MetricsChart: React.FC<MetricsChartProps> = ({ 
+  metrics, 
+  metricType,
+  title = `${metricType.charAt(0).toUpperCase() + metricType.slice(1)} Metrics`, 
+  color = '#1976d2' 
+}) => {
+  // Transform the metrics data to the format expected by the component
+  const data: MetricsData[] = Object.keys(metrics.before).map(entity => ({
+    entityType: entity,
+    before: metrics.before[entity],
+    after: metrics.after[entity]
+  }));
+
   return (
     <Box sx={{ p: 2, border: '1px solid #eaeaea', borderRadius: 1, height: '100%' }}>
       <Typography variant="subtitle1" sx={{ fontWeight: 500, mb: 2 }}>
