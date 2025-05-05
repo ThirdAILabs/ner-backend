@@ -11,11 +11,9 @@ import (
 type GRPCClient struct{ client proto.ModelClient }
 
 func (m *GRPCClient) Predict(sentence string) ([]*proto.Entity, error) {
-	fmt.Println("GRPCClient Predict called, sentence:", sentence)
 	resp, err := m.client.Predict(context.Background(), &proto.PredictRequest{
 		Sentence: sentence,
 	})
-	fmt.Println("GRPCClient Predict response:", resp)
 	if err != nil {
 		return nil, err
 	}

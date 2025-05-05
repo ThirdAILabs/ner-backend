@@ -369,19 +369,23 @@ func (proc *TaskProcessor) runInferenceOnObject(
 		}
 
 		chunkEntities, err := model.Predict(chunk.Text)
-		fmt.Println("chunkEntities", chunkEntities)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error running model inference: %w", err)
 		}
+
+		fmt.Println("tags", tags)
 
 		for _, entity := range chunkEntities {
 			if _, ok := tags[entity.Label]; ok {
 				entity.Start += chunk.Offset
 				entity.End += chunk.Offset
 				labelToEntities[entity.Label] = append(labelToEntities[entity.Label], entity)
+			} else {
+				fmt.Println("label not found in tags: ", entity.Label)
 			}
 		}
 		fmt.Println("chunkEntities after adding offset", chunkEntities)
+		fmt.Println("labelToEntities after tag filter", labelToEntities)
 
 		for tag, re := range customTags {
 			matches := re.FindAllStringIndex(chunk.Text, -1)
@@ -397,7 +401,7 @@ func (proc *TaskProcessor) runInferenceOnObject(
 				})
 			}
 		}
-		fmt.Println("labelToEntities", labelToEntities)
+		fmt.Println("labelToEntities after custom tag filter", labelToEntities)
 
 		if len(previewTokens) < previewLimit {
 			toks := strings.Fields(chunk.Text)
