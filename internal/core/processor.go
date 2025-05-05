@@ -381,12 +381,6 @@ func (proc *TaskProcessor) createObjectPreview(
 	}).Error
 }
 
-type ChunkEntities struct {
-	entities []database.ObjectEntity
-	groups   []database.ObjectGroup
-	err      error
-}
-
 func (proc *TaskProcessor) runInferenceOnObject(
 	reportId uuid.UUID,
 	chunks <-chan ParsedChunk,

@@ -76,6 +76,7 @@ func TestObjectInference(t *testing.T) {
 		Text:   testDoc,
 		Offset: 0,
 	}
+	close(chunks)
 
 	allEntities, groups, err := inferenceJobProcessor.runInferenceOnObject(
 		reportId,
