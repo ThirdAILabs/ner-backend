@@ -574,23 +574,22 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 		return fmt.Errorf("error finetuning model: %w", err)
 	}
 
-	localPath := proc.localModelPath(payload.ModelId)
-	if err := os.MkdirAll(filepath.Dir(localPath), 0755); err != nil {
+	localDir := proc.localModelPath(payload.ModelId)
+	if err := os.MkdirAll(localDir, 0755); err != nil {
 		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint:errcheck
 		slog.Error("error creating local model directory", "model_id", payload.ModelId, "error", err)
 		return fmt.Errorf("error creating local model directory: %w", err)
 	}
 
-	if err := model.Save(localPath); err != nil {
+	modelFile := filepath.Join(localDir, "model.bin")
+	if err := model.Save(modelFile); err != nil {
 		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint:errcheck
 		slog.Error("error saving finetuned model locally", "model_id", payload.ModelId, "error", err)
 		return fmt.Errorf("error saving finetuned model: %w", err)
 	}
 
-	if _, err := proc.s3Client.UploadDirectory(ctx, localPath, proc.modelBucket, filepath.Join(payload.ModelId.String())); err != nil {
-		if upErr := database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed); upErr != nil {
-			slog.Error("failed to update model status after upload error", "model_id", payload.ModelId, "error", upErr)
-		}
+	if _, err := proc.s3Client.UploadDirectory(ctx, localDir, proc.modelBucket, payload.ModelId.String()); err != nil {
+		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint:errcheck
 		slog.Error("error uploading finetuned model to S3", "model_id", payload.ModelId, "error", err)
 		return fmt.Errorf("error uploading model to S3: %w", err)
 	}
