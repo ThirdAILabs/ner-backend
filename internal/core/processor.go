@@ -588,7 +588,9 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 	}
 
 	if _, err := proc.s3Client.UploadDirectory(ctx, localPath, proc.modelBucket, filepath.Join(payload.ModelId.String())); err != nil {
-		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed)
+		if upErr := database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed); upErr != nil {
+			slog.Error("failed to update model status after upload error", "model_id", payload.ModelId, "error", upErr)
+		}
 		slog.Error("error uploading finetuned model to S3", "model_id", payload.ModelId, "error", err)
 		return fmt.Errorf("error uploading model to S3: %w", err)
 	}
