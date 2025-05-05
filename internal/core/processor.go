@@ -265,8 +265,9 @@ func (proc *TaskProcessor) loadModel(modelId uuid.UUID, modelType string) (Model
 			slog.Info("model not found locally, downloading from S3", "modelId", modelId)
 
 			modelObjectKey := filepath.Join(modelId.String(), "model.bin")
-			if modelType == "python_combined_ner_model" {
-				modelObjectKey = filepath.Join(modelType)
+			if modelType == "transformer" {
+				modelObjectKey = filepath.Join("python_combined_ner_model")
+				localPath = proc.getlocalModelDir(modelId)
 			}
 			if modelType == "ensemble" {
 				modelObjectKey = filepath.Join("python_ensemble_ner_model")

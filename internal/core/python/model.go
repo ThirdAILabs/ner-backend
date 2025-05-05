@@ -94,6 +94,7 @@ func convertProtoEntitiesToTypes(protoEntities []*proto.Entity) []types.Entity {
 			typesEntities[i].Start = int(pe.Start)
 			typesEntities[i].End = int(pe.End)
 		}
+		typesEntities[i].UpdateContext()
 	}
 	return typesEntities
 }

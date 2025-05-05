@@ -16,8 +16,6 @@ type RecognizerResult struct {
 	Match      string
 	Score      float64
 	Start, End int
-	LContext   string
-	RContext   string
 }
 
 type PatternRecognizer struct {
@@ -183,17 +181,6 @@ func (pr *PatternRecognizer) Recognize(text string, threshold float64) []Recogni
 				continue
 			}
 
-			lctxStart := start - ctxLen
-			if lctxStart < 0 {
-				lctxStart = 0
-			}
-			rctxEnd := end + ctxLen
-			if rctxEnd > len(text) {
-				rctxEnd = len(text)
-			}
-			lctx := text[lctxStart:start]
-			rctx := text[end:rctxEnd]
-
 			mapped, ok := entitiesMap[pr.EntityType]
 			if !ok || mapped == "" {
 				mapped = pr.EntityType
@@ -204,8 +191,6 @@ func (pr *PatternRecognizer) Recognize(text string, threshold float64) []Recogni
 				Score:      score,
 				Start:      loc[0],
 				End:        loc[1],
-				LContext:   lctx,
-				RContext:   rctx,
 			})
 		}
 	}
@@ -236,14 +221,14 @@ func (m *PresidioModel) Predict(text string) ([]types.Entity, error) {
 
 	entities := make([]types.Entity, 0, len(results))
 	for _, r := range results {
-		entities = append(entities, types.Entity{
-			Text:     r.Match,
-			Label:    r.EntityType,
-			Start:    r.Start,
-			End:      r.End,
-			LContext: r.LContext,
-			RContext: r.RContext,
-		})
+		entity := types.Entity{
+			Text:  r.Match,
+			Label: r.EntityType,
+			Start: r.Start,
+			End:   r.End,
+		}
+		entity.UpdateContext()
+		entities = append(entities, entity)
 	}
 	return entities, nil
 }

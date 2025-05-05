@@ -2,7 +2,6 @@ package core
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"ner-backend/internal/core/bolt"
@@ -35,11 +34,11 @@ var modelLoaders = map[string]modelLoader{
 	},
 
 	// TODO: replace env vars with a passed-in config
-	"python_combined_ner_model": func(path string) (Model, error) {
+	"transformer": func(path string) (Model, error) {
 		configJSON := fmt.Sprintf("{\"model_path\":\"%s\",\"threshold\": 0.5}", path)
 		return python.LoadPythonModel(
-			os.Getenv("PYTHON_EXECUTABLE_PATH"),
-			os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH"),
+			"python",
+			"plugin/plugin-python/plugin.py",
 			"python_combined_ner_model",
 			configJSON,
 		)

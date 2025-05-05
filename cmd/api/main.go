@@ -111,6 +111,51 @@ func initializeEnsembleModel(db *gorm.DB) {
 	}
 }
 
+func initializeTransformerModel(db *gorm.DB) {
+	transformer_tags := []string{
+		"ADDRESS",
+		"CARD_NUMBER",
+		"COMPANY",
+		"CREDIT_SCORE",
+		"DATE",
+		"EMAIL",
+		"ETHNICITY",
+		"GENDER",
+		"ID_NUMBER",
+		"LICENSE_PLATE",
+		"LOCATION",
+		"NAME",
+		"PHONENUMBER",
+		"SERVICE_CODE",
+		"SEXUAL_ORIENTATION",
+		"SSN",
+		"URL",
+		"VIN",
+		"O"}
+
+	modelId := uuid.New()
+
+	var tags []database.ModelTag
+	for _, tag := range transformer_tags {
+		tags = append(tags, database.ModelTag{
+			ModelId: modelId,
+			Tag:     tag,
+		})
+	}
+
+	var model database.Model
+
+	if err := db.Where(database.Model{Name: "transformer"}).Attrs(database.Model{
+		Id:           modelId,
+		Type:         "transformer",
+		Status:       database.ModelTrained,
+		CreationTime: time.Now(),
+		Tags:         tags,
+	}).FirstOrCreate(&model).Error; err != nil {
+		log.Fatalf("Failed to create model record: %v", err)
+	}
+}
+
 func main() {
 	log.Println("Starting API Server...")
 
