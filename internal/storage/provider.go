@@ -28,8 +28,4 @@ type Provider interface {
 	ListObjects(ctx context.Context, bucket, prefix string) ([]Object, error)
 
 	IterObjects(ctx context.Context, bucket, prefix string) ObjectIterator
-
-	Location() (string, string)
-
-	Credentials() (string, string)
 }

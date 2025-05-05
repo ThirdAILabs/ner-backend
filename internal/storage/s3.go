@@ -51,6 +51,8 @@ func NewS3Provider(cfg S3ProviderConfig) (*S3Provider, error) {
 		aws_config.WithEndpointResolverWithOptions(resolver), // nolint:staticcheck
 	}
 
+	// If credentials are not provided then they will be resolved by the sdk.
+	// One way to pass credentials is to set them in the environment variables AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.
 	if cfg.S3AccessKeyID != "" && cfg.S3SecretAccessKey != "" {
 		opts = append(opts, aws_config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(cfg.S3AccessKeyID, cfg.S3SecretAccessKey, "")))
 	}
@@ -295,12 +297,4 @@ func (s *S3Provider) IterObjects(ctx context.Context, bucket, prefix string) Obj
 			}
 		}
 	}
-}
-
-func (s *S3Provider) Location() (string, string) {
-	return s.cfg.S3EndpointURL, s.cfg.S3Region
-}
-
-func (s *S3Provider) Credentials() (string, string) {
-	return s.cfg.S3AccessKeyID, s.cfg.S3SecretAccessKey
 }

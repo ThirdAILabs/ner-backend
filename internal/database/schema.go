@@ -48,12 +48,11 @@ type Report struct {
 	ModelId uuid.UUID `gorm:"type:uuid"`
 	Model   *Model    `gorm:"foreignKey:ModelId"`
 
-	S3Endpoint        sql.NullString
-	S3Region          sql.NullString
-	S3AccessKeyID     sql.NullString
-	S3SecretAccessKey sql.NullString
-	SourceS3Bucket    string
-	SourceS3Prefix    sql.NullString
+	S3Endpoint     sql.NullString
+	S3Region       sql.NullString
+	SourceS3Bucket string
+	SourceS3Prefix sql.NullString
+	IsUpload       bool
 
 	CreationTime time.Time
 

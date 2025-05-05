@@ -14,6 +14,7 @@ import (
 	"ner-backend/pkg/api"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -105,6 +106,9 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	os.Setenv("AWS_ACCESS_KEY_ID", minioUsername)
+	os.Setenv("AWS_SECRET_ACCESS_KEY", minioPassword)
+
 	db := createDB(t)
 
 	queue := messaging.NewInMemoryQueue()
@@ -123,13 +127,11 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 	createData(t, s3)
 
 	reportId := createReport(t, router, api.CreateReportRequest{
-		ModelId:           modelId,
-		S3Endpoint:        minioUrl,
-		S3AccessKeyID:     minioUsername,
-		S3SecretAccessKey: minioPassword,
-		SourceS3Bucket:    dataBucket,
-		Tags:              []string{"phone", "email"},
-		CustomTags:        map[string]string{"custom-token": `(\w\d){3}`},
+		ModelId:        modelId,
+		S3Endpoint:     minioUrl,
+		SourceS3Bucket: dataBucket,
+		Tags:           []string{"phone", "email"},
+		CustomTags:     map[string]string{"custom-token": `(\w\d){3}`},
 		Groups: map[string]string{
 			"phone": `COUNT(phone) > 0`,
 			"email": `COUNT(email) > 0`,

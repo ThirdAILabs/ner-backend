@@ -123,6 +123,24 @@ func (proc *TaskProcessor) ProcessTask(task messaging.Task) {
 	}
 }
 
+func (proc *TaskProcessor) getStorageClient(report *database.Report) (storage.Provider, error) {
+	if report.IsUpload {
+		return proc.storage, nil
+	}
+
+	// If we are not using the internal storage provider, then we assume allow the client
+	// to load credentials from the environment, either environment variables or IAM roles, etc.
+	s3Client, err := storage.NewS3Provider(storage.S3ProviderConfig{
+		S3EndpointURL: report.S3Endpoint.String,
+		S3Region:      report.S3Region.String,
+	})
+	if err != nil {
+		slog.Error("error connecting to S3", "s3_endpoint", report.S3Endpoint.String, "region", report.S3Region.String, "error", err)
+		return nil, fmt.Errorf("error connecting to S3: %w", err)
+	}
+	return s3Client, nil
+}
+
 func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload messaging.InferenceTaskPayload) error {
 	reportId := payload.ReportId
 
@@ -159,14 +177,9 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 		groupToQuery[group.Id] = group.Query
 	}
 
-	storage, err := storage.NewS3Provider(storage.S3ProviderConfig{
-		S3EndpointURL:     task.Report.S3Endpoint.String,
-		S3AccessKeyID:     task.Report.S3AccessKeyID.String,
-		S3SecretAccessKey: task.Report.S3SecretAccessKey.String,
-		S3Region:          task.Report.S3Region.String,
-	})
+	storage, err := proc.getStorageClient(task.Report)
 	if err != nil {
-		slog.Error("error connecting to S3", "s3_endpoint", task.Report.S3Endpoint.String, "region", task.Report.S3Region.String, "error", err)
+		return err
 	}
 
 	workerErr := proc.runInferenceOnBucket(ctx, task.ReportId, storage, task.Report.Model.Id, task.Report.Model.Type, tags, customTags, groupToQuery, task.Report.SourceS3Bucket, s3Objects)
@@ -499,15 +512,11 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 		return nil
 	}
 
-	storage, err := storage.NewS3Provider(storage.S3ProviderConfig{
-		S3EndpointURL:     task.Report.S3Endpoint.String,
-		S3AccessKeyID:     task.Report.S3AccessKeyID.String,
-		S3SecretAccessKey: task.Report.S3SecretAccessKey.String,
-		S3Region:          task.Report.S3Region.String,
-	})
+	storage, err := proc.getStorageClient(task.Report)
 	if err != nil {
-		slog.Error("error connecting to S3", "s3_endpoint", task.Report.S3Endpoint.String, "region", task.Report.S3Region.String, "error", err)
+		return err
 	}
+
 	var currentChunkKeys []string
 	var currentChunkSize int64 = 0
 	var taskId int = 0
