@@ -12,6 +12,8 @@ type Model struct {
 	Name        string
 	Type        string
 	Status      string
+
+	Tags []string `json:"Tags,omitempty"`
 }
 
 type Group struct {
@@ -37,6 +39,9 @@ type Report struct {
 
 	CreationTime time.Time
 
+	Tags       []string          `json:"Tags,omitempty"`
+	CustomTags map[string]string `json:"CustomTags,omitempty"`
+
 	Groups []Group
 
 	ShardDataTaskStatus   string                        `json:"ShardDataTaskStatus,omitempty"`
@@ -61,6 +66,9 @@ type CreateReportRequest struct {
 	UploadId       uuid.UUID
 	SourceS3Bucket string
 	SourceS3Prefix string
+
+	Tags       []string
+	CustomTags map[string]string
 
 	Groups map[string]string
 }
@@ -98,4 +106,10 @@ type SearchResponse struct {
 
 type UploadResponse struct {
 	Id uuid.UUID
+}
+
+type ObjectPreviewResponse struct {
+	Object string   `json:"object"`
+	Tokens []string `json:"tokens"`
+	Tags   []string `json:"tags"`
 }

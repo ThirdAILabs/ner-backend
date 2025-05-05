@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"io"
 	"log/slog"
@@ -12,6 +13,7 @@ import (
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/s3"
+	"regexp"
 
 	"ner-backend/pkg/api"
 	"net/http"
@@ -59,6 +61,7 @@ func (s *BackendService) AddRoutes(r chi.Router) {
 		r.Get("/{report_id}/groups/{group_id}", RestHandler(s.GetReportGroup))
 		r.Get("/{report_id}/entities", RestHandler(s.GetReportEntities))
 		r.Get("/{report_id}/search", RestHandler(s.ReportSearch))
+		r.Get("/{report_id}/objects", RestHandler(s.GetReportPreviews))
 	})
 
 	r.Route("/uploads", func(r chi.Router) {
@@ -86,7 +89,7 @@ func (s *BackendService) GetModel(r *http.Request) (any, error) {
 	ctx := r.Context()
 
 	var model database.Model
-	if err := s.db.WithContext(ctx).First(&model, "id = ?", modelId).Error; err != nil {
+	if err := s.db.WithContext(ctx).Preload("Tags").First(&model, "id = ?", modelId).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, CodedErrorf(http.StatusNotFound, "model not found")
 		}
@@ -197,12 +200,39 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		return nil, CodedErrorf(http.StatusUnprocessableEntity, "the following fields are required: SourceS3Bucket or UploadId")
 	}
 
+	for _, tag := range req.Tags {
+		if _, ok := req.CustomTags[tag]; ok {
+			return nil, CodedErrorf(http.StatusUnprocessableEntity, "tag '%s' cannot be used as a regular and custom tag", tag)
+		}
+	}
+
+	for tag, pattern := range req.CustomTags {
+		if _, err := regexp.Compile(pattern); err != nil {
+			return nil, CodedErrorf(http.StatusUnprocessableEntity, "invalid regex pattern '%s' for custom tag '%s': %v", pattern, tag, err)
+		}
+	}
+
 	report := database.Report{
 		Id:             uuid.New(),
 		ModelId:        req.ModelId,
 		SourceS3Bucket: sourceS3Bucket,
 		SourceS3Prefix: sql.NullString{String: s3Prefix, Valid: s3Prefix != ""},
 		CreationTime:   time.Now().UTC(),
+	}
+
+	for _, tag := range req.Tags {
+		report.Tags = append(report.Tags, database.ReportTag{
+			ReportId: report.Id,
+			Tag:      tag,
+		})
+	}
+
+	for tag, pattern := range req.CustomTags {
+		report.CustomTags = append(report.CustomTags, database.CustomTag{
+			ReportId: report.Id,
+			Tag:      tag,
+			Pattern:  pattern,
+		})
 	}
 
 	for name, query := range req.Groups {
@@ -230,7 +260,7 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 	var model database.Model
 
 	if err := s.db.WithContext(ctx).Transaction(func(txn *gorm.DB) error {
-		if err := txn.First(&model, "id = ?", req.ModelId).Error; err != nil {
+		if err := txn.Preload("Tags").First(&model, "id = ?", req.ModelId).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return CodedErrorf(http.StatusNotFound, "model not found")
 			}
@@ -240,6 +270,17 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 
 		if model.Status != database.ModelTrained {
 			return CodedErrorf(http.StatusUnprocessableEntity, "model is not ready: model has status: %s", model.Status)
+		}
+
+		modelTags := make(map[string]struct{})
+		for _, tag := range model.Tags {
+			modelTags[tag.Tag] = struct{}{}
+		}
+
+		for _, tag := range req.Tags {
+			if _, ok := modelTags[tag]; !ok {
+				return CodedErrorf(http.StatusUnprocessableEntity, "model does not support tag '%s', either switch models, or add a custom tag", tag)
+			}
 		}
 
 		if err := txn.WithContext(ctx).Create(&report).Error; err != nil {
@@ -277,7 +318,7 @@ func (s *BackendService) GetReport(r *http.Request) (any, error) {
 	ctx := r.Context()
 
 	var report database.Report
-	if err := s.db.WithContext(ctx).Preload("Model").Preload("Groups").Preload("ShardDataTask").Preload("Errors").Find(&report, "id = ?", reportId).Error; err != nil {
+	if err := s.db.WithContext(ctx).Preload("Model").Preload("Tags").Preload("CustomTags").Preload("Groups").Preload("ShardDataTask").Preload("Errors").Find(&report, "id = ?", reportId).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, CodedErrorf(http.StatusNotFound, "inference job not found")
 		}
@@ -383,6 +424,56 @@ func (s *BackendService) GetReportEntities(r *http.Request) (any, error) {
 	return convertEntities(entities), nil
 }
 
+func (s *BackendService) GetReportPreviews(r *http.Request) (any, error) {
+	reportId, err := URLParamUUID(r, "report_id")
+	if err != nil {
+		return nil, err
+	}
+
+	params := r.URL.Query()
+	offset, limit := 0, 100
+	if os := params.Get("offset"); os != "" {
+		if offset, err = strconv.Atoi(os); err != nil || offset < 0 {
+			return nil, CodedErrorf(http.StatusBadRequest, "invalid offset")
+		}
+	}
+	if ls := params.Get("limit"); ls != "" {
+		if limit, err = strconv.Atoi(ls); err != nil || limit < 1 || limit > 200 {
+			return nil, CodedErrorf(http.StatusBadRequest, "invalid limit")
+		}
+	}
+
+	ctx := r.Context()
+	var previews []database.ObjectPreview
+	if err := s.db.WithContext(ctx).
+		Where("report_id = ?", reportId).
+		Offset(offset).
+		Limit(limit).
+		Order("object").
+		Find(&previews).Error; err != nil {
+		slog.Error("error fetching previews", "report_id", reportId, "err", err)
+		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving previews")
+	}
+
+	resp := make([]api.ObjectPreviewResponse, len(previews))
+	for i, p := range previews {
+		var payload struct {
+			Tokens []string `json:"tokens"`
+			Tags   []string `json:"tags"`
+		}
+		if err := json.Unmarshal(p.TokenTags, &payload); err != nil {
+			slog.Error("unmarshal preview payload", "object", p.Object, "err", err)
+		}
+		resp[i] = api.ObjectPreviewResponse{
+			Object: p.Object,
+			Tokens: payload.Tokens,
+			Tags:   payload.Tags,
+		}
+	}
+
+	return resp, nil
+}
+
 func (s *BackendService) ReportSearch(r *http.Request) (any, error) {
 	reportId, err := URLParamUUID(r, "report_id")
 	if err != nil {
@@ -396,6 +487,7 @@ func (s *BackendService) ReportSearch(r *http.Request) (any, error) {
 
 	filter, err := core.ToSql(s.db, queryStr)
 	if err != nil {
+		return nil, CodedErrorf(http.StatusUnprocessableEntity, "error parsing query: %v", err)
 	}
 
 	ctx := r.Context()
