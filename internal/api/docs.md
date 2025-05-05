@@ -48,7 +48,7 @@ Retrieve a list of all models.
 
 ### GET /models/{model_id}
 **Description:**  
-Retrieve details of a specific model by its ID.
+Retrieve details of a specific model by its ID. The tags field indicates the tags that are supported by the model.
 
 **Path Parameters:**  
 - `model_id` (UUID): The ID of the model.
@@ -64,7 +64,8 @@ Retrieve details of a specific model by its ID.
   "Id": "123e4567-e89b-12d3-a456-426614174000",
   "Name": "Model A",
   "Type": "bolt",
-  "Status": "TRAINED"
+  "Status": "TRAINED",
+  "Tags": ["NAME", "EMAIL"]
 }
 ```
 
@@ -110,7 +111,7 @@ Retrieve a list of all reports. Either `UploadId` or `SourceS3Bucket` must be sp
 
 ### POST /reports
 **Description:**  
-Create a new report.
+Create a new report. The tags fields indicates which of the models tags are considered in the report. This must be a subset of the tags supported by the model. Custom tags allows the user to define custom tags with regex patterns that are evaluated in addition to the model tags. The custom tag names must be distinct from the names of the model tags that are being used.
 
 **Request Body:**  
 - `ModelId` (UUID): The ID of the model.
@@ -124,6 +125,8 @@ Create a new report.
   "ModelId": "123e4567-e89b-12d3-a456-426614174000",
   "SourceS3Bucket": "example-bucket",
   "SourceS3Prefix": "data/",
+  "Tags": ["NAME", "EMAIL"],
+  "CustomTags": {"tag1": "regex1"},
   "Groups": {
     "Group1": "COUNT(label1) > 3 AND COUNT(label2) = 2",
     "Group2": "label3 CONTAINS 'xyz'"
@@ -171,6 +174,8 @@ Retrieve details of a specific report by its ID.
   "SourceS3Bucket": "example-bucket",
   "SourceS3Prefix": "data/",
   "CreationTime": "2023-01-01T12:00:00Z",
+  "Tags": ["NAME", "EMAIL"],
+  "CustomTags": {"tag1": "regex1"},
   "Groups": [
     {
       "Id": "123e4567-e89b-12d3-a456-426614174003",
@@ -196,8 +201,11 @@ Retrieve details of a specific report by its ID.
       "TotalTasks": 1,
       "TotalSize": 100
     },
-    
-  }
+  },
+  "Errors": [
+    "error message 1",
+    "error message 2",
+  ]
 }
 ```
 
@@ -270,6 +278,59 @@ Retrieve entities for a specific report.
 ```
 
 ---
+
+### GET /reports/{report_id}/objects
+**Description:**
+Retrieve preview snippets and token-level tags for each object in a report. Each entry includes the object name, a short text preview, and parallel arrays of text blocks (tokens) and their corresponding labels (tags).
+
+**Path Parameters:**
+- `report_id` (UUID): The ID of the report.
+
+**Query Parameters:**  
+- `offset` (integer, optional): Number of preview entries to skip (default: 0).
+- `limit` (integer, optional): Maximum number of preview entries to return (default: 100, max: 200).
+
+**Response:**  
+- `200 OK`: Returns a list of object previews.
+- `400 Bad Request`: Invalid offset or limit parameter.
+- `500 Internal Server Error`: Error retrieving previews.
+
+**Example Response:**
+```json
+[
+  {
+    "object": "document1.txt",
+    "tokens": [
+      "Call me at ",
+      "123 456 7890",
+      " I live at ",
+      "123 Main Street",
+      "..."
+    ],
+    "tags": [
+      "O",
+      "PHONE_NUMBER",
+      "O",
+      "ADDRESS",
+      "O"
+    ]
+  },
+  {
+    "object": "notes.pdf",
+    "tokens": [
+      "Project deadline is ",
+      "2025-06-30",
+      ". Please review by then."
+    ],
+    "tags": [
+      "O",
+      "DATE",
+      "O"
+    ]
+  }
+]
+```
+
 
 ### GET /reports/{report_id}/search?query=<...>
 **Description:**  

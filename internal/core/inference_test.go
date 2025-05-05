@@ -58,7 +58,7 @@ type stringReadCloser struct{ *strings.Reader }
 
 func (r *stringReadCloser) Close() error { return nil }
 
-const testDoc = "This is a test doc. It contains a phone number: 012-345-6789, and a email: test@email.com."
+const testDoc = "This is a test doc. It contains a phone number: 012-345-6789, an email: test@email.com, and a special token a1b2c3."
 
 func (m *mockS3Client) GetObject(context.Context, *aws_s3.GetObjectInput, ...func(*aws_s3.Options)) (*aws_s3.GetObjectOutput, error) {
 	return &aws_s3.GetObjectOutput{
@@ -73,13 +73,15 @@ func TestInference(t *testing.T) {
 		patterns: map[string]regexp.Regexp{
 			"phone": *regexp.MustCompile(`\d{3}-\d{3}-\d{4}`),
 			"email": *regexp.MustCompile(`\w+@email\.com`),
+			"test":  *regexp.MustCompile(`test`),
 		},
 	}
 
 	reportId := uuid.New()
 
 	inferenceJobProcessor := TaskProcessor{
-		s3Client: s3.NewFromClient(&mockS3Client{}, "test-bucket"),
+		internalS3Client: s3.NewFromClient(&mockS3Client{}, "test-bucket"),
+		externalS3Client: s3.NewFromClient(&mockS3Client{}, "test-bucket"),
 	}
 
 	groupId1, groupId2 := uuid.New(), uuid.New()
@@ -95,18 +97,22 @@ func TestInference(t *testing.T) {
 		reportId,
 		NewDefaultParser(),
 		model,
+		map[string]struct{}{"phone": {}, "email": {}},
+		map[string]*regexp.Regexp{"special_token": regexp.MustCompile(`(\w\d){3}`)},
 		map[uuid.UUID]Filter{groupId1: group1, groupId2: group2},
 		"",
 		object,
+		"internal",
 	)
 	assert.NoError(t, err)
 
-	phone, email := "012-345-6789", "test@email.com"
-	phoneStart, emailStart := strings.Index(testDoc, phone), strings.Index(testDoc, email)
+	phone, email, special := "012-345-6789", "test@email.com", "a1b2c3"
+	phoneStart, emailStart, specialStart := strings.Index(testDoc, phone), strings.Index(testDoc, email), strings.Index(testDoc, special)
 
 	assert.ElementsMatch(t, allEntities, []database.ObjectEntity{
 		{ReportId: reportId, Object: object, Label: "phone", Text: phone, Start: phoneStart, End: phoneStart + len(phone), LContext: testDoc[phoneStart-20 : phoneStart], RContext: testDoc[phoneStart+len(phone) : phoneStart+len(phone)+20]},
-		{ReportId: reportId, Object: object, Label: "email", Text: email, Start: emailStart, End: emailStart + len(email), LContext: testDoc[emailStart-20 : emailStart], RContext: testDoc[emailStart+len(email):]},
+		{ReportId: reportId, Object: object, Label: "email", Text: email, Start: emailStart, End: emailStart + len(email), LContext: testDoc[emailStart-20 : emailStart], RContext: testDoc[emailStart+len(email) : emailStart+len(email)+20]},
+		{ReportId: reportId, Object: object, Label: "special_token", Text: special, Start: specialStart, End: specialStart + len(special), LContext: testDoc[specialStart-20 : specialStart], RContext: testDoc[specialStart+len(special):]},
 	})
 
 	assert.ElementsMatch(t, groups, []database.ObjectGroup{

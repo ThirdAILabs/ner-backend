@@ -45,24 +45,34 @@ type Config struct {
 }
 
 func NewS3Client(cfg *Config) (*Client, error) {
-	resolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+	resolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) { // nolint:staticcheck
 		if cfg.S3EndpointURL != "" {
-			return aws.Endpoint{
+			return aws.Endpoint{ // nolint:staticcheck
 				PartitionID:       "aws",
 				URL:               cfg.S3EndpointURL,
-				SigningRegion:     cfg.S3Region,
 				HostnameImmutable: true, // Important for MinIO
 			}, nil
 		}
 		// fallback to default AWS endpoint resolution
-		return aws.Endpoint{}, &aws.EndpointNotFoundError{}
+		return aws.Endpoint{}, &aws.EndpointNotFoundError{} // nolint:staticcheck
 	})
 
-	awsCfg, err := aws_config.LoadDefaultConfig(context.TODO(),
-		aws_config.WithRegion(cfg.S3Region),
-		aws_config.WithEndpointResolverWithOptions(resolver),
-		aws_config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(cfg.S3AccessKeyID, cfg.S3SecretAccessKey, "")),
-	)
+	var awsCfg aws.Config
+	var err error
+
+	if cfg.S3AccessKeyID != "" && cfg.S3SecretAccessKey != "" {
+		awsCfg, err = aws_config.LoadDefaultConfig(context.TODO(),
+			aws_config.WithEndpointResolverWithOptions(resolver),
+			aws_config.WithRegion(cfg.S3Region),
+			aws_config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(cfg.S3AccessKeyID, cfg.S3SecretAccessKey, "")),
+		)
+	} else {
+		awsCfg, err = aws_config.LoadDefaultConfig(context.TODO(),
+			aws_config.WithEndpointResolverWithOptions(resolver),
+			aws_config.WithRegion(cfg.S3Region),
+		)
+	}
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to load AWS config: %w", err)
 	}

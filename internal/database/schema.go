@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 )
 
 const (
@@ -25,6 +26,13 @@ type Model struct {
 	Status         string `gorm:"size:20;not null"`
 	CreationTime   time.Time
 	CompletionTime sql.NullTime
+
+	Tags []ModelTag `gorm:"foreignKey:ModelId;constraint:OnDelete:CASCADE"`
+}
+
+type ModelTag struct {
+	ModelId uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Tag     string    `gorm:"primaryKey"`
 }
 
 const (
@@ -40,15 +48,32 @@ type Report struct {
 	ModelId uuid.UUID `gorm:"type:uuid"`
 	Model   *Model    `gorm:"foreignKey:ModelId"`
 
-	SourceS3Bucket string
-	SourceS3Prefix sql.NullString
+	SourceS3Bucket   string
+	SourceS3Prefix   sql.NullString
+	SourceS3Location string `gorm:"default:internal"` // Whether the files are in the internal or external S3 bucket (uploaded to minio or aws s3)
 
 	CreationTime time.Time
+
+	Tags       []ReportTag `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
+	CustomTags []CustomTag `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
 
 	Groups []Group `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
 
 	ShardDataTask  *ShardDataTask  `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
 	InferenceTasks []InferenceTask `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
+
+	Errors []ReportError `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
+}
+
+type ReportTag struct {
+	ReportId uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Tag      string    `gorm:"primaryKey"`
+}
+
+type CustomTag struct {
+	ReportId uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Tag      string    `gorm:"primaryKey"`
+	Pattern  string
 }
 
 type ShardDataTask struct {
@@ -100,4 +125,16 @@ type ObjectEntity struct {
 	Text     string
 	LContext string
 	RContext string
+}
+
+type ObjectPreview struct {
+	ReportId  uuid.UUID      `gorm:"type:uuid;primaryKey"`
+	Object    string         `gorm:"primaryKey;size:255"`
+	TokenTags datatypes.JSON `gorm:"type:jsonb;not null"` // [{"token":"…","tag":"…"},…]
+}
+
+type ReportError struct {
+	ReportId  uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Error     string
+	Timestamp time.Time
 }

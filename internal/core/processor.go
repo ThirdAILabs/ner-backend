@@ -8,14 +8,18 @@ import (
 	"log/slog"
 	"ner-backend/internal/core/types"
 	"ner-backend/internal/database"
+	"ner-backend/internal/licensing"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/s3"
 	"os"
 	"path/filepath"
+	"regexp"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -25,16 +29,18 @@ type TaskProcessor struct {
 	publisher messaging.Publisher
 	reciever  messaging.Reciever
 
+	licensing     licensing.LicenseVerifier
 	localModelDir string
 	modelBucket   string
 }
 
-func NewTaskProcessor(db *gorm.DB, s3client *s3.Client, publisher messaging.Publisher, reciever messaging.Reciever, localModelDir string, modelBucket string) *TaskProcessor {
+func NewTaskProcessor(db *gorm.DB, s3client *s3.Client, publisher messaging.Publisher, reciever messaging.Reciever, licenseVerifier licensing.LicenseVerifier, localModelDir string, modelBucket string) *TaskProcessor {
 	return &TaskProcessor{
 		db:            db,
 		s3Client:      s3client,
 		publisher:     publisher,
 		reciever:      reciever,
+		licensing:     licenseVerifier,
 		localModelDir: localModelDir,
 		modelBucket:   modelBucket,
 	}
@@ -66,7 +72,9 @@ func (proc *TaskProcessor) ProcessTask(task messaging.Task) {
 		var payload messaging.InferenceTaskPayload
 		if err = json.Unmarshal(task.Payload(), &payload); err != nil {
 			slog.Error("error unmarshalling inference task", "error", err)
-			task.Reject() // Discard malformed message
+			if err := task.Reject(); err != nil { // Discard malformed message
+				slog.Error("error rejecting message from queue", "error", err)
+			}
 			return
 		}
 		err = proc.processInferenceTask(ctx, payload)
@@ -75,7 +83,9 @@ func (proc *TaskProcessor) ProcessTask(task messaging.Task) {
 		var payload messaging.ShardDataPayload
 		if err = json.Unmarshal(task.Payload(), &payload); err != nil {
 			slog.Error("error unmarshalling shard data task", "error", err)
-			task.Reject() // Discard malformed message
+			if err := task.Reject(); err != nil { // Discard malformed message
+				slog.Error("error rejecting message from queue", "error", err)
+			}
 			return
 		}
 		err = proc.processShardDataTask(ctx, payload) // Call new handler
@@ -84,24 +94,31 @@ func (proc *TaskProcessor) ProcessTask(task messaging.Task) {
 		var payload messaging.FinetuneTaskPayload
 		if err = json.Unmarshal(task.Payload(), &payload); err != nil {
 			slog.Error("error unmarshalling finetuning task", "error", err)
-			// Reject message (non-requeueable) as it's malformed
-			task.Reject()
+			if err := task.Reject(); err != nil { // Discard malformed message
+				slog.Error("error rejecting message from queue", "error", err)
+			}
 			return
 		}
 		err = proc.processFinetuneTask(ctx, payload)
 
 	default:
 		slog.Error("received unknown task type", "queue", task.Type())
-		task.Reject() // reject unknown message type
+		if err := task.Reject(); err != nil { // reject unknown message type
+			slog.Error("error rejecting message from queue", "error", err)
+		}
 		return
 	}
 
 	if err != nil {
 		slog.Error("error processing task", "queue", task.Type(), "error", err)
-		task.Nack()
+		if err := task.Nack(); err != nil {
+			slog.Error("error reporting processing failure on message from queue", "error", err)
+		}
 	} else {
 		slog.Info("successfully processed task", "queue", task.Type())
-		task.Ack()
+		if err := task.Ack(); err != nil {
+			slog.Error("error acknowledging message from queue", "error", err)
+		}
 	}
 }
 
@@ -109,26 +126,42 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 	reportId := payload.ReportId
 
 	slog.Info("processing inference task", "report_id", reportId, "task_id", payload.TaskId)
+	database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobRunning) //nolint:errcheck
+
+	if err := proc.licensing.VerifyLicense(ctx); err != nil {
+		slog.Error("license verification failed", "error", err)
+		database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobFailed) //nolint:errcheck
+		database.SaveReportError(ctx, proc.db, reportId, fmt.Sprintf("license verification failed: %s", err.Error()))
+		return err
+	}
 
 	var task database.InferenceTask
-	if err := proc.db.Preload("Report").Preload("Report.Model").Preload("Report.Groups").First(&task, "report_id = ? AND task_id = ?", reportId, payload.TaskId).Error; err != nil {
+	if err := proc.db.Preload("Report").Preload("Report.Model").Preload("Report.Tags").Preload("Report.CustomTags").Preload("Report.Groups").First(&task, "report_id = ? AND task_id = ?", reportId, payload.TaskId).Error; err != nil {
 		slog.Error("error fetching inference task", "report_id", reportId, "task_id", payload.TaskId, "error", err)
 		return fmt.Errorf("error getting inference task: %w", err)
 	}
 
-	database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobRunning)
-
 	s3Objects := strings.Split(task.SourceS3Keys, ";")
+
+	tags := make(map[string]struct{})
+	for _, tag := range task.Report.Tags {
+		tags[tag.Tag] = struct{}{}
+	}
+
+	customTags := make(map[string]string)
+	for _, tag := range task.Report.CustomTags {
+		customTags[tag.Tag] = tag.Pattern
+	}
 
 	groupToQuery := map[uuid.UUID]string{}
 	for _, group := range task.Report.Groups {
 		groupToQuery[group.Id] = group.Query
 	}
 
-	workerErr := proc.runInferenceOnBucket(task.ReportId, task.Report.Model.Id, task.Report.Model.Type, groupToQuery, task.SourceS3Bucket, s3Objects)
+	workerErr := proc.runInferenceOnBucket(task.ReportId, task.Report.Model.Id, task.Report.Model.Type, tags, customTags, groupToQuery, task.SourceS3Bucket, s3Objects)
 	if workerErr != nil {
 		slog.Error("error running inference task", "report_id", reportId, "task_id", payload.TaskId, "error", workerErr)
-		database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobFailed)
+		database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobFailed) // nolint:errcheck
 		return fmt.Errorf("error running inference task: %w", workerErr)
 	}
 
@@ -145,6 +178,8 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 	reportId uuid.UUID,
 	modelId uuid.UUID,
 	modelType string,
+	tags map[string]struct{},
+	customTags map[string]string,
 	groupToQuery map[uuid.UUID]string,
 	bucket string,
 	objects []string,
@@ -166,10 +201,19 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 		groupToFilter[groupId] = filter
 	}
 
+	customTagsRe := make(map[string]*regexp.Regexp)
+	for tag, pat := range customTags {
+		re, err := regexp.Compile(pat)
+		if err != nil {
+			return fmt.Errorf("error compiling regex for tag %s: %w", tag, err)
+		}
+		customTagsRe[tag] = re
+	}
+
 	objectErrorCnt := 0
 
 	for _, object := range objects {
-		entities, groups, err := proc.runInferenceOnObject(reportId, parser, model, groupToFilter, bucket, object)
+		entities, groups, err := proc.runInferenceOnObject(reportId, parser, model, tags, customTagsRe, groupToFilter, bucket, object)
 		if err != nil {
 			slog.Error("error processing object", "object", object, "error", err)
 			objectErrorCnt++
@@ -229,18 +273,81 @@ func (proc *TaskProcessor) loadModel(modelId uuid.UUID, modelType string) (Model
 	return model, nil
 }
 
+func (proc *TaskProcessor) createObjectPreview(
+	reportId uuid.UUID,
+	object string,
+	previewText string,
+	model Model,
+) error {
+	if proc.db == nil {
+		return nil
+	}
+
+	spans, err := model.Predict(previewText)
+	if err != nil {
+		return fmt.Errorf("preview inference error: %w", err)
+	}
+
+	sort.Slice(spans, func(i, j int) bool {
+		return spans[i].Start < spans[j].Start
+	})
+
+	var (
+		tokens []string
+		tags   []string
+		cursor = 0
+		length = len(previewText)
+	)
+	for _, e := range spans {
+		if e.Start > cursor {
+			tokens = append(tokens, previewText[cursor:e.Start])
+			tags = append(tags, "O")
+		}
+		end := min(e.End, length)
+		tokens = append(tokens, previewText[e.Start:end])
+		tags = append(tags, e.Label)
+		cursor = end
+	}
+	if cursor < length {
+		tokens = append(tokens, previewText[cursor:])
+		tags = append(tags, "O")
+	}
+
+	payload := struct {
+		Tokens []string `json:"tokens"`
+		Tags   []string `json:"tags"`
+	}{
+		Tokens: tokens,
+		Tags:   tags,
+	}
+	b, _ := json.Marshal(payload)
+
+	return proc.db.Create(&database.ObjectPreview{
+		ReportId:  reportId,
+		Object:    object,
+		TokenTags: datatypes.JSON(b),
+	}).Error
+}
+
 func (proc *TaskProcessor) runInferenceOnObject(
 	reportId uuid.UUID,
 	parser Parser,
 	model Model,
+	tags map[string]struct{},
+	customTags map[string]*regexp.Regexp,
 	groupFilter map[uuid.UUID]Filter,
 	bucket string,
-	object string) (
+	object string,
+) (
 	[]database.ObjectEntity, []database.ObjectGroup, error) {
 
 	chunks := parser.Parse(object, proc.s3Client.DownloadFileStream(bucket, object))
 
 	labelToEntities := make(map[string][]types.Entity)
+
+	const previewLimit = 1000
+
+	previewTokens := make([]string, 0, previewLimit)
 
 	for chunk := range chunks {
 		if chunk.Error != nil {
@@ -253,10 +360,42 @@ func (proc *TaskProcessor) runInferenceOnObject(
 		}
 
 		for _, entity := range chunkEntities {
-			entity.Start += chunk.Offset
-			entity.End += chunk.Offset
-			labelToEntities[entity.Label] = append(labelToEntities[entity.Label], entity)
+			if _, ok := tags[entity.Label]; ok {
+				entity.Start += chunk.Offset
+				entity.End += chunk.Offset
+				labelToEntities[entity.Label] = append(labelToEntities[entity.Label], entity)
+			}
 		}
+
+		for tag, re := range customTags {
+			matches := re.FindAllStringIndex(chunk.Text, -1)
+			for _, match := range matches {
+				start, end := match[0], match[1]
+				labelToEntities[tag] = append(labelToEntities[tag], types.Entity{
+					Label:    tag,
+					Text:     chunk.Text[start:end],
+					Start:    start + chunk.Offset,
+					End:      end + chunk.Offset,
+					LContext: chunk.Text[max(0, start-20):start],
+					RContext: chunk.Text[end:min(len(chunk.Text), end+20)],
+				})
+			}
+		}
+
+		if len(previewTokens) < previewLimit {
+			toks := strings.Fields(chunk.Text)
+			need := previewLimit - len(previewTokens)
+			if len(toks) >= need {
+				previewTokens = append(previewTokens, toks[:need]...)
+			} else {
+				previewTokens = append(previewTokens, toks...)
+			}
+		}
+	}
+
+	previewText := strings.Join(previewTokens, " ")
+	if err := proc.createObjectPreview(reportId, object, previewText, model); err != nil {
+		slog.Error("saving ObjectPreview failed", "object", object, "err", err)
 	}
 
 	groups := make([]database.ObjectGroup, 0)
@@ -291,6 +430,15 @@ func (proc *TaskProcessor) runInferenceOnObject(
 
 func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload messaging.ShardDataPayload) error {
 	reportId := payload.ReportId
+
+	database.UpdateShardDataTaskStatus(ctx, proc.db, reportId, database.JobRunning) //nolint:errcheck
+
+	if err := proc.licensing.VerifyLicense(ctx); err != nil {
+		slog.Error("license verification failed", "error", err)
+		database.UpdateShardDataTaskStatus(ctx, proc.db, reportId, database.JobFailed) //nolint:errcheck
+		database.SaveReportError(ctx, proc.db, reportId, fmt.Sprintf("license verification failed: %s", err.Error()))
+		return err
+	}
 
 	var task database.ShardDataTask
 	if err := proc.db.Preload("Report").First(&task, "report_id = ?", reportId).Error; err != nil {
@@ -354,7 +502,7 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 
 	if err != nil {
 		slog.Error("Failed during S3 processing/chunk publishing", "report_id", reportId, "error", err)
-		database.UpdateShardDataTaskStatus(ctx, proc.db, reportId, database.JobFailed)
+		database.UpdateShardDataTaskStatus(ctx, proc.db, reportId, database.JobFailed) //nolint:errcheck
 		return fmt.Errorf("failed during task generation for job %s: %w", reportId, err)
 	}
 
@@ -385,44 +533,44 @@ func (proc *TaskProcessor) getModel(ctx context.Context, modelId uuid.UUID) (dat
 }
 
 func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload messaging.FinetuneTaskPayload) error {
-	database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelTraining)
+	database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelTraining) //nolint:errcheck
 
 	baseModel, err := proc.getModel(ctx, payload.BaseModelId)
 	if err != nil {
-		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed)
+		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint:errcheck
 		slog.Error("error getting base model", "base_model_id", payload.BaseModelId, "model_id", payload.ModelId, "error", err)
 		return err
 	}
 
 	model, err := proc.loadModel(payload.BaseModelId, baseModel.Type)
 	if err != nil {
-		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed)
+		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint:errcheck
 		slog.Error("error loading base model", "base_model_id", payload.BaseModelId, "model_id", payload.ModelId, "error", err)
 		return fmt.Errorf("error loading base model: %w", err)
 	}
 	defer model.Release()
 
 	if err := model.Finetune(payload.TaskPrompt, payload.Tags, payload.Samples); err != nil {
-		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed)
+		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint:errcheck
 		slog.Error("error finetuning model", "base_model_id", payload.BaseModelId, "model_id", payload.ModelId, "error", err)
 		return fmt.Errorf("error finetuning model: %w", err)
 	}
 
 	localPath := proc.localModelPath(payload.ModelId)
 	if err := os.MkdirAll(filepath.Dir(localPath), 0755); err != nil {
-		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed)
+		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint:errcheck
 		slog.Error("error creating local model directory", "model_id", payload.ModelId, "error", err)
 		return fmt.Errorf("error creating local model directory: %w", err)
 	}
 
 	if err := model.Save(localPath); err != nil {
-		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed)
+		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint:errcheck
 		slog.Error("error saving finetuned model locally", "model_id", payload.ModelId, "error", err)
 		return fmt.Errorf("error saving finetuned model: %w", err)
 	}
 
 	if _, err := proc.s3Client.UploadFile(ctx, localPath, proc.modelBucket, filepath.Join(payload.ModelId.String(), "model.bin")); err != nil {
-		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed)
+		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint:errcheck
 		slog.Error("error uploading finetuned model to S3", "model_id", payload.ModelId, "error", err)
 		return fmt.Errorf("error uploading model to S3: %w", err)
 	}

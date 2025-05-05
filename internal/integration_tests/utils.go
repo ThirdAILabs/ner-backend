@@ -128,6 +128,7 @@ func createModel(t *testing.T, s3Client *s3.Client, db *gorm.DB, modelBucket str
 		Type:         "regex",
 		Status:       database.ModelTrained,
 		CreationTime: time.Now().UTC(),
+		Tags:         []database.ModelTag{{ModelId: modelId, Tag: "phone"}, {ModelId: modelId, Tag: "email"}},
 	}
 
 	require.NoError(t, db.Create(&model).Error)
@@ -241,5 +242,11 @@ func httpRequest(api http.Handler, method, endpoint string, payload any, dest an
 		}
 	}
 
+	return nil
+}
+
+type DummyLicenseVerifier struct{}
+
+func (d *DummyLicenseVerifier) VerifyLicense(context.Context) error {
 	return nil
 }
