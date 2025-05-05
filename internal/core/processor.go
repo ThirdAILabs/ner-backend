@@ -198,6 +198,12 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 	return nil
 }
 
+type objectChunkStream struct {
+	object string
+	chunks <-chan ParsedChunk
+	err    error
+}
+
 func (proc *TaskProcessor) runInferenceOnBucket(
 	ctx context.Context,
 	reportId uuid.UUID,
@@ -236,10 +242,32 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 		customTagsRe[tag] = re
 	}
 
+	queue := make(chan objectChunkStream, 1)
+
+	go func() {
+		defer close(queue)
+		for _, object := range objects {
+			objectStream, err := storage.GetObjectStream(bucket, object)
+			if err != nil {
+				queue <- objectChunkStream{object: object, chunks: nil, err: err}
+				continue
+			}
+
+			chunks := parser.Parse(object, objectStream)
+			queue <- objectChunkStream{object: object, chunks: chunks, err: nil}
+		}
+	}()
+
 	objectErrorCnt := 0
 
-	for _, object := range objects {
-		entities, groups, err := proc.runInferenceOnObject(reportId, storage, parser, model, tags, customTagsRe, groupToFilter, bucket, object)
+	for object := range queue {
+		if object.err != nil {
+			slog.Error("error getting object stream", "bucket", bucket, "object", object, "error", err)
+			objectErrorCnt++
+			continue
+		}
+
+		entities, groups, err := proc.runInferenceOnObject(reportId, object.chunks, parser, model, tags, customTagsRe, groupToFilter, object.object)
 		if err != nil {
 			slog.Error("error processing object", "object", object, "error", err)
 			objectErrorCnt++
@@ -353,25 +381,22 @@ func (proc *TaskProcessor) createObjectPreview(
 	}).Error
 }
 
+type ChunkEntities struct {
+	entities []database.ObjectEntity
+	groups   []database.ObjectGroup
+	err      error
+}
+
 func (proc *TaskProcessor) runInferenceOnObject(
 	reportId uuid.UUID,
-	storage storage.Provider,
+	chunks <-chan ParsedChunk,
 	parser Parser,
 	model Model,
 	tags map[string]struct{},
 	customTags map[string]*regexp.Regexp,
 	groupFilter map[uuid.UUID]Filter,
-	bucket string,
 	object string) (
 	[]database.ObjectEntity, []database.ObjectGroup, error) {
-
-	objectStream, err := storage.GetObjectStream(bucket, object)
-	if err != nil {
-		return nil, nil, fmt.Errorf("error getting object stream: %w", err)
-	}
-
-	chunks := parser.Parse(object, objectStream)
-
 	labelToEntities := make(map[string][]types.Entity)
 
 	const previewLimit = 1000
