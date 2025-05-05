@@ -44,11 +44,16 @@ func NewS3Provider(cfg S3ProviderConfig) (*S3Provider, error) {
 		return aws.Endpoint{}, &aws.EndpointNotFoundError{} // nolint:staticcheck
 	})
 
-	awsCfg, err := aws_config.LoadDefaultConfig(context.TODO(),
+	opts := []func(*aws_config.LoadOptions) error{
 		aws_config.WithRegion(cfg.S3Region),
 		aws_config.WithEndpointResolverWithOptions(resolver), // nolint:staticcheck
-		aws_config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(cfg.S3AccessKeyID, cfg.S3SecretAccessKey, "")),
-	)
+	}
+
+	if cfg.S3AccessKeyID != "" && cfg.S3SecretAccessKey != "" {
+		opts = append(opts, aws_config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(cfg.S3AccessKeyID, cfg.S3SecretAccessKey, "")))
+	}
+
+	awsCfg, err := aws_config.LoadDefaultConfig(context.Background(), opts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load AWS config: %w", err)
 	}

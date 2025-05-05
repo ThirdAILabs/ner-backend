@@ -64,6 +64,8 @@ type CreateReportRequest struct {
 	ModelId uuid.UUID
 
 	UploadId       uuid.UUID
+	S3Endpoint     string
+	S3Region       string
 	SourceS3Bucket string
 	SourceS3Prefix string
 

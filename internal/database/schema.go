@@ -48,6 +48,8 @@ type Report struct {
 	ModelId uuid.UUID `gorm:"type:uuid"`
 	Model   *Model    `gorm:"foreignKey:ModelId"`
 
+	S3Endpoint     sql.NullString
+	S3Region       sql.NullString
 	SourceS3Bucket string
 	SourceS3Prefix sql.NullString
 
@@ -95,9 +97,8 @@ type InferenceTask struct {
 	CreationTime   time.Time
 	CompletionTime sql.NullTime
 
-	SourceS3Bucket string
-	SourceS3Keys   string
-	TotalSize      int64
+	SourceS3Keys string
+	TotalSize    int64
 }
 
 type Group struct {

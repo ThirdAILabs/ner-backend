@@ -70,9 +70,7 @@ func TestInference(t *testing.T) {
 
 	reportId := uuid.New()
 
-	inferenceJobProcessor := TaskProcessor{
-		storage: &mockStorage{},
-	}
+	inferenceJobProcessor := TaskProcessor{}
 
 	groupId1, groupId2 := uuid.New(), uuid.New()
 	group1, err := ParseQuery(`COUNT(phone) > 0 AND email CONTAINS "test"`)
@@ -85,6 +83,7 @@ func TestInference(t *testing.T) {
 
 	allEntities, groups, err := inferenceJobProcessor.runInferenceOnObject(
 		reportId,
+		&mockStorage{},
 		NewDefaultParser(),
 		model,
 		map[string]struct{}{"phone": {}, "email": {}},

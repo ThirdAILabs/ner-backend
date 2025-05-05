@@ -159,7 +159,7 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 		groupToQuery[group.Id] = group.Query
 	}
 
-	workerErr := proc.runInferenceOnBucket(ctx, task.ReportId, task.Report.Model.Id, task.Report.Model.Type, tags, customTags, groupToQuery, task.SourceS3Bucket, s3Objects)
+	workerErr := proc.runInferenceOnBucket(ctx, task.ReportId, task.Report.Model.Id, task.Report.Model.Type, tags, customTags, groupToQuery, task.Report.S3Endpoint.String, task.Report.S3Region.String, task.Report.SourceS3Bucket, s3Objects)
 	if workerErr != nil {
 		slog.Error("error running inference task", "report_id", reportId, "task_id", payload.TaskId, "error", workerErr)
 		database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobFailed) // nolint:errcheck
@@ -183,7 +183,7 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 	tags map[string]struct{},
 	customTags map[string]string,
 	groupToQuery map[uuid.UUID]string,
-	bucket string,
+	s3Endpoint, s3Region, bucket string,
 	objects []string,
 ) error {
 	parser := NewDefaultParser()
@@ -214,8 +214,16 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 
 	objectErrorCnt := 0
 
+	storage, err := storage.NewS3Provider(storage.S3ProviderConfig{
+		S3EndpointURL: s3Endpoint,
+		S3Region:      s3Region,
+	})
+	if err != nil {
+		slog.Error("error connecting to S3", "s3_endpoint", s3Endpoint, "region", s3Region, "error", err)
+	}
+
 	for _, object := range objects {
-		entities, groups, err := proc.runInferenceOnObject(reportId, parser, model, tags, customTagsRe, groupToFilter, bucket, object)
+		entities, groups, err := proc.runInferenceOnObject(reportId, storage, parser, model, tags, customTagsRe, groupToFilter, bucket, object)
 		if err != nil {
 			slog.Error("error processing object", "object", object, "error", err)
 			objectErrorCnt++
@@ -333,6 +341,7 @@ func (proc *TaskProcessor) createObjectPreview(
 
 func (proc *TaskProcessor) runInferenceOnObject(
 	reportId uuid.UUID,
+	storage storage.Provider,
 	parser Parser,
 	model Model,
 	tags map[string]struct{},
@@ -342,7 +351,7 @@ func (proc *TaskProcessor) runInferenceOnObject(
 	object string) (
 	[]database.ObjectEntity, []database.ObjectGroup, error) {
 
-	objectStream, err := proc.storage.GetObjectStream(bucket, object)
+	objectStream, err := storage.GetObjectStream(bucket, object)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error getting object stream: %w", err)
 	}
@@ -466,10 +475,8 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 			TaskId:       taskId,
 			Status:       database.JobQueued,
 			CreationTime: time.Now().UTC(),
-
-			SourceS3Bucket: task.Report.SourceS3Bucket,
-			SourceS3Keys:   strings.Join(chunkKeys, ";"),
-			TotalSize:      chunkSize,
+			SourceS3Keys: strings.Join(chunkKeys, ";"),
+			TotalSize:    chunkSize,
 		}
 
 		inferencePayload := messaging.InferenceTaskPayload{
@@ -491,11 +498,18 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 		return nil
 	}
 
+	storage, err := storage.NewS3Provider(storage.S3ProviderConfig{
+		S3EndpointURL: task.Report.S3Endpoint.String,
+		S3Region:      task.Report.S3Region.String,
+	})
+	if err != nil {
+		slog.Error("error connecting to S3", "s3_endpoint", task.Report.S3Endpoint.String, "region", task.Report.S3Region.String, "error", err)
+	}
 	var currentChunkKeys []string
 	var currentChunkSize int64 = 0
 	var taskId int = 0
 
-	for obj, err := range proc.storage.IterObjects(ctx, task.Report.SourceS3Bucket, task.Report.SourceS3Prefix.String) {
+	for obj, err := range storage.IterObjects(ctx, task.Report.SourceS3Bucket, task.Report.SourceS3Prefix.String) {
 		if err != nil {
 			slog.Error("error iterating over S3 objects", "bucket", task.Report.SourceS3Bucket, "prefix", task.Report.SourceS3Prefix.String, "error", err)
 			database.UpdateShardDataTaskStatus(ctx, proc.db, reportId, database.JobFailed) //nolint:errcheck

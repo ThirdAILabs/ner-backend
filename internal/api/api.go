@@ -215,6 +215,8 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 	report := database.Report{
 		Id:             uuid.New(),
 		ModelId:        req.ModelId,
+		S3Endpoint:     sql.NullString{String: req.S3Endpoint, Valid: req.S3Endpoint != ""},
+		S3Region:       sql.NullString{String: req.S3Region, Valid: req.S3Region != ""},
 		SourceS3Bucket: sourceS3Bucket,
 		SourceS3Prefix: sql.NullString{String: s3Prefix, Valid: s3Prefix != ""},
 		CreationTime:   time.Now().UTC(),
