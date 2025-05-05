@@ -30,7 +30,7 @@ type APIConfig struct {
 	S3AccessKeyID     string `env:"AWS_ACCESS_KEY_ID,notEmpty,required"`
 	S3SecretAccessKey string `env:"AWS_SECRET_ACCESS_KEY,notEmpty,required"`
 	S3Region          string `env:"AWS_REGION,notEmpty,required"`
-	ModelBucketName   string `env:"MODEL_BUCKET_NAME" envDefault:"models"`
+	ModelBucketName   string `env:"MODEL_BUCKET_NAME" envDefault:"ner-models"`
 	QueueNames        string `env:"QUEUE_NAMES" envDefault:"inference_queue,training_queue,shard_data_queue"`
 	WorkerConcurrency int    `env:"CONCURRENCY" envDefault:"1"`
 	APIPort           string `env:"API_PORT" envDefault:"8001"`
@@ -58,6 +58,51 @@ func initializePresidioModel(db *gorm.DB) {
 	if err := db.Where(database.Model{Name: "presidio"}).Attrs(database.Model{
 		Id:           modelId,
 		Type:         "presidio",
+		Status:       database.ModelTrained,
+		CreationTime: time.Now(),
+		Tags:         tags,
+	}).FirstOrCreate(&model).Error; err != nil {
+		log.Fatalf("Failed to create model record: %v", err)
+	}
+}
+
+func initializeEnsembleModel(db *gorm.DB) {
+	ensemble_tags := []string{
+		"ADDRESS",
+		"CARD_NUMBER",
+		"COMPANY",
+		"CREDIT_SCORE",
+		"DATE",
+		"EMAIL",
+		"ETHNICITY",
+		"GENDER",
+		"ID_NUMBER",
+		"LICENSE_PLATE",
+		"LOCATION",
+		"NAME",
+		"PHONENUMBER",
+		"SERVICE_CODE",
+		"SEXUAL_ORIENTATION",
+		"SSN",
+		"URL",
+		"VIN",
+		"O"}
+
+	modelId := uuid.New()
+
+	var tags []database.ModelTag
+	for _, tag := range ensemble_tags {
+		tags = append(tags, database.ModelTag{
+			ModelId: modelId,
+			Tag:     tag,
+		})
+	}
+
+	var model database.Model
+
+	if err := db.Where(database.Model{Name: "ensemble"}).Attrs(database.Model{
+		Id:           modelId,
+		Type:         "ensemble",
 		Status:       database.ModelTrained,
 		CreationTime: time.Now(),
 		Tags:         tags,
@@ -94,6 +139,7 @@ func main() {
 	}
 
 	initializePresidioModel(db)
+	initializeEnsembleModel(db)
 
 	// Initialize RabbitMQ Publisher
 	publisher, err := messaging.NewRabbitMQPublisher(cfg.RabbitMQURL)

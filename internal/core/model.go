@@ -3,6 +3,7 @@ package core
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"ner-backend/internal/core/bolt"
 	"ner-backend/internal/core/python"
@@ -49,11 +50,11 @@ var modelLoaders = map[string]modelLoader{
 		return NewPresidioModel()
 	},
 
-	"python_ensemble_ner_model": func(path string) (Model, error) {
-		configJSON := fmt.Sprintf("{\"load_config\":{\"cnn\":{\"model_path\":\"%s/models/ensemble/best_cnn.pth\",\"tokenizer_name\":\"Qwen/Qwen2.5-0.5B\",\"embedding_path\":\"%s/models/ensemble/cnnwrapped_model.pt\"},\"embedding_bag\":{\"checkpoint_path\":\"%s/models/ensemble/bolttorch.pth\"},\"udt\":{\"model_path\":\"%s/models/ensemble/udt_complete.model\"}}}", path, path, path, path)
+	"ensemble": func(path string) (Model, error) {
+		configJSON := fmt.Sprintf("{\"load_config\":{\"cnn\":{\"model_path\":\"%s/best_cnn_sentence_tokenization.pth\"},\"embedding_bag\":{\"checkpoint_path\":\"%s/bolt_torch_without_crf.pth\"},\"udt\":{\"model_path\":\"%s/udt_complete.model\"}}}", path, path, path)
 		return python.LoadPythonModel(
-			os.Getenv("PYTHON_EXECUTABLE_PATH"),
-			os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH"),
+			"python",
+			"plugin/plugin-python/plugin.py",
 			"python_ensemble_ner_model",
 			configJSON,
 		)
@@ -69,6 +70,8 @@ func LoadModel(modelType, path string) (Model, error) {
 	if !ok {
 		return nil, fmt.Errorf("unknown model type %s", modelType)
 	}
+
+	path = strings.TrimSuffix(path, "/")
 
 	return loader(path)
 }

@@ -17,9 +17,8 @@ class EnsembleModel(Model):
                 self.models.append(
                     CNNModel(
                         model_path=arguments["model_path"],
-                        tokenizer_name=arguments["tokenizer_name"],
+                        tokenizer_name="Qwen/Qwen2.5-0.5B",
                         tag2idx=build_tag_vocab(),
-                        embedding_path=arguments["embedding_path"],
                     )
                 )
             elif model_name == "embedding_bag":

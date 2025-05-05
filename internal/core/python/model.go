@@ -26,7 +26,7 @@ func LoadPythonModel(PythonExecutable, PluginScript, PluginModelName, KwargsJSON
 			PythonExecutable,
 			PluginScript,
 			"--model-name", PluginModelName,
-			"--kwargs", KwargsJSON,
+			"--model-config", KwargsJSON,
 		),
 		AllowedProtocols: []plugin.Protocol{
 			plugin.ProtocolNetRPC, plugin.ProtocolGRPC},

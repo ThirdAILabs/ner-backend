@@ -74,13 +74,13 @@ if __name__ == "__main__":
         "--model-name", type=str, required=True, help="Name of the model to serve."
     )
     parser.add_argument(
-        "--kwargs",
+        "--model-config",
         type=str,
         default="{}",
         help="Additional keyword arguments for the model in JSON format.",
     )
     args = parser.parse_args()
 
-    kwargs = json.loads(args.kwargs)
+    model_config = json.loads(args.model_config)
 
-    serve(model_name=args.model_name, **kwargs)
+    serve(model_name=args.model_name, **model_config)

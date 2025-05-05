@@ -2,6 +2,11 @@ import torch
 import torch.nn as nn
 
 from thirdai import data, dataset
+import thirdai
+
+
+# TODO(pratik): remove this dependency on license
+thirdai.licensing.activate("EUKX-7FXA-4WAX-XMYT-VWWY-MJPR-XTC3-7F9V")
 
 HASH_DIMENSION = 50000
 

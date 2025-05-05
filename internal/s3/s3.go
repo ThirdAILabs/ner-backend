@@ -26,6 +26,8 @@ type S3Api interface {
 	manager.UploadAPIClient
 	manager.ListObjectsV2APIClient
 
+	HeadObject(ctx context.Context, params *s3.HeadObjectInput, optFns ...func(*s3.Options)) (*s3.HeadObjectOutput, error)
+
 	CreateBucket(ctx context.Context, params *s3.CreateBucketInput, optFns ...func(*s3.Options)) (*s3.CreateBucketOutput, error)
 }
 
@@ -109,31 +111,78 @@ func (c *Client) UploadObject(ctx context.Context, bucket, key string, data io.R
 	return s3Path, nil
 }
 
-func (c *Client) DownloadFile(ctx context.Context, bucket, key, localPath string) error {
-	// Ensure directory exists
-	dir := filepath.Dir(localPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("failed to create directory %s: %w", dir, err)
-	}
-
-	file, err := os.Create(localPath)
-	if err != nil {
-		return fmt.Errorf("failed to create file %s: %w", localPath, err)
-	}
-	defer file.Close()
-
-	log.Printf("Downloading s3://%s/%s to %s", bucket, key, localPath)
-	_, err = c.downloader.Download(ctx, file, &s3.GetObjectInput{
+func (c *Client) DownloadFileOrFolder(ctx context.Context, bucket, key, localPath string) error {
+	_, err := c.s3Client.HeadObject(ctx, &s3.HeadObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
 	})
-	if err != nil {
-		// Clean up empty file on failure
-		file.Close()
-		os.Remove(localPath)
-		return fmt.Errorf("failed to download file s3://%s/%s: %w", bucket, key, err)
+	if err == nil {
+		if err := os.MkdirAll(filepath.Dir(localPath), 0o755); err != nil {
+			return fmt.Errorf("making directory %s: %w", filepath.Dir(localPath), err)
+		}
+		f, err := os.Create(localPath)
+		if err != nil {
+			return fmt.Errorf("create %s: %w", localPath, err)
+		}
+		defer f.Close()
+
+		log.Printf("downloading file s3://%s/%s → %s", bucket, key, localPath)
+		if _, err := c.downloader.Download(ctx, f, &s3.GetObjectInput{
+			Bucket: aws.String(bucket),
+			Key:    aws.String(key),
+		}); err != nil {
+			f.Close()
+			os.Remove(localPath)
+			return fmt.Errorf("download file s3://%s/%s: %w", bucket, key, err)
+		}
+		log.Printf("downloaded file to %s", localPath)
+		return nil
 	}
-	log.Printf("Successfully downloaded to %s", localPath)
+
+	prefix := key
+	prefix = strings.TrimPrefix(prefix, "/")
+
+	paginator := s3.NewListObjectsV2Paginator(c.s3Client, &s3.ListObjectsV2Input{
+		Bucket: aws.String(bucket),
+		Prefix: aws.String(prefix),
+	})
+
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(ctx)
+		if err != nil {
+			log.Printf("failed to list objects in s3://%s/%s: %v", bucket, prefix, err)
+			return fmt.Errorf("list objects %s/: %w", prefix, err)
+		}
+
+		for _, obj := range page.Contents {
+			relKey := strings.TrimPrefix(*obj.Key, prefix)
+			if relKey == "" {
+				continue
+			}
+			destPath := filepath.Join(localPath, relKey)
+			if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
+				return fmt.Errorf("making directory %s: %w", filepath.Dir(destPath), err)
+			}
+
+			f, err := os.Create(destPath)
+			if err != nil {
+				return fmt.Errorf("create %s: %w", destPath, err)
+			}
+			defer f.Close()
+
+			log.Printf("downloading s3://%s/%s → %s", bucket, *obj.Key, destPath)
+			if _, err := c.downloader.Download(ctx, f, &s3.GetObjectInput{
+				Bucket: aws.String(bucket),
+				Key:    obj.Key,
+			}); err != nil {
+				f.Close()
+				os.Remove(destPath)
+				return fmt.Errorf("download s3://%s/%s: %w", bucket, *obj.Key, err)
+			}
+		}
+	}
+
+	log.Printf("downloaded folder s3://%s/%s → %s", bucket, prefix, localPath)
 	return nil
 }
 
@@ -220,7 +269,7 @@ func (c *Client) UploadModelArtifact(ctx context.Context, localPath string, mode
 func (c *Client) DownloadModelArtifact(ctx context.Context, modelId uuid.UUID, downloadDir, filename string) (string, error) {
 	key := fmt.Sprintf("%s/%s", modelId.String(), filename)
 	localPath := filepath.Join(downloadDir, filename)
-	err := c.DownloadFile(ctx, c.bucketName, key, localPath)
+	err := c.DownloadFileOrFolder(ctx, c.bucketName, key, localPath)
 	if err != nil {
 		return "", err // Error includes details already
 	}
@@ -245,7 +294,7 @@ func (c *Client) DownloadTrainingData(ctx context.Context, sourceS3Path, downloa
 	var downloadedFiles []string
 	for _, key := range keys {
 		localFilename := filepath.Join(downloadDir, filepath.Base(key))
-		err := c.DownloadFile(ctx, bucket, key, localFilename)
+		err := c.DownloadFileOrFolder(ctx, bucket, key, localFilename)
 		if err != nil {
 			log.Printf("Failed to download training file %s: %v", key, err)
 		} else {

@@ -10,20 +10,13 @@ class CNNModel:
         model_path: str,
         tokenizer_name: str,
         tag2idx: dict,
-        embedding_path: str = None,
     ):
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
         self.tag2idx = tag2idx
 
-        if embedding_path:
-            pretrained_emb = nn.Embedding.from_pretrained(torch.load(embedding_path))
-        else:
-            pretrained_emb = None
-
         self.model = CNNNERModelSentenceTokenized(
             tokenizer=self.tokenizer,
             tag2idx=self.tag2idx,
-            pretrained_embedding=pretrained_emb,
         )
 
         state_dict = torch.load(model_path, map_location=torch.device("cpu"))

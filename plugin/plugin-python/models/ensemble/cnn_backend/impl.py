@@ -56,10 +56,9 @@ class CNNNERModelSentenceTokenized(nn.Module):
             self.embedding = pretrained_embedding
             self.embed_dim = self.embedding.weight.shape[1]
         else:
-            self.embedding = nn.Embedding(
-                tokenizer.vocab_size, 100, padding_idx=tokenizer.pad_token_id
-            )
-            self.embed_dim = 100
+            # hardcoding the embedding dimensions
+            self.embedding = nn.Embedding(151936, 896)
+            self.embed_dim = 896
 
         if freeze_embedding:
             self.embedding.weight.requires_grad = False
@@ -74,7 +73,6 @@ class CNNNERModelSentenceTokenized(nn.Module):
         self.dropout_rate = dropout
         self.num_blocks = num_blocks
 
-        # Build two separate lists for standard and dilated convolution blocks.
         self.branch1_convs = nn.ModuleList()
         self.branch2_convs = nn.ModuleList()
         self.batch_norms_1 = nn.ModuleList()
@@ -104,16 +102,13 @@ class CNNNERModelSentenceTokenized(nn.Module):
                 self.batch_norms_1.append(nn.BatchNorm1d(conv_channels))
                 self.batch_norms_2.append(nn.BatchNorm1d(conv_channels))
 
-        # Linear layer for projecting to the tag space.
         num_tags = len(tag2idx)
         self.hidden2tag = nn.Linear(conv_channels, num_tags)
         nn.init.xavier_uniform_(self.hidden2tag.weight)
         nn.init.zeros_(self.hidden2tag.bias)
 
-        # CRF layer for sequence tagging.
         self.crf = CRF(num_tags, batch_first=True)
 
-        # Inverse mapping of tags.
         self.idx_to_tag = {idx: tag for tag, idx in tag2idx.items()}
 
     def forward(self, tokens):
@@ -129,7 +124,6 @@ class CNNNERModelSentenceTokenized(nn.Module):
             i1 = 2 * b
             i2 = 2 * b + 1
 
-            # Branch 1: standard convolution.
             y1 = self.branch1_convs[i1](out_branch1)
             y1 = self.batch_norms_1[i1](y1)
             y1 = F.leaky_relu(y1)
@@ -142,7 +136,6 @@ class CNNNERModelSentenceTokenized(nn.Module):
                 y1 = F.dropout(y1, p=self.dropout_rate)
             out_branch1 = x + y1
 
-            # Branch 2: dilated convolution.
             z1 = self.branch2_convs[i1](out_branch2)
             z1 = self.batch_norms_2[i1](z1)
             z1 = F.leaky_relu(z1)
