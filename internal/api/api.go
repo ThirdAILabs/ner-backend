@@ -198,6 +198,8 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 	)
 
 	if req.UploadId != uuid.Nil {
+		s3Endpoint = ""
+		s3Region = ""
 		sourceS3Bucket = uploadBucket
 		s3Prefix = req.UploadId.String()
 		isUpload = true
