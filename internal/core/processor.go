@@ -259,9 +259,9 @@ func (proc *TaskProcessor) loadModel(modelId uuid.UUID, modelType string) (Model
 		if _, err := os.Stat(localPath); os.IsNotExist(err) {
 			slog.Info("model not found locally, downloading from S3", "modelId", modelId)
 
-			modelObjectKey := filepath.Join(modelId.String(), "model.bin")
+			modelPrefix := modelId.String()
 
-			if err := proc.s3Client.DownloadDirectory(context.TODO(), proc.modelBucket, modelObjectKey, localPath); err != nil {
+			if err := proc.s3Client.DownloadDirectory(context.Background(), proc.modelBucket, modelPrefix, localPath); err != nil {
 				return nil, fmt.Errorf("failed to download model from S3: %w", err)
 			}
 		}
