@@ -27,9 +27,8 @@ type APIConfig struct {
 	DatabaseURL       string `env:"DATABASE_URL,notEmpty,required"`
 	RabbitMQURL       string `env:"RABBITMQ_URL,notEmpty,required"`
 	S3EndpointURL     string `env:"S3_ENDPOINT_URL,notEmpty,required"`
-	S3AccessKeyID     string `env:"AWS_ACCESS_KEY_ID,notEmpty,required"`
-	S3SecretAccessKey string `env:"AWS_SECRET_ACCESS_KEY,notEmpty,required"`
-	S3Region          string `env:"AWS_REGION,notEmpty,required"`
+	S3AccessKeyID     string `env:"INTERNAL_AWS_ACCESS_KEY_ID,notEmpty,required"`
+	S3SecretAccessKey string `env:"INTERNAL_AWS_SECRET_ACCESS_KEY,notEmpty,required"`
 	ModelBucketName   string `env:"MODEL_BUCKET_NAME" envDefault:"models"`
 	QueueNames        string `env:"QUEUE_NAMES" envDefault:"inference_queue,training_queue,shard_data_queue"`
 	WorkerConcurrency int    `env:"CONCURRENCY" envDefault:"1"`
@@ -85,7 +84,6 @@ func main() {
 		S3EndpointURL:     cfg.S3EndpointURL,
 		S3AccessKeyID:     cfg.S3AccessKeyID,
 		S3SecretAccessKey: cfg.S3SecretAccessKey,
-		S3Region:          cfg.S3Region,
 	}
 	s3Client, err := storage.NewS3Provider(s3Cfg)
 	if err != nil {
