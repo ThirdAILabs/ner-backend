@@ -25,7 +25,9 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/minio"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
+	"github.com/testcontainers/testcontainers-go/modules/rabbitmq"
 	"github.com/testcontainers/testcontainers-go/wait"
+
 	"gorm.io/gorm"
 )
 
@@ -147,24 +149,21 @@ func createDB(t *testing.T) *gorm.DB {
 	return db
 }
 
-// func setupRabbitMQContainer(t *testing.T, ctx context.Context) string {
-// 	// Start RabbitMQ container
-// 	rabbitmqContainer, err := rabbitmq.RunContainer(ctx,
-// 		testcontainers.WithImage("rabbitmq:3.11-management"),
-// 	)
-// 	require.NoError(t, err, "Failed to start RabbitMQ container")
+func setupRabbitMQContainer(t *testing.T, ctx context.Context) string {
+	rabbitmqContainer, err := rabbitmq.Run(ctx, "rabbitmq:3.11-management-alpine")
 
-// 	t.Cleanup(func() {
-// 		err := rabbitmqContainer.Terminate(context.Background())
-// 		require.NoError(t, err, "Failed to terminate RabbitMQ container")
-// 	})
+	require.NoError(t, err, "Failed to start RabbitMQ container")
 
-// 	// Get connection string for the test container
-// 	connStr, err := rabbitmqContainer.AmqpURL(ctx)
-// 	require.NoError(t, err, "Failed to get RabbitMQ AMQP URL")
+	t.Cleanup(func() {
+		err := rabbitmqContainer.Terminate(context.Background())
+		require.NoError(t, err, "Failed to terminate RabbitMQ container")
+	})
 
-// 	return connStr
-// }
+	connStr, err := rabbitmqContainer.AmqpURL(ctx)
+	require.NoError(t, err, "Failed to get RabbitMQ AMQP URL")
+
+	return connStr
+}
 
 const (
 	minioUsername = "admin"

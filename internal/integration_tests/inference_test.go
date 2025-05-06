@@ -111,13 +111,20 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 
 	db := createDB(t)
 
-	queue := messaging.NewInMemoryQueue()
+	rabbitmqUrl := setupRabbitMQContainer(t, ctx)
+	publisher, err := messaging.NewRabbitMQPublisher(rabbitmqUrl)
+	require.NoError(t, err)
+	defer publisher.Close()
 
-	backend := backend.NewBackendService(db, s3, queue, 120)
+	reciever, err := messaging.NewRabbitMQReceiver(rabbitmqUrl)
+	require.NoError(t, err)
+	defer reciever.Close()
+
+	backend := backend.NewBackendService(db, s3, publisher, 120)
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
-	worker := core.NewTaskProcessor(db, s3, queue, queue, &DummyLicenseVerifier{}, t.TempDir(), modelBucket)
+	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket)
 
 	go worker.Start()
 	defer worker.Stop()
@@ -203,13 +210,20 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 
 	db := createDB(t)
 
-	queue := messaging.NewInMemoryQueue()
+	rabbitmqUrl := setupRabbitMQContainer(t, ctx)
+	publisher, err := messaging.NewRabbitMQPublisher(rabbitmqUrl)
+	require.NoError(t, err)
+	defer publisher.Close()
 
-	backend := backend.NewBackendService(db, s3, queue, 120)
+	reciever, err := messaging.NewRabbitMQReceiver(rabbitmqUrl)
+	require.NoError(t, err)
+	defer reciever.Close()
+
+	backend := backend.NewBackendService(db, s3, publisher, 120)
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
-	worker := core.NewTaskProcessor(db, s3, queue, queue, &DummyLicenseVerifier{}, t.TempDir(), modelBucket)
+	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket)
 
 	go worker.Start()
 	defer worker.Stop()
