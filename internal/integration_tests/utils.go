@@ -9,11 +9,12 @@ import (
 	"ner-backend/internal/core"
 	"ner-backend/internal/core/types"
 	"ner-backend/internal/database"
-	"ner-backend/internal/s3"
+	"ner-backend/internal/storage"
 	"ner-backend/pkg/api"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -64,12 +65,12 @@ func (m *regexModel) Finetune(taskPrompt string, tags []api.TagInfo, samples []a
 	return nil
 }
 
-func (m *regexModel) Save(path string) error {
+func (m *regexModel) Save(modelDir string) error {
 	data := make(map[string]string)
 	for label, pattern := range m.patterns {
 		data[label] = pattern.String()
 	}
-	file, err := os.Create(path)
+	file, err := os.Create(filepath.Join(modelDir, "model.json"))
 	if err != nil {
 		return fmt.Errorf("error saving model: %w", err)
 	}
@@ -84,8 +85,8 @@ func (m *regexModel) Save(path string) error {
 
 func (m *regexModel) Release() {}
 
-func loadRegexModel(path string) (core.Model, error) {
-	file, err := os.Open(path)
+func loadRegexModel(modelDir string) (core.Model, error) {
+	file, err := os.Open(filepath.Join(modelDir, "model.json"))
 	if err != nil {
 		return nil, err
 	}
@@ -113,13 +114,13 @@ const (
 	modelBucket = "test-model-bucket"
 )
 
-func createModel(t *testing.T, s3Client *s3.Client, db *gorm.DB, modelBucket string) uuid.UUID {
+func createModel(t *testing.T, storage storage.Provider, db *gorm.DB, modelBucket string) uuid.UUID {
 	modelData := `{"phone": "\\d{3}-\\d{3}-\\d{4}", "email": "\\w+@email\\.com"}`
 
-	require.NoError(t, s3Client.CreateBucket(context.Background(), modelBucket))
+	require.NoError(t, storage.CreateBucket(context.Background(), modelBucket))
 
 	modelId := uuid.New()
-	_, err := s3Client.UploadObject(context.Background(), modelBucket, modelId.String()+"/model.bin", strings.NewReader(modelData))
+	err := storage.PutObject(context.Background(), modelBucket, modelId.String()+"/model.json", strings.NewReader(modelData))
 	require.NoError(t, err)
 
 	model := database.Model{
