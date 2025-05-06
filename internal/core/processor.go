@@ -497,16 +497,16 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 			ReportId: task.ReportId, TaskId: task.TaskId,
 		}
 
-		if err := proc.publisher.PublishInferenceTask(ctx, inferencePayload); err != nil {
-			slog.Error("Handler: Failed to publish inference task", "report_id", reportId, "task_id", taskId, "error", err)
-			database.UpdateShardDataTaskStatus(ctx, proc.db, reportId, database.JobFailed) //nolint:errcheck
-			return fmt.Errorf("failed to publish inference task %d: %w", taskId, err)
-		}
-
 		if err := proc.db.WithContext(ctx).Create(&task).Error; err != nil {
 			slog.Error("error saving inference task to db", "report_id", task.ReportId, "task_id", task.TaskId, "error", err)
 			database.UpdateShardDataTaskStatus(ctx, proc.db, reportId, database.JobFailed) //nolint:errcheck
 			return fmt.Errorf("error saving inference task to db: %w", err)
+		}
+
+		if err := proc.publisher.PublishInferenceTask(ctx, inferencePayload); err != nil {
+			slog.Error("Handler: Failed to publish inference task", "report_id", reportId, "task_id", taskId, "error", err)
+			database.UpdateShardDataTaskStatus(ctx, proc.db, reportId, database.JobFailed) //nolint:errcheck
+			return fmt.Errorf("failed to publish inference task %d: %w", taskId, err)
 		}
 
 		return nil
