@@ -29,19 +29,24 @@ type TaskStatusCategory struct {
 	TotalSize  int
 }
 
+type CustomTagData struct {
+	Pattern string
+	Count   uint64
+}
+
 type Report struct {
 	Id uuid.UUID
 
-	Model Model
-
+	Model          Model
+	ReportName     string	`json:"report_name"`
 	SourceS3Bucket string
 	SourceS3Prefix string
 	IsUpload       bool
 
 	CreationTime time.Time
 
-	Tags       []string          `json:"Tags,omitempty"`
-	CustomTags map[string]string `json:"CustomTags,omitempty"`
+	Tags       map[string]uint64        `json:"Tags,omitempty"`
+	CustomTags map[string]CustomTagData `json:"CustomTags,omitempty"`
 
 	Groups []Group
 
@@ -64,6 +69,7 @@ type Entity struct {
 type CreateReportRequest struct {
 	ModelId uuid.UUID
 
+	ReportName     string `json:"report_name"`
 	UploadId       uuid.UUID
 	S3Endpoint     string
 	S3Region       string

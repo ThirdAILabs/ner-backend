@@ -29,8 +29,8 @@ A distributed system in Go for processing asynchronous Machine Learning tasks (t
 (Note: If workers run on separate hosts, update .env URLs to point to the head node's IP/hostname).
 
 To take services down, run: \
-`docker-compose --profile head down` \
-`docker-compose --profile worker down`
+`docker compose --profile head down` \
+`docker compose --profile worker down`
 
 Access Services (default ports): \
 API Health: http://localhost:8001/health \
