@@ -146,8 +146,7 @@ const GroupCard: React.FC<GroupProps> = ({ name, definition }) => (
 );
 
 interface CustomTag {
-  name: string;
-  pattern: string;
+  [key: string]: string;
 }
 
 const NewTagDialog: React.FC<{
@@ -253,25 +252,34 @@ export default function JobDetail() {
       setReportData(report as Report);
 
       if (report.Tags) {
-        const allTags: string[] = Object.keys(report.Tags);
-        const reportTagObj = report.Tags;
+        const allTags: string[] = report.Tags;
         setAvailableTags(allTags);
-        const allTagsCount = allTags.map((tag) => ({
-          type: tag,
-          count: reportTagObj[tag]
-        }));
-        setAvailableTagsCount(allTagsCount);
       }
       if (report.CustomTags !== undefined) {
         const customTagsObj = report.CustomTags;
         const customTagName: string[] = Object.keys(customTagsObj);
         const allCustomTags: CustomTag[] = customTagName.map((tag) => ({
           name: tag,
-          pattern: customTagsObj[tag].Pattern
+          pattern: customTagsObj[tag]
         }));
 
         setCustomTags(allCustomTags);
       }
+
+      if (report.TagCounts) {
+        const tagObject = report.TagCounts;
+        const tags = Object.keys(report.TagCounts);
+        const allTagsCounts = tags.map((tag) => {
+          return (
+            {
+              type: tag,
+              count: tagObject[tag]
+            }
+          )
+        })
+        setAvailableTagsCount(allTagsCounts);
+      }
+
     } catch (error) {
       console.error("Error fetching tags:", error);
     } finally {
@@ -373,13 +381,13 @@ export default function JobDetail() {
             Jobs
           </Link>
           <span className="mx-2 text-gray-400">/</span>
-          <span className="text-gray-700">{reportData?.report_name || '[Job Name]'}</span>
+          <span className="text-gray-700">{reportData?.ReportName || '[Job Name]'}</span>
         </div>
       </div>
 
       {/* Title and Back Button */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-medium">{reportData?.report_name || '[Job Name]'}</h1>
+        <h1 className="text-2xl font-medium">{reportData?.ReportName || '[Job Name]'}</h1>
 
         <Button variant="outline" size="sm" asChild>
           <Link href={`/token-classification/${params.deploymentId}?tab=jobs`} className="flex items-center">

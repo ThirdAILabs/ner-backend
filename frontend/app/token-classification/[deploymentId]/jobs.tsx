@@ -58,7 +58,7 @@ interface ReportWithStatus {
     InferenceTaskStatuses?: { [key: string]: TaskStatusCategory };
   };
   isLoadingStatus?: boolean;
-  report_name: string;
+  ReportName: string;
 }
 
 export default function Jobs() {
@@ -391,7 +391,7 @@ export default function Jobs() {
                       bgcolor: index % 2 === 0 ? 'white' : '#f9fafb'
                     }}
                   >
-                    <TableCell>{report.report_name}</TableCell>
+                    <TableCell>{report.ReportName}</TableCell>
                     <TableCell>{report.Model.Name}</TableCell>
                     <TableCell>
                       {getStatusDisplay(report)}

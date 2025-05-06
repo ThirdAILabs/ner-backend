@@ -29,18 +29,16 @@ interface Report {
   SourceS3Bucket: string;
   SourceS3Prefix: string;
   CreationTime: string;
-  Tags?: { [key: string]: number };
+  Tags?: string[];
   CustomTags?: {
-    [key: string]: {
-      Pattern: string;
-      Count: number;
-    }
+    [key: string]: string;
   };
   Groups?: Group[];
   ShardDataTaskStatus?: string;
   InferenceTaskStatuses?: { [key: string]: TaskStatusCategory };
   Errors?: string[];
-  report_name: string;
+  ReportName: string;
+  TagCounts: { [key: string]: number; }
 }
 
 interface Entity {
