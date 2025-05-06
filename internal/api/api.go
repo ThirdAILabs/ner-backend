@@ -300,13 +300,6 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 			return CodedErrorf(http.StatusInternalServerError, "failed to create report entry")
 		}
 
-		err = s.publisher.PublishShardDataTask(ctx, messaging.ShardDataPayload{ReportId: report.Id})
-		if err != nil {
-			slog.Error("error queueing shard data task", "error", err)
-			_ = database.UpdateShardDataTaskStatus(ctx, txn, report.Id, database.JobFailed)
-			return CodedErrorf(http.StatusInternalServerError, "failed to queue shard data task")
-		}
-
 		if err := txn.WithContext(ctx).Create(&task).Error; err != nil {
 			slog.Error("error creating shard data task", "error", err)
 			return CodedErrorf(http.StatusInternalServerError, "failed to create shard data task")
@@ -315,6 +308,13 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		return nil
 	}); err != nil {
 		return nil, err
+	}
+
+	err = s.publisher.PublishShardDataTask(ctx, messaging.ShardDataPayload{ReportId: report.Id})
+	if err != nil {
+		slog.Error("error queueing shard data task", "error", err)
+		_ = database.UpdateShardDataTaskStatus(ctx, s.db, report.Id, database.JobFailed)
+		return nil, CodedErrorf(http.StatusInternalServerError, "failed to queue shard data task")
 	}
 
 	slog.Info("created report", "report_id", report.Id)
