@@ -65,7 +65,7 @@ export function FilterSection({
       >
         <div className="p-6 pt-4 space-y-6">
           {/* Groups Section */}
-          {/* <div>
+          <div>
             <div
               className="flex items-center justify-between text-sm text-gray-600 mb-2 cursor-pointer hover:text-gray-800"
               onClick={toggleGroups}
@@ -109,7 +109,7 @@ export function FilterSection({
                 </div>
               </>
             )}
-          </div> */}
+          </div>
 
           {/* Tags Section */}
           <div>
