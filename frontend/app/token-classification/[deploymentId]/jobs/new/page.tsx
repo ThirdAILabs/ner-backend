@@ -260,15 +260,30 @@ export default function NewJobPage() {
     setIsCustomTagDialogOpen(true);
   };
 
+  const areFilesIdentical = (file1: File, file2: File): boolean => {
+    return file1.name === file2.name && file1.size === file2.size;
+  };
+
   // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
       const fileArray = Array.from(files);
-      setSelectedFiles(prev => [...prev, ...fileArray]);
+
+      // Filter out duplicates
+      const newFiles = fileArray.filter(newFile => {
+        // Check if this file already exists in selectedFiles
+        const isDuplicate = selectedFiles.some(existingFile =>
+          areFilesIdentical(existingFile, newFile)
+        );
+        return !isDuplicate;
+      });
+
+      setSelectedFiles(prev => [...prev, ...newFiles]);
       e.target.value = '';
     }
   };
+
   const removeFile = (index: number) => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
