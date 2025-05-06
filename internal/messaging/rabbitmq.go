@@ -183,15 +183,17 @@ func (t *RabbitMQTask) Reject() error {
 }
 
 type RabbitMQReceiver struct {
-	tasks chan Task
-	url   string
-	stop  chan struct{}
+	tasks      chan Task
+	url        string
+	stop       chan struct{}
+	destructor sync.Once
 }
 
 func NewRabbitMQReceiver(rabbitMQURL string) (*RabbitMQReceiver, error) {
 	c := &RabbitMQReceiver{
 		tasks: make(chan Task),
 		url:   rabbitMQURL,
+		stop:  make(chan struct{}),
 	}
 
 	if err := c.receiveTasks(); err != nil {
@@ -280,5 +282,7 @@ func (c *RabbitMQReceiver) Tasks() <-chan Task {
 }
 
 func (c *RabbitMQReceiver) Close() {
-	close(c.stop)
+	c.destructor.Do(func() {
+		close(c.stop)
+	})
 }
