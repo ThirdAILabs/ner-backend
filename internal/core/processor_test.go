@@ -1,10 +1,8 @@
 package core
 
 import (
-	"io"
 	"ner-backend/internal/core/types"
 	"ner-backend/internal/database"
-	"ner-backend/internal/storage"
 	"ner-backend/pkg/api"
 	"regexp"
 	"strings"
@@ -49,17 +47,9 @@ func (m *regexModel) Save(path string) error {
 
 func (m *regexModel) Release() {}
 
-type mockStorage struct {
-	storage.Provider
-}
-
 const testDoc = "This is a test doc. It contains a phone number: 012-345-6789, an email: test@email.com, and a special token a1b2c3."
 
-func (m *mockStorage) GetObjectStream(bucket, key string) (io.Reader, error) {
-	return strings.NewReader(testDoc), nil
-}
-
-func TestInference(t *testing.T) {
+func TestObjectInference(t *testing.T) {
 	model := &regexModel{
 		patterns: map[string]regexp.Regexp{
 			"phone": *regexp.MustCompile(`\d{3}-\d{3}-\d{4}`),
@@ -81,15 +71,21 @@ func TestInference(t *testing.T) {
 
 	object := "test.txt"
 
+	chunks := make(chan ParsedChunk, 1)
+	chunks <- ParsedChunk{
+		Text:   testDoc,
+		Offset: 0,
+	}
+	close(chunks)
+
 	allEntities, groups, err := inferenceJobProcessor.runInferenceOnObject(
 		reportId,
-		&mockStorage{},
+		chunks,
 		NewDefaultParser(),
 		model,
 		map[string]struct{}{"phone": {}, "email": {}},
 		map[string]*regexp.Regexp{"special_token": regexp.MustCompile(`(\w\d){3}`)},
 		map[uuid.UUID]Filter{groupId1: group1, groupId2: group2},
-		"",
 		object,
 	)
 	assert.NoError(t, err)
