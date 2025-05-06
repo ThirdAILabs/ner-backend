@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Plus, Edit, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Plus, RefreshCw } from 'lucide-react';
 import { nerService } from '@/lib/backend';
 
 // Tag chip component - reused from the detail page but with interactive mode
@@ -56,12 +56,6 @@ const SourceOption: React.FC<SourceOptionProps> = ({
   >
     <h3 className="text-base font-medium">{title}</h3>
     <p className="text-sm text-gray-500 mt-1">{description}</p>
-
-    {isSelected && !disabled && (
-      <div className="absolute top-3 right-3">
-        <Edit className="h-4 w-4 text-gray-500" />
-      </div>
-    )}
   </div>
 );
 

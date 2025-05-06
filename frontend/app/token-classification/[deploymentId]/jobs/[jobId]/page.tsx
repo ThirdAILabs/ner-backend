@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { CheckCircle, ArrowLeft, RefreshCw, Pause, Square, Plus, Edit } from 'lucide-react';
+import { CheckCircle, ArrowLeft, RefreshCw, Pause, Square, Plus } from 'lucide-react';
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
 import { DatabaseTable } from './(database-table)/DatabaseTable';
 import { nerService } from '@/lib/backend';
@@ -97,12 +97,6 @@ const SourceOption: React.FC<SourceOptionProps> = ({
   >
     <h3 className="text-base font-medium">{title}</h3>
     <p className="text-sm text-gray-500 mt-1">{description}</p>
-
-    {isSelected && !disabled && (
-      <div className="absolute top-3 right-3">
-        <Edit className="h-4 w-4 text-gray-500" />
-      </div>
-    )}
   </div>
 );
 
@@ -456,7 +450,7 @@ export default function JobDetail() {
                 />}
                 <SourceOption
                   title="File Upload"
-                  description="Configure now"
+                  description=""
                   isSelected={selectedSource === 'local'}
                   disabled={selectedSource === "s3"}
                   onClick={() => { }}
