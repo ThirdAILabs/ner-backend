@@ -50,12 +50,12 @@ var modelLoaders = map[string]modelLoader{
 		return NewPresidioModel()
 	},
 
-	"ensemble": func(path string) (Model, error) {
-		configJSON := fmt.Sprintf("{\"load_config\":{\"cnn\":{\"model_path\":\"%s/best_cnn_sentence_tokenization.pth\"},\"embedding_bag\":{\"checkpoint_path\":\"%s/bolt_torch_without_crf.pth\"},\"udt\":{\"model_path\":\"%s/udt_complete.model\"}}}", path, path, path)
+	"cnn": func(path string) (Model, error) {
+		configJSON := fmt.Sprintf("{\"model_path\":\"%s/cnn_model.pth\"}", path)
 		return python.LoadPythonModel(
 			"python",
 			"plugin/plugin-python/plugin.py",
-			"python_ensemble_ner_model",
+			"python_cnn_ner_model",
 			configJSON,
 		)
 	},

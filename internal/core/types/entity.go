@@ -1,5 +1,7 @@
 package types
 
+import "strings"
+
 const contextLength = 20
 
 type Entity struct {
@@ -13,9 +15,9 @@ type Entity struct {
 
 func (e *Entity) UpdateContext(text string) {
 	if e.LContext == "" {
-		e.LContext = text[max(0, e.Start-contextLength):e.Start]
+		e.LContext = strings.ToValidUTF8(text[max(0, e.Start-contextLength):e.Start], "")
 	}
 	if e.RContext == "" {
-		e.RContext = text[e.End-1 : min(len(text), e.End+contextLength)]
+		e.RContext = strings.ToValidUTF8(text[e.End-1:min(len(text), e.End+contextLength)], "")
 	}
 }

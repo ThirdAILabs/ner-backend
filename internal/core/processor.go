@@ -271,9 +271,6 @@ func (proc *TaskProcessor) getModelDir(modelId uuid.UUID) string {
 }
 
 func (proc *TaskProcessor) loadModel(ctx context.Context, modelId uuid.UUID, modelType string) (Model, error) {
-	if modelType == "transformer" {
-		return nil, fmt.Errorf("transformer model type is not supported yet")
-	}
 
 	var localDir string
 
@@ -288,11 +285,8 @@ func (proc *TaskProcessor) loadModel(ctx context.Context, modelId uuid.UUID, mod
 		if _, err := os.Stat(localDir); os.IsNotExist(err) {
 			slog.Info("model not found locally, downloading from S3", "modelId", modelId)
 
-			if modelType == "transformer" {
-				prefix = "python_combined_ner_model"
-			}
-			if modelType == "ensemble" {
-				prefix = "python_ensemble_ner_model"
+			if modelType == "cnn" {
+				prefix = "cnn_model"
 			}
 
 			if err := proc.storage.DownloadDir(ctx, proc.modelBucket, prefix, localDir); err != nil {

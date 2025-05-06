@@ -13,13 +13,13 @@ from proto import model_pb2_grpc
 from grpc_health.v1.health import HealthServicer
 from grpc_health.v1 import health_pb2, health_pb2_grpc
 
-from models import CombinedNERModel, EnsembleModel
+from models import CombinedNERModel, CnnNerExtractor
 
 import argparse
 
 model_dict: Dict[str, Model] = {
     "python_combined_ner_model": CombinedNERModel,
-    "python_ensemble_ner_model": EnsembleModel,
+    "python_cnn_ner_model": CnnNerExtractor,
 }
 
 

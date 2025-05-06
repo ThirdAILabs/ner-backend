@@ -1,1 +1,1 @@
-from .ensemble import EnsembleModel
+from .cnn import CnnNerExtractor
