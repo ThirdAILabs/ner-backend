@@ -58,7 +58,6 @@ func LoadPythonModel(PythonExecutable, PluginScript, PluginModelName, KwargsJSON
 func (ner *PythonModel) Predict(text string) ([]types.Entity, error) {
 	result, err := ner.model.Predict(text)
 	if err != nil {
-		fmt.Println("PythonModel Predict error:", err)
 		return nil, err
 	}
 

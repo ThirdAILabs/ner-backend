@@ -2,7 +2,6 @@ package shared
 
 import (
 	"context"
-	"fmt"
 
 	"ner-backend/plugin/proto"
 )
@@ -30,12 +29,6 @@ type GRPCServer struct {
 func (m *GRPCServer) Predict(
 	ctx context.Context,
 	req *proto.PredictRequest) (*proto.PredictResponse, error) {
-	fmt.Println("GRPCServer Predict called, req:", req)
 	v, err := m.Impl.Predict(req.Sentence)
-	if err != nil {
-		fmt.Println("GRPCServer Predict error:", err)
-		return nil, err
-	}
-	fmt.Println("GRPCServer Predict response:", v)
 	return &proto.PredictResponse{Entities: v}, err
 }

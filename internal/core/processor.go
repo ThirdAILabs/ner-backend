@@ -147,12 +147,12 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 	slog.Info("processing inference task", "report_id", reportId, "task_id", payload.TaskId)
 	database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobRunning) //nolint:errcheck
 
-	// if err := proc.licensing.VerifyLicense(ctx); err != nil {
-	// 	slog.Error("license verification failed", "error", err)
-	// 	database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobFailed) //nolint:errcheck
-	// 	database.SaveReportError(ctx, proc.db, reportId, fmt.Sprintf("license verification failed: %s", err.Error()))
-	// 	return err
-	// }
+	if err := proc.licensing.VerifyLicense(ctx); err != nil {
+		slog.Error("license verification failed", "error", err)
+		database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobFailed) //nolint:errcheck
+		database.SaveReportError(ctx, proc.db, reportId, fmt.Sprintf("license verification failed: %s", err.Error()))
+		return err
+	}
 
 	var task database.InferenceTask
 	if err := proc.db.Preload("Report").Preload("Report.Model").Preload("Report.Tags").Preload("Report.CustomTags").Preload("Report.Groups").First(&task, "report_id = ? AND task_id = ?", reportId, payload.TaskId).Error; err != nil {
@@ -474,12 +474,12 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 
 	database.UpdateShardDataTaskStatus(ctx, proc.db, reportId, database.JobRunning) //nolint:errcheck
 
-	// if err := proc.licensing.VerifyLicense(ctx); err != nil {
-	// 	slog.Error("license verification failed", "error", err)
-	// 	database.UpdateShardDataTaskStatus(ctx, proc.db, reportId, database.JobFailed) //nolint:errcheck
-	// 	database.SaveReportError(ctx, proc.db, reportId, fmt.Sprintf("license verification failed: %s", err.Error()))
-	// 	return err
-	// }
+	if err := proc.licensing.VerifyLicense(ctx); err != nil {
+		slog.Error("license verification failed", "error", err)
+		database.UpdateShardDataTaskStatus(ctx, proc.db, reportId, database.JobFailed) //nolint:errcheck
+		database.SaveReportError(ctx, proc.db, reportId, fmt.Sprintf("license verification failed: %s", err.Error()))
+		return err
+	}
 
 	var task database.ShardDataTask
 	if err := proc.db.Preload("Report").First(&task, "report_id = ?", reportId).Error; err != nil {

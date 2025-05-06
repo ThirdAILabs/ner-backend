@@ -309,7 +309,6 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		return nil, err
 	}
 
-	slog.Info("Publishing shard data task to queue", "report_id", report.Id)
 	err = s.publisher.PublishShardDataTask(ctx, messaging.ShardDataPayload{ReportId: report.Id})
 	if err != nil {
 		slog.Error("error queueing shard data task", "error", err)
