@@ -82,7 +82,6 @@ func TestObjectInference(t *testing.T) {
 	allEntities, groups, tagCount, customTagCount, err := inferenceJobProcessor.runInferenceOnObject(
 		reportId,
 		chunks,
-		NewDefaultParser(),
 		model,
 		map[string]struct{}{"phone": {}, "email": {}},
 		map[string]*regexp.Regexp{"special_token": regexp.MustCompile(`(\w\d){3}`)},

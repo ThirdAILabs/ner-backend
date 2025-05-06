@@ -199,7 +199,7 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 	return nil
 }
 
-func (proc *TaskProcessor) updateInferenceTagCount(reportId uuid.UUID, tagCount map[string]int, isCustomTag bool) error {
+func (proc *TaskProcessor) updateInferenceTagCount(reportId uuid.UUID, tagCount map[string]uint64, isCustomTag bool) error {
 	var model any
 	if isCustomTag {
 		model = &database.CustomTag{}
@@ -286,7 +286,7 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 			continue
 		}
 
-		entities, groups, objTagCount, objCustomTagCount, err := proc.runInferenceOnObject(reportId, object.chunks, parser, model, tags, customTagsRe, groupToFilter, object.object)
+		entities, groups, objTagCount, objCustomTagCount, err := proc.runInferenceOnObject(reportId, object.chunks, model, tags, customTagsRe, groupToFilter, object.object)
 		if err != nil {
 			slog.Error("error processing object", "object", object, "error", err)
 			objectErrorCnt++
@@ -416,20 +416,19 @@ func (proc *TaskProcessor) createObjectPreview(
 func (proc *TaskProcessor) runInferenceOnObject(
 	reportId uuid.UUID,
 	chunks <-chan ParsedChunk,
-	parser Parser,
 	model Model,
 	tags map[string]struct{},
 	customTags map[string]*regexp.Regexp,
 	groupFilter map[uuid.UUID]Filter,
 	object string) (
-	[]database.ObjectEntity, []database.ObjectGroup, map[string]int, map[string]int, error) {
+	[]database.ObjectEntity, []database.ObjectGroup, map[string]uint64, map[string]uint64, error) {
 	labelToEntities := make(map[string][]types.Entity)
 
 	const previewLimit = 1000
 
 	previewTokens := make([]string, 0, previewLimit)
 
-	tagCount, customTagCount := make(map[string]int), make(map[string]int)
+	tagCount, customTagCount := make(map[string]uint64), make(map[string]uint64)
 
 	for chunk := range chunks {
 		if chunk.Error != nil {
