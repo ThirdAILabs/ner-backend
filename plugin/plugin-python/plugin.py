@@ -55,8 +55,9 @@ def serve(model_name: str, **kwargs):
     server.start()
 
     # Output information using the dynamically assigned port
-    print(f"1|1|tcp|127.0.0.1:{port}|grpc")
-    sys.stdout.flush()
+    hs = f"1|1|tcp|127.0.0.1:{port}|grpc\n"
+    sys.__stdout__.write(hs)
+    sys.__stdout__.flush()
 
     try:
         while True:
@@ -65,7 +66,7 @@ def serve(model_name: str, **kwargs):
         server.stop(0)
     except Exception as e:
         server.stop(1)
-        raise
+        raise e
 
 
 if __name__ == "__main__":
