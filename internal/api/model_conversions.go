@@ -63,19 +63,18 @@ func convertReport(r database.Report) api.Report {
 		CreationTime:   r.CreationTime,
 		Groups:         convertGroups(r.Groups),
 	}
+	report.TagCounts = make(map[string]uint64)
 
-	report.Tags = make(map[string]uint64)
 	for _, tag := range r.Tags {
-		report.Tags[tag.Tag] = tag.Count
+		report.Tags = append(report.Tags, tag.Tag)
+		report.TagCounts[tag.Tag] = tag.Count
 	}
 
 	if r.CustomTags != nil {
-		report.CustomTags = make(map[string]api.CustomTagData)
+		report.CustomTags = make(map[string]string)
 		for _, tag := range r.CustomTags {
-			report.CustomTags[tag.Tag] = api.CustomTagData{
-				Pattern: tag.Pattern,
-				Count:   tag.Count,
-			}
+			report.CustomTags[tag.Tag] = tag.Pattern
+			report.TagCounts[tag.Tag] = tag.Count
 		}
 	}
 

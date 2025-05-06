@@ -29,24 +29,20 @@ type TaskStatusCategory struct {
 	TotalSize  int
 }
 
-type CustomTagData struct {
-	Pattern string
-	Count   uint64
-}
-
 type Report struct {
 	Id uuid.UUID
 
 	Model          Model
-	ReportName     string	`json:"report_name"`
+	ReportName     string
 	SourceS3Bucket string
 	SourceS3Prefix string
 	IsUpload       bool
 
 	CreationTime time.Time
 
-	Tags       map[string]uint64        `json:"Tags,omitempty"`
-	CustomTags map[string]CustomTagData `json:"CustomTags,omitempty"`
+	Tags       []string          `json:"Tags,omitempty"`
+	CustomTags map[string]string `json:"CustomTags,omitempty"`
+	TagCounts  map[string]uint64 `json:"TagCounts,omitempty"`
 
 	Groups []Group
 

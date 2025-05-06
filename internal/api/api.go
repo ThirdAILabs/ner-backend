@@ -279,11 +279,12 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 	if err := s.db.WithContext(ctx).Transaction(func(txn *gorm.DB) error {
 		// check if duplicate report name
 		var existingReport database.Report
-		if err := txn.Where("report_name = ?", req.ReportName).First(&existingReport).Error; err == nil {
-			return CodedErrorf(http.StatusUnprocessableEntity, "report name '%s' already exists", req.ReportName)
-		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
-			slog.Error("error checking for duplicate report name", "error", err)
+		result := txn.Where("report_name = ?", req.ReportName).Limit(1).Find(&existingReport)
+		if result.Error != nil {
+			slog.Error("error checking for duplicate report name", "error", result.Error)
 			return CodedErrorf(http.StatusInternalServerError, "error checking for duplicate report name")
+		} else if result.RowsAffected > 0 {
+			return CodedErrorf(http.StatusUnprocessableEntity, "report name '%s' already exists", req.ReportName)
 		}
 
 		if err := txn.Preload("Tags").First(&model, "id = ?", req.ModelId).Error; err != nil {
