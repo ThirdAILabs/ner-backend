@@ -425,7 +425,7 @@ export default function NewJobPage() {
                 <SourceOption
                   key={model.Id}
                   title={model.Name}
-                  description={`Description: TDB`}
+                  description={`Description: TBD`}
                   // description={`Type: ${model.Type}`}
                   isSelected={selectedModelId === model.Id}
                   onClick={() => setSelectedModelId(model.Id)}
