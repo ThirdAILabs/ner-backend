@@ -185,6 +185,7 @@ func main() {
 
 	initializePresidioModel(db)
 	initializeEnsembleModel(db)
+	initializeTransformerModel(db)
 
 	// Initialize RabbitMQ Publisher
 	publisher, err := messaging.NewRabbitMQPublisher(cfg.RabbitMQURL)

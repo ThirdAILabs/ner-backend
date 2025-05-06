@@ -215,8 +215,6 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 
 	for _, object := range objects {
 		entities, groups, err := proc.runInferenceOnObject(reportId, parser, model, tags, customTagsRe, groupToFilter, bucket, object)
-		fmt.Println("entities", entities)
-		fmt.Println("groups", groups)
 		if err != nil {
 			slog.Error("error processing object", "object", object, "error", err)
 			objectErrorCnt++
@@ -273,6 +271,8 @@ func (proc *TaskProcessor) loadModel(modelId uuid.UUID, modelType string) (Model
 				modelObjectKey = filepath.Join("python_ensemble_ner_model")
 				localPath = proc.getlocalModelDir(modelId)
 			}
+
+			slog.Info("downloading model from S3", "modelId", modelId, "modelObjectKey", modelObjectKey, "localPath", localPath)
 
 			if err := proc.s3Client.DownloadFileOrFolder(context.TODO(), proc.modelBucket, modelObjectKey, localPath); err != nil {
 				return nil, fmt.Errorf("failed to download model from S3: %w", err)
@@ -363,7 +363,6 @@ func (proc *TaskProcessor) runInferenceOnObject(
 
 	previewTokens := make([]string, 0, previewLimit)
 
-	fmt.Println("chunks", chunks)
 	for chunk := range chunks {
 		if chunk.Error != nil {
 			return nil, nil, fmt.Errorf("error parsing document: %w", chunk.Error)
@@ -374,19 +373,13 @@ func (proc *TaskProcessor) runInferenceOnObject(
 			return nil, nil, fmt.Errorf("error running model inference: %w", err)
 		}
 
-		fmt.Println("tags", tags)
-
 		for _, entity := range chunkEntities {
 			if _, ok := tags[entity.Label]; ok {
 				entity.Start += chunk.Offset
 				entity.End += chunk.Offset
 				labelToEntities[entity.Label] = append(labelToEntities[entity.Label], entity)
-			} else {
-				fmt.Println("label not found in tags: ", entity.Label)
 			}
 		}
-		fmt.Println("chunkEntities after adding offset", chunkEntities)
-		fmt.Println("labelToEntities after tag filter", labelToEntities)
 
 		for tag, re := range customTags {
 			matches := re.FindAllStringIndex(chunk.Text, -1)
@@ -402,7 +395,6 @@ func (proc *TaskProcessor) runInferenceOnObject(
 				})
 			}
 		}
-		fmt.Println("labelToEntities after custom tag filter", labelToEntities)
 
 		if len(previewTokens) < previewLimit {
 			toks := strings.Fields(chunk.Text)
@@ -430,7 +422,6 @@ func (proc *TaskProcessor) runInferenceOnObject(
 			})
 		}
 	}
-	fmt.Println("labelToEntities", labelToEntities)
 
 	allEntities := make([]database.ObjectEntity, 0)
 	for _, entities := range labelToEntities {
@@ -447,7 +438,6 @@ func (proc *TaskProcessor) runInferenceOnObject(
 			})
 		}
 	}
-	fmt.Println("allEntities", allEntities)
 
 	return allEntities, groups, nil
 }

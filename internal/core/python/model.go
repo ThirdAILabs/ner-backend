@@ -62,7 +62,7 @@ func (ner *PythonModel) Predict(text string) ([]types.Entity, error) {
 		return nil, err
 	}
 
-	return convertProtoEntitiesToTypes(result), nil
+	return convertProtoEntitiesToTypes(result, text), nil
 }
 
 func (ner *PythonModel) Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sample) error {
@@ -83,7 +83,7 @@ func (ner *PythonModel) Release() {
 	ner.model = nil
 }
 
-func convertProtoEntitiesToTypes(protoEntities []*proto.Entity) []types.Entity {
+func convertProtoEntitiesToTypes(protoEntities []*proto.Entity, text string) []types.Entity {
 
 	typesEntities := make([]types.Entity, len(protoEntities))
 
@@ -94,7 +94,7 @@ func convertProtoEntitiesToTypes(protoEntities []*proto.Entity) []types.Entity {
 			typesEntities[i].Start = int(pe.Start)
 			typesEntities[i].End = int(pe.End)
 		}
-		typesEntities[i].UpdateContext()
+		typesEntities[i].UpdateContext(text)
 	}
 	return typesEntities
 }

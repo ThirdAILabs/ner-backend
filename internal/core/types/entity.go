@@ -11,11 +11,11 @@ type Entity struct {
 	RContext string
 }
 
-func (e *Entity) UpdateContext() {
+func (e *Entity) UpdateContext(text string) {
 	if e.LContext == "" {
-		e.LContext = e.Text[max(0, e.Start-contextLength):e.Start]
+		e.LContext = text[max(0, e.Start-contextLength):e.Start]
 	}
 	if e.RContext == "" {
-		e.RContext = e.Text[e.End:min(len(e.Text), e.End+contextLength)]
+		e.RContext = text[e.End-1 : min(len(text), e.End+contextLength)]
 	}
 }

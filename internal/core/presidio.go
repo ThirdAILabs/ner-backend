@@ -227,7 +227,7 @@ func (m *PresidioModel) Predict(text string) ([]types.Entity, error) {
 			Start: r.Start,
 			End:   r.End,
 		}
-		entity.UpdateContext()
+		entity.UpdateContext(text)
 		entities = append(entities, entity)
 	}
 	return entities, nil

@@ -61,7 +61,7 @@ func (ner *NER) Predict(text string) ([]types.Entity, error) {
 				Start: start,
 				End:   end,
 			}
-			entity.UpdateContext()
+			entity.UpdateContext(sentences[i])
 			results = append(results, entity)
 		}
 	}
