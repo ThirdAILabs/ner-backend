@@ -9,7 +9,6 @@ import (
 	backend "ner-backend/internal/api"
 	"ner-backend/internal/core"
 	"ner-backend/internal/database"
-	"ner-backend/internal/messaging"
 	"ner-backend/internal/storage"
 	"ner-backend/pkg/api"
 	"net/http"
@@ -111,14 +110,7 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 
 	db := createDB(t)
 
-	rabbitmqUrl := setupRabbitMQContainer(t, ctx)
-	publisher, err := messaging.NewRabbitMQPublisher(rabbitmqUrl)
-	require.NoError(t, err)
-	defer publisher.Close()
-
-	reciever, err := messaging.NewRabbitMQReceiver(rabbitmqUrl)
-	require.NoError(t, err)
-	defer reciever.Close()
+	publisher, reciever := setupRabbitMQContainer(t, ctx)
 
 	backend := backend.NewBackendService(db, s3, publisher, 120)
 	router := chi.NewRouter()
@@ -210,14 +202,7 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 
 	db := createDB(t)
 
-	rabbitmqUrl := setupRabbitMQContainer(t, ctx)
-	publisher, err := messaging.NewRabbitMQPublisher(rabbitmqUrl)
-	require.NoError(t, err)
-	defer publisher.Close()
-
-	reciever, err := messaging.NewRabbitMQReceiver(rabbitmqUrl)
-	require.NoError(t, err)
-	defer reciever.Close()
+	publisher, reciever := setupRabbitMQContainer(t, ctx)
 
 	backend := backend.NewBackendService(db, s3, publisher, 120)
 	router := chi.NewRouter()

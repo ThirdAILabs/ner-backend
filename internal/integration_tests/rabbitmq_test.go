@@ -16,15 +16,7 @@ func TestRabbitMQ(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
-	rabbitmqUrl := setupRabbitMQContainer(t, ctx)
-
-	publisher, err := messaging.NewRabbitMQPublisher(rabbitmqUrl)
-	require.NoError(t, err)
-	defer publisher.Close()
-
-	receiver, err := messaging.NewRabbitMQReceiver(rabbitmqUrl)
-	require.NoError(t, err)
-	defer receiver.Close()
+	publisher, receiver := setupRabbitMQContainer(t, ctx)
 
 	// Test publishing and receiving a FinetuneTask
 	t.Run("Publish and Receive FinetuneTask", func(t *testing.T) {

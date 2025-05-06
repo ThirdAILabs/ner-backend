@@ -9,6 +9,7 @@ import (
 	"ner-backend/internal/core"
 	"ner-backend/internal/core/types"
 	"ner-backend/internal/database"
+	"ner-backend/internal/messaging"
 	"ner-backend/internal/storage"
 	"ner-backend/pkg/api"
 	"net/http"
@@ -149,7 +150,7 @@ func createDB(t *testing.T) *gorm.DB {
 	return db
 }
 
-func setupRabbitMQContainer(t *testing.T, ctx context.Context) string {
+func setupRabbitMQContainer(t *testing.T, ctx context.Context) (messaging.Publisher, messaging.Reciever) {
 	rabbitmqContainer, err := rabbitmq.Run(ctx, "rabbitmq:3.11-management-alpine")
 
 	require.NoError(t, err, "Failed to start RabbitMQ container")
@@ -162,7 +163,21 @@ func setupRabbitMQContainer(t *testing.T, ctx context.Context) string {
 	connStr, err := rabbitmqContainer.AmqpURL(ctx)
 	require.NoError(t, err, "Failed to get RabbitMQ AMQP URL")
 
-	return connStr
+	publisher, err := messaging.NewRabbitMQPublisher(connStr)
+	require.NoError(t, err, "Failed to create RabbitMQ publisher")
+
+	t.Cleanup(func() {
+		publisher.Close()
+	})
+
+	reciever, err := messaging.NewRabbitMQReceiver(connStr)
+	require.NoError(t, err, "Failed to create RabbitMQ reciever")
+
+	t.Cleanup(func() {
+		reciever.Close()
+	})
+
+	return publisher, reciever
 }
 
 const (
