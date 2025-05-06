@@ -44,8 +44,8 @@ func (m *regexModel) Predict(text string) ([]types.Entity, error) {
 					Text:     text[match[0]:match[1]],
 					Start:    match[0],
 					End:      match[1],
-					LContext: text[max(0, match[0]-20):match[0]],
-					RContext: text[match[1]:min(len(text), match[1]+20)],
+					LContext: strings.ToValidUTF8(text[max(0, match[0]-20):match[0]], ""),
+					RContext: strings.ToValidUTF8(text[match[1]:min(len(text), match[1]+20)], ""),
 				})
 			}
 		}

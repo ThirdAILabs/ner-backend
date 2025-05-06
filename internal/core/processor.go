@@ -405,8 +405,8 @@ func (proc *TaskProcessor) runInferenceOnObject(
 					Text:     chunk.Text[start:end],
 					Start:    start + chunk.Offset,
 					End:      end + chunk.Offset,
-					LContext: chunk.Text[max(0, start-20):start],
-					RContext: chunk.Text[end:min(len(chunk.Text), end+20)],
+					LContext: strings.ToValidUTF8(chunk.Text[max(0, start-20):start], ""),
+					RContext: strings.ToValidUTF8(chunk.Text[end:min(len(chunk.Text), end+20)], ""),
 				})
 			}
 		}
@@ -528,7 +528,7 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 			return fmt.Errorf("error iterating over S3 objects: %w", err)
 		}
 
-		if currentChunkSize+obj.Size > targetBytes {
+		if currentChunkSize+obj.Size > targetBytes && len(currentChunkKeys) > 0 {
 			if err := createInferenceTask(ctx, taskId, currentChunkKeys, currentChunkSize); err != nil {
 				return err
 			}

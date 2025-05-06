@@ -60,8 +60,8 @@ func (ner *NER) Predict(text string) ([]types.Entity, error) {
 				Text:     C.GoString(C.Results_text(cResults, i, j)),
 				Start:    start,
 				End:      end,
-				LContext: sentences[i][max(start-20, 0):start],
-				RContext: sentences[i][end:min(len(sentences[i]), end+20)],
+				LContext: strings.ToValidUTF8(sentences[i][max(start-20, 0):start], ""),
+				RContext: strings.ToValidUTF8(sentences[i][end:min(len(sentences[i]), end+20)], ""),
 			}
 			results = append(results, entity)
 		}
