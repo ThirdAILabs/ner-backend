@@ -68,6 +68,10 @@ func (s *BackendService) AddRoutes(r chi.Router) {
 	r.Route("/uploads", func(r chi.Router) {
 		r.Post("/", RestHandler(s.UploadFiles))
 	})
+
+	r.Route("/metrics", func(r chi.Router) {
+		r.Get("/", RestHandler(s.GetInferenceMetrics))
+	})
 }
 
 func (s *BackendService) ListModels(r *http.Request) (any, error) {
@@ -644,4 +648,92 @@ func (s *BackendService) UploadFiles(r *http.Request) (any, error) {
 	slog.Info("created upload record", "upload_id", uploadId, "filenames", filenames)
 
 	return api.UploadResponse{Id: uploadId}, nil
+}
+
+func (s *BackendService) GetInferenceMetrics(r *http.Request) (any, error) {
+	qs := r.URL.Query()
+
+	days := 7
+	if ds := qs.Get("days"); ds != "" {
+		d, err := strconv.Atoi(ds)
+		if err != nil || d < 0 {
+			return nil, CodedErrorf(http.StatusBadRequest, "invalid days parameter")
+		}
+		days = d
+	}
+
+	var modelID *uuid.UUID
+	if ms := qs.Get("model_id"); ms != "" {
+		u, err := uuid.Parse(ms)
+		if err != nil {
+			return nil, CodedErrorf(http.StatusBadRequest, "invalid model_id")
+		}
+		modelID = &u
+	}
+
+	since := time.Now().UTC().Add(-time.Duration(days) * 24 * time.Hour)
+
+	var completedCount int64
+	qC := s.db.Model(&database.InferenceTask{}).
+		Where("status = ?", database.JobCompleted).
+		Where("completion_time >= ?", since)
+	if modelID != nil {
+		qC = qC.
+			Joins("JOIN reports ON inference_tasks.report_id = reports.id").
+			Where("reports.model_id = ?", *modelID)
+	}
+	if err := qC.Count(&completedCount).Error; err != nil {
+		slog.Error("error counting completed inference tasks", "error", err)
+		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving metrics")
+	}
+
+	var inProgressCount int64
+	qP := s.db.Model(&database.InferenceTask{}).
+		Where("status = ?", database.JobRunning).
+		Where("creation_time >= ?", since)
+	if modelID != nil {
+		qP = qP.
+			Joins("JOIN reports ON inference_tasks.report_id = reports.id").
+			Where("reports.model_id = ?", *modelID)
+	}
+	if err := qP.Count(&inProgressCount).Error; err != nil {
+		slog.Error("error counting in-progress inference tasks", "error", err)
+		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving metrics")
+	}
+
+	var windowBytes sql.NullInt64
+	qW := s.db.Model(&database.InferenceTask{}).
+		Select("COALESCE(SUM(total_size),0) AS total").
+		Where("status IN ? AND creation_time >= ?", []string{database.JobCompleted, database.JobRunning}, since)
+	if modelID != nil {
+		qW = qW.
+			Joins("JOIN reports ON inference_tasks.report_id = reports.id").
+			Where("reports.model_id = ?", *modelID)
+	}
+	if err := qW.Scan(&windowBytes).Error; err != nil {
+		slog.Error("error summing window bytes", "error", err)
+		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving metrics")
+	}
+	dataProcessedMB := float64(windowBytes.Int64) / (1024 * 1024)
+
+	var windowTokens sql.NullInt64
+	qT := s.db.Model(&database.InferenceTask{}).
+		Select("COALESCE(SUM(token_count),0) AS total").
+		Where("status IN ? AND creation_time >= ?", []string{database.JobCompleted, database.JobRunning}, since)
+	if modelID != nil {
+		qT = qT.
+			Joins("JOIN reports ON inference_tasks.report_id = reports.id").
+			Where("reports.model_id = ?", *modelID)
+	}
+	if err := qT.Scan(&windowTokens).Error; err != nil {
+		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving token sum")
+	}
+	tokensProcessed := windowTokens.Int64
+
+	return api.InferenceMetricsResponse{
+		Completed:       completedCount,
+		InProgress:      inProgressCount,
+		DataProcessedMB: dataProcessedMB,
+		TokensProcessed: tokensProcessed,
+	}, nil
 }
