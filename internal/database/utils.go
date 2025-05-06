@@ -50,7 +50,8 @@ func UpdateShardDataTaskStatus(ctx context.Context, txn *gorm.DB, reportId uuid.
 
 func SaveReportError(ctx context.Context, txn *gorm.DB, reportId uuid.UUID, errorMessage string) {
 	reportError := ReportError{
-		ReportId:  uuid.New(),
+		ReportId:  reportId,
+		ErrorId:   uuid.New(),
 		Error:     errorMessage,
 		Timestamp: time.Now().UTC(),
 	}

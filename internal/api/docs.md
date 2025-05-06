@@ -155,7 +155,7 @@ Create a new report. The tags fields indicates which of the models tags are cons
 
 ### GET /reports/{report_id}
 **Description:**  
-Retrieve details of a specific report by its ID.
+Retrieve details of a specific report by its ID. The field `IsUpload` indicates if the source was uploaded file(s) rather than a cloud bucket.
 
 **Path Parameters:**  
 - `report_id` (UUID): The ID of the report.
@@ -177,6 +177,7 @@ Retrieve details of a specific report by its ID.
   },
   "SourceS3Bucket": "example-bucket",
   "SourceS3Prefix": "data/",
+  "IsUpload": false,
   "CreationTime": "2023-01-01T12:00:00Z",
   "Tags": ["NAME", "EMAIL"],
   "CustomTags": {"tag1": "regex1"},

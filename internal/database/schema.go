@@ -136,6 +136,7 @@ type ObjectPreview struct {
 
 type ReportError struct {
 	ReportId  uuid.UUID `gorm:"type:uuid;primaryKey"`
+	ErrorId   uuid.UUID `gorm:"type:uuid;primaryKey"`
 	Error     string
 	Timestamp time.Time
 }
