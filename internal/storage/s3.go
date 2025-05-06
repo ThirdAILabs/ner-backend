@@ -47,8 +47,11 @@ func NewS3Provider(cfg S3ProviderConfig) (*S3Provider, error) {
 	})
 
 	opts := []func(*aws_config.LoadOptions) error{
-		aws_config.WithRegion(cfg.S3Region),
 		aws_config.WithEndpointResolverWithOptions(resolver), // nolint:staticcheck
+	}
+
+	if cfg.S3Region != "" {
+		opts = append(opts, aws_config.WithRegion(cfg.S3Region))
 	}
 
 	// If credentials are not provided then they will be resolved by the sdk.
