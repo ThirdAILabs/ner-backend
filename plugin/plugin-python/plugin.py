@@ -1,5 +1,12 @@
 from concurrent import futures
 import sys
+import logging
+
+# grpc reads from stdout and hence, if any import prints anything, it will break the plugin
+# we redirect stdout to stderr to avoid this issue
+sys.stdout = sys.stderr
+logging.disable(logging.WARNING)
+
 import time
 import json
 from typing import Dict

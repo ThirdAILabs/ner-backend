@@ -289,6 +289,10 @@ func (proc *TaskProcessor) loadModel(ctx context.Context, modelId uuid.UUID, mod
 				prefix = "cnn_model"
 			}
 
+			if modelType == "transformer" {
+				prefix = "python_combined_ner_model"
+			}
+
 			if err := proc.storage.DownloadDir(ctx, proc.modelBucket, prefix, localDir); err != nil {
 				return nil, fmt.Errorf("failed to download model from S3: %w", err)
 			}

@@ -4,6 +4,7 @@ import time
 from .make_analyzer import analyze_text, get_analyzer
 from .transformer_inference import punctuation_filter, predict_on_text
 from ..model_interface import Model, Entities, Predictions
+from ..clean_utils import clean_text
 import contextlib
 import io
 
@@ -229,6 +230,7 @@ class CombinedNERModel(Model):
 
     def predict(self, text: str) -> Predictions:
         # get both
+        text = clean_text(text)
         hf_out = self.hf.predict(text)
         pres_out = self.pres.predict(text)
         # merge

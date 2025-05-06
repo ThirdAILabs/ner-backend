@@ -1,7 +1,8 @@
 from time import time
 from .cnn_backend.backend import CNNModel
 from ..model_interface import Model, Predictions, Entities
-from .utils import build_tag_vocab, clean_text
+from .utils import build_tag_vocab
+from ..clean_utils import clean_text
 from typing import List
 
 

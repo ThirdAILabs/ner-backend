@@ -59,6 +59,8 @@ COPY --from=builder /app/plugin/plugin-python /app/plugin/plugin-python
 RUN pip install --no-cache-dir \
     -r /app/plugin/plugin-python/requirements.txt
 
+RUN python -m spacy download en_core_web_lg
+
 RUN chmod +x /app/entrypoint.sh
 
 EXPOSE 8001
