@@ -232,7 +232,7 @@ export default function JobDetail() {
   const reportId: string = params.jobId as string;
   const [lastUpdated, setLastUpdated] = useState(0);
   const [tabValue, setTabValue] = useState('configuration');
-  const [selectedSource, setSelectedSource] = useState('s3');
+  const [selectedSource, setSelectedSource] = useState<'s3' | 'local'>('s3');
 
   // Remove selectedTags state, just keep availableTags
   const [availableTags, setAvailableTags] = useState<string[]>([]);
@@ -250,6 +250,13 @@ export default function JobDetail() {
       const report = await nerService.getReport(reportId);
 
       setReportData(report as Report);
+      
+      // Set selectedSource based on IsUpload field
+      if (report.IsUpload) {
+        setSelectedSource('local');
+      } else {
+        setSelectedSource('s3');
+      }
 
       if (report.Tags) {
         const allTags: string[] = report.Tags;

@@ -28,6 +28,7 @@ interface Report {
   Model: Model;
   SourceS3Bucket: string;
   SourceS3Prefix: string;
+  IsUpload?: boolean;
   CreationTime: string;
   Tags?: string[];
   CustomTags?: {
