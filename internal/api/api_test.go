@@ -339,7 +339,50 @@ func TestGetReport(t *testing.T) {
 			{Object: "object2", Start: 1, End: 1, Label: "label2", Text: "text2"},
 			{Object: "object1", Start: 2, End: 3, Label: "label3", Text: "text3"},
 		}, entities)
+	})
+}
 
+func TestDeleteReport(t *testing.T) {
+	modelId, reportId := uuid.New(), uuid.New()
+	db := createDB(t,
+		&database.Model{Id: modelId, Name: "Model1", Type: "regex", Status: database.ModelTrained},
+		&database.Report{Id: reportId, ModelId: modelId},
+	)
+
+	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	router := chi.NewRouter()
+	service.AddRoutes(router)
+
+	t.Run("DeleteReport", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodDelete, "/reports/"+reportId.String(), nil)
+		rec := httptest.NewRecorder()
+
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+	})
+
+	t.Run("GetDeletedReport", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/reports/"+reportId.String(), nil)
+		rec := httptest.NewRecorder()
+
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusNotFound, rec.Code)
+	})
+
+	t.Run("ListDeletedReport", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/reports", nil)
+		rec := httptest.NewRecorder()
+
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var reports []api.Report
+		err := json.Unmarshal(rec.Body.Bytes(), &reports)
+		assert.NoError(t, err)
+
+		assert.Empty(t, reports)
 	})
 }
 

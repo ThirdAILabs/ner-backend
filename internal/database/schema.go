@@ -45,8 +45,11 @@ const (
 type Report struct {
 	Id         uuid.UUID `gorm:"type:uuid;primaryKey"`
 	ReportName string    `gorm:"unique;not null"`
+  
 	ModelId    uuid.UUID `gorm:"type:uuid"`
 	Model      *Model    `gorm:"foreignKey:ModelId"`
+
+	Deleted bool      `gorm:"default:false"`
 
 	S3Endpoint     sql.NullString
 	S3Region       sql.NullString
