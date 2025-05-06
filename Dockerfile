@@ -22,13 +22,17 @@ ENV PATH="/usr/local/go/bin:${PATH}"
 
 WORKDIR /app
 
+# Copy module files and download dependencies first for caching
 COPY go.mod go.sum ./
 RUN go mod download
 
+# Copy the rest of the application source code
 COPY . .
 
+# Build the API server binary
 RUN CGO_ENABLED=1 GOOS=linux GOARCH=${TARGETARCH} go build -v -o /app/api ./cmd/api
 
+# Build the Worker binary
 RUN CGO_ENABLED=1 GOOS=linux GOARCH=${TARGETARCH} go build -v -o /app/worker ./cmd/worker
 
 
@@ -45,6 +49,7 @@ RUN python3 -m venv /opt/venv && \
 
 WORKDIR /app
 
+# Copy only the necessary artifacts from the builder stage
 COPY --from=builder /app/api          /app/api
 COPY --from=builder /app/worker       /app/worker
 COPY --from=builder /app/entrypoint.sh /app/entrypoint.sh
