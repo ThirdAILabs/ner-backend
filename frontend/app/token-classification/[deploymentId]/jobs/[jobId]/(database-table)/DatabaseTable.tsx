@@ -32,6 +32,14 @@ export function DatabaseTable({
   const [viewMode, setViewMode] = useState<ViewMode>('classified-token');
   const [query, setQuery] = useState('');
   const [filteredObjects, setFilteredObjects] = useState<string[]>([]);
+  
+  // Pagination states
+  const [tokenOffset, setTokenOffset] = useState(0);
+  const [hasMoreTokens, setHasMoreTokens] = useState(true);
+  const [objectOffset, setObjectOffset] = useState(0);
+  const [hasMoreObjects, setHasMoreObjects] = useState(true);
+  const TOKENS_LIMIT = 25; // Number of token records to fetch per request
+  const OBJECTS_LIMIT = 10; // Number of object records to fetch per request
 
   // Filter states
   const [groupFilters, setGroupFilters] = useState<Record<string, boolean>>(
@@ -42,20 +50,47 @@ export function DatabaseTable({
   );
 
   // Load records functions
-  const loadTokenRecords = (objectFilter?: string) => {
-    console.log("Loading token records, objectFilter:", objectFilter);
+  const loadTokenRecords = (newOffset = 0, objectFilter?: string) => {
+    // Don't load if we're already loading or if we've reached the end
+    if (isLoadingTokenRecords || (!hasMoreTokens && newOffset > 0)) {
+      console.log("Skipping token records load - already loading or no more data");
+      return;
+    }
+
+    console.log(`Loading token records from offset=${newOffset}, objectFilter:`, objectFilter);
     setIsLoadingTokenRecords(true);
-    loadMoreClassifiedTokenRecords()
-      .then((records) => {
-        console.log("Loaded token records:", records.length);
-        const filtered = objectFilter 
-          ? records.filter(record => objectFilter === record.sourceObject)
-          : records;
-        setTokenRecords((prev) => {
-          const newRecords = [...prev, ...filtered];
-          console.log("Total token records after update:", newRecords.length);
-          return newRecords;
-        });
+    
+    // Use our custom function to fetch entities with pagination
+    nerService.getReportEntities(reportId, {
+      offset: newOffset,
+      limit: TOKENS_LIMIT,
+      ...(objectFilter && { object: objectFilter })
+    })
+      .then((entities) => {
+        console.log(`Loaded ${entities.length} token records from offset ${newOffset}`);
+        
+        // Map API entities to our record format
+        const mappedRecords = entities.map(entity => ({
+          token: entity.Text,
+          tag: entity.Label,
+          sourceObject: entity.Object,
+          groups: [], // This would need to be populated from somewhere if needed
+          context: {
+            left: entity.LContext || '',
+            right: entity.RContext || '',
+          }
+        }));
+        
+        // If resetting (offset=0), replace records; otherwise append
+        if (newOffset === 0) {
+          setTokenRecords(mappedRecords);
+        } else {
+          setTokenRecords(prev => [...prev, ...mappedRecords]);
+        }
+        
+        // Update pagination state
+        setHasMoreTokens(entities.length === TOKENS_LIMIT);
+        setTokenOffset(newOffset + entities.length);
         setIsLoadingTokenRecords(false);
       })
       .catch(error => {
@@ -64,17 +99,52 @@ export function DatabaseTable({
       });
   };
 
-  const loadObjectRecords = (objectsFilter?: string[]) => {
+  const loadObjectRecords = (newOffset = 0, objectsFilter?: string[]) => {
+    // Don't load if we're already loading or if we've reached the end
+    if (isLoadingObjectRecords || (!hasMoreObjects && newOffset > 0)) {
+      console.log("Skipping object records load - already loading or no more data");
+      return;
+    }
+    
+    console.log(`Loading object records from offset=${newOffset}`);
     setIsLoadingObjectRecords(true);
-    // This uses the updated loadMoreObjectRecords which fetches data from /reports/{report_id}/objects
-    // Now returning complete sentences with tagged tokens for better readability
-    loadMoreObjectRecords().then((records) => {
-      const filtered = objectsFilter?.length 
-        ? records.filter(record => objectsFilter.includes(record.sourceObject))
-        : records;
-      setObjectRecords((prev) => [...prev, ...filtered]);
-      setIsLoadingObjectRecords(false);
-    });
+    
+    // Use the API service to fetch objects with pagination
+    nerService.getReportObjects(reportId, {
+      offset: newOffset,
+      limit: OBJECTS_LIMIT,
+    })
+      .then((objects) => {
+        console.log(`Loaded ${objects.length} object records from offset ${newOffset}`);
+        
+        // Filter records if objectsFilter is provided
+        const filtered = objectsFilter?.length 
+          ? objects.filter(obj => objectsFilter.includes(obj.object))
+          : objects;
+        
+        // Map API objects to our record format
+        const mappedRecords = filtered.map(obj => ({
+          sourceObject: obj.object,
+          taggedTokens: obj.tokens.map((token, i) => [token, obj.tags[i]] as [string, string]),
+          groups: [], // This would need to be populated from somewhere if needed
+        }));
+        
+        // If resetting (offset=0), replace records; otherwise append
+        if (newOffset === 0) {
+          setObjectRecords(mappedRecords);
+        } else {
+          setObjectRecords(prev => [...prev, ...mappedRecords]);
+        }
+        
+        // Update pagination state
+        setHasMoreObjects(objects.length === OBJECTS_LIMIT);
+        setObjectOffset(newOffset + objects.length);
+        setIsLoadingObjectRecords(false);
+      })
+      .catch(error => {
+        console.error("Error loading object records:", error);
+        setIsLoadingObjectRecords(false);
+      });
   };
 
   // Search function
@@ -82,10 +152,9 @@ export function DatabaseTable({
     if (!searchQuery.trim()) {
       // If empty query, reset filters and reload data
       setFilteredObjects([]);
-      setTokenRecords([]);
-      setObjectRecords([]);
-      loadObjectRecords();
-      loadTokenRecords();
+      resetPagination();
+      loadTokenRecords(0);
+      loadObjectRecords(0);
       return;
     }
 
@@ -94,14 +163,15 @@ export function DatabaseTable({
       const result = await nerService.searchReport(reportId, searchQuery);
       setFilteredObjects(result.Objects || []);
       
-      // Clear existing records and load new ones with filter
-      setTokenRecords([]);
-      setObjectRecords([]);
+      // Reset pagination and clear existing records
+      resetPagination();
       
       // Load records filtered by the object names
       if (result.Objects?.length) {
-        loadObjectRecords(result.Objects);
-        loadTokenRecords();
+        loadObjectRecords(0, result.Objects);
+        // For token records, we'll let them load unfiltered first
+        // then filter them in the TableContent component
+        loadTokenRecords(0);
       }
     } catch (error) {
       console.error("Error searching:", error);
@@ -110,14 +180,23 @@ export function DatabaseTable({
     }
   };
 
+  // Helper function to reset pagination state
+  const resetPagination = () => {
+    setTokenOffset(0);
+    setObjectOffset(0);
+    setHasMoreTokens(true);
+    setHasMoreObjects(true);
+    setTokenRecords([]);
+    setObjectRecords([]);
+  };
+
   // Initial load
   useEffect(() => {
     // Force immediate loading of token records
     console.log("Component mounted, loading initial data");
-    setTokenRecords([]);
-    setObjectRecords([]);
-    loadTokenRecords();
-    loadObjectRecords();
+    resetPagination();
+    loadTokenRecords(0);
+    loadObjectRecords(0);
     loadedInitialTokenRecords.current = true;
     loadedInitialObjectRecords.current = true;
   }, []);
@@ -138,16 +217,31 @@ export function DatabaseTable({
 
       // Check if we're near the bottom
       const { scrollTop, scrollHeight, clientHeight } = tableScrollRef.current;
-      const bottomThreshold = 100; // pixels from bottom to trigger load
+      const bottomThreshold = 200; // pixels from bottom to trigger load
       
       if (scrollHeight - (scrollTop + clientHeight) < bottomThreshold) {
         // Load more records based on view mode
-        if (viewMode === 'object' && !isLoadingObjectRecords) {
-          loadObjectRecords(filteredObjects.length ? filteredObjects : undefined);
-        } else if (viewMode === 'classified-token' && !isLoadingTokenRecords) {
-          loadTokenRecords();
+        if (viewMode === 'object' && !isLoadingObjectRecords && hasMoreObjects) {
+          loadObjectRecords(
+            objectOffset,
+            filteredObjects.length ? filteredObjects : undefined
+          );
+        } else if (viewMode === 'classified-token' && !isLoadingTokenRecords && hasMoreTokens) {
+          loadTokenRecords(tokenOffset);
         }
       }
+    }
+  };
+
+  // Load more handler for manual loading (can be used with a button)
+  const handleLoadMore = () => {
+    if (viewMode === 'object' && !isLoadingObjectRecords && hasMoreObjects) {
+      loadObjectRecords(
+        objectOffset,
+        filteredObjects.length ? filteredObjects : undefined
+      );
+    } else if (viewMode === 'classified-token' && !isLoadingTokenRecords && hasMoreTokens) {
+      loadTokenRecords(tokenOffset);
     }
   };
 
@@ -182,6 +276,18 @@ export function DatabaseTable({
     setTagFilters(Object.fromEntries(tags.map((tag) => [tag, false])));
   };
 
+  // Handle view mode changes
+  const handleViewModeChange = (newMode: ViewMode) => {
+    setViewMode(newMode);
+    
+    // Load data if we haven't loaded any for this view mode yet
+    if (newMode === 'object' && objectRecords.length === 0) {
+      loadObjectRecords(0);
+    } else if (newMode === 'classified-token' && tokenRecords.length === 0) {
+      loadTokenRecords(0);
+    }
+  };
+
   // Other handlers
   const handleQueryChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setQuery(event.target.value);
@@ -195,9 +301,13 @@ export function DatabaseTable({
   useEffect(() => {
     console.log("Records updated:", {
       tokenRecords: tokenRecords.length,
-      objectRecords: objectRecords.length
+      tokenOffset,
+      hasMoreTokens,
+      objectRecords: objectRecords.length,
+      objectOffset,
+      hasMoreObjects
     });
-  }, [tokenRecords, objectRecords]);
+  }, [tokenRecords, objectRecords, tokenOffset, objectOffset, hasMoreTokens, hasMoreObjects]);
 
   return (
     <Card className="h-[70vh]">
@@ -221,7 +331,7 @@ export function DatabaseTable({
               viewMode={viewMode}
               query={query}
               onQueryChange={handleQueryChange}
-              onViewModeChange={setViewMode}
+              onViewModeChange={handleViewModeChange}
               onSave={handleSave}
               onSearch={handleSearch}
               searchLoading={isSearching}
@@ -247,6 +357,9 @@ export function DatabaseTable({
                   isLoadingObjectRecords={isLoadingObjectRecords}
                   isLoadingTokenRecords={isLoadingTokenRecords}
                   tags={tags}
+                  hasMoreTokens={hasMoreTokens}
+                  hasMoreObjects={hasMoreObjects}
+                  onLoadMore={handleLoadMore}
                 />
               </div>
             </div>
