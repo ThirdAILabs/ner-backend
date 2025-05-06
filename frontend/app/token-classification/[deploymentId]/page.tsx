@@ -2,11 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { Tabs, Tab, Box } from '@mui/material';
-import { Breadcrumbs, Link as MuiLink, Typography } from '@mui/material';
+import { Link as MuiLink, Typography } from '@mui/material';
 import * as _ from 'lodash';
 import { useParams, useSearchParams } from 'next/navigation';
-import { Card, CardContent } from '@mui/material';
-import { Alert } from '@mui/material';
 
 // Import our implemented components
 import Interact from './interact';
@@ -116,23 +114,23 @@ export default function Page() {
     <div style={{ backgroundColor: '#F5F7FA', minHeight: '100vh' }}>
       <header style={{ width: '100%', padding: '16px', borderBottom: '1px solid #e0e0e0' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', marginBottom: '16px' }}>
-          <Typography 
-            variant="body1" 
-            color="textSecondary" 
+          <Typography
+            variant="body1"
+            color="textSecondary"
             gutterBottom
             style={{ fontWeight: 500 }}
           >
             Token Classification
           </Typography>
-          
-          <Typography 
-            variant="h5" 
-            style={{ 
-              fontWeight: 'bold', 
-              overflow: 'hidden', 
-              textOverflow: 'ellipsis', 
-              whiteSpace: 'nowrap' 
-            }} 
+
+          <Typography
+            variant="h5"
+            style={{
+              fontWeight: 'bold',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}
             title={workflowName}
           >
             {workflowName}
@@ -142,8 +140,8 @@ export default function Page() {
 
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px' }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-          <Tabs 
-            value={tabValue} 
+          <Tabs
+            value={tabValue}
             onChange={handleTabChange}
             aria-label="token classification tabs"
             sx={{
@@ -165,20 +163,15 @@ export default function Page() {
             }}
           >
             <Tab label="Monitoring" value="monitoring" />
-            <Tab label="Testing" value="testing" />
             <Tab label="Jobs" value="jobs" />
           </Tabs>
         </Box>
-        
+
         {/* Tab Content Sections */}
         <div style={{ display: tabValue === 'monitoring' ? 'block' : 'none' }}>
           <Dashboard />
         </div>
-        
-        <div style={{ display: tabValue === 'testing' ? 'block' : 'none' }}>
-          <Interact />
-        </div>
-        
+
         <div style={{ display: tabValue === 'jobs' ? 'block' : 'none' }}>
           <Jobs />
         </div>

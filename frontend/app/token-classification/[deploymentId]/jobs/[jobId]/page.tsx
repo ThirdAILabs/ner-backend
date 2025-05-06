@@ -234,59 +234,44 @@ export default function JobDetail() {
   const [lastUpdated, setLastUpdated] = useState(0);
   const [tabValue, setTabValue] = useState('configuration');
   const [selectedSource, setSelectedSource] = useState('s3');
-  
+
   // Remove selectedTags state, just keep availableTags
   const [availableTags, setAvailableTags] = useState<string[]>([]);
-  
+  const [availableTagsCount, setAvailableTagsCount] = useState<{ type: string, count: number }[]>([]);
+
   const [reportData, setReportData] = useState<Report | null>(null);
   const [customTags, setCustomTags] = useState<CustomTag[]>([]);
   const [isNewTagDialogOpen, setIsNewTagDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Comprehensive function to fetch tags from all sources
   const fetchTags = async () => {
     setIsLoading(true);
     try {
-      // 1. Get report data which includes model ID and report tags
+
       const report = await nerService.getReport(reportId);
-      setReportData(report as any);
-      
-      // 2. Get tags from the model used in this report
-      let modelTags: string[] = [];
-      if (report.Model?.Id) {
-        modelTags = await nerService.getTagsFromModel(report.Model.Id);
+
+      setReportData(report as Report);
+
+      if (report.Tags) {
+        const allTags: string[] = Object.keys(report.Tags);
+        const reportTagObj = report.Tags;
+        setAvailableTags(allTags);
+        const allTagsCount = allTags.map((tag) => ({
+          type: tag,
+          count: reportTagObj[tag]
+        }));
+        setAvailableTagsCount(allTagsCount);
       }
-      
-      // 3. Get report tags
-      const reportTagsData = await nerService.getTagsFromReport(reportId);
-      
-      // 4. Get unique entity tags from actual data
-      const entityTags = await nerService.getUniqueTagsFromEntities(reportId, 1000);
-      
-      // 5. Combine and deduplicate all tags
-      const allTags = Array.from(new Set([
-        ...modelTags,
-        ...reportTagsData.regularTags,
-        ...entityTags
-      ]));
-      
-      console.log("Tags from model:", modelTags);
-      console.log("Tags from report:", reportTagsData.regularTags);
-      console.log("Tags from entities:", entityTags);
-      console.log("Combined tags:", allTags);
-      
-      // 6. Set available tags
-      setAvailableTags(allTags);
-      
-      // 7. Set custom tags from report
-      const customTagsList = Object.entries(reportTagsData.customTags || {}).map(
-        ([name, pattern]) => ({ name, pattern })
-      );
-      
-      setCustomTags(customTagsList.length ? customTagsList : [
-        // Fallback example if none exist
-        { name: "CREDIT_SCORE", pattern: "\\b[0-9]{3,4}\\b" }
-      ]);
+      if (report.CustomTags !== undefined) {
+        const customTagsObj = report.CustomTags;
+        const customTagName: string[] = Object.keys(customTagsObj);
+        const allCustomTags: CustomTag[] = customTagName.map((tag) => ({
+          name: tag,
+          pattern: customTagsObj[tag].Pattern
+        }));
+
+        setCustomTags(allCustomTags);
+      }
     } catch (error) {
       console.error("Error fetching tags:", error);
     } finally {
@@ -296,12 +281,12 @@ export default function JobDetail() {
 
   useEffect(() => {
     fetchTags();
-    
+
     // Set up refresh timer
     const timer = setInterval(() => {
       setLastUpdated(prev => prev + 1);
     }, 1000);
-    
+
     return () => clearInterval(timer);
   }, [reportId]);
 
@@ -356,19 +341,19 @@ export default function JobDetail() {
     try {
       // Get object previews (transformed from entities)
       const objectPreviews = await nerService.getReportObjects(reportId, { limit: 100 });
-      
+
       return objectPreviews.map(preview => {
         // Create tagged tokens array from the parallel tokens and tags arrays
         const taggedTokens = preview.tokens.map((token, index) => [
-          token, 
+          token,
           preview.tags[index]
         ]) as [string, string][];
-        
+
         return {
           taggedTokens,
           sourceObject: preview.object,
           // Get groups that include this object
-          groups: reportData?.Groups?.filter(group => 
+          groups: reportData?.Groups?.filter(group =>
             group.Objects?.includes(preview.object)
           ).map(g => g.Name) || []
         };
@@ -388,13 +373,13 @@ export default function JobDetail() {
             Jobs
           </Link>
           <span className="mx-2 text-gray-400">/</span>
-          <span className="text-gray-700">Customer Calls</span>
+          <span className="text-gray-700">{reportData?.report_name || '[Job Name]'}</span>
         </div>
       </div>
 
       {/* Title and Back Button */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-medium">Customer Calls</h1>
+        <h1 className="text-2xl font-medium">{reportData?.report_name || '[Job Name]'}</h1>
 
         <Button variant="outline" size="sm" asChild>
           <Link href={`/token-classification/${params.deploymentId}?tab=jobs`} className="flex items-center">
@@ -469,7 +454,7 @@ export default function JobDetail() {
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-medium">Tags</h2>
               </div>
-              
+
               {isLoading ? (
                 <div className="flex justify-center py-4">
                   <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
@@ -490,7 +475,7 @@ export default function JobDetail() {
             </div>
 
             {/* Custom Tags section */}
-            <div>
+            {reportData?.CustomTags && <div>
               <h2 className="text-lg font-medium mb-4">Custom Tags</h2>
               {isLoading ? (
                 <div className="flex justify-center py-4">
@@ -501,7 +486,6 @@ export default function JobDetail() {
                   {customTags.map((customTag) => (
                     <div key={customTag.name} className="border border-gray-200 rounded-md overflow-hidden">
                       <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-                        <h3 className="text-base font-medium">{customTag.name}</h3>
                         <Tag tag={customTag.name} custom displayOnly={true} />
                       </div>
                       <div className="p-4">
@@ -509,30 +493,9 @@ export default function JobDetail() {
                       </div>
                     </div>
                   ))}
-
-                  <div
-                    className="border border-dashed border-gray-300 rounded-md flex items-center justify-center p-6 cursor-pointer hover:border-gray-400"
-                    onClick={() => setIsNewTagDialogOpen(true)}
-                  >
-                    <div className="flex flex-col items-center">
-                      <Plus className="h-8 w-8 text-gray-400 mb-2" />
-                      <span className="text-gray-600">Define new tag</span>
-                    </div>
-                  </div>
                 </div>
               )}
-            </div>
-
-            {/* Add the dialog component */}
-            <NewTagDialog
-              isOpen={isNewTagDialogOpen}
-              onClose={() => setIsNewTagDialogOpen(false)}
-              onSubmit={(newTag) => {
-                setCustomTags([...customTags, newTag]);
-                setAvailableTags([...availableTags, newTag.name]);
-              }}
-              existingTags={availableTags}
-            />
+            </div>}
 
             {/* Groups section */}
             {reportData?.Groups && <div>
@@ -562,16 +525,7 @@ export default function JobDetail() {
           <AnalyticsDashboard
             progress={calculateProgress(reportData)}
             tokensProcessed={getProcessedTokens(reportData)}
-            tokenCounts={{
-              'VIN': 450,
-              'NAME': 2300,
-              'SSN': 800,
-              'ADDRESS': 1200,
-              'EMAIL': 950,
-              'PHONE': 1100,
-              'POLICY_ID': 400,
-              'DATE': 780
-            }}
+            tags={availableTagsCount}
           />
         </TabsContent>
 
