@@ -181,17 +181,6 @@ func (pr *PatternRecognizer) Recognize(text string, threshold float64) []Recogni
 				continue
 			}
 
-			lctxStart := start - ctxLen
-			if lctxStart < 0 {
-				lctxStart = 0
-			}
-			rctxEnd := end + ctxLen
-			if rctxEnd > len(text) {
-				rctxEnd = len(text)
-			}
-			lctx := strings.ToValidUTF8(text[lctxStart:start], "")
-			rctx := strings.ToValidUTF8(text[end:rctxEnd], "")
-
 			mapped, ok := entitiesMap[pr.EntityType]
 			if !ok || mapped == "" {
 				mapped = pr.EntityType

@@ -271,29 +271,31 @@ func (proc *TaskProcessor) getModelDir(modelId uuid.UUID) string {
 }
 
 func (proc *TaskProcessor) loadModel(ctx context.Context, modelId uuid.UUID, modelType string) (Model, error) {
+	if modelType == "transformer" {
+		return nil, fmt.Errorf("transformer model type is not supported yet")
+	}
 
 	var localDir string
 
 	if IsStatelessModel(modelType) {
 		localDir = ""
 	} else {
-		localDir = proc.getModelDir(modelId)
+		var prefix string
 
-		// Check if the model file exists locally
+		localDir = proc.getModelDir(modelId)
+		prefix = modelId.String()
+
 		if _, err := os.Stat(localDir); os.IsNotExist(err) {
 			slog.Info("model not found locally, downloading from S3", "modelId", modelId)
 
-			modelObjectKey := filepath.Join(modelId.String(), "model.bin")
 			if modelType == "transformer" {
-				modelObjectKey = filepath.Join("python_combined_ner_model")
+				prefix = "python_combined_ner_model"
 			}
 			if modelType == "ensemble" {
-				modelObjectKey = filepath.Join("python_ensemble_ner_model")
+				prefix = "python_ensemble_ner_model"
 			}
 
-			slog.Info("downloading model from S3", "modelId", modelId, "modelObjectKey", modelObjectKey, "localPath", localDir)
-
-			if err := proc.storage.DownloadDir(ctx, proc.modelBucket, modelId.String(), localDir); err != nil {
+			if err := proc.storage.DownloadDir(ctx, proc.modelBucket, prefix, localDir); err != nil {
 				return nil, fmt.Errorf("failed to download model from S3: %w", err)
 			}
 		}

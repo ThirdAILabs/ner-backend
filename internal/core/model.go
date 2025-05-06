@@ -36,7 +36,7 @@ var modelLoaders = map[string]modelLoader{
 
 	// TODO: replace env vars with a passed-in config
 	"transformer": func(path string) (Model, error) {
-		configJSON := fmt.Sprintf("{\"model_path\":\"%s\",\"threshold\": 0.5}", path)
+		configJSON := fmt.Sprintf("{\"model_path\":\"%s/custom_ner_model\",\"threshold\": 0.5}", path)
 		return python.LoadPythonModel(
 			"python",
 			"plugin/plugin-python/plugin.py",
@@ -71,9 +71,9 @@ func LoadModel(modelType, modelDir string) (Model, error) {
 		return nil, fmt.Errorf("unknown model type %s", modelType)
 	}
 
-	path = strings.TrimSuffix(path, "/")
+	modelDir = strings.TrimSuffix(modelDir, "/")
 
-	return loader(path)
+	return loader(modelDir)
 }
 
 func IsStatelessModel(modelType string) bool {

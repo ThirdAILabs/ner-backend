@@ -4,6 +4,15 @@ import time
 from .make_analyzer import analyze_text, get_analyzer
 from .transformer_inference import punctuation_filter, predict_on_text
 from ..model_interface import Model, Entities, Predictions
+import contextlib
+import io
+
+
+def suppress_output():
+
+    return contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(
+        io.StringIO()
+    )
 
 
 def merge_predictions(
@@ -214,8 +223,9 @@ class CombinedNERModel(Model):
 
     def __init__(self, model_path, threshold):
         self.threshold = threshold
-        self.hf = HuggingFaceModel(model_path)
-        self.pres = PresidioWrappedNerModel(threshold)
+        with suppress_output()[0], suppress_output()[1]:
+            self.hf = HuggingFaceModel(model_path)
+            self.pres = PresidioWrappedNerModel(threshold)
 
     def predict(self, text: str) -> Predictions:
         # get both
