@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"ner-backend/internal/core/types"
 	"ner-backend/internal/database"
 	"ner-backend/pkg/api"
@@ -78,10 +79,9 @@ func TestObjectInference(t *testing.T) {
 	}
 	close(chunks)
 
-	allEntities, groups, err := inferenceJobProcessor.runInferenceOnObject(
+	allEntities, groups, tagCount, customTagCount, err := inferenceJobProcessor.runInferenceOnObject(
 		reportId,
 		chunks,
-		NewDefaultParser(),
 		model,
 		map[string]struct{}{"phone": {}, "email": {}},
 		map[string]*regexp.Regexp{"special_token": regexp.MustCompile(`(\w\d){3}`)},
@@ -102,4 +102,14 @@ func TestObjectInference(t *testing.T) {
 	assert.ElementsMatch(t, groups, []database.ObjectGroup{
 		{ReportId: reportId, GroupId: groupId1, Object: object},
 	})
+
+	assert.Equal(t, tagCount, map[string]uint64{
+		"phone": 1,
+		"email": 1,
+	}, fmt.Sprintf("Expected: %v, got: %v", map[string]uint64{"phone": 1, "email": 1}, tagCount))
+
+	assert.Equal(t, customTagCount, map[string]uint64{
+		"special_token": 1,
+	}, fmt.Sprintf("Expected: %v, got: %v", map[string]uint64{"special_token": 1}, customTagCount))
+
 }

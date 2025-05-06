@@ -43,11 +43,13 @@ const (
 )
 
 type Report struct {
-	Id      uuid.UUID `gorm:"type:uuid;primaryKey"`
-	Deleted bool      `gorm:"default:false"`
+	Id         uuid.UUID `gorm:"type:uuid;primaryKey"`
+	ReportName string    `gorm:"unique;not null"`
+  
+	ModelId    uuid.UUID `gorm:"type:uuid"`
+	Model      *Model    `gorm:"foreignKey:ModelId"`
 
-	ModelId uuid.UUID `gorm:"type:uuid"`
-	Model   *Model    `gorm:"foreignKey:ModelId"`
+	Deleted bool      `gorm:"default:false"`
 
 	S3Endpoint     sql.NullString
 	S3Region       sql.NullString
@@ -71,12 +73,14 @@ type Report struct {
 type ReportTag struct {
 	ReportId uuid.UUID `gorm:"type:uuid;primaryKey"`
 	Tag      string    `gorm:"primaryKey"`
+	Count    uint64    `gorm:"default:0"`
 }
 
 type CustomTag struct {
 	ReportId uuid.UUID `gorm:"type:uuid;primaryKey"`
 	Tag      string    `gorm:"primaryKey"`
 	Pattern  string
+	Count    uint64 `gorm:"default:0"`
 }
 
 type ShardDataTask struct {

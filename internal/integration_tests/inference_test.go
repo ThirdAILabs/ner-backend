@@ -127,6 +127,7 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 	createData(t, s3)
 
 	reportId := createReport(t, router, api.CreateReportRequest{
+		ReportName:     "test-report",
 		ModelId:        modelId,
 		S3Endpoint:     minioUrl,
 		SourceS3Bucket: dataBucket,
@@ -219,9 +220,10 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 	uploadId := createUpload(t, router)
 
 	reportId := createReport(t, router, api.CreateReportRequest{
-		ModelId:  modelId,
-		UploadId: uploadId,
-		Tags:     []string{"phone", "email"},
+		ReportName: "test-report",
+		ModelId:    modelId,
+		UploadId:   uploadId,
+		Tags:       []string{"phone", "email"},
 	})
 
 	report := waitForReport(t, router, reportId)

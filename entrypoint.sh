@@ -18,13 +18,17 @@ echo "--- Starting container in $ROLE mode ---"
 # No DB migrations handled here in Go version (assume handled externally or by app)
 
 if [ "$ROLE" = "head" ]; then
-  echo "--- Starting Go API Server ---"
-  # Execute the compiled Go binary for the API
-  # Use "$@" to pass any remaining arguments if needed
-  exec /app/api "$@"
+  # --- Head Mode: Start Next.js + Go API ---
+  echo "Starting Next.js Server (background)..."
+  node_modules/.bin/next start --port 3000 &
+  NEXT_PID=$!
+  echo "Next.js PID: $NEXT_PID"
+
+  echo "Starting Go API Server (foreground)..."
+  exec /app/api "$@" # Replace shell with Go API
+
 else
-  echo "--- Starting Go Worker Process ---"
-  # Execute the compiled Go binary for the worker
-  # Use "$@" to pass any remaining arguments if needed
-  exec /app/worker "$@"
+  # --- Worker Mode: Start Go Worker Only ---
+  echo "Starting Go Worker Process (foreground)..."
+  exec /app/worker "$@" # Replace shell with Go Worker
 fi

@@ -92,6 +92,7 @@ Retrieve a list of all reports. Either `UploadId` or `SourceS3Bucket` must be sp
       "Type": "bolt",
       "Status": "TRAINED"
     },
+    "ReportName": "report-name",
     "UploadId": "123e4567-e89b-12d3-a456-426614174000",
     "SourceS3Bucket": "example-bucket",
     "SourceS3Prefix": "data/",
@@ -115,6 +116,7 @@ Create a new report. The tags fields indicates which of the models tags are cons
 
 **Request Body:**  
 - `ModelId` (UUID): The ID of the model.
+- `ModelName` (string): Name of the report
 - `S3Endpoint` (string, optional): The s3 endpoint to use. Important if using a custom s3 compatible api like minio.
 - `S3Region` (string, optional): The s3 region to use.
 - `SourceS3Bucket` (string): The S3 bucket containing the source data.
@@ -181,6 +183,11 @@ Retrieve details of a specific report by its ID. The field `IsUpload` indicates 
   "CreationTime": "2023-01-01T12:00:00Z",
   "Tags": ["NAME", "EMAIL"],
   "CustomTags": {"tag1": "regex1"},
+  "TagCounts": {
+    "NAME": 10,
+    "EMAIL": 0,
+    "tag1": 23
+  }
   "Groups": [
     {
       "Id": "123e4567-e89b-12d3-a456-426614174003",

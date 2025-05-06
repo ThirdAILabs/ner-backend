@@ -163,6 +163,7 @@ func TestCreateReport(t *testing.T) {
 	service.AddRoutes(router)
 
 	payload := api.CreateReportRequest{
+		ReportName:     "test-report",
 		ModelId:        modelId,
 		SourceS3Bucket: "test-bucket",
 		SourceS3Prefix: "test-prefix",
