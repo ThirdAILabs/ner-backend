@@ -186,6 +186,7 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 	if workerErr != nil {
 		slog.Error("error running inference task", "report_id", reportId, "task_id", payload.TaskId, "error", workerErr)
 		database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobFailed) // nolint:errcheck
+		database.SaveReportError(ctx, proc.db, reportId, workerErr.Error())
 		return fmt.Errorf("error running inference task: %w", workerErr)
 	}
 
@@ -194,6 +195,24 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 	}
 
 	slog.Info("inference task completed successfully", "report_id", reportId, "task_id", payload.TaskId)
+
+	return nil
+}
+
+func (proc *TaskProcessor) updateInferenceTagCount(reportId uuid.UUID, tagCount map[string]int, isCustomTag bool) error {
+	var model any
+	if isCustomTag {
+		model = &database.CustomTag{}
+	} else {
+		model = &database.ReportTag{}
+	}
+
+	for tag, count := range tagCount {
+		if err := proc.db.Model(model).Where("report_id = ? AND tag = ?", reportId, tag).Update("count", gorm.Expr("count + ?", count)).Error; err != nil {
+			slog.Error("error updating tag count", "report_id", reportId, "tag", tag, "is_custom_tag", isCustomTag, "error", err)
+			return fmt.Errorf("error updating tag count: %w", err)
+		}
+	}
 
 	return nil
 }
@@ -239,7 +258,7 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 	objectErrorCnt := 0
 
 	for _, object := range objects {
-		entities, groups, err := proc.runInferenceOnObject(reportId, storage, parser, model, tags, customTagsRe, groupToFilter, bucket, object)
+		entities, groups, objTagCount, objCustomTagCount, err := proc.runInferenceOnObject(reportId, storage, parser, model, tags, customTagsRe, groupToFilter, bucket, object)
 		if err != nil {
 			slog.Error("error processing object", "object", object, "error", err)
 			objectErrorCnt++
@@ -257,6 +276,19 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 			objectErrorCnt++
 			continue
 		}
+
+		if err := proc.updateInferenceTagCount(reportId, objTagCount, false); err != nil {
+			slog.Error("error updating tag count", "object", object, "error", err)
+			objectErrorCnt++
+			continue
+		}
+
+		if err := proc.updateInferenceTagCount(reportId, objCustomTagCount, true); err != nil {
+			slog.Error("error updating custom tag count", "object", object, "error", err)
+			objectErrorCnt++
+			continue
+		}
+
 	}
 
 	if objectErrorCnt > 0 {
@@ -363,11 +395,11 @@ func (proc *TaskProcessor) runInferenceOnObject(
 	groupFilter map[uuid.UUID]Filter,
 	bucket string,
 	object string) (
-	[]database.ObjectEntity, []database.ObjectGroup, error) {
+	[]database.ObjectEntity, []database.ObjectGroup, map[string]int, map[string]int, error) {
 
 	objectStream, err := storage.GetObjectStream(bucket, object)
 	if err != nil {
-		return nil, nil, fmt.Errorf("error getting object stream: %w", err)
+		return nil, nil, nil, nil, fmt.Errorf("error getting object stream: %w", err)
 	}
 
 	chunks := parser.Parse(object, objectStream)
@@ -378,14 +410,16 @@ func (proc *TaskProcessor) runInferenceOnObject(
 
 	previewTokens := make([]string, 0, previewLimit)
 
+	tagCount, customTagCount := make(map[string]int), make(map[string]int)
+
 	for chunk := range chunks {
 		if chunk.Error != nil {
-			return nil, nil, fmt.Errorf("error parsing document: %w", chunk.Error)
+			return nil, nil, nil, nil, fmt.Errorf("error parsing document: %w", chunk.Error)
 		}
 
 		chunkEntities, err := model.Predict(chunk.Text)
 		if err != nil {
-			return nil, nil, fmt.Errorf("error running model inference: %w", err)
+			return nil, nil, nil, nil, fmt.Errorf("error running model inference: %w", err)
 		}
 
 		for _, entity := range chunkEntities {
@@ -393,6 +427,7 @@ func (proc *TaskProcessor) runInferenceOnObject(
 				entity.Start += chunk.Offset
 				entity.End += chunk.Offset
 				labelToEntities[entity.Label] = append(labelToEntities[entity.Label], entity)
+				tagCount[entity.Label]++
 			}
 		}
 
@@ -408,6 +443,7 @@ func (proc *TaskProcessor) runInferenceOnObject(
 					LContext: strings.ToValidUTF8(chunk.Text[max(0, start-20):start], ""),
 					RContext: strings.ToValidUTF8(chunk.Text[end:min(len(chunk.Text), end+20)], ""),
 				})
+				customTagCount[tag]++
 			}
 		}
 
@@ -454,7 +490,7 @@ func (proc *TaskProcessor) runInferenceOnObject(
 		}
 	}
 
-	return allEntities, groups, nil
+	return allEntities, groups, tagCount, customTagCount, nil
 }
 
 func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload messaging.ShardDataPayload) error {

@@ -56,21 +56,25 @@ func convertReport(r database.Report) api.Report {
 	report := api.Report{
 		Id:             r.Id,
 		Model:          convertModel(*r.Model),
+		ReportName:     r.ReportName,
 		SourceS3Bucket: r.SourceS3Bucket,
 		SourceS3Prefix: r.SourceS3Prefix.String,
 		IsUpload:       r.IsUpload,
 		CreationTime:   r.CreationTime,
 		Groups:         convertGroups(r.Groups),
 	}
+	report.TagCounts = make(map[string]uint64)
 
 	for _, tag := range r.Tags {
 		report.Tags = append(report.Tags, tag.Tag)
+		report.TagCounts[tag.Tag] = tag.Count
 	}
 
 	if r.CustomTags != nil {
 		report.CustomTags = make(map[string]string)
 		for _, tag := range r.CustomTags {
 			report.CustomTags[tag.Tag] = tag.Pattern
+			report.TagCounts[tag.Tag] = tag.Count
 		}
 	}
 

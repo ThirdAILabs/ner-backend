@@ -32,8 +32,8 @@ type TaskStatusCategory struct {
 type Report struct {
 	Id uuid.UUID
 
-	Model Model
-
+	Model          Model
+	ReportName     string
 	SourceS3Bucket string
 	SourceS3Prefix string
 	IsUpload       bool
@@ -42,6 +42,7 @@ type Report struct {
 
 	Tags       []string          `json:"Tags,omitempty"`
 	CustomTags map[string]string `json:"CustomTags,omitempty"`
+	TagCounts  map[string]uint64 `json:"TagCounts,omitempty"`
 
 	Groups []Group
 
@@ -64,6 +65,7 @@ type Entity struct {
 type CreateReportRequest struct {
 	ModelId uuid.UUID
 
+	ReportName     string `json:"report_name"`
 	UploadId       uuid.UUID
 	S3Endpoint     string
 	S3Region       string

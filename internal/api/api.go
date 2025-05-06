@@ -209,6 +209,10 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		return nil, CodedErrorf(http.StatusUnprocessableEntity, "the following fields are required: SourceS3Bucket or UploadId")
 	}
 
+	if err := validateReportName(req.ReportName); err != nil {
+		return nil, err
+	}
+
 	for _, tag := range req.Tags {
 		if _, ok := req.CustomTags[tag]; ok {
 			return nil, CodedErrorf(http.StatusUnprocessableEntity, "tag '%s' cannot be used as a regular and custom tag", tag)
@@ -223,6 +227,7 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 
 	report := database.Report{
 		Id:             uuid.New(),
+		ReportName:     req.ReportName,
 		ModelId:        req.ModelId,
 		S3Endpoint:     sql.NullString{String: s3Endpoint, Valid: s3Endpoint != ""},
 		S3Region:       sql.NullString{String: s3Region, Valid: s3Region != ""},
@@ -272,6 +277,16 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 	var model database.Model
 
 	if err := s.db.WithContext(ctx).Transaction(func(txn *gorm.DB) error {
+		// check if duplicate report name
+		var existingReport database.Report
+		result := txn.Where("report_name = ?", req.ReportName).Limit(1).Find(&existingReport)
+		if result.Error != nil {
+			slog.Error("error checking for duplicate report name", "error", result.Error)
+			return CodedErrorf(http.StatusInternalServerError, "error checking for duplicate report name")
+		} else if result.RowsAffected > 0 {
+			return CodedErrorf(http.StatusUnprocessableEntity, "report name '%s' already exists", req.ReportName)
+		}
+
 		if err := txn.Preload("Tags").First(&model, "id = ?", req.ModelId).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return CodedErrorf(http.StatusNotFound, "model not found")

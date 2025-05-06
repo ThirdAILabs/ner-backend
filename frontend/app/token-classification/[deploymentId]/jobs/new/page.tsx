@@ -415,6 +415,7 @@ export default function NewJobPage() {
                   onChange={handleFileChange}
                   className="hidden"
                   id="file-upload"
+                  accept=".pdf, .txt, .csv, .html, .json, .xml"
                 />
                 <label
                   htmlFor="file-upload"
