@@ -144,6 +144,17 @@ func (proc *TaskProcessor) getStorageClient(report *database.Report) (storage.Pr
 func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload messaging.InferenceTaskPayload) error {
 	reportId := payload.ReportId
 
+	var task database.InferenceTask
+	if err := proc.db.Preload("Report").Preload("Report.Model").Preload("Report.Tags").Preload("Report.CustomTags").Preload("Report.Groups").First(&task, "report_id = ? AND task_id = ?", reportId, payload.TaskId).Error; err != nil {
+		slog.Error("error fetching inference task", "report_id", reportId, "task_id", payload.TaskId, "error", err)
+		return fmt.Errorf("error getting inference task: %w", err)
+	}
+
+	if task.Report.Stopped {
+		slog.Info("report stopped, skipping inference task", "report_id", reportId, "task_id", payload.TaskId)
+		return nil
+	}
+
 	slog.Info("processing inference task", "report_id", reportId, "task_id", payload.TaskId)
 	database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobRunning) //nolint:errcheck
 
@@ -152,12 +163,6 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 		database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobFailed) //nolint:errcheck
 		database.SaveReportError(ctx, proc.db, reportId, fmt.Sprintf("license verification failed: %s", err.Error()))
 		return err
-	}
-
-	var task database.InferenceTask
-	if err := proc.db.Preload("Report").Preload("Report.Model").Preload("Report.Tags").Preload("Report.CustomTags").Preload("Report.Groups").First(&task, "report_id = ? AND task_id = ?", reportId, payload.TaskId).Error; err != nil {
-		slog.Error("error fetching inference task", "report_id", reportId, "task_id", payload.TaskId, "error", err)
-		return fmt.Errorf("error getting inference task: %w", err)
 	}
 
 	s3Objects := strings.Split(task.SourceS3Keys, ";")
@@ -514,6 +519,17 @@ func (proc *TaskProcessor) runInferenceOnObject(
 func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload messaging.ShardDataPayload) error {
 	reportId := payload.ReportId
 
+	var task database.ShardDataTask
+	if err := proc.db.Preload("Report").First(&task, "report_id = ?", reportId).Error; err != nil {
+		slog.Error("error fetching shard data task", "report_id", reportId, "error", err)
+		return fmt.Errorf("error getting shard data task: %w", err)
+	}
+
+	if task.Report.Stopped {
+		slog.Info("report stopped, skipping shard data task", "report_id", reportId)
+		return nil
+	}
+
 	database.UpdateShardDataTaskStatus(ctx, proc.db, reportId, database.JobRunning) //nolint:errcheck
 
 	if err := proc.licensing.VerifyLicense(ctx); err != nil {
@@ -521,12 +537,6 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 		database.UpdateShardDataTaskStatus(ctx, proc.db, reportId, database.JobFailed) //nolint:errcheck
 		database.SaveReportError(ctx, proc.db, reportId, fmt.Sprintf("license verification failed: %s", err.Error()))
 		return err
-	}
-
-	var task database.ShardDataTask
-	if err := proc.db.Preload("Report").First(&task, "report_id = ?", reportId).Error; err != nil {
-		slog.Error("error fetching shard data task", "report_id", reportId, "error", err)
-		return fmt.Errorf("error getting shard data task: %w", err)
 	}
 
 	slog.Info("Handling generate tasks", "jobId", task.ReportId, "sourceBucket", task.Report.SourceS3Bucket, "sourcePrefix", task.Report.SourceS3Prefix)

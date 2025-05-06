@@ -60,6 +60,7 @@ func convertReport(r database.Report) api.Report {
 		SourceS3Bucket: r.SourceS3Bucket,
 		SourceS3Prefix: r.SourceS3Prefix.String,
 		IsUpload:       r.IsUpload,
+		Stopped:        r.Stopped,
 		CreationTime:   r.CreationTime,
 		Groups:         convertGroups(r.Groups),
 	}
