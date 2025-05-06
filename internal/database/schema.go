@@ -43,7 +43,8 @@ const (
 )
 
 type Report struct {
-	Id uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Id      uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Deleted bool      `gorm:"default:false"`
 
 	ModelId uuid.UUID `gorm:"type:uuid"`
 	Model   *Model    `gorm:"foreignKey:ModelId"`

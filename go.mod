@@ -10,6 +10,7 @@ require (
 	github.com/gen2brain/go-fitz v1.24.14
 	github.com/go-chi/cors v1.2.1
 	github.com/go-gormigrate/gormigrate/v2 v2.1.4
+	github.com/go-resty/resty/v2 v2.16.5
 	github.com/hashicorp/go-plugin v1.6.3
 	github.com/jaswdr/faker/v2 v2.3.3
 	github.com/openai/openai-go v0.1.0-beta.10
@@ -46,7 +47,6 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-sql-driver/mysql v1.8.1 // indirect
-	github.com/go-resty/resty/v2 v2.16.5 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0 // indirect
