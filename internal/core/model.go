@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"ner-backend/internal/core/bolt"
@@ -29,8 +30,8 @@ type Model interface {
 type modelLoader func(string) (Model, error)
 
 var modelLoaders = map[string]modelLoader{
-	"bolt": func(path string) (Model, error) {
-		return bolt.LoadNER(path)
+	"bolt": func(modelDir string) (Model, error) {
+		return bolt.LoadNER(filepath.Join(modelDir, "model.bin"))
 	},
 
 	// TODO: replace env vars with a passed-in config
@@ -64,7 +65,7 @@ func RegisterModelLoader(modelType string, loader modelLoader) {
 	modelLoaders[modelType] = loader
 }
 
-func LoadModel(modelType, path string) (Model, error) {
+func LoadModel(modelType, modelDir string) (Model, error) {
 	loader, ok := modelLoaders[modelType]
 	if !ok {
 		return nil, fmt.Errorf("unknown model type %s", modelType)

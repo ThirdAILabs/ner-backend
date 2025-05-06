@@ -56,10 +56,12 @@ func (ner *NER) Predict(text string) ([]types.Entity, error) {
 			start := int(C.Results_start(cResults, i, j))
 			end := int(C.Results_end(cResults, i, j))
 			entity := types.Entity{
-				Label: C.GoString(C.Results_label(cResults, i, j)),
-				Text:  C.GoString(C.Results_text(cResults, i, j)),
-				Start: start,
-				End:   end,
+				Label:    C.GoString(C.Results_label(cResults, i, j)),
+				Text:     C.GoString(C.Results_text(cResults, i, j)),
+				Start:    start,
+				End:      end,
+				LContext: strings.ToValidUTF8(sentences[i][max(start-20, 0):start], ""),
+				RContext: strings.ToValidUTF8(sentences[i][end:min(len(sentences[i]), end+20)], ""),
 			}
 			entity.UpdateContext(sentences[i])
 			results = append(results, entity)

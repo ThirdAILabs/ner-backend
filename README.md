@@ -68,6 +68,8 @@ We support 3 types of licensing
 2. Local licensing: a signed key that is verified in the backend without network calls, allows for full access.
 3. Free licensing: used if no key is provided. Restricts users to 1Gb of data accross all reports.
 
+The license key is determined by the `LICENSE_KEY` env when the worker starts. If the key starts with `local:` it will be treated as a local license key. Otherwise it will be treated as a keygen license. Keygen licenses need to have the FULL_ACCESS entitlement. If no license key is specified then it will use the free license. The free license simply restricts the total size of all files accross all jobs by checking the DB. The current max size is 1GB.
+
 The `cmd/licensing/main.go` cli tool provides utilities for creating an managing licensings.
 
 ### Creating Keys

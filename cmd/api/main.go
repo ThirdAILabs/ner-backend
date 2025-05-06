@@ -8,7 +8,7 @@ import (
 	"ner-backend/internal/core"
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
-	"ner-backend/internal/s3"
+	"ner-backend/internal/storage"
 	"net/http"
 	"os"
 	"os/signal"
@@ -27,10 +27,9 @@ type APIConfig struct {
 	DatabaseURL       string `env:"DATABASE_URL,notEmpty,required"`
 	RabbitMQURL       string `env:"RABBITMQ_URL,notEmpty,required"`
 	S3EndpointURL     string `env:"S3_ENDPOINT_URL,notEmpty,required"`
-	S3AccessKeyID     string `env:"AWS_ACCESS_KEY_ID,notEmpty,required"`
-	S3SecretAccessKey string `env:"AWS_SECRET_ACCESS_KEY,notEmpty,required"`
-	S3Region          string `env:"AWS_REGION,notEmpty,required"`
-	ModelBucketName   string `env:"MODEL_BUCKET_NAME" envDefault:"ner-models"`
+	S3AccessKeyID     string `env:"INTERNAL_AWS_ACCESS_KEY_ID,notEmpty,required"`
+	S3SecretAccessKey string `env:"INTERNAL_AWS_SECRET_ACCESS_KEY,notEmpty,required"`
+	ModelBucketName   string `env:"MODEL_BUCKET_NAME" envDefault:"models"`
 	QueueNames        string `env:"QUEUE_NAMES" envDefault:"inference_queue,training_queue,shard_data_queue"`
 	WorkerConcurrency int    `env:"CONCURRENCY" envDefault:"1"`
 	APIPort           string `env:"API_PORT" envDefault:"8001"`
@@ -171,14 +170,12 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	s3Cfg := s3.Config{
+	s3Cfg := storage.S3ProviderConfig{
 		S3EndpointURL:     cfg.S3EndpointURL,
 		S3AccessKeyID:     cfg.S3AccessKeyID,
 		S3SecretAccessKey: cfg.S3SecretAccessKey,
-		S3Region:          cfg.S3Region,
-		ModelBucketName:   cfg.ModelBucketName,
 	}
-	s3Client, err := s3.NewS3Client(&s3Cfg)
+	s3Client, err := storage.NewS3Provider(s3Cfg)
 	if err != nil {
 		log.Fatalf("Worker: Failed to create S3 client: %v", err)
 	}

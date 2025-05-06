@@ -8,7 +8,7 @@ import (
 	"ner-backend/internal/core"
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
-	"ner-backend/internal/s3"
+	"ner-backend/internal/storage"
 	"ner-backend/pkg/api"
 	"testing"
 	"time"
@@ -24,7 +24,7 @@ func TestFinetuning(t *testing.T) {
 
 	minioUrl := setupMinioContainer(t, ctx)
 
-	s3, err := s3.NewS3Client(&s3.Config{
+	s3, err := storage.NewS3Provider(storage.S3ProviderConfig{
 		S3EndpointURL:     minioUrl,
 		S3AccessKeyID:     minioUsername,
 		S3SecretAccessKey: minioPassword,
@@ -68,7 +68,8 @@ func TestFinetuning(t *testing.T) {
 	assert.NotEqual(t, nil, model.BaseModelId)
 	assert.Equal(t, baseModelId, *model.BaseModelId)
 
-	stream := s3.DownloadFileStream(modelBucket, fmt.Sprintf("%s/model.bin", model.Id))
+	stream, err := s3.GetObjectStream(modelBucket, fmt.Sprintf("%s/model.json", model.Id))
+	require.NoError(t, err)
 
 	var modelData map[string]string
 	if err := json.NewDecoder(stream).Decode(&modelData); err != nil {

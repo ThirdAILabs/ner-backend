@@ -115,6 +115,8 @@ Create a new report. The tags fields indicates which of the models tags are cons
 
 **Request Body:**  
 - `ModelId` (UUID): The ID of the model.
+- `S3Endpoint` (string, optional): The s3 endpoint to use. Important if using a custom s3 compatible api like minio.
+- `S3Region` (string, optional): The s3 region to use.
 - `SourceS3Bucket` (string): The S3 bucket containing the source data.
 - `SourceS3Prefix` (string, optional): The S3 prefix for the source data.
 - `Groups` (map[string]string): A map of group names to queries.
@@ -124,6 +126,8 @@ Create a new report. The tags fields indicates which of the models tags are cons
 {
   "ModelId": "123e4567-e89b-12d3-a456-426614174000",
   "SourceS3Bucket": "example-bucket",
+  "S3Endpoint":     "https://my-service",
+	"S3Region": "region-1",
   "SourceS3Prefix": "data/",
   "Tags": ["NAME", "EMAIL"],
   "CustomTags": {"tag1": "regex1"},
@@ -151,7 +155,7 @@ Create a new report. The tags fields indicates which of the models tags are cons
 
 ### GET /reports/{report_id}
 **Description:**  
-Retrieve details of a specific report by its ID.
+Retrieve details of a specific report by its ID. The field `IsUpload` indicates if the source was uploaded file(s) rather than a cloud bucket.
 
 **Path Parameters:**  
 - `report_id` (UUID): The ID of the report.
@@ -173,6 +177,7 @@ Retrieve details of a specific report by its ID.
   },
   "SourceS3Bucket": "example-bucket",
   "SourceS3Prefix": "data/",
+  "IsUpload": false,
   "CreationTime": "2023-01-01T12:00:00Z",
   "Tags": ["NAME", "EMAIL"],
   "CustomTags": {"tag1": "regex1"},
@@ -247,6 +252,7 @@ Retrieve entities for a specific report.
 - `offset` (int, optional): The starting point for pagination (default: 0).
 - `limit` (int, optional): The maximum number of entities to return (default: 100, max: 200).
 - `object` (string, optional): Filter entities by object.
+- `tags` (List[string], optional): If specified then the endpoint will only return entities where the label is one of the specified tags. The parameter can be specified multiple times to restrict to multiple tags. 
 
 **Response:**  
 - `200 OK`: Returns a list of entities.
