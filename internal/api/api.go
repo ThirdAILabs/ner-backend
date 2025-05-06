@@ -58,6 +58,7 @@ func (s *BackendService) AddRoutes(r chi.Router) {
 		r.Get("/", RestHandler(s.ListReports))
 		r.Post("/", RestHandler(s.CreateReport))
 		r.Get("/{report_id}", RestHandler(s.GetReport))
+		r.Delete("/{report_id}", RestHandler(s.DeleteReport))
 		r.Get("/{report_id}/groups/{group_id}", RestHandler(s.GetReportGroup))
 		r.Get("/{report_id}/entities", RestHandler(s.GetReportEntities))
 		r.Get("/{report_id}/search", RestHandler(s.ReportSearch))
@@ -171,9 +172,9 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 func (s *BackendService) ListReports(r *http.Request) (any, error) {
 	ctx := r.Context()
 	var reports []database.Report
-	if err := s.db.WithContext(ctx).Preload("Model").Preload("Groups").Find(&reports).Error; err != nil {
-		slog.Error("error getting inference jobs", "error", err)
-		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving inference job records")
+	if err := s.db.WithContext(ctx).Preload("Model").Preload("Groups").Where("deleted = ?", false).Find(&reports).Error; err != nil {
+		slog.Error("error getting reports", "error", err)
+		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving report records")
 	}
 
 	return convertReports(reports), nil
@@ -332,10 +333,14 @@ func (s *BackendService) GetReport(r *http.Request) (any, error) {
 	var report database.Report
 	if err := s.db.WithContext(ctx).Preload("Model").Preload("Tags").Preload("CustomTags").Preload("Groups").Preload("ShardDataTask").Preload("Errors").Find(&report, "id = ?", reportId).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, CodedErrorf(http.StatusNotFound, "inference job not found")
+			return nil, CodedErrorf(http.StatusNotFound, "report not found")
 		}
-		slog.Error("error getting inference job", "report_id", reportId, "error", err)
+		slog.Error("error getting report", "report_id", reportId, "error", err)
 		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving report data")
+	}
+
+	if report.Deleted {
+		return nil, CodedErrorf(http.StatusNotFound, "report not found")
 	}
 
 	type taskStatusCategory struct {
@@ -351,7 +356,7 @@ func (s *BackendService) GetReport(r *http.Request) (any, error) {
 		Select("status, COUNT(*) as count, sum(total_size) as total").
 		Group("status").
 		Find(&statusCategories).Error; err != nil {
-		slog.Error("error getting inference job task statuses", "report_id", reportId, "error", err)
+		slog.Error("error getting inference task statuses", "report_id", reportId, "error", err)
 		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving inference task statuses")
 	}
 
@@ -365,6 +370,51 @@ func (s *BackendService) GetReport(r *http.Request) (any, error) {
 	}
 
 	return apiReport, nil
+}
+
+func (s *BackendService) DeleteReport(r *http.Request) (any, error) {
+	reportId, err := URLParamUUID(r, "report_id")
+	if err != nil {
+		return nil, err
+	}
+
+	ctx := r.Context()
+
+	if err := s.db.WithContext(ctx).Transaction(func(txn *gorm.DB) error {
+		result := txn.Model(&database.Report{Id: reportId}).Update("deleted", true)
+		if err := result.Error; err != nil {
+			slog.Error("error deleting report job", "report_id", reportId, "error", err)
+			return CodedErrorf(http.StatusInternalServerError, "error deleting report")
+		}
+
+		if result.RowsAffected == 0 {
+			return CodedErrorf(http.StatusNotFound, "report not found")
+		}
+
+		// Delete the report data that takes up the most space
+		if err := txn.Delete(&database.ObjectGroup{}, "report_id = ?", reportId).Error; err != nil {
+			slog.Error("error deleting report groups", "report_id", reportId, "error", err)
+			return CodedErrorf(http.StatusInternalServerError, "error deleting report")
+		}
+
+		if err := txn.Delete(&database.ObjectEntity{}, "report_id = ?", reportId).Error; err != nil {
+			slog.Error("error deleting report entities", "report_id", reportId, "error", err)
+			return CodedErrorf(http.StatusInternalServerError, "error deleting report")
+		}
+
+		if err := txn.Delete(&database.ObjectPreview{}, "report_id = ?", reportId).Error; err != nil {
+			slog.Error("error deleting report entities", "report_id", reportId, "error", err)
+			return CodedErrorf(http.StatusInternalServerError, "error deleting report")
+		}
+
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	slog.Info("deleted report", "report_id", reportId)
+
+	return nil, nil
 }
 
 func (s *BackendService) GetReportGroup(r *http.Request) (any, error) {
@@ -383,10 +433,10 @@ func (s *BackendService) GetReportGroup(r *http.Request) (any, error) {
 	var group database.Group
 	if err := s.db.WithContext(ctx).Preload("Objects").First(&group, "report_id = ? AND id = ?", reportId, groupId).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, CodedErrorf(http.StatusNotFound, "inference job group not found")
+			return nil, CodedErrorf(http.StatusNotFound, "report group not found")
 		}
-		slog.Error("error getting inference job group", "report_id", reportId, "group_id", groupId, "error", err)
-		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving inference job group record")
+		slog.Error("error getting report group", "report_id", reportId, "group_id", groupId, "error", err)
+		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving report group record")
 	}
 
 	return convertGroup(group), nil
@@ -434,7 +484,7 @@ func (s *BackendService) GetReportEntities(r *http.Request) (any, error) {
 	var entities []database.ObjectEntity
 	if err := query.Find(&entities, "report_id = ?", reportId).Error; err != nil {
 		slog.Error("error getting job entities", "report_id", reportId, "error", err)
-		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving inference job entities")
+		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving report entities")
 	}
 
 	return convertEntities(entities), nil
@@ -510,8 +560,8 @@ func (s *BackendService) ReportSearch(r *http.Request) (any, error) {
 
 	var objects []string
 	if err := s.db.WithContext(ctx).Model(&database.ObjectEntity{}).Distinct("object").Where("report_id = ?", reportId).Where(filter).Find(&objects).Error; err != nil {
-		slog.Error("error getting job entities", "report_id", reportId, "error", err)
-		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving inference job entities")
+		slog.Error("error getting job objects by search", "report_id", reportId, "error", err)
+		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving report objects")
 	}
 
 	return api.SearchResponse{Objects: objects}, nil

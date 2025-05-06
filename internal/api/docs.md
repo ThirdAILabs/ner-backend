@@ -216,6 +216,17 @@ Retrieve details of a specific report by its ID. The field `IsUpload` indicates 
 
 ---
 
+### DELETE /reports/{report_id}
+**Description:**
+Deletes report with the given Id.
+
+**Response:**
+- `200 OK`: The report is deleted successfully.
+- `404 Not Found`: Report is not found.
+- `500 Internal Server Error`: Error deleting the report data.
+
+---
+
 ### GET /reports/{report_id}/groups/{group_id}
 **Description:**  
 Retrieve details of a specific group within a report.
