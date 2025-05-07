@@ -1,6 +1,6 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
-const url = require('url');
+const isDev = require('electron-is-dev');
 
 // Keep a global reference of the window object to prevent it from being garbage collected
 let mainWindow;
@@ -17,14 +17,15 @@ function createWindow() {
     }
   });
 
-  // Determine the URL to load
-  const isDev = process.argv.includes('--dev');
-  
   if (isDev) {
-    // Load from Vite dev server in development
-    mainWindow.loadURL('http://localhost:3007/');
-    // Open DevTools in development
-    mainWindow.webContents.openDevTools();
+    // In development mode, add a delay to ensure Vite has time to start
+    console.log("Development mode: Waiting for Vite server to start...");
+    setTimeout(() => {
+      console.log("Attempting to load from Vite dev server...");
+      mainWindow.loadURL('http://localhost:3007/');
+      // Open DevTools in development
+      mainWindow.webContents.openDevTools();
+    }, 3000); // 3 second delay
   } else {
     // Load built app in production
     mainWindow.loadFile(path.join(__dirname, 'src/dist/index.html'));

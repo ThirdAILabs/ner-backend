@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, Tabs, Tab, CircularProgress } from '@mui/material';
+import JobsTable from '../components/JobsTable';
 
 // These components would be imported from their actual locations
 // For now we'll create placeholder components
@@ -21,13 +22,6 @@ const Dashboard = () => (
         <Typography>Options to update the model would be available here.</Typography>
       </Box>
     </div>
-  </Box>
-);
-
-const Jobs = () => (
-  <Box sx={{ p: 2, bgcolor: 'white', borderRadius: 1, boxShadow: 1 }}>
-    <Typography variant="h6" sx={{ mb: 2 }}>Jobs</Typography>
-    <Typography>List of jobs and their status would appear here.</Typography>
   </Box>
 );
 
@@ -120,7 +114,7 @@ const TokenClassification = () => {
         </div>
 
         <div style={{ display: tabValue === 'jobs' ? 'block' : 'none' }}>
-          <Jobs />
+          <JobsTable />
         </div>
       </main>
     </div>
