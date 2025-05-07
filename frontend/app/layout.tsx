@@ -1,7 +1,7 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'ThirdAI Platform',
+  title: 'Pocket Shield',
   description: 'Democratize AI for everyone.',
 };
 

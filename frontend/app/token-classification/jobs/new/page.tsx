@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Plus, Edit, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Plus, RefreshCw, Edit } from 'lucide-react';
 import { nerService } from '@/lib/backend';
 import { Suspense } from 'react';
 
@@ -57,12 +57,6 @@ const SourceOption: React.FC<SourceOptionProps> = ({
   >
     <h3 className="text-base font-medium">{title}</h3>
     <p className="text-sm text-gray-500 mt-1">{description}</p>
-
-    {isSelected && !disabled && (
-      <div className="absolute top-3 right-3">
-        <Edit className="h-4 w-4 text-gray-500" />
-      </div>
-    )}
   </div>
 );
 
@@ -133,6 +127,8 @@ function NewJobPage() {
   // Error/Success messages
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  const [patternType, setPatternType] = useState('string');
 
   // Fetch models on page load
   useEffect(() => {
@@ -646,7 +642,6 @@ function NewJobPage() {
               </div>
             </div>
 
-            {/* Custom Tag Dialog - Simple version for now */}
             {isCustomTagDialogOpen && (
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-lg p-6 w-full max-w-md">
@@ -664,20 +659,56 @@ function NewJobPage() {
                         placeholder="CUSTOM_TAG_NAME"
                       />
                     </div>
+                    
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Regex Pattern
+                    <div className="flex items-center space-x-4 mb-1">
+                      <label className="flex items-center text-sm text-gray-700">
+                        <input
+                          type="radio"
+                          value="string"
+                          checked={patternType === 'string'}
+                          onChange={() => setPatternType('string')}
+                          className="mr-1"
+                        />
+                        <span className="block text-sm font-medium text-gray-700">
+                          String
+                        </span>
                       </label>
+                      <label className="flex items-center text-sm text-gray-700">
+                        <input
+                          type="radio"
+                          value="regex"
+                          checked={patternType === 'regex'}
+                          onChange={() => setPatternType('regex')}
+                          className="mr-1"
+                        />
+                        <span className="block text-sm font-medium text-gray-700">
+                          Regex
+                        </span>
+                      </label>
+                    </div>
+
                       <input
                         type="text"
                         value={customTagPattern}
                         onChange={(e) => setCustomTagPattern(e.target.value)}
                         className="w-full p-2 border border-gray-300 rounded"
-                        placeholder="\b[A-Z]{2}\d{6}\b"
+                        placeholder={
+                          patternType === 'regex' ? '\\b[A-Z]{2}\\d{6}\\b' : 'John Doe'
+                        }
                       />
-                      <p className="text-xs text-gray-500 mt-1">
-                        Example: \d{3}[-.]?\d{3}[-.]?\d{4} for phone numbers
-                      </p>
+                      
+                      {patternType === 'string' && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Example: <code>John Doe</code> for matching an exact name
+                        </p>
+                      )}
+
+                      {patternType === 'regex' && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Example: <code>\d{3}[-.]?\d{3}[-.]?\d{4}</code> for phone numbers
+                        </p>
+                      )}
                     </div>
                     <div className="flex justify-end space-x-2">
                       <Button

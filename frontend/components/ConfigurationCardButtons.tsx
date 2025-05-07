@@ -3,7 +3,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import DeleteIcon from '@mui/icons-material/Delete';
-import EditIcon from '@mui/icons-material/Edit';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { Plus } from 'lucide-react';
 import { Typography } from '@mui/material';
@@ -103,7 +102,6 @@ export const StorageOptionButton: React.FC<StorageOptionButtonProps> = ({
   description,
   isSelected = false,
   onClick,
-  showEditIcon = false,
   disabled = false,
   preserveStyles = false,
 }) => {
@@ -121,11 +119,6 @@ export const StorageOptionButton: React.FC<StorageOptionButtonProps> = ({
             <p className="text-sm text-gray-500 mt-2 w-full whitespace-normal break-words">{description}</p>
           )}
         </div>
-        {showEditIcon && !disabled && (
-          <div className="mt-auto self-end">
-            <EditIcon className="text-gray-500" />
-          </div>
-        )}
       </div>
     </BaseCardButton>
   );

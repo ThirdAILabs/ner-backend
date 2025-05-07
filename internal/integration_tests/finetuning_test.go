@@ -7,7 +7,6 @@ import (
 	backend "ner-backend/internal/api"
 	"ner-backend/internal/core"
 	"ner-backend/internal/database"
-	"ner-backend/internal/messaging"
 	"ner-backend/internal/storage"
 	"ner-backend/pkg/api"
 	"testing"
@@ -33,13 +32,13 @@ func TestFinetuning(t *testing.T) {
 
 	db := createDB(t)
 
-	queue := messaging.NewInMemoryQueue()
+	publisher, reciever := setupRabbitMQContainer(t, ctx)
 
-	backend := backend.NewBackendService(db, s3, queue, 120)
+	backend := backend.NewBackendService(db, s3, publisher, 120)
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
-	worker := core.NewTaskProcessor(db, s3, queue, queue, &DummyLicenseVerifier{}, t.TempDir(), modelBucket)
+	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket)
 
 	go worker.Start()
 	defer worker.Stop()
