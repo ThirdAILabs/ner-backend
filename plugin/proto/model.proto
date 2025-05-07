@@ -3,11 +3,19 @@ package proto;
 option go_package = "./proto";
 
 message PredictRequest {
-    repeated string sentences = 1;
+    string sentence = 1;
 }
 
 message PredictResponse {
     repeated Entities entities = 1;
+}
+
+message PredictBatchRequest {
+    repeated string sentences = 1;
+}
+
+message PredictBatchResponse {
+    repeated PredictResponse predictions = 1;
 }
 
 message Entity {
@@ -23,4 +31,5 @@ message Entities {
 
 service Model {
     rpc Predict(PredictRequest) returns (PredictResponse);
+    rpc PredictBatch(PredictBatchRequest) returns (PredictBatchResponse);
 }

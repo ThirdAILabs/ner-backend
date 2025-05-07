@@ -13,6 +13,8 @@ class CnnNerExtractor(Model):
             tag2idx=build_tag_vocab(),
         )
 
+        self.batch_size = 100
+
     def _process_prediction(self, text: str, pred: List[str]) -> SentencePredictions:
         tokens = text.split()
         if len(tokens) != len(pred):
@@ -37,13 +39,19 @@ class CnnNerExtractor(Model):
 
     def predict_batch(self, texts: List[str]) -> BatchPredictions:
         texts = [clean_text(text) for text in texts]
-        preds = self.model.predict_batch(texts)
 
-        sentence_predictions = [
-            self._process_prediction(text, pred) for text, pred in zip(texts, preds)
-        ]
+        predictions = []
 
-        return BatchPredictions(predictions=sentence_predictions)
+        for i in range(0, len(texts), self.batch_size):
+            batch_texts = texts[i : i + self.batch_size]
+            batch_predictions = self.model.predict_batch(batch_texts)
+            sentence_predictions = [
+                self._process_prediction(text, pred)
+                for text, pred in zip(batch_texts, batch_predictions)
+            ]
+            predictions.extend(sentence_predictions)
+
+        return BatchPredictions(predictions=predictions)
 
     def predict(self, text: str) -> SentencePredictions:
         return self.predict_batch([text]).predictions[0]

@@ -104,6 +104,7 @@ class HuggingFaceModel(Model):
         self.top_k = 3
 
         self.skipped_entites = set({"O", "CARD_NUMBER"})
+        self.batch_size = 4
 
     def _process_prediction(
         self, text: str, entities: List[str]
@@ -129,24 +130,30 @@ class HuggingFaceModel(Model):
 
     def predict_batch(self, texts: List[str]) -> BatchPredictions:
         texts = [clean_text(text) for text in texts]
-        batch_entities = predict_batch(
-            texts,
-            self.model,
-            self.tokenizer,
-            aggregation_strategy=self.aggregation_strategy,
-            threshold=self.threshold,
-            filter_funcs=self.filter_funcs,
-            max_length=self.max_length,
-            stride=self.stride,
-            top_k=self.top_k,
-        )
 
-        sentence_predictions = [
-            self._process_prediction(text, entities)
-            for text, entities in zip(texts, batch_entities)
-        ]
+        predictions = []
+        for i in range(0, len(texts), self.batch_size):
+            batch_texts = texts[i : i + self.batch_size]
+            batch_entities = predict_batch(
+                batch_texts,
+                self.model,
+                self.tokenizer,
+                aggregation_strategy=self.aggregation_strategy,
+                threshold=self.threshold,
+                filter_funcs=self.filter_funcs,
+                max_length=self.max_length,
+                stride=self.stride,
+                top_k=self.top_k,
+            )
+            predictions.extend(batch_entities)
 
-        return BatchPredictions(predictions=sentence_predictions)
+            sentence_predictions = [
+                self._process_prediction(text, entities)
+                for text, entities in zip(batch_texts, batch_entities)
+            ]
+            predictions.extend(sentence_predictions)
+
+        return BatchPredictions(predictions=predictions)
 
     def predict(self, text: str) -> SentencePredictions:
         return self.predict_batch([text]).predictions[0]
@@ -203,7 +210,8 @@ class CombinedNERModel(Model):
     def predict_batch(self, texts: List[str]) -> BatchPredictions:
         hf_out = self.hf.predict_batch(texts)
         pres_out = self.pres.predict_batch(texts)
-        # merge
+
+        # merge predictions
         sentence_predictions = [
             self._process_predictions(text, hf_out, pres_out)
             for text, hf_out, pres_out in zip(texts, hf_out, pres_out)

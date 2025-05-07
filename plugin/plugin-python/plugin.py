@@ -30,6 +30,12 @@ class ModelServicer(model_pb2_grpc.ModelServicer):
         result = model_pb2.PredictResponse(entities=preds)
         return result
 
+    def PredictBatch(self, request, context):
+        sentences = request.sentences
+        preds = self.model.predict_batch(sentences).to_go()
+        result = model_pb2.PredictBatchResponse(predictions=preds)
+        return result
+
 
 def serve(model_name: str, **kwargs):
     health = HealthServicer()
