@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Plus, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Plus, RefreshCw, Edit } from 'lucide-react';
 import { nerService } from '@/lib/backend';
 
 // Tag chip component - reused from the detail page but with interactive mode
@@ -361,20 +361,20 @@ export default function NewJobPage() {
       <div className="mb-6">
         <div className="flex items-center mb-2">
           <Link href={`/token-classification/${deploymentId}?tab=jobs`} className="text-blue-500 hover:underline">
-            Jobs
+            Report
           </Link>
           <span className="mx-2 text-gray-400">/</span>
-          <span className="text-gray-700">New Job</span>
+          <span className="text-gray-700">New Report</span>
         </div>
       </div>
 
       {/* Title and Back Button */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-medium">Create New Job</h1>
+        <h1 className="text-2xl font-medium">Create New Report</h1>
 
         <Button variant="outline" size="sm" asChild>
-          <Link href={`/token-classification/${deploymentId}?tab=jobs`} className="flex items-center">
-            <ArrowLeft className="mr-1 h-4 w-4" /> Back to Jobs
+          <Link href={`/?tab=jobs`} className="flex items-center">
+            <ArrowLeft className="mr-1 h-4 w-4" /> Back to Reports
           </Link>
         </Button>
       </div>
@@ -393,7 +393,7 @@ export default function NewJobPage() {
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Job Name Field */}
           <div>
-            <h2 className="text-lg font-medium mb-4">Job Name</h2>
+            <h2 className="text-lg font-medium mb-4">Report Name</h2>
             <div className="w-full md:w-1/2">
               <input
                 type="text"
@@ -403,7 +403,7 @@ export default function NewJobPage() {
                   setJobName(value);
                 }}
                 className="w-full p-2 border border-gray-300 rounded"
-                placeholder="my_job_name"
+                placeholder="Enter_Report_Name"
                 required
                 pattern="^[^\s]+$"
               />
@@ -658,34 +658,34 @@ export default function NewJobPage() {
                         placeholder="CUSTOM_TAG_NAME"
                       />
                     </div>
-                    
+
                     <div>
-                    <div className="flex items-center space-x-4 mb-1">
-                      <label className="flex items-center text-sm text-gray-700">
-                        <input
-                          type="radio"
-                          value="string"
-                          checked={patternType === 'string'}
-                          onChange={() => setPatternType('string')}
-                          className="mr-1"
-                        />
-                        <span className="block text-sm font-medium text-gray-700">
-                          String
-                        </span>
-                      </label>
-                      <label className="flex items-center text-sm text-gray-700">
-                        <input
-                          type="radio"
-                          value="regex"
-                          checked={patternType === 'regex'}
-                          onChange={() => setPatternType('regex')}
-                          className="mr-1"
-                        />
-                        <span className="block text-sm font-medium text-gray-700">
-                          Regex
-                        </span>
-                      </label>
-                    </div>
+                      <div className="flex items-center space-x-4 mb-1">
+                        <label className="flex items-center text-sm text-gray-700">
+                          <input
+                            type="radio"
+                            value="string"
+                            checked={patternType === 'string'}
+                            onChange={() => setPatternType('string')}
+                            className="mr-1"
+                          />
+                          <span className="block text-sm font-medium text-gray-700">
+                            String
+                          </span>
+                        </label>
+                        <label className="flex items-center text-sm text-gray-700">
+                          <input
+                            type="radio"
+                            value="regex"
+                            checked={patternType === 'regex'}
+                            onChange={() => setPatternType('regex')}
+                            className="mr-1"
+                          />
+                          <span className="block text-sm font-medium text-gray-700">
+                            Regex
+                          </span>
+                        </label>
+                      </div>
 
                       <input
                         type="text"
@@ -696,7 +696,7 @@ export default function NewJobPage() {
                           patternType === 'regex' ? '\\b[A-Z]{2}\\d{6}\\b' : 'John Doe'
                         }
                       />
-                      
+
                       {patternType === 'string' && (
                         <p className="text-xs text-gray-500 mt-1">
                           Example: <code>John Doe</code> for matching an exact name

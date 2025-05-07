@@ -138,7 +138,7 @@ export default function Jobs() {
             mb: 3
           }}>
             <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.125rem' }}>
-              Jobs
+              Report
             </Typography>
             <Link href={`/token-classification/${params.deploymentId}/jobs/new`} passHref>
               <Button
@@ -153,7 +153,7 @@ export default function Jobs() {
                   fontWeight: 500
                 }}
               >
-                New
+                New Report
               </Button>
             </Link>
           </Box>
@@ -176,7 +176,7 @@ export default function Jobs() {
             mb: 3
           }}>
             <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.125rem' }}>
-              Jobs
+              Report
             </Typography>
             <Link href={`/token-classification/${params.deploymentId}/jobs/new`} passHref>
               <Button
@@ -191,7 +191,7 @@ export default function Jobs() {
                   fontWeight: 500
                 }}
               >
-                New
+                New Report
               </Button>
             </Link>
           </Box>
@@ -343,7 +343,7 @@ export default function Jobs() {
           mb: 3
         }}>
           <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.125rem' }}>
-            Jobs
+            Report
           </Typography>
           <Link href={`/token-classification/${params.deploymentId}/jobs/new`} passHref>
             <Button
