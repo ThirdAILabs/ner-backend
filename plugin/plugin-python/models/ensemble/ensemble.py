@@ -1,7 +1,7 @@
 from collections import Counter
 from typing import List
 
-from ..model_interface import BatchPredictions, Entities, Model, SentencePredictions
+from ..model_interface import BatchPredictions, Entity, Model, SentencePredictions
 from .cnn_backend.backend import CNNModel
 from .pytorch_embedding_backend.backend import EmbeddingBagWrappedNerModel
 from .udt_backend.backend import UDTModel
@@ -55,7 +55,7 @@ class EnsembleModel(Model):
             tags.append(tag)
 
         offset = 0
-        entities: List[Entities] = []
+        entities: List[Entity] = []
         for tok, tag in zip(tokens, tags):
             idx = text.find(tok, offset)
             if idx == -1:
@@ -64,7 +64,7 @@ class EnsembleModel(Model):
             if tag == "O":
                 continue
             entities.append(
-                Entities(
+                Entity(
                     text=tok,
                     label=tag,
                     score=1.0,

@@ -1,6 +1,6 @@
 from typing import List
 
-from ..model_interface import BatchPredictions, Entities, Model, SentencePredictions
+from ..model_interface import BatchPredictions, Entity, Model, SentencePredictions
 from .cnn_backend.backend import CNNModel
 from ..utils import build_tag_vocab, clean_text
 
@@ -21,7 +21,7 @@ class CnnNerExtractor(Model):
             raise ValueError(
                 f"Token count ({len(tokens)}) and prediction count ({len(pred)}) differ."
             )
-        entities: List[Entities] = []
+        entities: List[Entity] = []
         for tok, tag in zip(tokens, pred):
             idx = text.find(tok)
             if idx == -1:
@@ -29,7 +29,7 @@ class CnnNerExtractor(Model):
             if tag == "O":
                 continue
             entities.append(
-                Entities(
+                Entity(
                     text=tok,
                     label=tag,
                     score=1.0,

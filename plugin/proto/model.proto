@@ -7,7 +7,7 @@ message PredictRequest {
 }
 
 message PredictResponse {
-    repeated Entities entities = 1;
+    repeated Entity entities = 1;
 }
 
 message PredictBatchRequest {
@@ -23,10 +23,6 @@ message Entity {
     string text = 2;
     int32 start = 3;
     int32 end = 4;
-}
-
-message Entities {
-    repeated Entity entities = 1;
 }
 
 service Model {

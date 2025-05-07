@@ -5,7 +5,7 @@ from typing import Any, Dict, List
 from transformers import AutoModelForTokenClassification, AutoTokenizer
 from presidio_analyzer import RecognizerResult
 
-from ..model_interface import Entities, Model, SentencePredictions, BatchPredictions
+from ..model_interface import Entity, Model, SentencePredictions, BatchPredictions
 from .make_analyzer import analyze_text_batch, get_batch_analyzer
 from .transformer_inference import predict_batch, punctuation_filter
 from ..utils import clean_text
@@ -54,7 +54,7 @@ def merge_predictions(
     if current_cluster:
         clusters.append(current_cluster)
 
-    merged: List[Entities] = []
+    merged: List[Entity] = []
     # process each cluster
     for cluster in clusters:
         pres = [x["ent"] for x in cluster if x["src"] == "presidio"]
@@ -70,7 +70,7 @@ def merge_predictions(
                 ends = [e.end for e in pres + hf]
                 st, ed = min(starts), max(ends)
                 merged.append(
-                    Entities(
+                    Entity(
                         text=full_text[st:ed],
                         label=label,
                         # you could max or avg the scores
@@ -118,7 +118,7 @@ class HuggingFaceModel(Model):
             if label in self.skipped_entites:
                 continue
             predictions.append(
-                Entities(
+                Entity(
                     text=w,
                     label=label,
                     score=conf,
@@ -169,7 +169,7 @@ class PresidioWrappedNerModel(Model):
         predictions = []
         for entity in entities:
             predictions.append(
-                Entities(
+                Entity(
                     text=text[entity.start : entity.end],
                     label=entity.entity_type,
                     score=entity.score,
