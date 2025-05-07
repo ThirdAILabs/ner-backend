@@ -8,8 +8,8 @@ import { useParams, useSearchParams } from 'next/navigation';
 
 // Import our implemented components
 // import Interact from './interact';
-import Dashboard from './token-classification/[deploymentId]/dashboard';
-import Jobs from './token-classification/[deploymentId]/jobs';
+import Dashboard from './token-classification/dashboard';
+import Jobs from './token-classification/jobs';
 
 interface ModelUpdateProps {
   username: string;

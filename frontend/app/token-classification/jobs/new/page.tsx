@@ -214,18 +214,12 @@ export default function NewJobPage() {
 
   // Add a custom tag
   const handleAddCustomTag = () => {
+
     if (!customTagName.trim() || !customTagPattern.trim()) {
       setError('Custom tag name and pattern are required');
       return;
     }
-    for (let index = 0; index < customTags.length; index++) {
-      const thisTag = customTags[index];
-      if (thisTag.name === customTagName.toUpperCase()) {
-        setError('Custom tag name and pattern are required');
-        return;
-      }
 
-    }
     const newCustomTag = {
       name: customTagName.toUpperCase(),
       pattern: customTagPattern
@@ -236,6 +230,13 @@ export default function NewJobPage() {
         tag.name === editingTag.name ? newCustomTag : tag
       ));
     } else {
+      for (let index = 0; index < customTags.length; index++) {
+        const thisTag = customTags[index];
+        if (thisTag.name === customTagName.toUpperCase()) {
+          setError(`${customTagName.toUpperCase()} is already taken. Please choose other tag name.`);
+          return;
+        }
+      }
       setCustomTags(prev => [...prev, newCustomTag]);
     }
 
@@ -255,7 +256,12 @@ export default function NewJobPage() {
     setEditingTag(tag);
     setIsCustomTagDialogOpen(true);
   };
-
+  const handleCancel = () => {
+    setCustomTagName('');
+    setCustomTagPattern('');
+    setEditingTag(null);
+    setIsCustomTagDialogOpen(false);
+  }
   const areFilesIdentical = (file1: File, file2: File): boolean => {
     return file1.name === file2.name && file1.size === file2.size;
   };
@@ -360,7 +366,7 @@ export default function NewJobPage() {
       {/* Breadcrumbs */}
       <div className="mb-6">
         <div className="flex items-center mb-2">
-          <Link href={`/token-classification/${deploymentId}?tab=jobs`} className="text-blue-500 hover:underline">
+          <Link href={`/?tab=jobs`} className="text-blue-500 hover:underline">
             Report
           </Link>
           <span className="mx-2 text-gray-400">/</span>
@@ -609,6 +615,7 @@ export default function NewJobPage() {
                         size="sm"
                         onClick={() => handleEditCustomTag(customTag)}
                         className="text-blue-500"
+                        type="button"
                       >
                         <Edit className="h-4 w-4 mr-1" />
                         Edit
@@ -712,11 +719,12 @@ export default function NewJobPage() {
                     <div className="flex justify-end space-x-2">
                       <Button
                         variant="outline"
-                        onClick={() => setIsCustomTagDialogOpen(false)}
+                        onClick={handleCancel}
+                        type='button'
                       >
                         Cancel
                       </Button>
-                      <Button onClick={handleAddCustomTag}>
+                      <Button onClick={handleAddCustomTag} type='button'>
                         Add Tag
                       </Button>
                     </div>

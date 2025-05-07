@@ -140,7 +140,7 @@ export default function Jobs() {
             <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.125rem' }}>
               Report
             </Typography>
-            <Link href={`/token-classification/${params.deploymentId}/jobs/new`} passHref>
+            <Link href={`/token-classification/jobs/new`} passHref>
               <Button
                 variant="contained"
                 color="primary"
@@ -178,7 +178,7 @@ export default function Jobs() {
             <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.125rem' }}>
               Report
             </Typography>
-            <Link href={`/token-classification/${params.deploymentId}/jobs/new`} passHref>
+            <Link href={`/token-classification/jobs/new`} passHref>
               <Button
                 variant="contained"
                 color="primary"
@@ -345,7 +345,7 @@ export default function Jobs() {
           <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.125rem' }}>
             Report
           </Typography>
-          <Link href={`/token-classification/${params.deploymentId}/jobs/new`} passHref>
+          <Link href={`/token-classification/jobs/new`} passHref>
             <Button
               variant="contained"
               color="primary"
@@ -399,7 +399,7 @@ export default function Jobs() {
                     <TableCell>{format(new Date(report.CreationTime), 'MM/dd/yyyy, hh:mm:ss a')}</TableCell>
                     <TableCell>
                       <Link
-                        href={`/token-classification/${params.deploymentId}/jobs/${report.Id}`}
+                        href={`/token-classification/jobs/${report.Id}`}
                         style={{
                           color: '#1976d2',
                           textDecoration: 'none'
