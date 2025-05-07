@@ -1,18 +1,14 @@
 package main
 
 import (
-	"fmt"
 	"log" // Adjust import path
-	"log/slog"
 	"ner-backend/cmd"
 	"ner-backend/internal/core"
 	"ner-backend/internal/database"
-	"ner-backend/internal/licensing"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/storage"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	"github.com/caarlos0/env/v11"
@@ -68,24 +64,9 @@ func main() {
 		log.Fatalf("Failed to connect to RabbitMQ: %v", err)
 	}
 
-	var licenseVerifier licensing.LicenseVerifier
-	if strings.HasPrefix(cfg.LicenseKey, "local:") {
-		var err error
-		licenseVerifier, err = licensing.NewFileLicenseVerifier([]byte(licensing.FileLicensePublicKey), strings.TrimSpace(strings.TrimPrefix(cfg.LicenseKey, "local:")))
-		if err != nil {
-			log.Fatalf("Failed to create file license verifier: %v", err)
-		}
-	} else if cfg.LicenseKey != "" {
-		licenseVerifier, err = licensing.NewKeygenLicenseVerifier(cfg.LicenseKey)
-		if err != nil {
-			log.Fatalf("Failed to create license verifier: %v", err)
-		}
-	} else {
-		slog.Warn(fmt.Sprintf("License key not provided. Using free license verifier with %.2fGB total file size limit", float64(licensing.DefaultFreeLicenseMaxBytes)/(1024*1024*1024)))
-		licenseVerifier = licensing.NewFreeLicenseVerifier(db, licensing.DefaultFreeLicenseMaxBytes)
-	}
+	licensing := cmd.CreateLicenseVerifier(db, cfg.LicenseKey)
 
-	worker := core.NewTaskProcessor(db, s3Client, publisher, receiver, licenseVerifier, "./tmp_models_TODO", cfg.ModelBucketName)
+	worker := core.NewTaskProcessor(db, s3Client, publisher, receiver, licensing, "./tmp_models_TODO", cfg.ModelBucketName)
 
 	go worker.Start()
 
