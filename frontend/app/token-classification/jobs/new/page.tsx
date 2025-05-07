@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Box } from '@mui/material';
@@ -100,7 +100,6 @@ interface CustomTag {
 }
 
 export default function NewJobPage() {
-  const params = useParams();
   const router = useRouter();
 
   // Essential state

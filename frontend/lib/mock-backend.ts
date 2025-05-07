@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import type { TrainReportData, LabelMetrics, ExampleCategories, TrainingExample } from '@/lib/types';
 import { ObjectDatabaseRecord, ClassifiedTokenDatabaseRecord } from '@/app/token-classification/jobs/[jobId]/(database-table)/types';
 import {
@@ -138,7 +138,8 @@ export const getReformulations = async () => {
 };
 
 export function useTokenClassificationEndpoints() {
-  const { deploymentId } = useParams();
+  const searchParams = useSearchParams();
+  const deploymentId = searchParams.get('deploymentId') as string;
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

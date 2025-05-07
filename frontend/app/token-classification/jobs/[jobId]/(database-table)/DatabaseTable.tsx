@@ -6,7 +6,7 @@ import { FilterSection } from './FilterSection';
 import { HeaderContent } from './HeaderContent';
 import { TableContent } from './TableContent';
 import { nerService } from '@/lib/backend';
-import { useParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 
 export function DatabaseTable({
   loadMoreObjectRecords,
@@ -14,8 +14,8 @@ export function DatabaseTable({
   groups,
   tags,
 }: DatabaseTableProps) {
-  const params = useParams();
-  const reportId: string = params.jobId as string;
+  const searchParams = useSearchParams();
+  const reportId: string = searchParams.get('jobId') as string;
   
   // Loading states and refs
   const [isLoadingTokenRecords, setIsLoadingTokenRecords] = useState(false);

@@ -18,7 +18,7 @@ import { Plus } from 'lucide-react';
 
 import { Card, CardContent } from '@mui/material';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { format } from 'date-fns';
 import { nerService } from '@/lib/backend';
 import { IconButton, Tooltip } from '@mui/material';
@@ -66,7 +66,8 @@ interface ReportWithStatus {
 }
 
 export default function Jobs() {
-  const params = useParams();
+  const searchParams = useSearchParams();
+  const deploymentId = searchParams.get('deploymentId');
   const [reports, setReports] = useState<ReportWithStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -490,7 +491,7 @@ export default function Jobs() {
                         sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
                       >
                         <Link
-                          href={`/token-classification/jobs/${report.Id}`}
+                          href={`/token-classification/jobs?jobId=${report.Id}`}
                           style={{
                             color: '#1976d2',
                             textDecoration: 'none'

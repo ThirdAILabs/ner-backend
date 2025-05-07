@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -222,8 +222,9 @@ const NewTagDialog: React.FC<{
 };
 
 export default function JobDetail() {
-  const params = useParams();
-  const reportId: string = params.jobId as string;
+  const searchParams = useSearchParams();
+  const reportId: string = searchParams.get('jobId') as string;
+  const deploymentId = searchParams.get('deploymentId') as string;
   const [lastUpdated, setLastUpdated] = useState(0);
   const [tabValue, setTabValue] = useState('analytics');
   const [selectedSource, setSelectedSource] = useState<'s3' | 'local'>('s3');
@@ -378,7 +379,7 @@ export default function JobDetail() {
       {/* Header with Back Button and Title */}
       <div className="flex items-center justify-between mb-6">
         <Button variant="outline" size="sm" asChild>
-          <Link href={`/?tab=jobs`} className="flex items-center">
+          <Link href={`/token-classification/jobs?jobId=${reportId}&tab=jobs`} className="flex items-center">
             <ArrowLeft className="mr-1 h-4 w-4" /> Back to Reports
           </Link>
         </Button>
