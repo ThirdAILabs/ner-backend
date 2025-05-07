@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Use the same API endpoint as the Next.js app
-const nerBaseUrl = 'http://localhost:8080/api/v1'; // Update this to match your backend URL
+const nerBaseUrl = 'http://localhost:8000/api/v1'; // Updated to port 8000
 
 const axiosInstance = axios.create({
     baseURL: nerBaseUrl,
