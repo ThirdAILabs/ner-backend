@@ -26,6 +26,8 @@ class CnnNerExtractor(Model):
             idx = text.find(tok)
             if idx == -1:
                 continue
+            if tag == "O":
+                continue
             entities.append(
                 Entities(
                     text=tok,
