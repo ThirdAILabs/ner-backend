@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -38,7 +39,7 @@ var modelLoaders = map[string]modelLoader{
 	"transformer": func(path string) (Model, error) {
 		configJSON := fmt.Sprintf("{\"model_path\":\"%s/custom_ner_model\",\"threshold\": 0.5}", path)
 		return python.LoadPythonModel(
-			"python",
+			os.Getenv("PYTHON_EXECUTABLE_PATH"),
 			"plugin/plugin-python/plugin.py",
 			"python_combined_ner_model",
 			configJSON,
@@ -53,7 +54,7 @@ var modelLoaders = map[string]modelLoader{
 	"cnn": func(path string) (Model, error) {
 		configJSON := fmt.Sprintf("{\"model_path\":\"%s/cnn_model.pth\"}", path)
 		return python.LoadPythonModel(
-			"python",
+			os.Getenv("PYTHON_EXECUTABLE_PATH"),
 			"plugin/plugin-python/plugin.py",
 			"python_cnn_ner_model",
 			configJSON,

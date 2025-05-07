@@ -63,7 +63,6 @@ func (ner *NER) Predict(text string) ([]types.Entity, error) {
 				LContext: strings.ToValidUTF8(sentences[i][max(start-20, 0):start], ""),
 				RContext: strings.ToValidUTF8(sentences[i][end:min(len(sentences[i]), end+20)], ""),
 			}
-			entity.UpdateContext(sentences[i])
 			results = append(results, entity)
 		}
 	}

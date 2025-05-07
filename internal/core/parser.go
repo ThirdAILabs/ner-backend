@@ -25,7 +25,7 @@ type DefaultParser struct {
 	maxChunkSize int
 }
 
-const defaultMaxChunkSize = 512 * 1024 * 1024 // 512 MB
+const defaultMaxChunkSize = 2 * 1024 * 1024 // 2 MB
 
 func NewDefaultParser() *DefaultParser {
 	return &DefaultParser{maxChunkSize: defaultMaxChunkSize}
@@ -93,27 +93,35 @@ func (parser *DefaultParser) parsePdf(object string, data io.Reader, output chan
 	}
 }
 
-func (parser *DefaultParser) parsePlaintext(filename string, data io.Reader, output chan ParsedChunk) {
+func (parser *DefaultParser) parsePlaintext(
+	filename string,
+	data io.Reader,
+	output chan ParsedChunk,
+) {
 	offset := 0
+	buf := make([]byte, parser.maxChunkSize)
+
 	for {
-		chunk := make([]byte, parser.maxChunkSize)
-
-		n, err := io.ReadFull(data, chunk)
-		isEnd := false
-		if err != io.EOF || err != io.ErrUnexpectedEOF {
-			err = nil
-			isEnd = true
+		n, err := data.Read(buf)
+		if n > 0 {
+			output <- ParsedChunk{
+				Object: filename,
+				Text:   string(buf[:n]),
+				Offset: offset,
+				Error:  nil,
+			}
+			offset += n
 		}
 
-		output <- ParsedChunk{
-			Object: filename,
-			Text:   string(chunk[:n]),
-			Offset: offset,
-			Error:  err,
-		}
-		offset += n
-
-		if isEnd {
+		if err != nil {
+			if err != io.EOF {
+				output <- ParsedChunk{
+					Object: filename,
+					Text:   "",
+					Offset: offset,
+					Error:  err,
+				}
+			}
 			return
 		}
 	}

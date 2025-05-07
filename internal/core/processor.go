@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"log/slog"
 	"ner-backend/internal/core/types"
 	"ner-backend/internal/database"
@@ -390,7 +391,10 @@ func (proc *TaskProcessor) runInferenceOnObject(
 			return nil, nil, fmt.Errorf("error parsing document: %w", chunk.Error)
 		}
 
+		start := time.Now()
 		chunkEntities, err := model.Predict(chunk.Text)
+		duration := time.Since(start)
+		log.Printf("[DEBUG] model prediction took %s", duration)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error running model inference: %w", err)
 		}
