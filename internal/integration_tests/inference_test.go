@@ -9,7 +9,6 @@ import (
 	backend "ner-backend/internal/api"
 	"ner-backend/internal/core"
 	"ner-backend/internal/database"
-	"ner-backend/internal/messaging"
 	"ner-backend/internal/storage"
 	"ner-backend/pkg/api"
 	"net/http"
@@ -111,13 +110,13 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 
 	db := createDB(t)
 
-	queue := messaging.NewInMemoryQueue()
+	publisher, reciever := setupRabbitMQContainer(t, ctx)
 
-	backend := backend.NewBackendService(db, s3, queue, 120)
+	backend := backend.NewBackendService(db, s3, publisher, 120)
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
-	worker := core.NewTaskProcessor(db, s3, queue, queue, &DummyLicenseVerifier{}, t.TempDir(), modelBucket)
+	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket)
 
 	go worker.Start()
 	defer worker.Stop()
@@ -127,6 +126,7 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 	createData(t, s3)
 
 	reportId := createReport(t, router, api.CreateReportRequest{
+		ReportName:     "test-report",
 		ModelId:        modelId,
 		S3Endpoint:     minioUrl,
 		SourceS3Bucket: dataBucket,
@@ -203,13 +203,13 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 
 	db := createDB(t)
 
-	queue := messaging.NewInMemoryQueue()
+	publisher, reciever := setupRabbitMQContainer(t, ctx)
 
-	backend := backend.NewBackendService(db, s3, queue, 120)
+	backend := backend.NewBackendService(db, s3, publisher, 120)
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
-	worker := core.NewTaskProcessor(db, s3, queue, queue, &DummyLicenseVerifier{}, t.TempDir(), modelBucket)
+	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket)
 
 	go worker.Start()
 	defer worker.Stop()
@@ -219,9 +219,10 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 	uploadId := createUpload(t, router)
 
 	reportId := createReport(t, router, api.CreateReportRequest{
-		ModelId:  modelId,
-		UploadId: uploadId,
-		Tags:     []string{"phone", "email"},
+		ReportName: "test-report",
+		ModelId:    modelId,
+		UploadId:   uploadId,
+		Tags:       []string{"phone", "email"},
 	})
 
 	report := waitForReport(t, router, reportId)

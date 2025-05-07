@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"regexp"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -90,4 +91,18 @@ func URLParamUUID(r *http.Request, key string) (uuid.UUID, error) {
 	}
 
 	return id, nil
+}
+
+func validateReportName(name string) error {
+	// Allow only alphanumeric characters, underscores, and hyphens
+	matched, err := regexp.MatchString("^[\\w-]+$", name)
+	if err != nil {
+		return CodedError(http.StatusInternalServerError, fmt.Errorf("error validating report name: %w", err))
+	}
+
+	if !matched {
+		return CodedErrorf(http.StatusBadRequest, "invalid report name '%s' provided: only alphanumeric characters, underscores, and hyphens are allowed", name)
+	}
+
+	return nil
 }

@@ -11,10 +11,9 @@ import (
 )
 
 type ParsedChunk struct {
-	Object string
 	Text   string
-	Error  error
 	Offset int
+	Error  error
 }
 
 type Parser interface {
@@ -25,14 +24,17 @@ type DefaultParser struct {
 	maxChunkSize int
 }
 
-const defaultMaxChunkSize = 2 * 1024 * 1024 // 2 MB
+const (
+	defaultMaxChunkSize = 2 * 1024 * 1024 // 2 MB
+	queueBufferSize     = 4
+)
 
 func NewDefaultParser() *DefaultParser {
 	return &DefaultParser{maxChunkSize: defaultMaxChunkSize}
 }
 
 func (parser *DefaultParser) Parse(object string, data io.Reader) chan ParsedChunk {
-	output := make(chan ParsedChunk)
+	output := make(chan ParsedChunk, queueBufferSize)
 
 	ext := filepath.Ext(object)
 
@@ -58,10 +60,10 @@ func (parser *DefaultParser) parsePdf(object string, data io.Reader, output chan
 	n, err := io.ReadFull(data, document)
 	if err == nil {
 		// if the error is nil then the end of the stream was not reached, thus we cannot parse the pdf.
-		output <- ParsedChunk{Object: object, Error: fmt.Errorf("pdf is too large for parsing")}
+		output <- ParsedChunk{Error: fmt.Errorf("pdf is too large for parsing")}
 		return
 	} else if err != io.EOF && err != io.ErrUnexpectedEOF {
-		output <- ParsedChunk{Object: object, Error: err}
+		output <- ParsedChunk{Error: err}
 		return
 	}
 
@@ -69,7 +71,7 @@ func (parser *DefaultParser) parsePdf(object string, data io.Reader, output chan
 
 	pdf, err := fitz.NewFromMemory(document)
 	if err != nil {
-		output <- ParsedChunk{Object: object, Error: err}
+		output <- ParsedChunk{Error: err}
 		return
 	}
 	defer pdf.Close()
@@ -79,14 +81,13 @@ func (parser *DefaultParser) parsePdf(object string, data io.Reader, output chan
 	for i := 0; i < pdf.NumPage(); i++ {
 		pageText, err := pdf.Text(i)
 		if err != nil {
-			output <- ParsedChunk{Object: object, Error: err}
+			output <- ParsedChunk{Error: err}
 			return
 		}
 		pages = append(pages, pageText)
 	}
 
 	output <- ParsedChunk{
-		Object: object,
 		Text:   strings.Join(pages, "\n\n"),
 		Offset: 0,
 		Error:  nil,

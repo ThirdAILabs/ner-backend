@@ -92,6 +92,7 @@ Retrieve a list of all reports. Either `UploadId` or `SourceS3Bucket` must be sp
       "Type": "bolt",
       "Status": "TRAINED"
     },
+    "ReportName": "report-name",
     "UploadId": "123e4567-e89b-12d3-a456-426614174000",
     "SourceS3Bucket": "example-bucket",
     "SourceS3Prefix": "data/",
@@ -115,6 +116,7 @@ Create a new report. The tags fields indicates which of the models tags are cons
 
 **Request Body:**  
 - `ModelId` (UUID): The ID of the model.
+- `ModelName` (string): Name of the report
 - `S3Endpoint` (string, optional): The s3 endpoint to use. Important if using a custom s3 compatible api like minio.
 - `S3Region` (string, optional): The s3 region to use.
 - `SourceS3Bucket` (string): The S3 bucket containing the source data.
@@ -181,6 +183,11 @@ Retrieve details of a specific report by its ID. The field `IsUpload` indicates 
   "CreationTime": "2023-01-01T12:00:00Z",
   "Tags": ["NAME", "EMAIL"],
   "CustomTags": {"tag1": "regex1"},
+  "TagCounts": {
+    "NAME": 10,
+    "EMAIL": 0,
+    "tag1": 23
+  }
   "Groups": [
     {
       "Id": "123e4567-e89b-12d3-a456-426614174003",
@@ -213,6 +220,28 @@ Retrieve details of a specific report by its ID. The field `IsUpload` indicates 
   ]
 }
 ```
+
+---
+
+### DELETE /reports/{report_id}
+**Description:**
+Deletes report with the given Id.
+
+**Response:**
+- `200 OK`: The report is deleted successfully.
+- `404 Not Found`: Report is not found.
+- `500 Internal Server Error`: Error deleting the report data.
+
+---
+
+### POST /reports/{report_id}/stop
+**Description:**
+Stops the report with the given Id. This means that any sub tasks within the report that have not yet started are cancelled. Any in progress tasks will continue.
+
+**Response:**
+- `200 OK`: The report is stopped successfully.
+- `404 Not Found`: Report is not found.
+- `500 Internal Server Error`: Error stopping the report.
 
 ---
 
