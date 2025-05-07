@@ -1,4 +1,4 @@
-import { Tag } from "../../../../../../components/AnalyticsDashboard"
+import { Tag } from "@/components/AnalyticsDashboard"
 
 export interface ObjectDatabaseRecord {
   taggedTokens: [string, string][];

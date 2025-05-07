@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { ChevronDown, ChevronUp, ListFilter } from 'lucide-react';
 
-import { Tag } from '../../../../../../components/AnalyticsDashboard';
+import { Tag } from '@/components/AnalyticsDashboard';
 
 interface FilterSectionProps {
   groups: string[];
