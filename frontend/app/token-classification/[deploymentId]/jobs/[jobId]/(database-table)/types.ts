@@ -25,4 +25,18 @@ export interface DatabaseTableProps {
   tags: string[];
 }
 
+export interface TableContentProps {
+  viewMode: ViewMode;
+  objectRecords: ObjectDatabaseRecord[];
+  tokenRecords: ClassifiedTokenDatabaseRecord[];
+  groupFilters: Record<string, boolean>;
+  tagFilters: Record<string, boolean>;
+  isLoadingObjectRecords: boolean;
+  isLoadingTokenRecords: boolean;
+  tags: string[]; 
+  hasMoreTokens?: boolean;
+  hasMoreObjects?: boolean;
+  onLoadMore?: () => void;
+}
+
 export type ViewMode = 'object' | 'classified-token'; 

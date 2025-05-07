@@ -6,8 +6,9 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { Loader2 } from 'lucide-react';
-import { ClassifiedTokenDatabaseRecord, ObjectDatabaseRecord, ViewMode } from './types';
+import { ClassifiedTokenDatabaseRecord, ObjectDatabaseRecord, ViewMode, TableContentProps } from './types';
 import { useMemo } from 'react';
+import { Button } from '@/components/ui/button';
 
 // Define color palettes for tag colors
 const PASTELS = ['#E5A49C', '#F6C886', '#FBE7AA', '#99E3B5', '#A6E6E7', '#A5A1E1', '#D8A4E2'];
@@ -141,17 +142,6 @@ function TokenContext({ context, tagColors }: TokenContextProps) {
   );
 }
 
-interface TableContentProps {
-  viewMode: ViewMode;
-  objectRecords: ObjectDatabaseRecord[];
-  tokenRecords: ClassifiedTokenDatabaseRecord[];
-  groupFilters: Record<string, boolean>;
-  tagFilters: Record<string, boolean>;
-  isLoadingObjectRecords: boolean;
-  isLoadingTokenRecords: boolean;
-  tags: string[]; // Add tags prop
-}
-
 export function TableContent({
   viewMode,
   objectRecords,
@@ -161,6 +151,9 @@ export function TableContent({
   isLoadingObjectRecords,
   isLoadingTokenRecords,
   tags,
+  hasMoreTokens = false,
+  hasMoreObjects = false,
+  onLoadMore,
 }: TableContentProps) {
   // Debug log for records
   console.log("TableContent received:", {
@@ -168,7 +161,9 @@ export function TableContent({
     tokenRecordsCount: tokenRecords.length,
     objectRecordsCount: objectRecords.length,
     tagFilters,
-    groupFilters
+    groupFilters,
+    hasMoreTokens,
+    hasMoreObjects
   });
 
   // Compute tag colors based on the provided tags
@@ -187,6 +182,31 @@ export function TableContent({
 
     return colors;
   }, [tags]);
+
+  // Load More button component
+  const LoadMoreButton = ({ hasMore, isLoading }: { hasMore: boolean, isLoading: boolean }) => {
+    if (!hasMore) return null;
+    
+    return (
+      <div className="py-4 flex justify-center">
+        <Button 
+          variant="outline"
+          onClick={onLoadMore}
+          disabled={isLoading || !hasMore}
+          className="w-full max-w-sm"
+        >
+          {isLoading ? (
+            <div className="flex items-center justify-center">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Loading more...
+            </div>
+          ) : (
+            'Load More'
+          )}
+        </Button>
+      </div>
+    );
+  };
 
   // For classified token view
   if (viewMode === 'classified-token') {
@@ -221,7 +241,6 @@ export function TableContent({
             filteredRecords.map((record, index) => (
               <TableRow key={index}>
                 <TableCell
-
                 >
                   {record.context ? (
                     <TokenContext context={{
@@ -256,15 +275,25 @@ export function TableContent({
               </TableCell>
             </TableRow>
           )}
-          {isLoadingTokenRecords && filteredRecords.length > 0 && (
+          
+          {/* Show spinner during initial load, show load more button when we have data */}
+          {isLoadingTokenRecords && filteredRecords.length === 0 ? (
             <TableRow>
               <TableCell colSpan={5} className="text-center py-4 text-gray-500">
                 <div className="flex items-center justify-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Loading more records...
+                  Loading records...
                 </div>
               </TableCell>
             </TableRow>
+          ) : (
+            filteredRecords.length > 0 && (
+              <TableRow>
+                <TableCell colSpan={5} className="py-2">
+                  <LoadMoreButton hasMore={hasMoreTokens} isLoading={isLoadingTokenRecords} />
+                </TableCell>
+              </TableRow>
+            )
           )}
         </TableBody>
       </>
@@ -338,15 +367,25 @@ export function TableContent({
               </TableCell>
             </TableRow>
           )}
-          {isLoadingObjectRecords && filteredRecords.length > 0 && (
+          
+          {/* Show spinner during initial load, show load more button when we have data */}
+          {isLoadingObjectRecords && filteredRecords.length === 0 ? (
             <TableRow>
               <TableCell colSpan={3} className="text-center py-4 text-gray-500">
                 <div className="flex items-center justify-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Loading more records...
+                  Loading records...
                 </div>
               </TableCell>
             </TableRow>
+          ) : (
+            filteredRecords.length > 0 && (
+              <TableRow>
+                <TableCell colSpan={3} className="py-2">
+                  <LoadMoreButton hasMore={hasMoreObjects} isLoading={isLoadingObjectRecords} />
+                </TableCell>
+              </TableRow>
+            )
           )}
         </TableBody>
       </>
