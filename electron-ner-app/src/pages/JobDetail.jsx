@@ -28,60 +28,111 @@ const ConfigurationTab = ({ report }) => {
   
   return (
     <Box sx={{ mt: 3 }}>
-      <Grid container spacing={2}>
-        <Grid item xs={12} md={6}>
-          <Typography variant="subtitle1" fontWeight="bold">Name</Typography>
-          <Typography mb={2}>{report.ReportName}</Typography>
-          
-          <Typography variant="subtitle1" fontWeight="bold">Model</Typography>
-          <Typography mb={2}>{report.Model?.Name}</Typography>
-          
-          <Typography variant="subtitle1" fontWeight="bold">Created At</Typography>
-          <Typography mb={2}>{format(new Date(report.CreationTime), 'PPpp')}</Typography>
-        </Grid>
-        
-        <Grid item xs={12} md={6}>
-          <Typography variant="subtitle1" fontWeight="bold">Source</Typography>
-          <Typography mb={2}>{report.SourceS3Bucket}/{report.SourceS3Prefix || 'N/A'}</Typography>
-          
-          <Typography variant="subtitle1" fontWeight="bold">Tags</Typography>
-          <Box sx={{ mb: 2 }}>
-            {report.Tags && report.Tags.length > 0 ? (
-              report.Tags.map((tag, index) => (
-                <Chip key={index} label={tag} size="small" sx={{ mr: 0.5, mb: 0.5 }} />
-              ))
-            ) : (
-              <Typography color="text.secondary">No tags</Typography>
+      <div className="space-y-8">
+        {/* Source section */}
+        <div>
+          <Typography 
+            variant="h6" 
+            sx={{ 
+              fontSize: '1.125rem', 
+              fontWeight: 500, 
+              mb: 2 
+            }}
+          >
+            Source
+          </Typography>
+          <Box 
+            sx={{ 
+              display: 'grid', 
+              gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, 
+              gap: 2 
+            }}
+          >
+            {report.SourceS3Bucket && (
+              <Paper 
+                elevation={0} 
+                sx={{ 
+                  p: 2, 
+                  border: '1px solid',
+                  borderColor: 'primary.main',
+                  borderRadius: 1,
+                  position: 'relative',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    right: 10,
+                    top: 10,
+                    width: 10,
+                    height: 10,
+                    borderRadius: '50%',
+                    bgcolor: 'primary.main'
+                  }
+                }}
+              >
+                <Typography fontWeight="medium" gutterBottom>S3 Bucket</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ wordBreak: 'break-all' }}>
+                  {report.SourceS3Bucket}/{report.SourceS3Prefix || ''}
+                </Typography>
+              </Paper>
             )}
+            <Paper 
+              elevation={0} 
+              sx={{ 
+                p: 2, 
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 1,
+                opacity: 0.5
+              }}
+            >
+              <Typography fontWeight="medium" gutterBottom>File Upload</Typography>
+              <Typography variant="body2" color="text.secondary">
+                
+              </Typography>
+            </Paper>
           </Box>
-        </Grid>
-      </Grid>
-      
-      {report.Groups && report.Groups.length > 0 && (
-        <>
-          <Typography variant="subtitle1" fontWeight="bold" mt={3} mb={1}>Groups</Typography>
-          <TableContainer component={Paper} sx={{ maxHeight: 300 }}>
-            <Table stickyHeader size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Name</TableCell>
-                  <TableCell>Query</TableCell>
-                  <TableCell>Count</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {report.Groups.map((group, index) => (
-                  <TableRow key={index}>
-                    <TableCell>{group.Name}</TableCell>
-                    <TableCell>{group.Query}</TableCell>
-                    <TableCell>{group.Objects?.length || 0}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </>
-      )}
+        </div>
+
+        {/* Tags section */}
+        <div>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                fontSize: '1.125rem', 
+                fontWeight: 500 
+              }}
+            >
+              Tags
+            </Typography>
+          </Box>
+
+          {report.Tags && report.Tags.length > 0 ? (
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              {report.Tags.map((tag, index) => (
+                <Chip 
+                  key={index} 
+                  label={tag} 
+                  variant="filled"
+                  sx={{ 
+                    bgcolor: 'rgba(25, 118, 210, 0.08)',
+                    color: 'primary.main',
+                    fontWeight: 500,
+                    borderRadius: '4px',
+                    '&:hover': {
+                      bgcolor: 'rgba(25, 118, 210, 0.12)',
+                    }
+                  }} 
+                />
+              ))}
+            </Box>
+          ) : (
+            <Typography color="text.secondary" sx={{ py: 1 }}>
+              No tags available
+            </Typography>
+          )}
+        </div>
+      </div>
     </Box>
   );
 };
