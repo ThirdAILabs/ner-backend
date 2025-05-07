@@ -50,6 +50,7 @@ type Report struct {
 	Model   *Model    `gorm:"foreignKey:ModelId"`
 
 	Deleted bool `gorm:"default:false"`
+	Stopped bool `gorm:"default:false"`
 
 	S3Endpoint     sql.NullString
 	S3Region       sql.NullString

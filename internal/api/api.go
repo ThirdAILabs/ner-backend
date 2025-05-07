@@ -58,6 +58,7 @@ func (s *BackendService) AddRoutes(r chi.Router) {
 		r.Get("/", RestHandler(s.ListReports))
 		r.Post("/", RestHandler(s.CreateReport))
 		r.Get("/{report_id}", RestHandler(s.GetReport))
+		r.Post("/{report_id}/stop", RestHandler(s.StopReport))
 		r.Delete("/{report_id}", RestHandler(s.DeleteReport))
 		r.Get("/{report_id}/groups/{group_id}", RestHandler(s.GetReportGroup))
 		r.Get("/{report_id}/entities", RestHandler(s.GetReportEntities))
@@ -402,7 +403,7 @@ func (s *BackendService) DeleteReport(r *http.Request) (any, error) {
 	if err := s.db.WithContext(ctx).Transaction(func(txn *gorm.DB) error {
 		result := txn.Model(&database.Report{Id: reportId}).Update("deleted", true)
 		if err := result.Error; err != nil {
-			slog.Error("error deleting report job", "report_id", reportId, "error", err)
+			slog.Error("error deleting report", "report_id", reportId, "error", err)
 			return CodedErrorf(http.StatusInternalServerError, "error deleting report")
 		}
 
@@ -432,6 +433,34 @@ func (s *BackendService) DeleteReport(r *http.Request) (any, error) {
 	}
 
 	slog.Info("deleted report", "report_id", reportId)
+
+	return nil, nil
+}
+
+func (s *BackendService) StopReport(r *http.Request) (any, error) {
+	reportId, err := URLParamUUID(r, "report_id")
+	if err != nil {
+		return nil, err
+	}
+
+	ctx := r.Context()
+
+	if err := s.db.WithContext(ctx).Transaction(func(txn *gorm.DB) error {
+		result := txn.Model(&database.Report{Id: reportId}).Update("stopped", true)
+		if err := result.Error; err != nil {
+			slog.Error("error stopping report", "report_id", reportId, "error", err)
+			return CodedErrorf(http.StatusInternalServerError, "error deleting report")
+		}
+
+		if result.RowsAffected == 0 {
+			return CodedErrorf(http.StatusNotFound, "report not found")
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	slog.Info("stopped report", "report_id", reportId)
 
 	return nil, nil
 }

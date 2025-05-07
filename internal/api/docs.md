@@ -234,6 +234,17 @@ Deletes report with the given Id.
 
 ---
 
+### POST /reports/{report_id}/stop
+**Description:**
+Stops the report with the given Id. This means that any sub tasks within the report that have not yet started are cancelled. Any in progress tasks will continue.
+
+**Response:**
+- `200 OK`: The report is stopped successfully.
+- `404 Not Found`: Report is not found.
+- `500 Internal Server Error`: Error stopping the report.
+
+---
+
 ### GET /reports/{report_id}/groups/{group_id}
 **Description:**  
 Retrieve details of a specific group within a report.

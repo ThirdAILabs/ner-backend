@@ -36,10 +36,10 @@ const ConfigurationCard: React.FC<ConfigurationCardProps> = ({
   const tags = ['NAME', 'VIN', 'ORG', 'ID', 'SSN', 'ADDRESS', 'EMAIL'];
   
   const renderSource = () => {
-    if (selectedSource === 's3' || (!selectedSource && sourceS3Config.name)) {
+    if (selectedSource === 'local') {
+      return 'File Upload';
+    } else if (selectedSource === 's3' && sourceS3Config.name) {
       return sourceS3Config.name;
-    } else if (selectedSource === 'local' || (!selectedSource && sourceLocalConfig.name)) {
-      return sourceLocalConfig.name;
     }
     return 'No source selected';
   };

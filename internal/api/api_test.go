@@ -387,6 +387,41 @@ func TestDeleteReport(t *testing.T) {
 	})
 }
 
+func TestStopReport(t *testing.T) {
+	modelId, reportId := uuid.New(), uuid.New()
+	db := createDB(t,
+		&database.Model{Id: modelId, Name: "Model1", Type: "regex", Status: database.ModelTrained},
+		&database.Report{Id: reportId, ModelId: modelId},
+	)
+
+	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	router := chi.NewRouter()
+	service.AddRoutes(router)
+
+	t.Run("StopReport", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/reports/"+reportId.String()+"/stop", nil)
+		rec := httptest.NewRecorder()
+
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+	})
+
+	t.Run("GetStoppedReport", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/reports/"+reportId.String(), nil)
+		rec := httptest.NewRecorder()
+
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var report api.Report
+		err := json.Unmarshal(rec.Body.Bytes(), &report)
+		assert.NoError(t, err)
+		assert.Equal(t, report.Id, reportId)
+		assert.True(t, report.Stopped)
+	})
+}
+
 func TestReportSearch(t *testing.T) {
 	modelId, reportId := uuid.New(), uuid.New()
 	db := createDB(t,

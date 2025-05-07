@@ -38,6 +38,7 @@ type Report struct {
 	SourceS3Prefix string
 	IsUpload       bool
 
+	Stopped      bool
 	CreationTime time.Time
 
 	Tags       []string          `json:"Tags,omitempty"`

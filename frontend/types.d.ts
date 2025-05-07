@@ -21,16 +21,18 @@ interface Report {
     Id: string;
     Model: Model;
     SourceS3Bucket: string;
-    SourceS3Prefix?: string;
+    SourceS3Prefix: string;
     CreationTime: string;
-    Groups: Group[];
-    ShardDataTaskStatus: string;
-    InferenceTaskStatuses: {
-        COMPLETED: TaskStatus;
-        RUNNING: TaskStatus;
-        QUEUED: TaskStatus;
-        FAILED: TaskStatus;
+    Tags?: string[];
+    CustomTags?: {
+        [key: string]: string;
     };
+    Groups?: Group[];
+    ShardDataTaskStatus?: string;
+    InferenceTaskStatuses?: { [key: string]: TaskStatusCategory };
+    Errors?: string[];
+    ReportName: string;
+    TagCounts: { [key: string]: number; }
 }
 
 interface Entity {
