@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'export',  // Enable static export
+  distDir: 'out',    // Set output directory
   images: {
+    unoptimized: true,  // Required for static export
     remotePatterns: [
       {
         protocol: 'https',
@@ -21,14 +24,8 @@ const nextConfig = {
 
     return config;
   },
-  async rewrites() {
-    return [
-      {
-        source: '/api/v1/:path*',
-        destination: 'http://localhost:8001/api/v1/:path*',
-      },
-    ];
-  },
+  // Remove rewrites when in export mode since they don't work with static export
+  // We'll handle API calls directly in Electron
 };
 
 module.exports = nextConfig;

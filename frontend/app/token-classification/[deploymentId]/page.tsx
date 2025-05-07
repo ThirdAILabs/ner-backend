@@ -11,6 +11,17 @@ import Interact from './interact';
 import Dashboard from './dashboard';
 import Jobs from './jobs';
 
+// Add generateStaticParams function for static export
+export async function generateStaticParams() {
+  // In production, these would be fetched from your API
+  // For now, we're using a static list
+  return [
+    { deploymentId: 'deployment1' },
+    { deploymentId: 'deployment2' },
+    { deploymentId: 'deployment3' },
+  ];
+}
+
 interface ModelUpdateProps {
   username: string;
   modelName: string;

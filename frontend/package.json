@@ -2,12 +2,37 @@
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
+  "main": "electron/main.js",
   "scripts": {
     "dev": "next dev -p 3007",
     "build": "next build",
     "start": "next start -H 0.0.0.0 -p 3000",
     "lint": "next lint",
-    "export": "next export"
+    "export": "next export",
+    "electron:dev": "concurrently \"npm run dev\" \"electron .\"",
+    "electron:build": "next build && electron-builder",
+    "electron:start": "electron ."
+  },
+  "build": {
+    "appId": "com.example.ner-app",
+    "productName": "NER App",
+    "files": [
+      "electron/**/*",
+      "out/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "mac": {
+      "category": "public.app-category.developer-tools"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
   },
   "dependencies": {
     "@emotion/react": "^11.13.0",
@@ -89,6 +114,10 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "@types/recharts": "^1.8.29",
+    "concurrently": "^9.1.2",
+    "electron": "^36.1.0",
+    "electron-builder": "^26.0.12",
+    "electron-serve": "^2.1.1",
     "eslint": "^8.57.0",
     "eslint-config-next": "14.2.5",
     "postcss": "^8",

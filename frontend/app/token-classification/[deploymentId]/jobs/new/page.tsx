@@ -86,6 +86,15 @@ interface CustomTag {
   pattern: string;
 }
 
+export async function generateStaticParams() {
+  // For static export, we're providing sample deployment IDs
+  return [
+    { deploymentId: 'deployment1' },
+    { deploymentId: 'deployment2' },
+    { deploymentId: 'deployment3' },
+  ];
+}
+
 export default function NewJobPage() {
   const params = useParams();
   const router = useRouter();

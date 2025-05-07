@@ -221,6 +221,22 @@ const NewTagDialog: React.FC<{
   );
 };
 
+export async function generateStaticParams() {
+  // This would typically be filled from an API call
+  // For static export, we're providing sample job IDs for each deployment
+  const deployments = ['deployment1', 'deployment2', 'deployment3'];
+  
+  // Generate combinations of deployment IDs and job IDs
+  const params: { deploymentId: string; jobId: string }[] = [];
+  deployments.forEach(deploymentId => {
+    ['job1', 'job2', 'job3'].forEach(jobId => {
+      params.push({ deploymentId, jobId });
+    });
+  });
+  
+  return params;
+}
+
 export default function JobDetail() {
   const params = useParams();
   const reportId: string = params.jobId as string;
