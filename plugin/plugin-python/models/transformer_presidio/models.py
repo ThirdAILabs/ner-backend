@@ -6,7 +6,7 @@ from transformers import AutoModelForTokenClassification, AutoTokenizer
 from presidio_analyzer import RecognizerResult
 
 from ..model_interface import Entities, Model, SentencePredictions, BatchPredictions
-from .make_analyzer import get_analyzer, analyze_text_batch
+from .make_analyzer import analyze_text_batch, get_batch_analyzer
 from .transformer_inference import predict_batch, punctuation_filter
 from ..utils import clean_text
 
@@ -145,7 +145,6 @@ class HuggingFaceModel(Model):
                 stride=self.stride,
                 top_k=self.top_k,
             )
-            predictions.extend(batch_entities)
 
             sentence_predictions = [
                 self._process_prediction(text, entities)
@@ -162,7 +161,7 @@ class HuggingFaceModel(Model):
 class PresidioWrappedNerModel(Model):
     def __init__(self, threshold: float):
         self.threshold = threshold
-        self.analyzer = get_analyzer()
+        self.batch_analyzer = get_batch_analyzer()
 
     def _process_prediction(
         self, text: str, entities: List[RecognizerResult]
@@ -181,7 +180,7 @@ class PresidioWrappedNerModel(Model):
         return SentencePredictions(entities=predictions)
 
     def predict_batch(self, texts: List[str]) -> BatchPredictions:
-        batch_entities = analyze_text_batch(texts, self.analyzer, self.threshold)
+        batch_entities = analyze_text_batch(texts, self.batch_analyzer, self.threshold)
         sentence_predictions = [
             self._process_prediction(text, entities)
             for text, entities in zip(texts, batch_entities)
@@ -203,7 +202,9 @@ class CombinedNERModel(Model):
             self.hf = HuggingFaceModel(model_path)
             self.pres = PresidioWrappedNerModel(threshold)
 
-    def _process_predictions(self, text, hf_out, pres_out):
+    def _process_predictions(
+        self, text, hf_out: SentencePredictions, pres_out: SentencePredictions
+    ):
         merged = merge_predictions(hf_out, pres_out, text)
         return merged
 
@@ -213,8 +214,10 @@ class CombinedNERModel(Model):
 
         # merge predictions
         sentence_predictions = [
-            self._process_predictions(text, hf_out, pres_out)
-            for text, hf_out, pres_out in zip(texts, hf_out, pres_out)
+            self._process_predictions(text, hf_sentence, pres_sentence)
+            for text, hf_sentence, pres_sentence in zip(
+                texts, hf_out.predictions, pres_out.predictions
+            )
         ]
         return BatchPredictions(predictions=sentence_predictions)
 
