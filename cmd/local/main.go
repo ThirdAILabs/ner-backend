@@ -66,7 +66,7 @@ func createQueue(db *gorm.DB) *messaging.InMemoryQueue {
 		log.Fatalf("Failed to fetch tasks from database: %v", err)
 	}
 
-	queue := messaging.NewInMemoryQueueWithSize(len(shardTasks) + len(inferenceTasks))
+	queue := messaging.NewInMemoryQueue()
 
 	for _, task := range shardTasks {
 		if err := queue.PublishShardDataTask(context.Background(), messaging.ShardDataPayload{
@@ -110,6 +110,8 @@ func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publish
 	r.Route("/api/v1", func(r chi.Router) {
 		apiHandler.AddRoutes(r)
 	})
+
+	r.Handle("/*", http.FileServerFS(os.DirFS("/Users/nmeisburger/ThirdAI/ner-backend/frontend/out")))
 
 	return &http.Server{
 		Addr:    fmt.Sprintf(":%d", port),

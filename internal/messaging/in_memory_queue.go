@@ -37,12 +37,8 @@ type InMemoryQueue struct {
 }
 
 func NewInMemoryQueue() *InMemoryQueue {
-	return NewInMemoryQueueWithSize(100)
-}
-
-func NewInMemoryQueueWithSize(size int) *InMemoryQueue {
 	return &InMemoryQueue{
-		tasks: make(chan Task, size),
+		tasks: make(chan Task, 1000),
 	}
 }
 
