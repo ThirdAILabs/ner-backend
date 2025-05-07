@@ -749,65 +749,6 @@ func (s *BackendService) GetInferenceMetrics(r *http.Request) (any, error) {
 	}, nil
 }
 
-// func (s *BackendService) GetThroughputMetrics(r *http.Request) (any, error) {
-// 	qs := r.URL.Query()
-
-// 	ms := qs.Get("model_id")
-// 	if ms == "" {
-// 		return nil, CodedErrorf(http.StatusBadRequest, "model_id query param is required")
-// 	}
-// 	modelID, err := uuid.Parse(ms)
-// 	if err != nil {
-// 		return nil, CodedErrorf(http.StatusBadRequest, "invalid model_id")
-// 	}
-
-// 	var reportID uuid.UUID
-// 	if rs := qs.Get("report_id"); rs != "" {
-// 		rid, err := uuid.Parse(rs)
-// 		if err != nil {
-// 			return nil, CodedErrorf(http.StatusBadRequest, "invalid report_id")
-// 		}
-// 		reportID = rid
-// 	}
-
-// 	type agg struct {
-// 		TotalBytes   int64   `gorm:"column:bytes"`
-// 		TotalSeconds float64 `gorm:"column:seconds"`
-// 	}
-// 	var a agg
-
-// 	q := s.db.Model(&database.InferenceTask{}).
-// 		Select(
-// 			"COALESCE(SUM(total_size),0) AS bytes, "+
-// 				"COALESCE(SUM(EXTRACT(EPOCH FROM (completion_time - started_time))),0) AS seconds",
-// 		).
-// 		Joins("JOIN reports ON reports.id = inference_tasks.report_id").
-// 		Where("inference_tasks.status = ?", database.JobCompleted).
-// 		Where("reports.model_id = ?", modelID)
-
-// 	if reportID != uuid.Nil {
-// 		q = q.Where("inference_tasks.report_id = ?", reportID)
-// 	}
-
-// 	if err := q.Scan(&a).Error; err != nil {
-// 		slog.Error("error fetching throughput agg", "error", err)
-// 		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving throughput")
-// 	}
-
-// 	var mbPerHour float64
-// 	if a.TotalSeconds > 0 {
-// 		mb := float64(a.TotalBytes) / (1024.0 * 1024.0)
-// 		hours := a.TotalSeconds / 3600.0
-// 		mbPerHour = mb / hours
-// 	}
-
-// 	return api.ThroughputResponse{
-// 		ModelID:             modelID,
-// 		ReportID:            reportID,
-// 		ThroughputMBPerHour: mbPerHour,
-// 	}, nil
-// }
-
 func (s *BackendService) GetThroughputMetrics(r *http.Request) (any, error) {
 	qs := r.URL.Query()
 
@@ -829,7 +770,6 @@ func (s *BackendService) GetThroughputMetrics(r *http.Request) (any, error) {
 		reportID = rid
 	}
 
-	// 1) Fetch each completed task’s size & timestamps
 	var rows []struct {
 		TotalSize      int64        `gorm:"column:total_size"`
 		StartedTime    sql.NullTime `gorm:"column:started_time"`
@@ -849,7 +789,6 @@ func (s *BackendService) GetThroughputMetrics(r *http.Request) (any, error) {
 		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving throughput")
 	}
 
-	// 2) Sum bytes and accumulate totalSeconds in Go (cross-dialect safe)
 	var totalBytes int64
 	var totalSeconds float64
 	for _, r := range rows {
@@ -859,7 +798,6 @@ func (s *BackendService) GetThroughputMetrics(r *http.Request) (any, error) {
 		}
 	}
 
-	// 3) Compute MB/hour
 	mb := float64(totalBytes) / (1024.0 * 1024.0)
 	var throughputMBPerHour float64
 	if totalSeconds > 0 {
