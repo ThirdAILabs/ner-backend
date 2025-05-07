@@ -1,5 +1,6 @@
 from .impl import EmbeddingBagNERModel, HASH_DIMENSION, run_ner_inference
 import torch
+from typing import List
 
 
 class EmbeddingBagWrappedNerModel:
@@ -27,3 +28,6 @@ class EmbeddingBagWrappedNerModel:
 
         preds = self.model.predict_sequence(seqs, lengths)
         return preds[0]
+
+    def predict_batch(self, texts: List[str]):
+        return [self.predict(text) for text in texts]

@@ -1,6 +1,5 @@
-from time import time
 from .cnn_backend.backend import CNNModel
-from ..model_interface import Model, Predictions, Entities
+from ..model_interface import Model, SentencePredictions, BatchPredictions, Entities
 from .utils import build_tag_vocab, clean_text
 from typing import List
 
@@ -13,31 +12,17 @@ class CnnNerExtractor(Model):
             tag2idx=build_tag_vocab(),
         )
 
-    def predict(self, text: str) -> Predictions:
-        start = time()
-        text = clean_text(text)
+    def _process_prediction(self, text: str, pred: List[str]) -> SentencePredictions:
         tokens = text.split()
-        preds = self.model.predict(text)
-
-        if len(preds) != len(tokens):
+        if len(tokens) != len(pred):
             raise ValueError(
-                f"Token count ({len(tokens)}) and prediction count ({len(preds)}) differ."
+                f"Token count ({len(tokens)}) and prediction count ({len(pred)}) differ."
             )
-
-        elapsed_ms = round((time() - start) * 1000, 2)
-
-        # build entity list with character offsets
-        offset = 0
         entities: List[Entities] = []
-        for tok, tag in zip(tokens, preds):
-            idx = text.find(tok, offset)
+        for tok, tag in zip(tokens, pred):
+            idx = text.find(tok)
             if idx == -1:
-                idx = offset
-            offset = idx + len(tok)
-
-            if tag == "O":
                 continue
-
             entities.append(
                 Entities(
                     text=tok,
@@ -47,5 +32,17 @@ class CnnNerExtractor(Model):
                     end=idx + len(tok),
                 )
             )
+        return SentencePredictions(entities=entities)
 
-        return Predictions(entities=entities, elapsed_ms=elapsed_ms)
+    def predict_batch(self, texts: List[str]) -> BatchPredictions:
+        texts = [clean_text(text) for text in texts]
+        preds = self.model.predict_batch(texts)
+
+        sentence_predictions = [
+            self._process_prediction(text, pred) for text, pred in zip(texts, preds)
+        ]
+
+        return BatchPredictions(predictions=sentence_predictions)
+
+    def predict(self, text: str) -> SentencePredictions:
+        return self.predict_batch([text]).predictions[0]

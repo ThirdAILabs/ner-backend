@@ -11,9 +11,8 @@ class Entities(BaseModel):
     end: int
 
 
-class Predictions(BaseModel):
+class SentencePredictions(BaseModel):
     entities: List[Entities]
-    elapsed_ms: float
 
     def to_go(self) -> List[Dict[str, Any]]:
         return [
@@ -21,14 +20,21 @@ class Predictions(BaseModel):
                 "text": entity.text,
                 "label": entity.label,
                 "start": entity.start,
-                "end": entity.end
+                "end": entity.end,
             }
             for entity in self.entities
         ]
-    
-    
+
+
+class BatchPredictions(BaseModel):
+    predictions: List[SentencePredictions]
+
+    def to_go(self) -> List[Dict[str, Any]]:
+        return [sentence.to_go() for sentence in self.predictions]
+
+
 class Model(ABC):
 
     @abstractmethod
-    def predict(self, text: str) -> Predictions:
+    def predict(self, texts: List[str]) -> BatchPredictions:
         pass

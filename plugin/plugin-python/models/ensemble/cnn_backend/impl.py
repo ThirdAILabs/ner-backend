@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+from typing import List
 from torchcrf import CRF
 
 
@@ -153,29 +153,49 @@ class CNNNERModelSentenceTokenized(nn.Module):
         emissions = self.hidden2tag(out)
         return emissions
 
-    def predict(self, text: str):
-        txt = text.lower() if getattr(self.tokenizer, "do_lower_case", False) else text
-        enc = self.tokenizer(txt, return_offsets_mapping=True, add_special_tokens=False)
-        input_ids = torch.tensor(enc["input_ids"], dtype=torch.long).unsqueeze(0)
-        offsets = enc["offset_mapping"]
-
-        word_ids = manual_word_ids(txt, offsets)
+    def predict_batch(self, texts: List[str]):
+        """
+        Tokenize & score `texts` in mini‐batches of size `batch_size`.
+        Returns a flat list of (words, word_preds) for each input text.
+        """
+        results = []
+        batch = texts
+        # lowercase if needed
+        txts = [
+            t.lower() if getattr(self.tokenizer, "do_lower_case", False) else t
+            for t in batch
+        ]
+        # batch‐tokenize with padding
+        enc = self.tokenizer(
+            txts,
+            return_offsets_mapping=True,
+            padding=True,
+            add_special_tokens=False,
+            return_tensors="pt",
+        )
+        input_ids = enc["input_ids"].to(next(self.parameters()).device)
+        offsets_batch = enc["offset_mapping"]
         mask = input_ids != self.tokenizer.pad_token_id
-        emissions = self.forward(input_ids)
-        paths = self.crf.decode(emissions, mask=mask)[0]
-        sub_tags = [self.idx_to_tag[idx] for idx in paths]
 
-        words = text.split()
-        n_words = len(words)
+        # forward & CRF‐decode entire mini‐batch
+        emissions = self.forward(input_ids)  # (B, L, C)
+        paths_batch = self.crf.decode(emissions, mask=mask)  # List[B × L]
 
-        word_preds = ["O"] * n_words
+        # map to tag‐strings
+        sub_tags_batch = [
+            [self.idx_to_tag[idx] for idx in path] for path in paths_batch
+        ]
 
-        for wid, tag in zip(word_ids, sub_tags):
-            if wid is None:
-                continue
-            if word_preds[wid] == "O" and tag != "O":
-                word_preds[wid] = tag
-        assert len(words) == len(
-            word_preds
-        ), f"Mismatch {len(words)} words vs {len(word_preds)} preds"
-        return words, word_preds
+        # for each sample in the mini‐batch, re‐aggregate to per‐word
+        for orig_text, offsets, sub_tags in zip(batch, offsets_batch, sub_tags_batch):
+            word_ids = manual_word_ids(orig_text, offsets)
+            words = orig_text.split()
+            word_preds = ["O"] * len(words)
+            for wid, tag in zip(word_ids, sub_tags):
+                if wid is None:
+                    continue
+                if word_preds[wid] == "O" and tag != "O":
+                    word_preds[wid] = tag
+            results.append((words, word_preds))
+
+        return results
