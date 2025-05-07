@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Box } from '@mui/material';
 import { ArrowLeft, Plus, RefreshCw, Edit } from 'lucide-react';
 import { nerService } from '@/lib/backend';
+import { Suspense } from 'react';
 
 // Tag chip component - reused from the detail page but with interactive mode
 interface TagProps {
@@ -407,7 +408,7 @@ export default function NewJobPage() {
 
       // Redirect after success
       setTimeout(() => {
-        router.push(`/token-classification/jobs/${response.ReportId}`);
+        router.push(`/token-classification/jobs?jobId=${response.ReportId}`);
       }, 2000);
     } catch (err) {
       setError('Failed to create report. Please try again.');
