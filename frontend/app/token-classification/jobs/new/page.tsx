@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Plus, Edit, RefreshCw } from 'lucide-react';
 import { nerService } from '@/lib/backend';
+import { Suspense } from 'react';
 
 // Tag chip component - reused from the detail page but with interactive mode
 interface TagProps {
@@ -92,7 +93,7 @@ interface CustomTag {
   pattern: string;
 }
 
-export default function NewJobPage() {
+function NewJobPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const deploymentId = searchParams.get('deploymentId') as string;
@@ -778,3 +779,9 @@ export default function NewJobPage() {
     </div>
   );
 } 
+
+export default function Page() {
+  return <Suspense>
+    <NewJobPage />
+  </Suspense>
+}

@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Suspense } from 'react';
 
 // Calculate progress based on InferenceTaskStatuses
 const calculateProgress = (report: Report | null): number => {
@@ -227,7 +228,7 @@ const NewTagDialog: React.FC<{
   );
 };
 
-export default function JobDetail() {
+function JobDetail() {
   const searchParams = useSearchParams();
   const reportId: string = searchParams.get('jobId') as string;
   const deploymentId = searchParams.get('deploymentId') as string;
@@ -557,3 +558,9 @@ export default function JobDetail() {
     </div>
   );
 } 
+
+export default function Page() {
+  return <Suspense>
+    <JobDetail />
+  </Suspense>
+}

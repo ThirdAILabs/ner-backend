@@ -10,6 +10,7 @@ import { useSearchParams } from 'next/navigation';
 import Interact from './interact';
 import Dashboard from './dashboard';
 import Jobs from './jobs';
+import { Suspense } from 'react';
 
 interface ModelUpdateProps {
   username: string;
@@ -66,11 +67,11 @@ const getTrainReport = async (workflowName: string) => {
   return { data: emptyReport };
 };
 
-export default function Page() {
+function PageImpl() {
   const params = useSearchParams();
   const workflowName = params.get('deploymentId') as string || 'PII';
   const searchParams = useSearchParams();
-  const defaultTab = searchParams.get('tab') || 'testing';
+  const defaultTab = searchParams.get('tab') || 'monitoring';
   const [tabValue, setTabValue] = useState(defaultTab);
   const [trainReport, setTrainReport] = useState<TrainReportData>(emptyReport);
   const [isLoadingReport, setIsLoadingReport] = useState(false);
@@ -179,3 +180,9 @@ export default function Page() {
     </div>
   );
 } 
+
+export default function Page() {
+  return <Suspense>
+    <PageImpl />
+  </Suspense>
+}
