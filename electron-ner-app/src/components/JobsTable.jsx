@@ -107,7 +107,7 @@ const ReportStatus = ({ report }) => {
   );
 };
 
-const JobsTable = () => {
+const JobsTable = ({ onViewReport }) => {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -318,7 +318,7 @@ const JobsTable = () => {
                     <TableCell>{format(new Date(report.CreationTime), 'MM/dd/yyyy, hh:mm:ss a')}</TableCell>
                     <TableCell>
                       <Typography
-                        onClick={() => console.log(`View report: ${report.Id}`)}
+                        onClick={() => onViewReport(report.Id)}
                         sx={{
                           color: '#1976d2',
                           cursor: 'pointer',

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, Tabs, Tab, CircularProgress } from '@mui/material';
 import JobsTable from '../components/JobsTable';
+import JobDetail from './JobDetail';
 
 // These components would be imported from their actual locations
 // For now we'll create placeholder components
@@ -28,6 +29,7 @@ const Dashboard = () => (
 const TokenClassification = () => {
   const [tabValue, setTabValue] = useState('monitoring');
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedReportId, setSelectedReportId] = useState(null);
   const workflowName = 'PII'; // Default workflow name
 
   useEffect(() => {
@@ -41,6 +43,14 @@ const TokenClassification = () => {
 
   const handleTabChange = (_event, newValue) => {
     setTabValue(newValue);
+  };
+
+  const handleViewReport = (reportId) => {
+    setSelectedReportId(reportId);
+  };
+
+  const handleBackToJobs = () => {
+    setSelectedReportId(null);
   };
 
   if (isLoading) {
@@ -114,7 +124,11 @@ const TokenClassification = () => {
         </div>
 
         <div style={{ display: tabValue === 'jobs' ? 'block' : 'none' }}>
-          <JobsTable />
+          {selectedReportId ? (
+            <JobDetail reportId={selectedReportId} onBack={handleBackToJobs} />
+          ) : (
+            <JobsTable onViewReport={handleViewReport} />
+          )}
         </div>
       </main>
     </div>
