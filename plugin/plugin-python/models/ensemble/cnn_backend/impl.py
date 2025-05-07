@@ -165,14 +165,16 @@ class CNNNERModelSentenceTokenized(nn.Module):
         paths = self.crf.decode(emissions, mask=mask)[0]
         sub_tags = [self.idx_to_tag[idx] for idx in paths]
 
-        word_preds = []
-        max_word = max(w for w in word_ids if w is not None)
-        for w in range(max_word + 1):
-            toks = [sub_tags[i] for i, wid in enumerate(word_ids) if wid == w]
-            chosen = next((t for t in toks if t != "O"), "O")
-            word_preds.append(chosen)
+        words = text.split()
+        n_words = len(words)
 
-        words = txt.split()
+        word_preds = ["O"] * n_words
+
+        for wid, tag in zip(word_ids, sub_tags):
+            if wid is None:
+                continue
+            if word_preds[wid] == "O" and tag != "O":
+                word_preds[wid] = tag
         assert len(words) == len(
             word_preds
         ), f"Mismatch {len(words)} words vs {len(word_preds)} preds"

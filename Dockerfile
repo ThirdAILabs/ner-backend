@@ -49,15 +49,18 @@ RUN python3 -m venv /opt/venv && \
 
 WORKDIR /app
 
-# Copy only the necessary artifacts from the builder stage
+COPY plugin/plugin-python/requirements.txt ./requirements.txt
+
+RUN --mount=type=cache,id=pip_cache,target=/root/.cache/pip \
+    pip install --no-cache-dir \
+    -r requirements.txt
+
+
 COPY --from=builder /app/api          /app/api
 COPY --from=builder /app/worker       /app/worker
 COPY --from=builder /app/entrypoint.sh /app/entrypoint.sh
 
 COPY --from=builder /app/plugin/plugin-python /app/plugin/plugin-python
-
-RUN pip install --no-cache-dir \
-    -r /app/plugin/plugin-python/requirements.txt
 
 RUN chmod +x /app/entrypoint.sh
 
