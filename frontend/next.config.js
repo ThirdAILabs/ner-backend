@@ -11,7 +11,11 @@ const nextConfig = {
         hostname: '*.public.blob.vercel-storage.com',
       },
     ],
+    unoptimized: true, // For static export
   },
+  output: 'export', // Enable static exports for Electron
+  distDir: 'out', // Output directory for static files
+  trailingSlash: true, // Add trailing slashes to URLs for better static file serving
   webpack(config) {
     config.module.rules.push({
       test: /\.svg$/i,
@@ -21,14 +25,9 @@ const nextConfig = {
 
     return config;
   },
-  async rewrites() {
-    return [
-      {
-        source: '/api/v1/:path*',
-        destination: 'http://localhost:8001/api/v1/:path*',
-      },
-    ];
-  },
+  // Note: rewrites won't work with static export
+  // In Electron, we'll handle this in the main process
+  // or use absolute URLs in the axios config
 };
 
 module.exports = nextConfig;

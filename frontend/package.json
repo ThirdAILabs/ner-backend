@@ -1,13 +1,17 @@
 {
-  "name": "frontend",
+  "name": "ner-frontend",
   "version": "0.1.0",
   "private": true,
+  "main": "main.js",
   "scripts": {
     "dev": "next dev -p 3007",
     "build": "next build",
     "start": "next start -H 0.0.0.0 -p 3000",
     "lint": "next lint",
-    "export": "next export"
+    "export": "next export",
+    "electron:dev": "NODE_ENV=development concurrently \"npm run dev\" \"electron .\"",
+    "electron:build": "next build && next export -o out && electron-builder",
+    "electron:start": "electron ."
   },
   "dependencies": {
     "@emotion/react": "^11.13.0",
@@ -89,6 +93,9 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "@types/recharts": "^1.8.29",
+    "concurrently": "^9.1.2",
+    "electron": "^36.1.0",
+    "electron-builder": "^26.0.12",
     "eslint": "^8.57.0",
     "eslint-config-next": "14.2.5",
     "postcss": "^8",
@@ -107,5 +114,27 @@
       "oidc-token-hash": "5.0.1"
     }
   },
-  "packageManager": "pnpm@10.2.1+sha512.398035c7bd696d0ba0b10a688ed558285329d27ea994804a52bad9167d8e3a72bcb993f9699585d3ca25779ac64949ef422757a6c31102c12ab932e5cbe5cc92"
+  "packageManager": "pnpm@10.2.1+sha512.398035c7bd696d0ba0b10a688ed558285329d27ea994804a52bad9167d8e3a72bcb993f9699585d3ca25779ac64949ef422757a6c31102c12ab932e5cbe5cc92",
+  "build": {
+    "appId": "com.thirdai.ner-frontend",
+    "productName": "NER Frontend",
+    "files": [
+      "out/**/*",
+      "main.js",
+      "preload.js"
+    ],
+    "directories": {
+      "buildResources": "assets",
+      "output": "dist"
+    },
+    "mac": {
+      "category": "public.app-category.developer-tools"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
 }
