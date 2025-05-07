@@ -622,7 +622,7 @@ func TestGetInferenceMetrics_WithTasks(t *testing.T) {
 		var resp api.ThroughputResponse
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
 		assert.Equal(t, modelID, resp.ModelID)
-		assert.Equal(t, &reportID, resp.ReportID)
+		assert.Equal(t, reportID, resp.ReportID)
 		assert.InEpsilon(t, 1.0, resp.ThroughputMBPerHour, 1e-6)
 	})
 }
