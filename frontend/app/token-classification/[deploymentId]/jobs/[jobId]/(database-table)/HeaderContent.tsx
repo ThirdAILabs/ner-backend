@@ -66,8 +66,8 @@ export function HeaderContent({
                 onKeyDown={handleKeyDown}
               />
             </div>
-            <Button 
-              onClick={handleSearch} 
+            <Button
+              onClick={handleSearch}
               disabled={searchLoading || !onSearch}
               className="h-10 w-10 p-2"
               variant="outline"
@@ -78,7 +78,7 @@ export function HeaderContent({
                 <Search className="h-5 w-5" />
               )}
             </Button>
-            <SaveButton
+            {/* <SaveButton
               onClick={onSave}
               style={{
                 width: '40px',
@@ -86,7 +86,7 @@ export function HeaderContent({
                 minWidth: '40px',
                 padding: '8px',
               }}
-            />
+            /> */}
           </div>
         </div>
       </div>

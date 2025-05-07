@@ -225,7 +225,7 @@ export default function JobDetail() {
   const params = useParams();
   const reportId: string = params.jobId as string;
   const [lastUpdated, setLastUpdated] = useState(0);
-  const [tabValue, setTabValue] = useState('configuration');
+  const [tabValue, setTabValue] = useState('analytics');
   const [selectedSource, setSelectedSource] = useState<'s3' | 'local'>('s3');
 
   // Remove selectedTags state, just keep availableTags
@@ -244,7 +244,7 @@ export default function JobDetail() {
       const report = await nerService.getReport(reportId);
 
       setReportData(report as Report);
-      
+
       // Set selectedSource based on IsUpload field
       if (report.IsUpload) {
         setSelectedSource('local');
@@ -378,8 +378,8 @@ export default function JobDetail() {
       {/* Breadcrumbs */}
       <div className="mb-6">
         <div className="flex items-center mb-2">
-          <Link href={`/token-classification/${params.deploymentId}?tab=jobs`} className="text-blue-500 hover:underline">
-            Jobs
+          <Link href={`/?tab=jobs`} className="text-blue-500 hover:underline">
+            Reports
           </Link>
           <span className="mx-2 text-gray-400">/</span>
           <span className="text-gray-700">{reportData?.ReportName || '[Job Name]'}</span>
@@ -391,8 +391,8 @@ export default function JobDetail() {
         <h1 className="text-2xl font-medium">{reportData?.ReportName || '[Job Name]'}</h1>
 
         <Button variant="outline" size="sm" asChild>
-          <Link href={`/token-classification/${params.deploymentId}?tab=jobs`} className="flex items-center">
-            <ArrowLeft className="mr-1 h-4 w-4" /> Back to Jobs
+          <Link href={`/?tab=jobs`} className="flex items-center">
+            <ArrowLeft className="mr-1 h-4 w-4" /> Back to Reports
           </Link>
         </Button>
       </div>
@@ -402,22 +402,22 @@ export default function JobDetail() {
         <div className="flex items-center justify-between border-b mb-6">
           <TabsList className="border-0 bg-transparent p-0">
             <TabsTrigger
-              value="configuration"
-              className="data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:shadow-none rounded-none bg-transparent px-4 py-3 data-[state=active]:bg-transparent"
-            >
-              Configuration
-            </TabsTrigger>
-            <TabsTrigger
               value="analytics"
               className="data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:shadow-none rounded-none bg-transparent px-4 py-3 data-[state=active]:bg-transparent"
             >
-              Analytics
+              Summary
             </TabsTrigger>
             <TabsTrigger
               value="output"
               className="data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:shadow-none rounded-none bg-transparent px-4 py-3 data-[state=active]:bg-transparent"
             >
-              Output
+              Review
+            </TabsTrigger>
+            <TabsTrigger
+              value="configuration"
+              className="data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:shadow-none rounded-none bg-transparent px-4 py-3 data-[state=active]:bg-transparent"
+            >
+              Info
             </TabsTrigger>
           </TabsList>
 
