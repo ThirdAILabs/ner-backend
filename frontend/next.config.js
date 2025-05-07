@@ -11,11 +11,11 @@ const nextConfig = {
         hostname: '*.public.blob.vercel-storage.com',
       },
     ],
-    unoptimized: true, // For static export
+    unoptimized: true, // Keep for Electron compatibility
   },
-  output: 'export', // Enable static exports for Electron
-  distDir: 'out', // Output directory for static files
-  trailingSlash: true, // Add trailing slashes to URLs for better static file serving
+  // output: 'export', // Removed static export configuration
+  distDir: 'out', // Output directory for build files
+  trailingSlash: true, // Add trailing slashes to URLs for better file serving
   webpack(config) {
     config.module.rules.push({
       test: /\.svg$/i,

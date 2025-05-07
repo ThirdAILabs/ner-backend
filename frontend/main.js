@@ -34,14 +34,8 @@ function createWindow() {
     });
   }
 
-  // Determine the URL to load
-  const startUrl = isDev 
-    ? 'http://localhost:3007' // Development server URL
-    : url.format({ // Production build
-        pathname: path.join(__dirname, './out/index.html'),
-        protocol: 'file:',
-        slashes: true
-      });
+  // Determine the URL to load - always use the dev server
+  const startUrl = 'http://localhost:3007';
   
   // Load the app
   mainWindow.loadURL(startUrl);

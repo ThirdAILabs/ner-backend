@@ -21,8 +21,20 @@ sleep 2
 # Change to frontend directory
 cd frontend
 
-# Start the Electron app
-echo "Starting Electron app..."
-npm run electron:dev
+# Start the Next.js development server
+echo "Starting Next.js development server..."
+npm run dev &
+NEXT_PID=$!
 
-# Script will automatically kill the backend when it exits thanks to the trap 
+# Add Next.js to the trap to kill it on exit
+trap "kill $BACKEND_PID $NEXT_PID" EXIT
+
+# Wait for Next.js to start
+echo "Waiting for Next.js to start..."
+sleep 5
+
+# Start Electron pointing to the development server
+echo "Starting Electron app..."
+npm run electron:start
+
+# Script will automatically kill the backend and Next.js when it exits thanks to the trap 
