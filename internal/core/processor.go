@@ -157,7 +157,16 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 	}
 
 	slog.Info("processing inference task", "report_id", reportId, "task_id", payload.TaskId)
-	database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobRunning) //nolint:errcheck
+	now := time.Now().UTC()
+	if err := proc.db.
+		Model(&database.InferenceTask{}).
+		Where("report_id = ? AND task_id = ?", reportId, taskId).
+		Updates(map[string]interface{}{
+			"status":       database.JobRunning,
+			"started_time": now,
+		}).Error; err != nil {
+		slog.Error("error marking task as running", "error", err)
+	}
 
 	if err := proc.licensing.VerifyLicense(ctx); err != nil {
 		slog.Error("license verification failed", "error", err)

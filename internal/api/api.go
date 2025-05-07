@@ -740,10 +740,35 @@ func (s *BackendService) GetInferenceMetrics(r *http.Request) (any, error) {
 	totalTokens := completed.Tokens.Int64 + running.Tokens.Int64
 	dataProcessedMB := float64(totalBytes) / (1024 * 1024)
 
+	type tf struct {
+		TotalSizeMB  float64 `gorm:"column:total_size_mb"`
+		TotalSeconds float64 `gorm:"column:total_seconds"`
+	}
+	var t tf
+	if err := s.db.Model(&database.InferenceTask{}).
+		Select(
+			"COALESCE(SUM(total_size),0)/1024.0/1024.0 AS total_size_mb, "+
+				"COALESCE(SUM(EXTRACT(EPOCH FROM (completion_time - started_time))),0) AS total_seconds",
+		).
+		Where("status = ? AND completion_time >= ? AND started_time IS NOT NULL",
+			database.JobCompleted, since,
+		).
+		Scan(&t).Error; err != nil {
+		slog.Error("error fetching throughput metrics", "error", err)
+		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving throughput metrics")
+	}
+
+	var throughput float64
+	if t.TotalSeconds > 0 {
+		// MB per second → MB per hour
+		throughput = t.TotalSizeMB / (t.TotalSeconds / 3600.0)
+	}
+
 	return api.InferenceMetricsResponse{
-		Completed:       completed.Count,
-		InProgress:      running.Count,
-		DataProcessedMB: dataProcessedMB,
-		TokensProcessed: totalTokens,
+		Completed:           completed.Count,
+		InProgress:          running.Count,
+		DataProcessedMB:     dataProcessedMB,
+		TokensProcessed:     totalTokens,
+		ThroughPutMBPerHour: throughput,
 	}, nil
 }
