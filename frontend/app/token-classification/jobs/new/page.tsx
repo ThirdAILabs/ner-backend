@@ -563,21 +563,38 @@ export default function NewJobPage() {
             <div>
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-medium">Tags</h2>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={selectAllTags}
-                  className="text-sm flex items-center"
-                  disabled={isTagsLoading || selectedTags.length === availableTags.length}
-                >
-                  <span className="mr-1">Select All</span>
-                  <input
-                    type="checkbox"
-                    checked={selectedTags.length === availableTags.length}
-                    onChange={selectAllTags}
-                    className="rounded border-gray-300"
-                  />
-                </Button>
+                <div className="flex space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={selectAllTags}
+                    className="text-sm flex items-center"
+                    disabled={isTagsLoading || selectedTags.length === availableTags.length}
+                  >
+                    <span className="mr-1">Select All</span>
+                    <input
+                      type="checkbox"
+                      checked={selectedTags.length === availableTags.length}
+                      onChange={selectAllTags}
+                      className="rounded border-gray-300"
+                    />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedTags([])}
+                    className="text-sm flex items-center"
+                    disabled={isTagsLoading || selectedTags.length === 0}
+                  >
+                    <span className="mr-1">Clear Selection</span>
+                    <input
+                      type="checkbox"
+                      checked={selectedTags.length === 0}
+                      onChange={() => setSelectedTags([])}
+                      className="rounded border-gray-300"
+                    />
+                  </Button>
+                </div>
               </div>
 
               {isTagsLoading ? (

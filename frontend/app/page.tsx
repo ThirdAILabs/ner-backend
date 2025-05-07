@@ -5,6 +5,7 @@ import { Tabs, Tab, Box } from '@mui/material';
 import { Link as MuiLink, Typography } from '@mui/material';
 import * as _ from 'lodash';
 import { useParams, useSearchParams } from 'next/navigation';
+import Image from 'next/image';
 
 // Import our implemented components
 // import Interact from './interact';
@@ -113,30 +114,25 @@ export default function Page() {
   return (
     <div style={{ backgroundColor: '#F5F7FA', minHeight: '100vh' }}>
       <header style={{ width: '100%', padding: '16px', borderBottom: '1px solid #e0e0e0' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', marginBottom: '16px' }}>
-          <Typography
-            variant="body1"
-            color="textSecondary"
-            gutterBottom
-            style={{ fontWeight: 500 }}
-          >
-            {"[ThirdAI-Logo]"}
-          </Typography>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', marginBottom: '8px', display: 'flex', flexDirection: 'row', gap: '20px' }}>
+          <Image
+            src="/thirdai-small.png"
+            alt="ThirdAI Logo"
+            width={40}
+            height={40}
+            style={{ objectFit: 'contain' }}
+            priority
+          />
 
           <Typography
             variant="h5"
-            style={{
-              fontWeight: 'bold',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap'
-            }}
             title={"Pocket Shield"}
+            sx={{ mt: 0.5 }}
           >
             {"Pocket Shield"}
           </Typography>
         </div>
-      </header>
+      </header >
 
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px' }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
@@ -176,6 +172,6 @@ export default function Page() {
           <Jobs />
         </div>
       </main>
-    </div>
+    </div >
   );
 } 
