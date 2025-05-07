@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"log/slog"
 	"ner-backend/internal/core/types"
 	"ner-backend/internal/database"
@@ -79,10 +78,7 @@ func (proc *TaskProcessor) ProcessTask(task messaging.Task) {
 			}
 			return
 		}
-		start := time.Now()
 		err = proc.processInferenceTask(ctx, payload)
-		duration := time.Since(start)
-		log.Printf("Complete Inference took %s", duration)
 
 	case messaging.ShardDataQueue:
 		var payload messaging.ShardDataPayload
@@ -187,10 +183,7 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 		return err
 	}
 
-	start := time.Now()
 	workerErr := proc.runInferenceOnBucket(ctx, task.ReportId, storage, task.Report.Model.Id, task.Report.Model.Type, tags, customTags, groupToQuery, task.Report.SourceS3Bucket, s3Objects)
-	duration := time.Since(start)
-	log.Printf("runInferenceOnBucket took %s", duration)
 	if workerErr != nil {
 		slog.Error("error running inference task", "report_id", reportId, "task_id", payload.TaskId, "error", workerErr)
 		database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobFailed) // nolint:errcheck
@@ -220,10 +213,7 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 ) error {
 	parser := NewDefaultParser()
 
-	start := time.Now()
 	model, err := proc.loadModel(ctx, modelId, modelType)
-	duration := time.Since(start)
-	log.Printf("loadModel took %s", duration)
 	if err != nil {
 		return err
 	}
@@ -250,33 +240,24 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 	objectErrorCnt := 0
 
 	for _, object := range objects {
-		start := time.Now()
 		entities, groups, err := proc.runInferenceOnObject(reportId, storage, parser, model, tags, customTagsRe, groupToFilter, bucket, object)
-		duration := time.Since(start)
-		log.Printf("runInferenceOnObject took %s", duration)
 		if err != nil {
 			slog.Error("error processing object", "object", object, "error", err)
 			objectErrorCnt++
 			continue
 		}
 
-		start_db_create_entities := time.Now()
 		if err := proc.db.CreateInBatches(&entities, 100).Error; err != nil {
 			slog.Error("error saving entities to database", "object", object, "error", err)
 			objectErrorCnt++
 			continue
 		}
-		duration = time.Since(start_db_create_entities)
-		log.Printf("createInBatches db entities took %s", duration)
 
-		start_db_create_grps := time.Now()
 		if err := proc.db.CreateInBatches(groups, 100).Error; err != nil {
 			slog.Error("error saving groups to database", "object", object, "error", err)
 			objectErrorCnt++
 			continue
 		}
-		duration = time.Since(start_db_create_grps)
-		log.Printf("createInBatches db grps took %s", duration)
 	}
 
 	if objectErrorCnt > 0 {
@@ -409,10 +390,7 @@ func (proc *TaskProcessor) runInferenceOnObject(
 			return nil, nil, fmt.Errorf("error parsing document: %w", chunk.Error)
 		}
 
-		start := time.Now()
 		chunkEntities, err := model.Predict(chunk.Text)
-		duration := time.Since(start)
-		log.Printf("model predict took %s", duration)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error running model inference: %w", err)
 		}
