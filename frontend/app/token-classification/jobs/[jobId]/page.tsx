@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -228,8 +228,9 @@ const NewTagDialog: React.FC<{
 };
 
 export default function JobDetail() {
-  const params = useParams();
-  const reportId: string = params.jobId as string;
+  const searchParams = useSearchParams();
+  const reportId: string = searchParams.get('jobId') as string;
+  const deploymentId = searchParams.get('deploymentId') as string;
   const [lastUpdated, setLastUpdated] = useState(0);
   const [tabValue, setTabValue] = useState('configuration');
   const [selectedSource, setSelectedSource] = useState<'s3' | 'local'>('s3');
@@ -384,7 +385,7 @@ export default function JobDetail() {
       {/* Breadcrumbs */}
       <div className="mb-6">
         <div className="flex items-center mb-2">
-          <Link href={`/token-classification/${params.deploymentId}?tab=jobs`} className="text-blue-500 hover:underline">
+          <Link href={`/token-classification/jobs?deploymentId=${deploymentId}&tab=jobs`} className="text-blue-500 hover:underline">
             Jobs
           </Link>
           <span className="mx-2 text-gray-400">/</span>
@@ -397,7 +398,7 @@ export default function JobDetail() {
         <h1 className="text-2xl font-medium">{reportData?.ReportName || '[Job Name]'}</h1>
 
         <Button variant="outline" size="sm" asChild>
-          <Link href={`/token-classification/${params.deploymentId}?tab=jobs`} className="flex items-center">
+          <Link href={`/token-classification/jobs?deploymentId=${deploymentId}&tab=jobs`} className="flex items-center">
             <ArrowLeft className="mr-1 h-4 w-4" /> Back to Jobs
           </Link>
         </Button>

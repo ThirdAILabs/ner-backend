@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Tabs, Tab, Box } from '@mui/material';
 import { Link as MuiLink, Typography } from '@mui/material';
 import * as _ from 'lodash';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 
 // Import our implemented components
 import Interact from './interact';
@@ -67,8 +67,8 @@ const getTrainReport = async (workflowName: string) => {
 };
 
 export default function Page() {
-  const params = useParams();
-  const workflowName = params.deploymentId as string || 'PII';
+  const params = useSearchParams();
+  const workflowName = params.get('deploymentId') as string || 'PII';
   const searchParams = useSearchParams();
   const defaultTab = searchParams.get('tab') || 'testing';
   const [tabValue, setTabValue] = useState(defaultTab);

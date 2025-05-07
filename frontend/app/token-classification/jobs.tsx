@@ -16,7 +16,7 @@ import {
 } from '@mui/material';
 import { Card, CardContent } from '@mui/material';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { format } from 'date-fns';
 import { nerService } from '@/lib/backend';
 
@@ -62,7 +62,8 @@ interface ReportWithStatus {
 }
 
 export default function Jobs() {
-  const params = useParams();
+  const searchParams = useSearchParams();
+  const deploymentId = searchParams.get('deploymentId');
   const [reports, setReports] = useState<ReportWithStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -140,7 +141,7 @@ export default function Jobs() {
             <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.125rem' }}>
               Jobs
             </Typography>
-            <Link href={`/token-classification/${params.deploymentId}/jobs/new`} passHref>
+            <Link href={`/token-classification/jobs/new?deploymentId=${deploymentId}`} passHref>
               <Button
                 variant="contained"
                 color="primary"
@@ -178,7 +179,7 @@ export default function Jobs() {
             <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.125rem' }}>
               Jobs
             </Typography>
-            <Link href={`/token-classification/${params.deploymentId}/jobs/new`} passHref>
+            <Link href={`/token-classification/jobs/new?deploymentId=${deploymentId}`} passHref>
               <Button
                 variant="contained"
                 color="primary"
@@ -345,7 +346,7 @@ export default function Jobs() {
           <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.125rem' }}>
             Jobs
           </Typography>
-          <Link href={`/token-classification/${params.deploymentId}/jobs/new`} passHref>
+          <Link href={`/token-classification/jobs/new?deploymentId=${deploymentId}`} passHref>
             <Button
               variant="contained"
               color="primary"
@@ -399,7 +400,7 @@ export default function Jobs() {
                     <TableCell>{format(new Date(report.CreationTime), 'MM/dd/yyyy, hh:mm:ss a')}</TableCell>
                     <TableCell>
                       <Link
-                        href={`/token-classification/${params.deploymentId}/jobs/${report.Id}`}
+                        href={`/token-classification/jobs?deploymentId=${deploymentId}&jobId=${report.Id}`}
                         style={{
                           color: '#1976d2',
                           textDecoration: 'none'

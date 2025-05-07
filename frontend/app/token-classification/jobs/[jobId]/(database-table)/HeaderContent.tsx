@@ -1,6 +1,6 @@
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import SaveButton from '../../../../../semantic-search/[deploymentId]/components/buttons/SaveButton';
+import SaveButton from '../../../../semantic-search/[deploymentId]/components/buttons/SaveButton';
 import { ViewMode } from './types';
 import { useState } from 'react';
 import { Loader2, Search } from 'lucide-react';
