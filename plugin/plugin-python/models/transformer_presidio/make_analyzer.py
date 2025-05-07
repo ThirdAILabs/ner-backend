@@ -1,7 +1,8 @@
-from presidio_analyzer import AnalyzerEngine, RecognizerResult, RecognizerRegistry
 import os
 import warnings
 from typing import List
+
+from presidio_analyzer import AnalyzerEngine, RecognizerRegistry, RecognizerResult
 
 # blade hosting shouldnt use GPU
 # spacy.require_gpu()

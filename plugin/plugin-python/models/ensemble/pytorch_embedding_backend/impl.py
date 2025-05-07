@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-
 from thirdai import data, dataset
 
 HASH_DIMENSION = 50000

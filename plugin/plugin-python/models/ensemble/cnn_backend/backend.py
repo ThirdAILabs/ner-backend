@@ -1,7 +1,9 @@
-from transformers import AutoTokenizer
-import torch
-from .impl import CNNNERModelSentenceTokenized
 from typing import List
+
+import torch
+from transformers import AutoTokenizer
+
+from .impl import CNNNERModelSentenceTokenized
 
 
 class CNNModel:

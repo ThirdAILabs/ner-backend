@@ -1,6 +1,6 @@
-from thirdai import bolt
-
 from typing import List
+
+from thirdai import bolt
 
 
 class UDTModel:

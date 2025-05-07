@@ -3,11 +3,11 @@ package proto;
 option go_package = "./proto";
 
 message PredictRequest {
-    string sentence = 1;
+    repeated string sentences = 1;
 }
 
 message PredictResponse {
-    repeated Entity entities = 1;
+    repeated Entities entities = 1;
 }
 
 message Entity {
@@ -15,6 +15,10 @@ message Entity {
     string text = 2;
     int32 start = 3;
     int32 end = 4;
+}
+
+message Entities {
+    repeated Entity entities = 1;
 }
 
 service Model {

@@ -1,11 +1,13 @@
-from typing import List, Dict, Any
-from transformers import AutoModelForTokenClassification, AutoTokenizer
-import time
-from .make_analyzer import analyze_text, get_analyzer
-from .transformer_inference import punctuation_filter, predict_on_text
-from ..model_interface import Model, Entities, Predictions
 import contextlib
 import io
+import time
+from typing import Any, Dict, List
+
+from transformers import AutoModelForTokenClassification, AutoTokenizer
+
+from ..model_interface import Entities, Model, Predictions
+from .make_analyzer import analyze_text, get_analyzer
+from .transformer_inference import predict_on_text, punctuation_filter
 
 
 def suppress_output():

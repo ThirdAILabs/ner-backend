@@ -1,9 +1,10 @@
-from pydantic import BaseModel
-from typing import Callable, List, Tuple, Dict
 import string
 from collections import defaultdict
-from transformers import AutoTokenizer, AutoModelForTokenClassification
+from typing import Callable, Dict, List, Tuple
+
 import torch
+from pydantic import BaseModel
+from transformers import AutoModelForTokenClassification, AutoTokenizer
 
 
 def aggregate_max(predictions: List[Tuple], pred_index: int, act_index: int):
