@@ -51,13 +51,14 @@ interface ReportWithStatus {
   ShardDataTaskStatus?: string;
   InferenceTaskStatuses?: { [key: string]: TaskStatusCategory };
   Errors?: string[];
-  
+
   // Additional fields for UI
   detailedStatus?: {
     ShardDataTaskStatus?: string;
     InferenceTaskStatuses?: { [key: string]: TaskStatusCategory };
   };
   isLoadingStatus?: boolean;
+  ReportName: string;
 }
 
 export default function Jobs() {
@@ -68,35 +69,35 @@ export default function Jobs() {
 
   const fetchReportStatus = async (report: ReportWithStatus) => {
     try {
-      setReports(prev => 
-        prev.map(r => 
-          r.Id === report.Id 
+      setReports(prev =>
+        prev.map(r =>
+          r.Id === report.Id
             ? { ...r, isLoadingStatus: true }
             : r
         )
       );
 
       const detailedReport = await nerService.getReport(report.Id);
-      
-      setReports(prev => 
-        prev.map(r => 
-          r.Id === report.Id 
-            ? { 
-                ...r, 
-                detailedStatus: {
-                  ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
-                  InferenceTaskStatuses: detailedReport.InferenceTaskStatuses
-                },
-                isLoadingStatus: false
-              }
+
+      setReports(prev =>
+        prev.map(r =>
+          r.Id === report.Id
+            ? {
+              ...r,
+              detailedStatus: {
+                ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
+                InferenceTaskStatuses: detailedReport.InferenceTaskStatuses
+              },
+              isLoadingStatus: false
+            }
             : r
         )
       );
     } catch (err) {
       console.error(`Error fetching status for report ${report.Id}:`, err);
-      setReports(prev => 
-        prev.map(r => 
-          r.Id === report.Id 
+      setReports(prev =>
+        prev.map(r =>
+          r.Id === report.Id
             ? { ...r, isLoadingStatus: false }
             : r
         )
@@ -109,11 +110,11 @@ export default function Jobs() {
       try {
         setLoading(true);
         const reportsData = await nerService.listReports();
-        setReports(reportsData);
-        
+        setReports(reportsData as ReportWithStatus[]);
+
         // Fetch status for each report
         reportsData.forEach(report => {
-          fetchReportStatus(report);
+          fetchReportStatus(report as ReportWithStatus);
         });
       } catch (err) {
         setError('Failed to fetch reports');
@@ -250,13 +251,13 @@ export default function Jobs() {
         </Box>
       );
     }
-    
+
     // Add default values for each status
     const completed = InferenceTaskStatuses?.COMPLETED?.TotalTasks || 0;
     const running = InferenceTaskStatuses?.RUNNING?.TotalTasks || 0;
     const queued = InferenceTaskStatuses?.QUEUED?.TotalTasks || 0;
     const failed = InferenceTaskStatuses?.FAILED?.TotalTasks || 0;
-    
+
     const totalTasks = completed + running + queued + failed;
     const completedTasks = completed;
     const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
@@ -374,8 +375,8 @@ export default function Jobs() {
           <Table>
             <TableHead>
               <TableRow>
+                <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>Model</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Source</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>Created At</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>Action</TableCell>
@@ -390,8 +391,8 @@ export default function Jobs() {
                       bgcolor: index % 2 === 0 ? 'white' : '#f9fafb'
                     }}
                   >
+                    <TableCell>{report.ReportName}</TableCell>
                     <TableCell>{report.Model.Name}</TableCell>
-                    <TableCell>{`${report.SourceS3Bucket}${report.SourceS3Prefix}`}</TableCell>
                     <TableCell>
                       {getStatusDisplay(report)}
                     </TableCell>

@@ -28,13 +28,18 @@ interface Report {
   Model: Model;
   SourceS3Bucket: string;
   SourceS3Prefix: string;
+  IsUpload?: boolean;
   CreationTime: string;
   Tags?: string[];
-  CustomTags?: { [key: string]: string };
+  CustomTags?: {
+    [key: string]: string;
+  };
   Groups?: Group[];
   ShardDataTaskStatus?: string;
   InferenceTaskStatuses?: { [key: string]: TaskStatusCategory };
   Errors?: string[];
+  ReportName: string;
+  TagCounts: { [key: string]: number; }
 }
 
 interface Entity {
@@ -61,6 +66,7 @@ interface CreateReportRequest {
   Tags: string[];
   CustomTags?: { [key: string]: string };
   Groups?: { [key: string]: string };
+  report_name: string;
 }
 
 export const nerService = {
@@ -105,22 +111,6 @@ export const nerService = {
     return response.data;
   },
 
-  getTagsFromReport: async (reportId: string): Promise<{
-    regularTags: string[],
-    customTags: { [key: string]: string }
-  }> => {
-    try {
-      const report = await nerService.getReport(reportId);
-      return {
-        regularTags: report.Tags || [],
-        customTags: report.CustomTags || {}
-      };
-    } catch (error) {
-      console.error("Error fetching tags from report:", error);
-      return { regularTags: [], customTags: {} };
-    }
-  },
-
   getReportGroup: async (reportId: string, groupId: string): Promise<Group> => {
     const response = await axiosInstance.get(`/reports/${reportId}/groups/${groupId}`);
     return response.data;
@@ -157,52 +147,41 @@ export const nerService = {
       offset: params?.offset || 0,
       limit: params?.limit || 100,
     });
-    
+
     // Group entities by object name
     const objectMap = new Map<string, { tokens: string[], tags: string[] }>();
-    
+
     entities.forEach(entity => {
       if (!objectMap.has(entity.Object)) {
         objectMap.set(entity.Object, { tokens: [], tags: [] });
       }
-      
+
       // For each entity, we add the text and its label
       const obj = objectMap.get(entity.Object)!;
-      
+
       // Add left context as regular text with "O" tag
       if (entity.LContext) {
         obj.tokens.push(entity.LContext);
         obj.tags.push("O");
       }
-      
+
       // Add the entity text with its tag
       obj.tokens.push(entity.Text);
       obj.tags.push(entity.Label);
-      
+
       // Add right context as regular text with "O" tag
       if (entity.RContext) {
         obj.tokens.push(entity.RContext);
         obj.tags.push("O");
       }
     });
-    
+
     // Convert map to array of ObjectPreview objects
     return Array.from(objectMap.entries()).map(([objectName, data]) => ({
       object: objectName,
       tokens: data.tokens,
       tags: data.tags
     }));
-  },
-
-  getUniqueTagsFromEntities: async (reportId: string, limit: number = 500): Promise<string[]> => {
-    try {
-      const entities = await nerService.getReportEntities(reportId, { limit });
-      // Extract and deduplicate tag types
-      return Array.from(new Set(entities.map(e => e.Label)));
-    } catch (error) {
-      console.error("Error fetching unique tags from entities:", error);
-      return [];
-    }
   },
 
   searchReport: async (reportId: string, query: string): Promise<{ Objects: string[] }> => {

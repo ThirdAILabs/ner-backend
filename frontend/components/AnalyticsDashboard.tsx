@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   BarChart,
   Bar,
@@ -19,21 +19,24 @@ interface ClusterSpecs {
   modelName: string;
   cpuMhz: number;
 }
-
+interface Tag {
+  type: string,
+  count: number
+}
 interface AnalyticsDashboardProps {
   progress: number;
   tokensProcessed: number; // This is actually bytes processed
-  tokenCounts: Record<string, number>;
+  tags: Tag[]
 }
 
 // Format file size in bytes to human-readable format
 const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return '0 Bytes';
-  
+
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  
+
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
@@ -51,14 +54,12 @@ const formatNumber = (num: number): string => {
 export function AnalyticsDashboard({
   progress,
   tokensProcessed,
-  tokenCounts,
+  tags
 }: AnalyticsDashboardProps) {
   // Convert token counts to chart data format
-  const tokenChartData = Object.entries(tokenCounts).map(([type, count]) => ({
-    type,
-    count,
-  }));
 
+  const tokenChartData = tags;
+  console.log("Tags", tags, tokenChartData);
   return (
     <div className="space-y-6 w-full">
       {/* Top Widgets */}
@@ -114,12 +115,12 @@ export function AnalyticsDashboard({
           <CardTitle>Identified Tokens</CardTitle>
         </CardHeader>
         <CardContent>
-          <div style={{ height: `${Math.max(300, tokenChartData.length * 50)}px` }}>
+          <div style={{ height: `${Math.max(400, tokenChartData.length * 50)}px` }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={tokenChartData}
                 layout="vertical"
-                margin={{ top: 20, right: 30, left: 50, bottom: 30 }}
+                margin={{ top: 20, right: 30, left: 120, bottom: 30 }}
               >
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
