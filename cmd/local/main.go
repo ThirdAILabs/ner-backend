@@ -165,7 +165,7 @@ func main() {
 
 	slog.Info("server started", "port", cfg.Port)
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatalf("Could not listen on %s: %v\n", cfg.Port, err)
+		log.Fatalf("Could not listen on %d: %v\n", cfg.Port, err)
 	}
 
 	slog.Info("server stopped")
