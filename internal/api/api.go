@@ -770,13 +770,17 @@ func (s *BackendService) GetThroughputMetrics(r *http.Request) (any, error) {
 		reportID = rid
 	}
 
-	var rows []struct {
-		TotalSize      int64        `gorm:"column:total_size"`
-		StartedTime    sql.NullTime `gorm:"column:started_time"`
-		CompletionTime sql.NullTime `gorm:"column:completion_time"`
+	type agg struct {
+		TotalBytes   int64   `gorm:"column:bytes"`
+		TotalSeconds float64 `gorm:"column:seconds"`
 	}
-	q := s.db.
-		Model(&database.InferenceTask{}).
+	var a agg
+
+	q := s.db.Model(&database.InferenceTask{}).
+		Select(
+			"COALESCE(SUM(total_size),0) AS bytes, "+
+				"COALESCE(SUM(EXTRACT(EPOCH FROM (completion_time - started_time))),0) AS seconds",
+		).
 		Joins("JOIN reports ON reports.id = inference_tasks.report_id").
 		Where("inference_tasks.status = ?", database.JobCompleted).
 		Where("reports.model_id = ?", modelID)
@@ -785,33 +789,21 @@ func (s *BackendService) GetThroughputMetrics(r *http.Request) (any, error) {
 		q = q.Where("inference_tasks.report_id = ?", reportID)
 	}
 
-	if err := q.
-		Select("inference_tasks.total_size, inference_tasks.started_time, inference_tasks.completion_time").
-		Scan(&rows).Error; err != nil {
-		slog.Error("error fetching throughput rows", "error", err)
+	if err := q.Scan(&a).Error; err != nil {
+		slog.Error("error fetching throughput agg", "error", err)
 		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving throughput")
 	}
 
-	// 4) compute sums in Go
-	var totalBytes int64
-	var totalSeconds float64
-	for _, r := range rows {
-		totalBytes += r.TotalSize
-		if r.StartedTime.Valid && r.CompletionTime.Valid {
-			totalSeconds += r.CompletionTime.Time.Sub(r.StartedTime.Time).Seconds()
-		}
-	}
-
-	// 5) convert to MB/hour
-	mb := float64(totalBytes) / (1024.0 * 1024.0)
-	var throughputMBPerHour float64
-	if totalSeconds > 0 {
-		throughputMBPerHour = mb / (totalSeconds / 3600.0)
+	var mbPerHour float64
+	if a.TotalSeconds > 0 {
+		mb := float64(a.TotalBytes) / (1024.0 * 1024.0)
+		hours := a.TotalSeconds / 3600.0
+		mbPerHour = mb / hours
 	}
 
 	return api.ThroughputResponse{
 		ModelID:             modelID,
 		ReportID:            reportID,
-		ThroughputMBPerHour: throughputMBPerHour,
+		ThroughputMBPerHour: mbPerHour,
 	}, nil
 }
