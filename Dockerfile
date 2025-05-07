@@ -81,7 +81,9 @@ RUN --mount=type=cache,id=pip_cache,target=/root/.cache/pip \
 # Copy only the necessary artifacts from the builder stage
 COPY --from=backend-builder /app/api /app/api
 COPY --from=backend-builder /app/worker /app/worker
-COPY --from=backend-builder /entrypoint.sh /entrypoint.sh
+COPY --from=backend-builder /app/entrypoint.sh /app/entrypoint.sh
+
+COPY --from=backend-builder /app/plugin/plugin-python /app/plugin/plugin-python
 
 # Copy necessary files for running 'next start'
 COPY --from=frontend-builder /frontend/package*.json ./
@@ -97,13 +99,6 @@ ENV NODE_ENV=production
 
 EXPOSE 3000
 EXPOSE 8001
-
-
-COPY --from=builder /app/api          /app/api
-COPY --from=builder /app/worker       /app/worker
-COPY --from=builder /app/entrypoint.sh /app/entrypoint.sh
-
-COPY --from=builder /app/plugin/plugin-python /app/plugin/plugin-python
 
 RUN chmod +x /app/entrypoint.sh
 

@@ -106,7 +106,6 @@ func (parser *DefaultParser) parsePlaintext(
 		n, err := data.Read(buf)
 		if n > 0 {
 			output <- ParsedChunk{
-				Object: filename,
 				Text:   string(buf[:n]),
 				Offset: offset,
 				Error:  nil,
@@ -117,7 +116,6 @@ func (parser *DefaultParser) parsePlaintext(
 		if err != nil {
 			if err != io.EOF {
 				output <- ParsedChunk{
-					Object: filename,
 					Text:   "",
 					Offset: offset,
 					Error:  err,
