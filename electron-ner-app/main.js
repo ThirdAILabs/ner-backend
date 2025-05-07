@@ -1,5 +1,6 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
+const url = require('url');
 
 // Keep a global reference of the window object to prevent it from being garbage collected
 let mainWindow;
@@ -16,11 +17,18 @@ function createWindow() {
     }
   });
 
-  // Load the index.html file
-  mainWindow.loadFile('renderer/index.html');
-
-  // Open DevTools in development
-  // mainWindow.webContents.openDevTools();
+  // Determine the URL to load
+  const isDev = process.argv.includes('--dev');
+  
+  if (isDev) {
+    // Load from Vite dev server in development
+    mainWindow.loadURL('http://localhost:3007/');
+    // Open DevTools in development
+    mainWindow.webContents.openDevTools();
+  } else {
+    // Load built app in production
+    mainWindow.loadFile(path.join(__dirname, 'src/dist/index.html'));
+  }
 
   // Emitted when the window is closed
   mainWindow.on('closed', () => {
