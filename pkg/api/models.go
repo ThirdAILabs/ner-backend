@@ -121,8 +121,8 @@ type ObjectPreviewResponse struct {
 }
 
 type InferenceMetricsResponse struct {
-	Completed       int64   `json:"completed"`
-	InProgress      int64   `json:"in_progress"`
-	DataProcessedMB float64 `json:"data_processed_mb"`
-	TokensProcessed int64   `json:"tokens_processed"`
+	Completed       int64   `json:"Completed"`
+	InProgress      int64   `json:"InProgress"`
+	DataProcessedMB float64 `json:"DataProcessedMB"`
+	TokensProcessed int64   `json:"TokensProcessed"`
 }

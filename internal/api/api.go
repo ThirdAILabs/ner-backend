@@ -679,6 +679,13 @@ func (s *BackendService) UploadFiles(r *http.Request) (any, error) {
 	return api.UploadResponse{Id: uploadId}, nil
 }
 
+type metricsRow struct {
+	Status string
+	Size   sql.NullInt64 `gorm:"column:size"`
+	Tokens sql.NullInt64 `gorm:"column:tokens"`
+	Count  int64         `gorm:"column:count"`
+}
+
 func (s *BackendService) GetInferenceMetrics(r *http.Request) (any, error) {
 	qs := r.URL.Query()
 
@@ -691,78 +698,61 @@ func (s *BackendService) GetInferenceMetrics(r *http.Request) (any, error) {
 		days = d
 	}
 
-	var modelID *uuid.UUID
+	var modelID uuid.UUID
 	if ms := qs.Get("model_id"); ms != "" {
 		u, err := uuid.Parse(ms)
 		if err != nil {
 			return nil, CodedErrorf(http.StatusBadRequest, "invalid model_id")
 		}
-		modelID = &u
+		modelID = u
 	}
 
 	since := time.Now().UTC().Add(-time.Duration(days) * 24 * time.Hour)
 
-	var completedCount int64
-	qC := s.db.Model(&database.InferenceTask{}).
-		Where("status = ?", database.JobCompleted).
-		Where("completion_time >= ?", since)
-	if modelID != nil {
-		qC = qC.
-			Joins("JOIN reports ON inference_tasks.report_id = reports.id").
-			Where("reports.model_id = ?", *modelID)
+	var rows []metricsRow
+	query := s.db.
+		Model(&database.InferenceTask{}).
+		Select("status, SUM(total_size) AS size, SUM(token_count) AS tokens, COUNT(*) AS count").
+		Where("creation_time >= ?", since).
+		Group("status")
+
+	if modelID != uuid.Nil {
+		query = query.
+			Joins("JOIN reports ON reports.id = inference_tasks.report_id").
+			Where("reports.model_id = ?", modelID)
 	}
-	if err := qC.Count(&completedCount).Error; err != nil {
-		slog.Error("error counting completed inference tasks", "error", err)
+
+	if err := query.Find(&rows).Error; err != nil {
+		slog.Error("error fetching metrics rows", "error", err)
 		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving metrics")
 	}
 
-	var inProgressCount int64
-	qP := s.db.Model(&database.InferenceTask{}).
-		Where("status = ?", database.JobRunning).
-		Where("creation_time >= ?", since)
-	if modelID != nil {
-		qP = qP.
-			Joins("JOIN reports ON inference_tasks.report_id = reports.id").
-			Where("reports.model_id = ?", *modelID)
-	}
-	if err := qP.Count(&inProgressCount).Error; err != nil {
-		slog.Error("error counting in-progress inference tasks", "error", err)
-		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving metrics")
+	var (
+		completedCount  int64
+		inProgressCount int64
+		totalBytes      int64
+		totalTokens     int64
+	)
+
+	for _, r := range rows {
+		switch r.Status {
+		case database.JobCompleted:
+			completedCount = r.Count
+			totalBytes += r.Size.Int64
+			totalTokens += r.Tokens.Int64
+		case database.JobRunning:
+			inProgressCount = r.Count
+			totalBytes += r.Size.Int64
+			totalTokens += r.Tokens.Int64
+		}
 	}
 
-	var windowBytes sql.NullInt64
-	qW := s.db.Model(&database.InferenceTask{}).
-		Select("COALESCE(SUM(total_size),0) AS total").
-		Where("status IN ? AND creation_time >= ?", []string{database.JobCompleted, database.JobRunning}, since)
-	if modelID != nil {
-		qW = qW.
-			Joins("JOIN reports ON inference_tasks.report_id = reports.id").
-			Where("reports.model_id = ?", *modelID)
-	}
-	if err := qW.Scan(&windowBytes).Error; err != nil {
-		slog.Error("error summing window bytes", "error", err)
-		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving metrics")
-	}
-	dataProcessedMB := float64(windowBytes.Int64) / (1024 * 1024)
-
-	var windowTokens sql.NullInt64
-	qT := s.db.Model(&database.InferenceTask{}).
-		Select("COALESCE(SUM(token_count),0) AS total").
-		Where("status IN ? AND creation_time >= ?", []string{database.JobCompleted, database.JobRunning}, since)
-	if modelID != nil {
-		qT = qT.
-			Joins("JOIN reports ON inference_tasks.report_id = reports.id").
-			Where("reports.model_id = ?", *modelID)
-	}
-	if err := qT.Scan(&windowTokens).Error; err != nil {
-		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving token sum")
-	}
-	tokensProcessed := windowTokens.Int64
+	dataProcessedMB := float64(totalBytes) / (1024 * 1024)
 
 	return api.InferenceMetricsResponse{
 		Completed:       completedCount,
 		InProgress:      inProgressCount,
 		DataProcessedMB: dataProcessedMB,
-		TokensProcessed: tokensProcessed,
+		TokensProcessed: totalTokens,
 	}, nil
 }

@@ -438,7 +438,7 @@ func (proc *TaskProcessor) runInferenceOnObject(
 	groupFilter map[uuid.UUID]Filter,
 	object string) (
 	int64, []database.ObjectEntity, []database.ObjectGroup, map[string]uint64, map[string]uint64, error) {
-	var Tokens int64
+	var tokens int64
 
 	labelToEntities := make(map[string][]types.Entity)
 
@@ -494,7 +494,7 @@ func (proc *TaskProcessor) runInferenceOnObject(
 		}
 
 		toks := strings.Fields(chunk.Text)
-		Tokens += int64(len(toks))
+		tokens += int64(len(toks))
 	}
 
 	previewText := strings.Join(previewTokens, " ")
@@ -529,7 +529,7 @@ func (proc *TaskProcessor) runInferenceOnObject(
 		}
 	}
 
-	return Tokens, allEntities, groups, tagCount, customTagCount, nil
+	return tokens, allEntities, groups, tagCount, customTagCount, nil
 }
 
 func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload messaging.ShardDataPayload) error {
