@@ -358,7 +358,7 @@ export default function Jobs() {
                 fontWeight: 500
               }}
             >
-              New
+              New Report
             </Button>
           </Link>
         </Box>
