@@ -4,9 +4,6 @@ from typing import List
 
 from presidio_analyzer import AnalyzerEngine, RecognizerRegistry, RecognizerResult
 
-# blade hosting shouldnt use GPU
-# spacy.require_gpu()
-
 warnings.filterwarnings("ignore")
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -62,4 +59,21 @@ def analyze_text(
     )
     for res in results:
         transform_existing_tags(text, res)
+    return results
+
+
+def analyze_text_batch(
+    texts: List[str], analyzer: AnalyzerEngine, threshold: float
+) -> List[List[RecognizerResult]]:
+    results = analyzer.analyze_batch(
+        texts=texts,
+        entities=entities,
+        language="en",
+        score_threshold=threshold,
+    )
+
+    for text, text_results in zip(texts, results):
+        for res in text_results:
+            transform_existing_tags(text, res)
+
     return results

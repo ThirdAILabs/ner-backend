@@ -5,7 +5,7 @@ from ..model_interface import BatchPredictions, Entities, Model, SentencePredict
 from .cnn_backend.backend import CNNModel
 from .pytorch_embedding_backend.backend import EmbeddingBagWrappedNerModel
 from .udt_backend.backend import UDTModel
-from .utils import build_tag_vocab, clean_text
+from ..utils import build_tag_vocab, clean_text
 
 
 class EnsembleModel(Model):

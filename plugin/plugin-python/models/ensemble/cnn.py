@@ -2,7 +2,7 @@ from typing import List
 
 from ..model_interface import BatchPredictions, Entities, Model, SentencePredictions
 from .cnn_backend.backend import CNNModel
-from .utils import build_tag_vocab, clean_text
+from ..utils import build_tag_vocab, clean_text
 
 
 class CnnNerExtractor(Model):

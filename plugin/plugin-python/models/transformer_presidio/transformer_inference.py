@@ -294,8 +294,8 @@ def transform_predictions(
     return aggregated_results, word_spans
 
 
-def predict_on_text(
-    text: List[str],
+def predict_batch(
+    texts: List[str],
     model: AutoModelForTokenClassification,
     tokenizer: AutoTokenizer,
     aggregation_strategy: str = "max_activation",
@@ -304,9 +304,9 @@ def predict_on_text(
     max_length: int = 256,
     stride: int = 4,
     top_k: int = 3,
-) -> List[Dict[int, Tuple[int, float]]]:
+) -> List[List[Tuple[str, str, float, Tuple[int, int]]]]:
     encoded = tokenizer(
-        text,
+        texts,
         truncation=True,
         max_length=max_length,
         stride=stride,
@@ -317,40 +317,58 @@ def predict_on_text(
     )
 
     offset_mappings = encoded.pop("offset_mapping").tolist()
-    encoded.pop("overflow_to_sample_mapping")
+    sample_mapping = encoded.pop("overflow_to_sample_mapping").tolist()
     input_ids_list = encoded["input_ids"].cpu().tolist()
     inputs = {k: v.to(model.device) for k, v in encoded.items()}
 
+    # Forward pass once for all chunks
     logits = normal_predictions(model, inputs)
     probs = torch.softmax(logits, dim=-1)
     topk_acts, topk_ids = torch.topk(probs, k=top_k, dim=-1)
-    topk_ids = topk_ids.cpu().tolist()  # List[n_chunks × L × k]
+    topk_ids = topk_ids.cpu().tolist()
     topk_acts = topk_acts.cpu().tolist()
 
-    flat_ids, flat_offs, flat_preds, flat_acts = _merge_single_text_chunks(
-        input_ids_list,
-        offset_mappings,
-        topk_ids,
-        topk_acts,
-    )
+    # Group chunks by original text sample
+    num_texts = len(texts)
+    chunks_per_sample: Dict[int, List[int]] = {i: [] for i in range(num_texts)}
+    for chunk_idx, sample_idx in enumerate(sample_mapping):
+        chunks_per_sample[sample_idx].append(chunk_idx)
 
-    agg, word_spans = transform_predictions(
-        tokens=flat_ids,
-        offset_mapping=flat_offs,
-        predictions=flat_preds,
-        activations=flat_acts,
-        tokenizer=tokenizer,
-        aggregation_strategy=aggregation_strategy,
-        threshold=threshold,
-        filter_funcs=filter_funcs,
-    )
-    words = text.split()
-    assert len(words) == len(agg), f"Got {len(words)} words vs {len(agg)} preds"
-    results = []
-    for index in range(len(words)):
-        w, (label_id, conf) = words[index], agg[index]
-        span = word_spans[index]
-        start, end = process_span(span, text)
-        results.append((w, model.config.id2label[label_id], conf, (start, end)))
+    batch_results: List[List[Tuple[str, str, float, Tuple[int, int]]]] = []
+    # Process each text sample
+    for i, text in enumerate(texts):
+        chunk_indices = chunks_per_sample.get(i, [])
+        ids_chunks = [input_ids_list[j] for j in chunk_indices]
+        offs_chunks = [offset_mappings[j] for j in chunk_indices]
+        preds_chunks = [topk_ids[j] for j in chunk_indices]
+        acts_chunks = [topk_acts[j] for j in chunk_indices]
 
-    return results
+        # Merge overlapping chunks for this sample
+        flat_ids, flat_offs, flat_preds, flat_acts = _merge_single_text_chunks(
+            ids_chunks, offs_chunks, preds_chunks, acts_chunks
+        )
+        # Aggregate token predictions into word-level predictions
+        agg, word_spans = transform_predictions(
+            tokens=flat_ids,
+            offset_mapping=flat_offs,
+            predictions=flat_preds,
+            activations=flat_acts,
+            tokenizer=tokenizer,
+            aggregation_strategy=aggregation_strategy,
+            threshold=threshold,
+            filter_funcs=filter_funcs,
+        )
+
+        words = text.split()
+        assert len(words) == len(agg), f"Got {len(words)} words vs {len(agg)} preds"
+        sample_results: List[Tuple[str, str, float, Tuple[int, int]]] = []
+        for idx, (label_id, conf) in enumerate(agg):
+            w = words[idx]
+            span = word_spans[idx]
+            start, end = process_span(span, text)
+            sample_results.append(
+                (w, model.config.id2label[label_id], conf, (start, end))
+            )
+        batch_results.append(sample_results)
+
+    return batch_results
