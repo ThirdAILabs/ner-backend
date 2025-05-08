@@ -106,39 +106,16 @@ This will:
 1. Build the Go backend for macOS
 2. Copy it to the Electron app
 3. Build the React frontend
-4. Package everything into a DMG file
+4. Package everything into a DMG file with the backend included
 
-The resulting DMG file will be in the `dist` directory.
+The resulting DMG file will be in the `dist` directory. 
 
-### Installing the App
-
-When you install the app from the DMG, you might need to run an additional script to ensure the backend is correctly installed:
-
-1. Install the app by dragging it to the Applications folder
-2. Open Terminal and run the installation script:
-   ```
-   cd path/to/electron-ner-app/dist
-   ./install-backend.sh
-   ```
-   
-This script will:
-- Create the necessary `bin` directory in the app
-- Copy the backend binary to the correct location
-- Set the appropriate permissions
+When installed, the app will automatically find and use the backend without any additional steps required.
 
 ### Troubleshooting
 
 If you encounter issues with the backend not starting:
 
-1. Check that the Go backend executable exists and is executable:
-   ```
-   ls -la /Applications/NER\ Electron\ App.app/Contents/Resources/bin/main
-   ```
-
-2. If the file is missing, run the installation script:
-   ```
-   cd path/to/electron-ner-app/dist
-   ./install-backend.sh
-   ```
-
-3. Check the Electron logs for any errors when starting the backend 
+1. Check the app logs via the developer tools console (View > Toggle Developer Tools)
+2. Ensure there are no firewall issues blocking port 8000
+3. Make sure no other processes are using port 8000 

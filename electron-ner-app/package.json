@@ -58,7 +58,7 @@
     "chart.js": "^4.4.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "commander": "^12.1.0",
+    "commander": "^12.0.0",
     "date-fns": "^4.1.0",
     "electron-is-dev": "^2.0.0",
     "lucide-react": "^0.508.0",
@@ -83,20 +83,30 @@
       "main.js",
       "preload.js",
       "src/dist/**/*",
-      "scripts/**/*"
+      "scripts/**/*",
+      "!**/node_modules/**/{CHANGELOG.md,README.md,README,readme.md,readme}",
+      "!**/node_modules/**/{test,__tests__,tests,powered-test,example,examples}",
+      "!**/node_modules/**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}",
+      "!**/node_modules/**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,.gitignore,.gitattributes}"
     ],
     "extraResources": [
       {
         "from": "bin",
         "to": "bin"
+      },
+      {
+        "from": "node_modules/electron-is-dev",
+        "to": "node_modules/electron-is-dev"
       }
     ],
     "asarUnpack": [
       "scripts/**/*"
     ],
+    "afterPack": "./scripts/after-pack.js",
+    "asar": true,
     "mac": {
       "category": "public.app-category.developer-tools",
-      "target": ["dir", "dmg"],
+      "target": ["dmg"],
       "hardenedRuntime": false,
       "gatekeeperAssess": false
     },
