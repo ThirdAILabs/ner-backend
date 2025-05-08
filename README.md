@@ -74,3 +74,168 @@ go run cmd/licensing/main.go create --public-key /path/to/public_key.pem --licen
 ```
 
 Validates a license and prints out information such as expiration date.
+
+# NER Electron App
+
+This is an Electron application for Named Entity Recognition that integrates a Go backend service.
+
+## Project Structure
+
+```
+electron-ner-app/               # Frontend Electron application
+├── bin/                        # Directory for storing the backend executable
+│   └── main                    # Go backend executable
+├── build/                      # Build resources for electron-builder
+├── main.js                     # Electron main process
+├── preload.js                  # Electron preload script
+├── package.json                # Project configuration
+├── scripts/                    # Utility scripts
+│   ├── after-pack.js           # Hook for electron-builder
+│   ├── build-dmg.js            # Script to build DMG
+│   ├── copy-backend.js         # Script to copy backend
+│   ├── debug-packaging.js      # Debug utilities
+│   └── start-backend.js        # Script to start backend
+└── src/                        # React application source code
+    ├── components/             # React components
+    ├── lib/                    # Utility libraries
+    │   └── api.js              # Backend API communication
+    └── pages/                  # Application pages
+
+../main                         # Go backend executable in parent directory
+```
+
+## Setup and Development
+
+### Prerequisites
+
+- Node.js (v14+)
+- npm (v6+)
+- Go (v1.16+)
+- macOS for building DMG packages (Windows/Linux supported for their respective formats)
+
+### Installation
+
+1. Build the Go backend first:
+   ```bash
+   # From the parent directory (ner-backend)
+   go build -o main
+   ```
+
+2. Install the Electron app dependencies:
+   ```bash
+   cd electron-ner-app
+   npm install
+   ```
+
+### Development Mode
+
+To run the app in development mode:
+
+```bash
+npm run dev
+```
+
+This will:
+- Copy the Go backend to the `bin` directory
+- Start the Vite development server
+- Start Electron
+- Start the Go backend
+
+## Building for Production
+
+### macOS DMG
+
+To build a macOS DMG with the integrated backend:
+
+```bash
+npm run build-dmg
+```
+
+This will:
+1. Build the Go backend for macOS
+2. Copy it to the Electron app
+3. Build the React frontend
+4. Package everything into a DMG file with the backend included
+
+The resulting DMG file will be in the `dist` directory. 
+
+When installed, the app will automatically find and use the backend without any additional steps required.
+
+### Other Platforms
+
+For Windows:
+```bash
+npm run build-win
+```
+
+For Linux:
+```bash
+npm run build-linux
+```
+
+## Technical Implementation Details
+
+### Backend Integration
+
+The Go backend is integrated with Electron through several components:
+
+1. **Backend Management**:
+   - `start-backend.js`: Locates and starts the backend
+   - `copy-backend.js`: Copies the backend during build
+   - `after-pack.js`: Ensures backend is properly packaged
+
+2. **Communication**:
+   - Frontend communicates with backend over HTTP (port 8000)
+   - API utilities in `src/lib/api.js` handle requests
+   - Backend URL exposed through preload script
+
+3. **Packaging**:
+   - Backend binary is included in the app's Resources directory
+   - No separate installation needed
+
+### Key Configuration
+
+Important configuration options in `package.json`:
+
+```json
+"build": {
+  "files": [...],
+  "extraResources": [
+    {
+      "from": "bin",
+      "to": "bin"
+    }
+  ],
+  "afterPack": "./scripts/after-pack.js"
+}
+```
+
+## Troubleshooting
+
+If you encounter issues:
+
+1. **Backend Connection Issues**:
+   - Check the app logs via developer tools console (View > Toggle Developer Tools)
+   - Ensure no other process is using port 8000
+   - Verify backend process is running
+
+2. **Build Problems**:
+   - Ensure Go backend was built first
+   - Check for any error messages during build
+   - Verify all dependencies are installed
+
+3. **Advanced Debugging**:
+   ```bash
+   # Inspect the packaged app
+   npm run debug-pkg inspect
+   
+   # Test running the backend
+   npm run debug-pkg run-backend
+   
+   # Run with debug logs
+   npm run debug-pkg run-app
+   ```
+
+## License
+
+ISC

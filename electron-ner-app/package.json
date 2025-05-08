@@ -12,6 +12,8 @@
     "vite-build": "cd src && vite build",
     "electron-build": "npm run copy-backend && electron-builder",
     "build-dmg": "node scripts/build-dmg.js",
+    "build-win": "node scripts/build-win.js",
+    "build-linux": "node scripts/build-linux.js",
     "debug:check-backend": "node scripts/debug-build.js check-backend",
     "debug:frontend-only": "node scripts/debug-build.js build-frontend-only",
     "debug:quick-package": "node scripts/debug-build.js quick-package",
