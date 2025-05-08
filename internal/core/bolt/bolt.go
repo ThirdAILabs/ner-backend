@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"ner-backend/internal/core/types"
+	"ner-backend/internal/core/utils"
 	"ner-backend/pkg/api"
 	"strings"
 	"unsafe"
@@ -34,7 +35,7 @@ func LoadNER(path string) (*NER, error) {
 }
 
 func (ner *NER) Predict(text string) ([]types.Entity, error) {
-	sentences := splitSentences(text)
+	sentences, startOffsets := utils.SplitText(text)
 
 	cSentences := newStringList(sentences)
 	defer C.StringList_free(cSentences)
@@ -51,18 +52,16 @@ func (ner *NER) Predict(text string) ([]types.Entity, error) {
 	results := make([]types.Entity, 0)
 	for i := C.uint(0); i < batchSize; i++ {
 		itemResultsLen := C.Results_len(cResults, i)
-
+		globalOffset := startOffsets[int(i)]
 		for j := C.uint(0); j < itemResultsLen; j++ {
-			start := int(C.Results_start(cResults, i, j))
-			end := int(C.Results_end(cResults, i, j))
-			entity := types.Entity{
-				Label:    C.GoString(C.Results_label(cResults, i, j)),
-				Text:     C.GoString(C.Results_text(cResults, i, j)),
-				Start:    start,
-				End:      end,
-				LContext: strings.ToValidUTF8(sentences[i][max(start-20, 0):start], ""),
-				RContext: strings.ToValidUTF8(sentences[i][end:min(len(sentences[i]), end+20)], ""),
-			}
+			start := int(C.Results_start(cResults, i, j)) + globalOffset
+			end := int(C.Results_end(cResults, i, j)) + globalOffset
+			entity := types.CreateEntity(
+				C.GoString(C.Results_label(cResults, i, j)),
+				text,
+				start,
+				end,
+			)
 			results = append(results, entity)
 		}
 	}

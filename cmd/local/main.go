@@ -29,7 +29,7 @@ import (
 
 type Config struct {
 	Root    string `env:"ROOT" envDefault:"./pocket-shield"`
-	Port    int    `env:"PORT" envDefault:"8000"`
+	Port    int    `env:"PORT" envDefault:"3001"`
 	License string `env:"LICENSE_KEY" envDefault:""`
 }
 

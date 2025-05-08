@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"ner-backend/internal/core/bolt"
 	"ner-backend/internal/core/python"
@@ -35,11 +36,11 @@ var modelLoaders = map[string]modelLoader{
 	},
 
 	// TODO: replace env vars with a passed-in config
-	"python_combined_ner_model": func(path string) (Model, error) {
+	"transformer": func(path string) (Model, error) {
 		configJSON := fmt.Sprintf("{\"model_path\":\"%s\",\"threshold\": 0.5}", path)
 		return python.LoadPythonModel(
 			os.Getenv("PYTHON_EXECUTABLE_PATH"),
-			os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH"),
+			"plugin/plugin-python/plugin.py",
 			"python_combined_ner_model",
 			configJSON,
 		)
@@ -48,6 +49,16 @@ var modelLoaders = map[string]modelLoader{
 	"presidio": func(arg string) (Model, error) {
 		// we ignore `path` (no checkpoint needed) and always use the default threshold
 		return NewPresidioModel()
+	},
+
+	"cnn": func(path string) (Model, error) {
+		configJSON := fmt.Sprintf("{\"model_path\":\"%s/cnn_model.pth\"}", path)
+		return python.LoadPythonModel(
+			os.Getenv("PYTHON_EXECUTABLE_PATH"),
+			"plugin/plugin-python/plugin.py",
+			"python_cnn_ner_model",
+			configJSON,
+		)
 	},
 }
 
@@ -60,6 +71,8 @@ func LoadModel(modelType, modelDir string) (Model, error) {
 	if !ok {
 		return nil, fmt.Errorf("unknown model type %s", modelType)
 	}
+
+	modelDir = strings.TrimSuffix(modelDir, "/")
 
 	return loader(modelDir)
 }

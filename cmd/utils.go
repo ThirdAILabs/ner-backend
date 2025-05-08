@@ -52,7 +52,7 @@ func InitializePresidioModel(db *gorm.DB) {
 
 	var model database.Model
 
-	if err := db.Where(database.Model{Name: "presidio"}).Attrs(database.Model{
+	if err := db.Where(database.Model{Name: "basic"}).Attrs(database.Model{
 		Id:           modelId,
 		Type:         "presidio",
 		Status:       database.ModelTrained,

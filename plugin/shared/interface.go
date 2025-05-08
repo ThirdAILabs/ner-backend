@@ -27,6 +27,7 @@ var PluginMap = map[string]plugin.Plugin{
 // KV is the interface that we're exposing as a plugin.
 type Model interface {
 	Predict(sentence string) ([]*proto.Entity, error)
+	PredictBatch(sentences []string) ([]*proto.PredictResponse, error)
 }
 
 // This is the implementation of plugin.GRPCPlugin so we can serve/consume this.

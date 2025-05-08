@@ -101,7 +101,7 @@ func (parser *DefaultParser) parsePlaintext(filename string, data io.Reader, out
 
 		n, err := io.ReadFull(data, chunk)
 		isEnd := false
-		if err != io.EOF || err != io.ErrUnexpectedEOF {
+		if err == io.EOF || err == io.ErrUnexpectedEOF {
 			err = nil
 			isEnd = true
 		}
