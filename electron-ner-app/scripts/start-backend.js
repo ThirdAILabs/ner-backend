@@ -1,6 +1,7 @@
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const portfinder = require('portfinder');
 const electron = require('electron');
 
 // Determine if we're in Electron or standalone
@@ -147,7 +148,11 @@ function getBackendPath() {
   return null;
 }
 
-function startBackend() {
+async function startBackend() {
+  const availablePort = await portfinder.getPortPromise();
+
+  console.log(`Found port available: ${availablePort}`)
+
   const backendPath = getBackendPath();
   
   if (!backendPath) {
@@ -173,6 +178,7 @@ function startBackend() {
     cwd: backendDir, // Set working directory to where the binary is
     env: {
       ...process.env,
+      PORT: availablePort.toString(),
       DEBUG: process.env.DEBUG || '*',
       // Add any environment variables needed by the backend
     }
