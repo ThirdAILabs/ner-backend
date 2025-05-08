@@ -1,12 +1,11 @@
 from collections import Counter
+from typing import List
+
+from ..model_interface import BatchPredictions, Entity, Model, SentencePredictions
 from .cnn_backend.backend import CNNModel
 from .pytorch_embedding_backend.backend import EmbeddingBagWrappedNerModel
 from .udt_backend.backend import UDTModel
-
-from ..model_interface import Model, Predictions, Entities
-from .utils import build_tag_vocab, clean_text
-from typing import List
-from time import time
+from ..utils import build_tag_vocab, clean_text
 
 
 class EnsembleModel(Model):
@@ -34,33 +33,29 @@ class EnsembleModel(Model):
             else:
                 raise ValueError(f"Model {model_name} not found")
 
-    def predict(self, text: str) -> Predictions:
-        start = time()
-        text = clean_text(text)
-        tokens = text.split()
-        preds = [model.predict(text) for model in self.models]
+    def predict(self, text: str) -> SentencePredictions:
+        return self.predict_batch([text]).predictions[0]
 
-        initial_len = len(tokens)
-        for i, pred in enumerate(preds):
-            if len(pred) != initial_len:
+    def _process_prediction(
+        self, text: str, preds: List[List[str]]
+    ) -> SentencePredictions:
+        tokens = text.split()
+        for i in range(len(preds)):
+            if len(preds[i]) != len(tokens):
                 raise ValueError(
                     f"Model Number {i} has different length of predictions. "
-                    f"Initial length: {initial_len}, Current length: {len(pred)}"
+                    f"Initial length: {len(tokens)}, Current length: {len(preds[i])}"
                 )
 
-        elapsed_ms = round((time() - start) * 1000, 2)
-
-        # perform majority voting
-        L = len(preds[0])
         tags = []
+        L = len(preds[0])
         for i in range(L):
             choices = [preds[m][i] for m in range(len(self.models))]
             tag = Counter(choices).most_common(1)[0][0]
             tags.append(tag)
 
-        # generate offsets and entities
         offset = 0
-        entities: List[Entities] = []
+        entities: List[Entity] = []
         for tok, tag in zip(tokens, tags):
             idx = text.find(tok, offset)
             if idx == -1:
@@ -69,7 +64,7 @@ class EnsembleModel(Model):
             if tag == "O":
                 continue
             entities.append(
-                Entities(
+                Entity(
                     text=tok,
                     label=tag,
                     score=1.0,
@@ -78,4 +73,19 @@ class EnsembleModel(Model):
                 )
             )
 
-        return Predictions(entities=entities, elapsed_ms=elapsed_ms)
+        return SentencePredictions(entities=entities)
+
+    def predict_batch(self, texts: List[str]) -> BatchPredictions:
+        texts = [clean_text(text) for text in texts]
+        batched_predictions = [model.predict_batch(texts) for model in self.models]
+
+        single_sample_predictions = []
+        for index in range(len(batched_predictions[0])):
+            # take the i-th prediction of each model
+            single_sample_predictions.append(
+                self._process_prediction(
+                    texts[index], [pred[index] for pred in batched_predictions]
+                )
+            )
+
+        return BatchPredictions(predictions=single_sample_predictions)

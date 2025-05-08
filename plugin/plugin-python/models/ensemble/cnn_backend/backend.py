@@ -1,6 +1,8 @@
-from transformers import AutoTokenizer
+from typing import List
+
 import torch
-import torch.nn as nn
+from transformers import AutoTokenizer
+
 from .impl import CNNNERModelSentenceTokenized
 
 
@@ -23,6 +25,10 @@ class CNNModel:
         self.model.load_state_dict(state_dict)
         self.model.eval()
 
+    def predict_batch(self, texts: List[str]):
+        predictions = self.model.predict_batch(texts)
+        return [tags for _, tags in predictions]
+
     def predict(self, text: str):
-        _, pred_tags = self.model.predict(text)
-        return [tag for tag in pred_tags]
+        predictions = self.model.predict_batch([text])
+        return predictions[0]

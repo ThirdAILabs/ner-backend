@@ -1,21 +1,16 @@
-from concurrent import futures
+import argparse
+import json
 import sys
 import time
-import json
+from concurrent import futures
 from typing import Dict
-from models import Model
 
 import grpc
-
-from proto import model_pb2
-from proto import model_pb2_grpc
-
-from grpc_health.v1.health import HealthServicer
 from grpc_health.v1 import health_pb2, health_pb2_grpc
+from grpc_health.v1.health import HealthServicer
 
-from models import CombinedNERModel, CnnNerExtractor
-
-import argparse
+from models import CnnNerExtractor, CombinedNERModel, Model
+from proto import model_pb2, model_pb2_grpc
 
 model_dict: Dict[str, Model] = {
     "python_combined_ner_model": CombinedNERModel,
@@ -33,6 +28,12 @@ class ModelServicer(model_pb2_grpc.ModelServicer):
         sentence = request.sentence
         preds = self.model.predict(sentence).to_go()
         result = model_pb2.PredictResponse(entities=preds)
+        return result
+
+    def PredictBatch(self, request, context):
+        sentences = request.sentences
+        preds = self.model.predict_batch(sentences).to_go()
+        result = model_pb2.PredictBatchResponse(predictions=preds)
         return result
 
 

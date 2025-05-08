@@ -1,11 +1,14 @@
-from typing import List, Dict, Any
-from transformers import AutoModelForTokenClassification, AutoTokenizer
-import time
-from .make_analyzer import analyze_text, get_analyzer
-from .transformer_inference import punctuation_filter, predict_on_text
-from ..model_interface import Model, Entities, Predictions
 import contextlib
 import io
+from typing import Any, Dict, List
+
+from transformers import AutoModelForTokenClassification, AutoTokenizer
+from presidio_analyzer import RecognizerResult
+
+from ..model_interface import Entity, Model, SentencePredictions, BatchPredictions
+from .make_analyzer import analyze_text_batch, get_batch_analyzer
+from .transformer_inference import predict_batch, punctuation_filter
+from ..utils import clean_text_with_spans
 
 
 def suppress_output():
@@ -16,8 +19,8 @@ def suppress_output():
 
 
 def merge_predictions(
-    hf_preds: Predictions, pres_preds: Predictions, full_text: str
-) -> Predictions:
+    hf_preds: SentencePredictions, pres_preds: SentencePredictions, full_text: str
+) -> SentencePredictions:
     """
     Merge two Predictions objects (HF + Presidio) according to:
       1. disjoint spans → keep both
@@ -51,7 +54,7 @@ def merge_predictions(
     if current_cluster:
         clusters.append(current_cluster)
 
-    merged: List[Entities] = []
+    merged: List[Entity] = []
     # process each cluster
     for cluster in clusters:
         pres = [x["ent"] for x in cluster if x["src"] == "presidio"]
@@ -67,7 +70,7 @@ def merge_predictions(
                 ends = [e.end for e in pres + hf]
                 st, ed = min(starts), max(ends)
                 merged.append(
-                    Entities(
+                    Entity(
                         text=full_text[st:ed],
                         label=label,
                         # you could max or avg the scores
@@ -84,9 +87,7 @@ def merge_predictions(
             # HF‐only cluster (no Presidio overlap) → keep all HF
             merged.extend(hf)
 
-    # recompute elapsed
-    total_time = round(hf_preds.elapsed_ms + pres_preds.elapsed_ms, 2)
-    return Predictions(entities=merged, elapsed_ms=total_time)
+    return SentencePredictions(entities=merged)
 
 
 class HuggingFaceModel(Model):
@@ -103,117 +104,98 @@ class HuggingFaceModel(Model):
         self.top_k = 3
 
         self.skipped_entites = set({"O", "CARD_NUMBER"})
+        self.batch_size = 4
 
-    def predict(self, text: str) -> Predictions:
-        start_time = time.time()
-
-        entities = predict_on_text(
-            text,
-            model=self.model,
-            tokenizer=self.tokenizer,
-            aggregation_strategy=self.aggregation_strategy,
-            threshold=self.threshold,
-            filter_funcs=self.filter_funcs,
-            max_length=self.max_length,
-            top_k=self.top_k,
-            stride=self.stride,
-        )
-
-        end_time = time.time()
-        elapsed_ms = round((end_time - start_time) * 1000, 2)
-
-        predictions = []
-        for entity in entities:
-            w, label, conf, span = entity
-            if label in self.skipped_entites:
-                continue
-            predictions.append(
-                Entities(
-                    text=w,
-                    label=label,
-                    score=conf,
-                    start=span[0],
-                    end=span[1],
-                )
+    def _process_prediction(
+        self,
+        raw_text,
+        spans,
+        tag_tuples,
+    ):
+        if len(spans) != len(tag_tuples):
+            raise ValueError(
+                f"Span count ({len(spans)}) != prediction count ({len(tag_tuples)})"
             )
 
-        return Predictions(entities=predictions, elapsed_ms=elapsed_ms)
+        entities: List[Entity] = []
+        for (start, end), (_, label, score, _) in zip(spans, tag_tuples):
+            if label in self.skipped_entites:
+                continue
+            entities.append(
+                Entity(
+                    text=raw_text[start:end],
+                    label=label,
+                    score=score,
+                    start=start,
+                    end=end,
+                )
+            )
+        return SentencePredictions(entities=entities)
+
+    def predict_batch(self, texts: List[str]):
+        cleaned_and_spans = [clean_text_with_spans(t) for t in texts]
+        cleaned_texts, spans_list = zip(*cleaned_and_spans)
+
+        all_preds: List[SentencePredictions] = []
+        for i in range(0, len(cleaned_texts), self.batch_size):
+            batch_clean = cleaned_texts[i : i + self.batch_size]
+            batch_spans = spans_list[i : i + self.batch_size]
+
+            batch_tag_tuples = predict_batch(
+                list(batch_clean),
+                self.model,
+                self.tokenizer,
+                aggregation_strategy=self.aggregation_strategy,
+                threshold=self.threshold,
+                filter_funcs=self.filter_funcs,
+                max_length=self.max_length,
+                stride=self.stride,
+                top_k=self.top_k,
+            )
+
+            for raw, spans, tags in zip(
+                texts[i : i + self.batch_size], batch_spans, batch_tag_tuples
+            ):
+                sent = self._process_prediction(raw, spans, tags)
+                all_preds.append(sent)
+
+        return BatchPredictions(predictions=all_preds)
+
+    def predict(self, text: str) -> SentencePredictions:
+        return self.predict_batch([text]).predictions[0]
 
 
 class PresidioWrappedNerModel(Model):
     def __init__(self, threshold: float):
         self.threshold = threshold
-        self.analyzer = get_analyzer()
+        self.batch_analyzer = get_batch_analyzer()
 
-    def predict(self, text: str) -> Predictions:
-        start_time = time.time()
-
-        results = analyze_text(text, self.analyzer, self.threshold)
-
-        end_time = time.time()
-        elapsed_ms = round((end_time - start_time) * 1000, 2)
-
+    def _process_prediction(
+        self, text: str, entities: List[RecognizerResult]
+    ) -> SentencePredictions:
         predictions = []
-        for result in results:
+        for entity in entities:
             predictions.append(
-                Entities(
-                    text=text[result.start : result.end],
-                    label=result.entity_type,
-                    score=result.score,
-                    start=result.start,
-                    end=result.end,
+                Entity(
+                    text=text[entity.start : entity.end],
+                    label=entity.entity_type,
+                    score=entity.score,
+                    start=entity.start,
+                    end=entity.end,
                 )
             )
+        return SentencePredictions(entities=predictions)
 
-        return Predictions(entities=predictions, elapsed_ms=elapsed_ms)
+    def predict_batch(self, texts: List[str]) -> BatchPredictions:
+        batch_entities = analyze_text_batch(texts, self.batch_analyzer, self.threshold)
+        sentence_predictions = [
+            self._process_prediction(text, entities)
+            for text, entities in zip(texts, batch_entities)
+        ]
+        return BatchPredictions(predictions=sentence_predictions)
 
-    def tag_text(self, text, predictions: Predictions, verbose=False):
-        tokens = text.split()
-        tags = [["O", 1] for _ in tokens]
-
-        results = [res for res in predictions.entities if res.score >= self.threshold]
-
-        # Calculate the character start index of each token
-        token_positions = []
-        start = 0
-        for token in tokens:
-            start = text.find(token, start)
-            token_positions.append((start, start + len(token)))
-            start += len(token)
-
-        if verbose:
-            print(f"{text=}")
-            print(f"{'---'*10} Detected Entities {'---'*10} ")
-            for ent in results:
-                entity = ent.label
-                chunk = text[ent.start : ent.end]
-                score = ent.score
-                print(f"{entity=}, {chunk=}, {score=}")
-
-        for ent in results:
-            transformed_type = ent.label
-
-            for i, (token_start, token_end) in enumerate(token_positions):
-                # Check for overlap
-                if (token_start >= ent.start and token_start <= ent.end) or (
-                    ent.start >= token_start and ent.start <= token_end
-                ):
-                    # If the token is already tagged with a different entity, decide on a strategy
-                    current_tag = tags[i][0]
-                    if current_tag == "O":
-                        tags[i] = [(transformed_type, ent.score)]
-                    else:
-                        if ent.score > tags[i][0][1]:
-                            tags[i] = [(transformed_type, ent.score)]
-
-        if verbose:
-            print(f"{tags=}")
-        return tags
-
-    def get_tokenized_predictions(self, text, verbose=False):
-        predictions = self.predict(text)
-        tags = self.tag_text(text, predictions, verbose)
-        return tags
+    def predict(self, text: str) -> SentencePredictions:
+        return self.predict_batch([text]).predictions[0]
 
 
 class CombinedNERModel(Model):
@@ -227,15 +209,24 @@ class CombinedNERModel(Model):
             self.hf = HuggingFaceModel(model_path)
             self.pres = PresidioWrappedNerModel(threshold)
 
-    def predict(self, text: str) -> Predictions:
-        # get both
-        hf_out = self.hf.predict(text)
-        pres_out = self.pres.predict(text)
-        # merge
+    def _process_predictions(
+        self, text, hf_out: SentencePredictions, pres_out: SentencePredictions
+    ):
         merged = merge_predictions(hf_out, pres_out, text)
         return merged
 
-    def get_tokenized_predictions(self, text, verbose=False):
-        predictions = self.predict(text)
-        tags = self.pres.tag_text(text, predictions, verbose)
-        return tags
+    def predict_batch(self, texts: List[str]) -> BatchPredictions:
+        hf_out = self.hf.predict_batch(texts)
+        pres_out = self.pres.predict_batch(texts)
+
+        # merge predictions
+        sentence_predictions = [
+            self._process_predictions(text, hf_sentence, pres_sentence)
+            for text, hf_sentence, pres_sentence in zip(
+                texts, hf_out.predictions, pres_out.predictions
+            )
+        ]
+        return BatchPredictions(predictions=sentence_predictions)
+
+    def predict(self, text: str) -> SentencePredictions:
+        return self.predict_batch([text]).predictions[0]

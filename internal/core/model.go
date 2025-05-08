@@ -37,7 +37,7 @@ var modelLoaders = map[string]modelLoader{
 
 	// TODO: replace env vars with a passed-in config
 	"transformer": func(path string) (Model, error) {
-		configJSON := fmt.Sprintf("{\"model_path\":\"%s/custom_ner_model\",\"threshold\": 0.5}", path)
+		configJSON := fmt.Sprintf("{\"model_path\":\"%s\",\"threshold\": 0.5}", path)
 		return python.LoadPythonModel(
 			os.Getenv("PYTHON_EXECUTABLE_PATH"),
 			"plugin/plugin-python/plugin.py",

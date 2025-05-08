@@ -3,6 +3,7 @@ package python
 import (
 	"fmt"
 	"ner-backend/internal/core/types"
+	"ner-backend/internal/core/utils"
 	"ner-backend/pkg/api"
 	"ner-backend/plugin/proto"
 	"ner-backend/plugin/shared"
@@ -55,15 +56,6 @@ func LoadPythonModel(PythonExecutable, PluginScript, PluginModelName, KwargsJSON
 	}, nil
 }
 
-func (ner *PythonModel) Predict(text string) ([]types.Entity, error) {
-	result, err := ner.model.Predict(text)
-	if err != nil {
-		return nil, err
-	}
-
-	return convertProtoEntitiesToTypes(result, text), nil
-}
-
 func (ner *PythonModel) Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sample) error {
 	return fmt.Errorf("Finetune not implemented")
 }
@@ -82,18 +74,61 @@ func (ner *PythonModel) Release() {
 	ner.model = nil
 }
 
-func convertProtoEntitiesToTypes(protoEntities []*proto.Entity, text string) []types.Entity {
+func (ner *PythonModel) Predict(text string) ([]types.Entity, error) {
+	sentences, startOffsets := utils.SplitText(text)
+
+	// we will send max size of 2 MB at once
+	const maxPayload = 2 * 1024 * 1024 // 2 MB
+
+	var allEntities []types.Entity
+	for i := 0; i < len(sentences); {
+		var (
+			batchBytes int
+			j          = i
+		)
+		// we accumulate sentences until we hit the payload
+		for ; j < len(sentences); j++ {
+			batchBytes += len(sentences[j])
+			if batchBytes > maxPayload {
+				break
+			}
+		}
+		// we ensure atleast one sentence per payload
+		if j == i {
+			j = i + 1
+		}
+
+		batchResults, err := ner.model.PredictBatch(sentences[i:j])
+		if err != nil {
+			return nil, err
+		}
+
+		// we convert each sub-slice’s entities back into global offsets
+		for k, resp := range batchResults {
+			idx := i + k
+			ents := convertProtoEntitiesToTypes(
+				resp.Entities,
+				text,
+				startOffsets[idx],
+			)
+			allEntities = append(allEntities, ents...)
+		}
+
+		i = j
+	}
+
+	return allEntities, nil
+}
+
+func convertProtoEntitiesToTypes(protoEntities []*proto.Entity, text string, startOffset int) []types.Entity {
 
 	typesEntities := make([]types.Entity, len(protoEntities))
-
 	for i, pe := range protoEntities {
 		if pe != nil {
-			typesEntities[i].Label = pe.Label
-			typesEntities[i].Text = pe.Text
-			typesEntities[i].Start = int(pe.Start)
-			typesEntities[i].End = int(pe.End)
+			start := int(pe.Start) + startOffset
+			end := int(pe.End) + startOffset
+			typesEntities[i] = types.CreateEntity(pe.Label, text, start, end)
 		}
-		typesEntities[i].UpdateContext(text)
 	}
 	return typesEntities
 }

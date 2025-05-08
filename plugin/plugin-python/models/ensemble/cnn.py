@@ -1,8 +1,8 @@
-from time import time
-from .cnn_backend.backend import CNNModel
-from ..model_interface import Model, Predictions, Entities
-from .utils import build_tag_vocab, clean_text
 from typing import List
+
+from ..model_interface import BatchPredictions, Entity, Model, SentencePredictions
+from .cnn_backend.backend import CNNModel
+from ..utils import build_tag_vocab, clean_text_with_spans
 
 
 class CnnNerExtractor(Model):
@@ -13,39 +13,45 @@ class CnnNerExtractor(Model):
             tag2idx=build_tag_vocab(),
         )
 
-    def predict(self, text: str) -> Predictions:
-        start = time()
-        text = clean_text(text)
-        tokens = text.split()
-        preds = self.model.predict(text)
+        self.batch_size = 100
 
-        if len(preds) != len(tokens):
-            raise ValueError(
-                f"Token count ({len(tokens)}) and prediction count ({len(preds)}) differ."
-            )
-
-        elapsed_ms = round((time() - start) * 1000, 2)
-
-        # build entity list with character offsets
-        offset = 0
-        entities: List[Entities] = []
-        for tok, tag in zip(tokens, preds):
-            idx = text.find(tok, offset)
-            if idx == -1:
-                idx = offset
-            offset = idx + len(tok)
-
+    def _process_prediction(
+        self,
+        original_text,
+        spans,
+        tags,
+    ) -> SentencePredictions:
+        if len(spans) != len(tags):
+            raise ValueError(f"{len(spans)} spans vs {len(tags)} tags")
+        entities = []
+        for (start, end), tag in zip(spans, tags):
             if tag == "O":
                 continue
 
             entities.append(
-                Entities(
-                    text=tok,
+                Entity(
+                    text=original_text[start:end],
                     label=tag,
                     score=1.0,
-                    start=idx,
-                    end=idx + len(tok),
+                    start=start,
+                    end=end,
                 )
             )
+        return SentencePredictions(entities=entities)
 
-        return Predictions(entities=entities, elapsed_ms=elapsed_ms)
+    def predict_batch(self, texts: List[str]) -> BatchPredictions:
+        results = []
+        for i in range(0, len(texts), self.batch_size):
+            batch = texts[i : i + self.batch_size]
+
+            cleaned_and_spans = [clean_text_with_spans(t) for t in batch]
+            cleaned_texts, spans_list = zip(*cleaned_and_spans)
+
+            batch_tags = self.model.predict_batch(list(cleaned_texts))
+            for orig, spans, tags in zip(batch, spans_list, batch_tags):
+                results.append(self._process_prediction(orig, spans, tags))
+
+        return BatchPredictions(predictions=results)
+
+    def predict(self, text: str) -> SentencePredictions:
+        return self.predict_batch([text]).predictions[0]
