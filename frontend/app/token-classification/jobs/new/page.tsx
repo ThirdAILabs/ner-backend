@@ -214,30 +214,33 @@ function NewJobPage() {
   };
 
   // Add a custom tag
-  const handleAddCustomTag = () => {
+  const handleAddCustomTag = () => {    
     if (!customTagName.trim() || !customTagPattern.trim()) {
       setError('Custom tag name and pattern are required');
       return;
     }
-    for (let index = 0; index < customTags.length; index++) {
-      const thisTag = customTags[index];
-      if (thisTag.name === customTagName.toUpperCase()) {
-        setError('Custom tag name and pattern are required');
-        return;
+
+    if (editingTag && customTagName.trim().toUpperCase() === editingTag.name.toUpperCase()) {
+      const newCustomTag = {
+        name: customTagName.trim().toUpperCase(),
+        pattern: customTagPattern
       }
 
-    }
-    const newCustomTag = {
-      name: customTagName.toUpperCase(),
-      pattern: customTagPattern
-    };
-
-    if (editingTag) {
       setCustomTags(prev => prev.map(tag =>
         tag.name === editingTag.name ? newCustomTag : tag
       ));
     } else {
-      setCustomTags(prev => [...prev, newCustomTag]);
+      for (let index = 0; index < customTags.length; index++) {
+        const thisTag = customTags[index];
+        if (thisTag.name === customTagName.toUpperCase()) {
+          setError('Custom Tag name must be unique');
+          return;
+        }
+      }
+      setCustomTags(prev => [...prev, {
+        name: customTagName.trim().toUpperCase(),
+        pattern: customTagPattern
+      }]);
     }
 
     setCustomTagName('');
@@ -255,6 +258,7 @@ function NewJobPage() {
     setCustomTagPattern(tag.pattern);
     setEditingTag(tag);
     setIsCustomTagDialogOpen(true);
+
   };
 
   const areFilesIdentical = (file1: File, file2: File): boolean => {
@@ -606,6 +610,7 @@ function NewJobPage() {
                     <Tag tag={customTag.name} custom={true} selected />
                     <div className="flex items-center space-x-2">
                       <Button
+                        type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => handleEditCustomTag(customTag)}
@@ -615,6 +620,7 @@ function NewJobPage() {
                         Edit
                       </Button>
                       <Button
+                        type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => handleRemoveCustomTag(customTag.name)}
@@ -712,12 +718,13 @@ function NewJobPage() {
                     </div>
                     <div className="flex justify-end space-x-2">
                       <Button
+                        type="button"
                         variant="outline"
                         onClick={() => setIsCustomTagDialogOpen(false)}
                       >
                         Cancel
                       </Button>
-                      <Button onClick={handleAddCustomTag}>
+                      <Button type="button" onClick={handleAddCustomTag}>
                         Add Tag
                       </Button>
                     </div>

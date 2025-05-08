@@ -71,7 +71,7 @@ func createQueue(db *gorm.DB) *messaging.InMemoryQueue {
 		log.Fatalf("Failed to fetch tasks from database: %v", err)
 	}
 
-	queue := messaging.NewInMemoryQueueWithSize(len(shardTasks) + len(inferenceTasks))
+	queue := messaging.NewInMemoryQueue()
 
 	for _, task := range shardTasks {
 		if err := queue.PublishShardDataTask(context.Background(), messaging.ShardDataPayload{
