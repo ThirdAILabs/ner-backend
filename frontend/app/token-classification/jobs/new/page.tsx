@@ -122,6 +122,7 @@ export default function NewJobPage() {
   const [customTagPattern, setCustomTagPattern] = useState('');
   const [isCustomTagDialogOpen, setIsCustomTagDialogOpen] = useState(false);
   const [editingTag, setEditingTag] = useState<CustomTag | null>(null);
+  const [dialogError, setDialogError] = useState<string | null>(null);
 
   // Error/Success messages
   const [error, setError] = useState<string | null>(null);
@@ -214,9 +215,10 @@ export default function NewJobPage() {
 
   // Add a custom tag
   const handleAddCustomTag = () => {
+    setDialogError(null);
 
     if (!customTagName.trim() || !customTagPattern.trim()) {
-      setError('Custom tag name and pattern are required');
+      setDialogError('Custom tag name and pattern are required');
       return;
     }
 
@@ -230,17 +232,15 @@ export default function NewJobPage() {
         tag.name === editingTag.name ? newCustomTag : tag
       ));
     } else {
+      // Check for duplicate tag names
       for (let index = 0; index < customTags.length; index++) {
         const thisTag = customTags[index];
         if (thisTag.name === customTagName.toUpperCase()) {
-          setError('Custom Tag name must be unique');
+          setDialogError('Custom Tag name must be unique');
           return;
         }
       }
-      setCustomTags(prev => [...prev, {
-        name: customTagName.trim().toUpperCase(),
-        pattern: customTagPattern
-      }]);
+      setCustomTags(prev => [...prev, newCustomTag]);
     }
 
     setCustomTagName('');
@@ -248,6 +248,7 @@ export default function NewJobPage() {
     setEditingTag(null);
     setIsCustomTagDialogOpen(false);
   };
+
   const handleRemoveCustomTag = (tagName: string) => {
     setCustomTags(prev => prev.filter(tag => tag.name !== tagName));
     setAvailableTags(prev => prev.filter(tag => tag !== tagName));
@@ -264,8 +265,9 @@ export default function NewJobPage() {
     setCustomTagName('');
     setCustomTagPattern('');
     setEditingTag(null);
+    setDialogError(null);
     setIsCustomTagDialogOpen(false);
-  }
+  };
   const areFilesIdentical = (file1: File, file2: File): boolean => {
     return file1.name === file2.name && file1.size === file2.size;
   };
@@ -367,25 +369,15 @@ export default function NewJobPage() {
 
   return (
     <div className="container px-4 py-8 mx-auto">
-      {/* Breadcrumbs */}
-      <div className="mb-6">
-        <div className="flex items-center mb-2">
-          <Link href={`/?tab=jobs`} className="text-blue-500 hover:underline">
-            Report
-          </Link>
-          <span className="mx-2 text-gray-400">/</span>
-          <span className="text-gray-700">New Report</span>
-        </div>
-      </div>
 
       {/* Title and Back Button */}
-      {/* <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6">
         <Button variant="outline" size="sm" asChild>
           <Link href={`/?tab=jobs`} className="flex items-center">
             <ArrowLeft className="mr-1 h-4 w-4" /> Back to Reports
           </Link>
         </Button>
-      </div> */}
+      </div>
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
@@ -625,13 +617,16 @@ export default function NewJobPage() {
 
           {/* Custom Tags Section */}
           <div>
-            <h2 className="text-lg font-medium mb-4">5. Custom Tags</h2>
+            <h2 className="text-lg font-medium mb-4">
+              5. Custom Tags
+              <span className="text-sm font-normal text-gray-500 ml-2">(Optional)</span>
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {customTags.map((customTag) => (
                 <div key={customTag.name} className="border border-gray-200 rounded-md overflow-hidden">
-                  <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+                  <div className="py-1 px-4 border-b border-gray-200 flex justify-between items-center">
                     <Tag tag={customTag.name} custom={true} selected />
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-1">
                       <Button
                         type="button"
                         variant="ghost"
@@ -640,7 +635,6 @@ export default function NewJobPage() {
                         className="text-blue-500"
                       >
                         <Edit className="h-4 w-4 mr-1" />
-                        Edit
                       </Button>
                       <Button
                         type="button"
@@ -649,7 +643,19 @@ export default function NewJobPage() {
                         onClick={() => handleRemoveCustomTag(customTag.name)}
                         className="text-red-500"
                       >
-                        Remove
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
                       </Button>
                     </div>
                   </div>
@@ -661,7 +667,7 @@ export default function NewJobPage() {
 
               {/* Add Custom Tag Card */}
               <div
-                className="border border-dashed border-gray-300 rounded-md flex items-center justify-center p-6 cursor-pointer hover:border-gray-400"
+                className="border border-dashed border-gray-300 rounded-md flex items-center justify-center px-6 cursor-pointer hover:border-gray-400"
                 onClick={() => setIsCustomTagDialogOpen(true)}
               >
                 <div className="flex flex-col items-center">
@@ -675,6 +681,11 @@ export default function NewJobPage() {
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-lg p-6 w-full max-w-md">
                   <h3 className="text-lg font-medium mb-4">Create Custom Tag</h3>
+                  {dialogError && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded">
+                      {dialogError}
+                    </div>
+                  )}
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -759,7 +770,10 @@ export default function NewJobPage() {
 
           {/* Groups Section */}
           <div>
-            <h2 className="text-lg font-medium mb-4">6. Groups</h2>
+            <h2 className="text-lg font-medium mb-4">
+              6. Groups
+              <span className="text-sm font-normal text-gray-500 ml-2">(Optional)</span>
+            </h2>
 
             {/* Group creation form */}
             <div className="mb-4 p-4 border border-gray-200 rounded-md">
