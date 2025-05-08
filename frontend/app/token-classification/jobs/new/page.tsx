@@ -102,7 +102,6 @@ interface CustomTag {
 export default function NewJobPage() {
   const params = useParams();
   const router = useRouter();
-  const deploymentId = params.deploymentId as string;
 
   // Essential state
   const [selectedSource, setSelectedSource] = useState<'s3' | 'files'>('s3');
@@ -445,7 +444,7 @@ export default function NewJobPage() {
           {/* Job Name Field */}
           <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
             <h2 className="text-2xl font-medium mb-4">Report Name</h2>
-            <div className="w-full md:w-1/2">
+            <div className="w-full ">
               <input
                 type="text"
                 value={jobName}
@@ -851,12 +850,28 @@ export default function NewJobPage() {
                         type="button"
                         variant="outline"
                         onClick={handleCancel}
+                        style={{
+                          color: '#1976d2',
+                        }}
                       >
                         Cancel
                       </Button>
-                      <Button onClick={handleAddCustomTag} type="button">
+                      <Button
+                      type="button"
+                      variant="default"
+                      color="primary"
+                      style={{
+                        backgroundColor: '#1976d2',
+                        textTransform: 'none',
+                        fontWeight: 500,
+                      }}
+                      onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#1565c0')}
+                      onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#1976d2')}
+                      onClick={handleAddCustomTag}
+                    >Add Tag</Button>
+                      {/* <Button onClick={handleAddCustomTag} type="button">
                         Add Tag
-                      </Button>
+                      </Button> */}
                     </div>
                   </div>
                 </div>
@@ -1027,23 +1042,9 @@ export default function NewJobPage() {
                   Creating...
                 </>
               ) : (
-                'Create Job'
+                'Create Report'
               )}{' '}
             </Button>
-            {/* <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full md:w-auto px-8"
-            >
-              {isSubmitting ? (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                'Create Job'
-              )}
-            </Button> */}
           </div>
         </form>
       )}
