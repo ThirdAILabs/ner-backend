@@ -66,13 +66,13 @@ export function AnalyticsDashboard({
       {/* Top Widgets */}
       <div className="grid grid-cols-4 gap-4">
         {/* Progress Widget */}
-        <Card className="flex flex-col justify-between">
+        <Card className="col-start-2 flex flex-col justify-between">
           <CardContent className="flex flex-col items-center justify-center flex-1 pt-6">
             <div className="relative h-32 w-32">
               <svg className="h-full w-full" viewBox="0 0 100 100">
                 {/* Background circle */}
                 <circle
-                  className="stroke-muted"
+                  className="stroke-gray-700"
                   cx="50"
                   cy="50"
                   r="40"
@@ -81,7 +81,7 @@ export function AnalyticsDashboard({
                 />
                 {/* Progress circle */}
                 <circle
-                  className="stroke-primary"
+                  className="stroke-gray-600"
                   cx="50"
                   cy="50"
                   r="40"
@@ -92,7 +92,7 @@ export function AnalyticsDashboard({
                 />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-2xl font-bold">{progress}%</span>
+                <span className="text-2xl font-bold text-gray-700">{progress}%</span>
               </div>
             </div>
             <h3 className="mt-auto text-sm text-muted-foreground">Progress</h3>
@@ -103,7 +103,7 @@ export function AnalyticsDashboard({
         <Card className="flex flex-col justify-between">
           <CardContent className="flex flex-col items-center pt-6 h-full">
             <div className="flex-1 flex items-center">
-              <span className="text-4xl font-semibold">{formatFileSize(tokensProcessed)}</span>
+              <span className="text-4xl font-semibold text-gray-700">{formatFileSize(tokensProcessed)}</span>
             </div>
             <h3 className="text-sm text-muted-foreground">Data Processed</h3>
           </CardContent>
@@ -113,7 +113,10 @@ export function AnalyticsDashboard({
       {/* Token Distribution Chart */}
       <Card>
         <CardHeader>
-          <CardTitle>Identified Tokens</CardTitle>
+          {/* <CardTitle>Identified Tokens</CardTitle> */}
+          <div className='text-2xl font-semibold text-gray-700'>
+            Identified Tokens
+          </div>
         </CardHeader>
         <CardContent>
           <div style={{ height: `${Math.max(400, tokenChartData.length * 50)}px` }}>

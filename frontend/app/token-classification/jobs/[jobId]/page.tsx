@@ -421,9 +421,6 @@ export default function JobDetail() {
               <RefreshCw className="h-4 w-4" />
             </Button>
             <Button variant="ghost" size="icon">
-              <Pause className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon">
               <Square className="h-4 w-4" />
             </Button>
           </div>
