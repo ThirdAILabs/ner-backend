@@ -225,7 +225,7 @@ export default function JobDetail() {
   const params = useParams();
   const reportId: string = params.jobId as string;
   const [lastUpdated, setLastUpdated] = useState(0);
-  const [tabValue, setTabValue] = useState('configuration');
+  const [tabValue, setTabValue] = useState('analytics');
   const [selectedSource, setSelectedSource] = useState<'s3' | 'local'>('s3');
 
   // Remove selectedTags state, just keep availableTags
@@ -244,7 +244,7 @@ export default function JobDetail() {
       const report = await nerService.getReport(reportId);
 
       setReportData(report as Report);
-      
+
       // Set selectedSource based on IsUpload field
       if (report.IsUpload) {
         setSelectedSource('local');
@@ -375,26 +375,20 @@ export default function JobDetail() {
 
   return (
     <div className="container px-4 py-8 mx-auto">
-      {/* Breadcrumbs */}
-      <div className="mb-6">
-        <div className="flex items-center mb-2">
-          <Link href={`/token-classification/${params.deploymentId}?tab=jobs`} className="text-blue-500 hover:underline">
-            Jobs
-          </Link>
-          <span className="mx-2 text-gray-400">/</span>
-          <span className="text-gray-700">{reportData?.ReportName || '[Job Name]'}</span>
-        </div>
-      </div>
-
-      {/* Title and Back Button */}
+      {/* Header with Back Button and Title */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-medium">{reportData?.ReportName || '[Job Name]'}</h1>
-
         <Button variant="outline" size="sm" asChild>
-          <Link href={`/token-classification/${params.deploymentId}?tab=jobs`} className="flex items-center">
-            <ArrowLeft className="mr-1 h-4 w-4" /> Back to Jobs
+          <Link href={`/?tab=jobs`} className="flex items-center">
+            <ArrowLeft className="mr-1 h-4 w-4" /> Back to Reports
           </Link>
         </Button>
+
+        <h1 className="text-2xl font-medium text-center flex-1">
+          {reportData?.ReportName || '[Report Name]'}
+        </h1>
+
+        {/* Empty div to maintain spacing */}
+        <div className="w-[106px]"></div> {/* Width matches the Back button */}
       </div>
 
       {/* Tabs and Controls */}
@@ -402,22 +396,22 @@ export default function JobDetail() {
         <div className="flex items-center justify-between border-b mb-6">
           <TabsList className="border-0 bg-transparent p-0">
             <TabsTrigger
-              value="configuration"
-              className="data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:shadow-none rounded-none bg-transparent px-4 py-3 data-[state=active]:bg-transparent"
-            >
-              Configuration
-            </TabsTrigger>
-            <TabsTrigger
               value="analytics"
               className="data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:shadow-none rounded-none bg-transparent px-4 py-3 data-[state=active]:bg-transparent"
             >
-              Analytics
+              Summary
             </TabsTrigger>
             <TabsTrigger
               value="output"
               className="data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:shadow-none rounded-none bg-transparent px-4 py-3 data-[state=active]:bg-transparent"
             >
-              Output
+              Review
+            </TabsTrigger>
+            <TabsTrigger
+              value="configuration"
+              className="data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:shadow-none rounded-none bg-transparent px-4 py-3 data-[state=active]:bg-transparent"
+            >
+              Info
             </TabsTrigger>
           </TabsList>
 
@@ -484,13 +478,13 @@ export default function JobDetail() {
             </div>
 
             {/* Custom Tags section */}
-            {reportData?.CustomTags && <div>
+            <div>
               <h2 className="text-lg font-medium mb-4">Custom Tags</h2>
               {isLoading ? (
                 <div className="flex justify-center py-4">
                   <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
                 </div>
-              ) : (
+              ) : customTags?.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {customTags.map((customTag) => (
                     <div key={customTag.name} className="border border-gray-200 rounded-md overflow-hidden">
@@ -503,30 +497,32 @@ export default function JobDetail() {
                     </div>
                   ))}
                 </div>
+              ) : (
+                <div className="text-center py-10 bg-gray-50 border border-dashed border-gray-200 rounded-lg w-[400px]">
+                  <p className="text-gray-500">No custom tags defined for this report</p>
+                </div>
               )}
-            </div>}
+            </div>
 
             {/* Groups section */}
-            {reportData?.Groups && <div>
+            <div>
               <h2 className="text-lg font-medium mb-4">Groups</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {reportData.Groups.map((group) => {
-                  return (
-                    <GroupCard key={group.Id} name={group.Name} definition={group.Query} />
-                  )
-                })}
-
-                <div
-                  className="border border-dashed border-gray-300 rounded-md flex items-center justify-center p-6 cursor-pointer hover:border-gray-400"
-                  onClick={() => console.log('Add new group')}
-                >
-                  <div className="flex flex-col items-center">
-                    <Plus className="h-8 w-8 text-gray-400 mb-2" />
-                    <span className="text-gray-600">Define new group</span>
-                  </div>
+              {isLoading ? (
+                <div className="flex justify-center py-4">
+                  <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
                 </div>
-              </div>
-            </div>}
+              ) : (reportData?.Groups ?? []).length > 0 ? (
+                <div className="grid grid-cols-3 md:grid-cols-3 gap-4">
+                  {reportData?.Groups?.map((group) => (
+                    <GroupCard key={group.Id} name={group.Name} definition={group.Query} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-10 bg-gray-50 border border-dashed border-gray-200 rounded-lg w-[400px]">
+                  <p className="text-gray-500">No groups defined for this report</p>
+                </div>
+              )}
+            </div>
           </div>
         </TabsContent>
 

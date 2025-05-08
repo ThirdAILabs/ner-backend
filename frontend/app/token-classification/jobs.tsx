@@ -19,6 +19,8 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { format } from 'date-fns';
 import { nerService } from '@/lib/backend';
+import { IconButton, Tooltip } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 // Import the TaskStatusCategory from backend.ts
 interface TaskStatusCategory {
@@ -138,9 +140,9 @@ export default function Jobs() {
             mb: 3
           }}>
             <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.125rem' }}>
-              Jobs
+              Report
             </Typography>
-            <Link href={`/token-classification/${params.deploymentId}/jobs/new`} passHref>
+            <Link href={`/token-classification/jobs/new`} passHref>
               <Button
                 variant="contained"
                 color="primary"
@@ -153,7 +155,7 @@ export default function Jobs() {
                   fontWeight: 500
                 }}
               >
-                New
+                New Report
               </Button>
             </Link>
           </Box>
@@ -176,9 +178,9 @@ export default function Jobs() {
             mb: 3
           }}>
             <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.125rem' }}>
-              Jobs
+              Report
             </Typography>
-            <Link href={`/token-classification/${params.deploymentId}/jobs/new`} passHref>
+            <Link href={`/token-classification/jobs/new`} passHref>
               <Button
                 variant="contained"
                 color="primary"
@@ -191,7 +193,7 @@ export default function Jobs() {
                   fontWeight: 500
                 }}
               >
-                New
+                New Report
               </Button>
             </Link>
           </Box>
@@ -208,9 +210,9 @@ export default function Jobs() {
       return (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
           <CircularProgress size={16} />
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+          {/* <Typography variant="body2" sx={{ color: 'text.secondary' }}>
             Loading status...
-          </Typography>
+          </Typography> */}
         </Box>
       );
     }
@@ -327,10 +329,23 @@ export default function Jobs() {
           </Typography>
         </Box>
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-          {`${completedTasks} completed, ${running} running, ${queued} queued`}
+          {`Files: ${completed}/${totalTasks}`}
         </Typography>
       </Box>
     );
+  };
+
+  const handleDelete = async (reportId: string) => {
+    if (window.confirm('Are you sure you want to delete this report?')) {
+      try {
+        await nerService.deleteReport(reportId);
+        // Update the reports list after deletion
+        setReports(reports.filter(report => report.Id !== reportId));
+      } catch (error) {
+        console.error('Error deleting report:', error);
+        // You might want to show an error message to the user
+      }
+    }
   };
 
   return (
@@ -343,9 +358,9 @@ export default function Jobs() {
           mb: 3
         }}>
           <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.125rem' }}>
-            Jobs
+            Report
           </Typography>
-          <Link href={`/token-classification/${params.deploymentId}/jobs/new`} passHref>
+          <Link href={`/token-classification/jobs/new`} passHref>
             <Button
               variant="contained"
               color="primary"
@@ -358,7 +373,7 @@ export default function Jobs() {
                 fontWeight: 500
               }}
             >
-              New
+              New Report
             </Button>
           </Link>
         </Box>
@@ -375,11 +390,11 @@ export default function Jobs() {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Model</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Created At</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Action</TableCell>
+                <TableCell sx={{ fontWeight: 600, width: '20%' }}>Name</TableCell>
+                <TableCell sx={{ fontWeight: 600, width: '15%' }}>Model</TableCell>
+                <TableCell sx={{ fontWeight: 600, width: '35%' }}>Status</TableCell>
+                <TableCell sx={{ fontWeight: 600, width: '15%' }}>Created At</TableCell>
+                <TableCell sx={{ fontWeight: 600, width: '15%' }}>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -396,25 +411,50 @@ export default function Jobs() {
                     <TableCell>
                       {getStatusDisplay(report)}
                     </TableCell>
-                    <TableCell>{format(new Date(report.CreationTime), 'MM/dd/yyyy, hh:mm:ss a')}</TableCell>
                     <TableCell>
-                      <Link
-                        href={`/token-classification/${params.deploymentId}/jobs/${report.Id}`}
-                        style={{
-                          color: '#1976d2',
-                          textDecoration: 'none'
-                        }}
-                      >
-                        <Typography
-                          sx={{
-                            '&:hover': {
-                              textDecoration: 'underline'
-                            }
+                      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                        <Typography variant="body2">
+                          {format(new Date(report.CreationTime), 'MMMM d, yyyy')}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {format(new Date(report.CreationTime), 'h:mm a')}
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Link
+                          href={`/token-classification/jobs/${report.Id}`}
+                          style={{
+                            color: '#1976d2',
+                            textDecoration: 'none'
                           }}
                         >
-                          View
-                        </Typography>
-                      </Link>
+                          <Typography
+                            sx={{
+                              '&:hover': {
+                                textDecoration: 'underline'
+                              }
+                            }}
+                          >
+                            View
+                          </Typography>
+                        </Link>
+                        <Tooltip title="Delete report">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleDelete(report.Id)}
+                            sx={{
+                              color: '#dc2626',
+                              '&:hover': {
+                                bgcolor: 'rgba(220, 38, 38, 0.04)'
+                              }
+                            }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
                     </TableCell>
                   </TableRow>
                 ))

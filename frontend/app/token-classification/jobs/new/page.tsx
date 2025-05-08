@@ -52,11 +52,10 @@ const SourceOption: React.FC<SourceOptionProps> = ({
 }) => (
   <div
     className={`relative p-6 border rounded-md transition-all
-      ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200'}
-      ${
-        disabled
-          ? 'opacity-50 cursor-not-allowed bg-gray-50'
-          : 'cursor-pointer hover:border-blue-300'
+      ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200 border-2'}
+      ${disabled
+        ? 'opacity-50 cursor-not-allowed bg-gray-50'
+        : 'cursor-pointer hover:border-blue-300'
       }
     `}
     onClick={() => !disabled && onClick()}
@@ -127,6 +126,9 @@ export default function NewJobPage() {
   const [groupName, setGroupName] = useState('');
   const [groupQuery, setGroupQuery] = useState('');
   const [groups, setGroups] = useState<Record<string, string>>({});
+  const [isGroupDialogOpen, setIsGroupDialogOpen] = useState(false);
+  const [groupDialogError, setGroupDialogError] = useState<string | null>(null);
+  const [editingGroup, setEditingGroup] = useState<{ name: string, query: string } | null>(null);
 
   // Custom tags handling
   const [customTags, setCustomTags] = useState<CustomTag[]>([]);
@@ -134,6 +136,7 @@ export default function NewJobPage() {
   const [customTagPattern, setCustomTagPattern] = useState('');
   const [isCustomTagDialogOpen, setIsCustomTagDialogOpen] = useState(false);
   const [editingTag, setEditingTag] = useState<CustomTag | null>(null);
+  const [dialogError, setDialogError] = useState<string | null>(null);
 
   // Error/Success messages
   const [error, setError] = useState<string | null>(null);
@@ -201,7 +204,6 @@ export default function NewJobPage() {
     setSelectedTags([...availableTags]);
   };
 
-  // Add a new group
   const handleAddGroup = () => {
     if (!groupName.trim() || !groupQuery.trim()) {
       setError('Group name and query are required');
@@ -218,7 +220,42 @@ export default function NewJobPage() {
     setError(null);
   };
 
-  // Remove a group
+  const handleGroupCancel = () => {
+    setGroupName('');
+    setGroupQuery('');
+    setEditingGroup(null);
+    setGroupDialogError(null);
+    setIsGroupDialogOpen(false);
+  };
+
+  const handleAddGroupFromDialog = () => {
+    setGroupDialogError(null);
+
+    if (!groupName.trim() || !groupQuery.trim()) {
+      setGroupDialogError('Group name and query are required');
+      return;
+    }
+
+    if (!editingGroup && groups[groupName]) {
+      setGroupDialogError('Group name must be unique');
+      return;
+    }
+
+    setGroups(prev => ({
+      ...prev,
+      [groupName]: groupQuery
+    }));
+
+    handleGroupCancel();
+  };
+
+  const handleEditGroup = (name: string, query: string) => {
+    setGroupName(name);
+    setGroupQuery(query);
+    setEditingGroup({ name, query });
+    setIsGroupDialogOpen(true);
+  };
+
   const handleRemoveGroup = (name: string) => {
     const newGroups = { ...groups };
     delete newGroups[name];
@@ -227,6 +264,8 @@ export default function NewJobPage() {
 
   // Add a custom tag
   const handleAddCustomTag = () => {
+    setDialogError(null);
+    
     if (!customTagName.trim() || !customTagPattern.trim()) {
       setError('Custom tag name and pattern are required');
       return;
@@ -253,7 +292,6 @@ export default function NewJobPage() {
     setEditingTag(null);
     setIsCustomTagDialogOpen(false);
   };
-
   const handleRemoveCustomTag = (tagName: string) => {
     setCustomTags((prev) => prev.filter((tag) => tag.name !== tagName));
     setAvailableTags((prev) => prev.filter((tag) => tag !== tagName));
@@ -268,7 +306,13 @@ export default function NewJobPage() {
     setEditingTag(tag);
     setIsCustomTagDialogOpen(true);
   };
-
+  const handleCancel = () => {
+    setCustomTagName('');
+    setCustomTagPattern('');
+    setEditingTag(null);
+    setDialogError(null);
+    setIsCustomTagDialogOpen(false);
+  };
   const areFilesIdentical = (file1: File, file2: File): boolean => {
     return file1.name === file2.name && file1.size === file2.size;
   };
@@ -360,9 +404,7 @@ export default function NewJobPage() {
 
       // Redirect after success
       setTimeout(() => {
-        router.push(
-          `/token-classification/${deploymentId}/jobs/${response.ReportId}`
-        );
+        router.push(`/token-classification/jobs/${response.ReportId}`);
       }, 2000);
     } catch (err) {
       setError('Failed to create report. Please try again.');
@@ -374,30 +416,12 @@ export default function NewJobPage() {
 
   return (
     <div className="container px-4 py-8 mx-auto">
-      {/* Breadcrumbs */}
-      <div className="mb-6">
-        <div className="flex items-center mb-2">
-          <Link
-            href={`/token-classification/${deploymentId}?tab=jobs`}
-            className="text-blue-500 hover:underline"
-          >
-            Jobs
-          </Link>
-          <span className="mx-2 text-gray-400">/</span>
-          <span className="text-gray-700">New Job</span>
-        </div>
-      </div>
 
       {/* Title and Back Button */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-medium">Create New Job</h1>
-
         <Button variant="outline" size="sm" asChild>
-          <Link
-            href={`/token-classification/${deploymentId}?tab=jobs`}
-            className="flex items-center"
-          >
-            <ArrowLeft className="mr-1 h-4 w-4" /> Back to Jobs
+          <Link href={`/?tab=jobs`} className="flex items-center">
+            <ArrowLeft className="mr-1 h-4 w-4" /> Back to Reports
           </Link>
         </Button>
       </div>
@@ -416,7 +440,7 @@ export default function NewJobPage() {
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Job Name Field */}
           <div>
-            <h2 className="text-lg font-medium mb-4">Job Name</h2>
+            <h2 className="text-lg font-medium mb-4">1. Report Name</h2>
             <div className="w-full md:w-1/2">
               <input
                 type="text"
@@ -426,7 +450,7 @@ export default function NewJobPage() {
                   setJobName(value);
                 }}
                 className="w-full p-2 border border-gray-300 rounded"
-                placeholder="my_job_name"
+                placeholder="Enter_Report_Name"
                 required
                 pattern="^[^\s]+$"
               />
@@ -436,27 +460,10 @@ export default function NewJobPage() {
             </div>
           </div>
 
-          {/* Model Selection */}
-          <div>
-            <h2 className="text-lg font-medium mb-4">Model</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {models.map((model) => (
-                <SourceOption
-                  key={model.Id}
-                  title={model.Name}
-                  description={`Description: TBD`}
-                  // description={`Type: ${model.Type}`}
-                  isSelected={selectedModelId === model.Id}
-                  onClick={() => setSelectedModelId(model.Id)}
-                />
-              ))}
-            </div>
-          </div>
-
           {/* Source Section */}
           <div>
-            <h2 className="text-lg font-medium mb-4">Source</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <h2 className="text-lg font-medium mb-4">2. Source</h2>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
               <SourceOption
                 title="S3 Bucket"
                 description="Use files from an S3 bucket"
@@ -500,7 +507,7 @@ export default function NewJobPage() {
                 </div>
               </div>
             ) : (
-              <div>
+              <div className='w-full'>
                 <input
                   type="file"
                   multiple
@@ -581,31 +588,65 @@ export default function NewJobPage() {
               </div>
             )}
           </div>
-
+          {/* Model Selection */}
+          <div>
+            <h2 className="text-lg font-medium mb-4">3. Model</h2>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {models.map(model => (
+                <SourceOption
+                  key={model.Id}
+                  title={model.Name}
+                  description={`Description: TBD`}
+                  // description={`Type: ${model.Type}`}
+                  isSelected={selectedModelId === model.Id}
+                  onClick={() => setSelectedModelId(model.Id)}
+                />
+              ))}
+            </div>
+          </div>
           {/* Tags Section - Only show if a model is selected */}
           {selectedModelId && (
             <div>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-medium">Tags</h2>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={selectAllTags}
-                  className="text-sm flex items-center"
-                  disabled={
-                    isTagsLoading ||
-                    selectedTags.length === availableTags.length
-                  }
-                >
-                  <span className="mr-1">Select All</span>
-                  <input
-                    type="checkbox"
-                    checked={selectedTags.length === availableTags.length}
-                    onChange={selectAllTags}
-                    className="rounded border-gray-300"
-                  />
-                </Button>
+              <div className="flex justify-between items-center mb-2">
+                <h2 className="text-lg font-medium">4. Tags</h2>
+                <div className="flex space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={selectAllTags}
+                    className="text-sm flex items-center"
+                    disabled={isTagsLoading || selectedTags.length === availableTags.length}
+                  >
+                    <span className="mr-1">Select All</span>
+                    <input
+                      type="checkbox"
+                      checked={selectedTags.length === availableTags.length}
+                      onChange={selectAllTags}
+                      className="rounded border-gray-300"
+                    />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedTags([])}
+                    className="text-sm flex items-center"
+                    disabled={isTagsLoading || selectedTags.length === 0}
+                  >
+                    <span className="mr-1">Clear Selection</span>
+                    <input
+                      type="checkbox"
+                      checked={selectedTags.length === 0}
+                      onChange={() => setSelectedTags([])}
+                      className="rounded border-gray-300"
+                    />
+                  </Button>
+                </div>
               </div>
+
+              {/* Added descriptive note */}
+              <p className="text-sm text-gray-500 mb-4">
+                Click on any tag to select/unselect it. By default, all tags are selected.
+              </p>
 
               {isTagsLoading ? (
                 <div className="flex justify-center py-4">
@@ -632,16 +673,16 @@ export default function NewJobPage() {
 
           {/* Custom Tags Section */}
           <div>
-            <h2 className="text-lg font-medium mb-4">Custom Tags</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <h2 className="text-lg font-medium mb-4">
+              5. Custom Tags
+              <span className="text-sm font-normal text-gray-500 ml-2">(Optional)</span>
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {customTags.map((customTag) => (
-                <div
-                  key={customTag.name}
-                  className="border border-gray-200 rounded-md overflow-hidden"
-                >
-                  <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+                <div key={customTag.name} className="border border-gray-200 rounded-md overflow-hidden">
+                  <div className="py-1 px-4 border-b border-gray-200 flex justify-between items-center">
                     <Tag tag={customTag.name} custom={true} selected />
-                    <div className="flex items-center">
+                    <div className="flex items-center space-x-1">
                       <Button
                         type="button"
                         variant="ghost"
@@ -658,7 +699,19 @@ export default function NewJobPage() {
                         onClick={() => handleRemoveCustomTag(customTag.name)}
                         className="text-red-500"
                       >
-                        <Trash className="h-4 w-4 mr-1" />
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
                       </Button>
                     </div>
                   </div>
@@ -670,7 +723,7 @@ export default function NewJobPage() {
 
               {/* Add Custom Tag Card */}
               <div
-                className="border border-dashed border-gray-300 rounded-md flex items-center justify-center p-6 cursor-pointer hover:border-gray-400"
+                className="border border-dashed border-gray-300 rounded-md flex items-center justify-center px-6 py-3 cursor-pointer hover:border-gray-400"
                 onClick={() => setIsCustomTagDialogOpen(true)}
               >
                 <div className="flex flex-col items-center">
@@ -683,9 +736,12 @@ export default function NewJobPage() {
             {isCustomTagDialogOpen && (
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-lg p-6 w-full max-w-md">
-                  <h3 className="text-lg font-medium mb-4">
-                    Create Custom Tag
-                  </h3>
+                  <h3 className="text-lg font-medium mb-4">Create Custom Tag</h3>
+                  {dialogError && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded">
+                      {dialogError}
+                    </div>
+                  )}
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -763,11 +819,11 @@ export default function NewJobPage() {
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => setIsCustomTagDialogOpen(false)}
+                        onClick={handleCancel}
                       >
                         Cancel
                       </Button>
-                      <Button type="button" onClick={handleAddCustomTag}>
+                      <Button onClick={handleAddCustomTag} type='button'>
                         Add Tag
                       </Button>
                     </div>
@@ -779,76 +835,142 @@ export default function NewJobPage() {
 
           {/* Groups Section */}
           <div>
-            <h2 className="text-lg font-medium mb-4">Groups</h2>
-
-            {/* Group creation form */}
-            <div className="mb-4 p-4 border border-gray-200 rounded-md">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Group Name
-                  </label>
-                  <input
-                    type="text"
-                    value={groupName}
-                    onChange={(e) => setGroupName(e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded"
-                    placeholder="sensitive_docs"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Group Query
-                  </label>
-                  <input
-                    type="text"
-                    value={groupQuery}
-                    onChange={(e) => setGroupQuery(e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded"
-                    placeholder="COUNT(SSN) > 0"
-                  />
-                </div>
-              </div>
-              <Button
-                onClick={handleAddGroup}
-                disabled={!groupName || !groupQuery}
-              >
-                Add Group
-              </Button>
-
-              <div className="mt-4 text-sm text-gray-500">
-                <p>Example queries:</p>
-                <ul className="list-disc pl-5 mt-1 space-y-1">
-                  <li>
-                    <code>COUNT(SSN) &gt; 0</code> - Documents containing SSNs
-                  </li>
-                  <li>
-                    <code>COUNT(NAME) &gt; 2 AND COUNT(PHONE) &gt; 0</code> -
-                    Documents with multiple names and a phone number
-                  </li>
-                </ul>
-              </div>
-            </div>
+            <h2 className="text-lg font-medium mb-4">
+              6. Groups
+              <span className="text-sm font-normal text-gray-500 ml-2">(Optional)</span>
+            </h2>
 
             {/* Display defined groups */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {Object.entries(groups).map(([name, query]) => (
-                <GroupCard
-                  key={name}
-                  name={name}
-                  definition={query}
-                  onRemove={() => handleRemoveGroup(name)}
-                />
+                <div key={name} className="border border-gray-200 rounded-md overflow-hidden">
+                  <div className="py-1 px-4 border-b border-gray-200 flex justify-between items-center">
+                    <span className="font-medium">{name}</span>
+                    <div className="flex items-center space-x-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditGroup(name, query)}
+                        className="text-blue-500"
+                      >
+                        <Edit className="h-4 w-4 mr-1" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveGroup(name)}
+                        className="text-red-500"
+                      >
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="p-4">
+                    <p className="text-sm font-mono">{query}</p>
+                  </div>
+                </div>
               ))}
+
+              {/* Add New Group Card */}
+              <div
+                className="border border-dashed border-gray-300 rounded-md flex items-center justify-center px-6 py-3 cursor-pointer hover:border-gray-400"
+                onClick={() => setIsGroupDialogOpen(true)}
+              >
+                <div className="flex flex-col items-center">
+                  <Plus className="h-8 w-8 text-gray-400 mb-2" />
+                  <span className="text-gray-600">Define new group</span>
+                </div>
+              </div>
             </div>
+
+            {/* Group Dialog */}
+            {isGroupDialogOpen && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-lg p-6 w-full max-w-md">
+                  <h3 className="text-lg font-medium mb-4">
+                    {editingGroup ? 'Edit Group' : 'Create Group'}
+                  </h3>
+
+                  {groupDialogError && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded">
+                      {groupDialogError}
+                    </div>
+                  )}
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Group Name
+                      </label>
+                      <input
+                        type="text"
+                        value={groupName}
+                        onChange={(e) => setGroupName(e.target.value)}
+                        className="w-full p-2 border border-gray-300 rounded"
+                        placeholder="sensitive_docs"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Group Query
+                      </label>
+                      <input
+                        type="text"
+                        value={groupQuery}
+                        onChange={(e) => setGroupQuery(e.target.value)}
+                        className="w-full p-2 border border-gray-300 rounded"
+                        placeholder="COUNT(SSN) > 0"
+                      />
+                    </div>
+
+                    <div className="text-sm text-gray-500">
+                      <p>Example queries:</p>
+                      <ul className="list-disc pl-5 mt-1 space-y-1">
+                        <li><code>COUNT(SSN) &gt; 0</code> - Documents containing SSNs</li>
+                        <li><code>COUNT(NAME) &gt; 2 AND COUNT(PHONE) &gt; 0</code> - Documents with multiple names and a phone number</li>
+                      </ul>
+                    </div>
+
+                    <div className="flex justify-end space-x-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleGroupCancel}
+                      >
+                        Cancel
+                      </Button>
+                      <Button onClick={handleAddGroupFromDialog} type='button'>
+                        {editingGroup ? 'Save Changes' : 'Add Group'}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
+
           {/* Submit Button */}
-          <div className="flex justify-end pt-4">
+          <div className="flex justify-center pt-4">
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="w-full md:w-auto"
+              className="w-full md:w-auto px-8"
             >
               {isSubmitting ? (
                 <>
