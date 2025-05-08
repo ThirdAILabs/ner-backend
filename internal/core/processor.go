@@ -147,6 +147,8 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 
 	reportId := payload.ReportId
 
+	slog.Info("processing inference task", "report_id", reportId, "task_id", payload.TaskId)
+
 	var task database.InferenceTask
 	if err := proc.db.Preload("Report").Preload("Report.Model").Preload("Report.Tags").Preload("Report.CustomTags").Preload("Report.Groups").First(&task, "report_id = ? AND task_id = ?", reportId, payload.TaskId).Error; err != nil {
 		slog.Error("error fetching inference task", "report_id", reportId, "task_id", payload.TaskId, "error", err)
@@ -528,6 +530,8 @@ func (proc *TaskProcessor) runInferenceOnObject(
 func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload messaging.ShardDataPayload) error {
 	reportId := payload.ReportId
 
+	slog.Info("processing shard data task", "report_id", reportId)
+
 	var task database.ShardDataTask
 	if err := proc.db.Preload("Report").First(&task, "report_id = ?", reportId).Error; err != nil {
 		slog.Error("error fetching shard data task", "report_id", reportId, "error", err)
@@ -557,6 +561,8 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 	}
 
 	createInferenceTask := func(ctx context.Context, taskId int, chunkKeys []string, chunkSize int64) error {
+		slog.Info("Creating inference task", "report_id", reportId, "task_id", taskId, "chunk_size", chunkSize)
+
 		task := database.InferenceTask{
 			ReportId:     reportId,
 			TaskId:       taskId,
@@ -581,6 +587,8 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 			database.UpdateShardDataTaskStatus(ctx, proc.db, reportId, database.JobFailed) //nolint:errcheck
 			return fmt.Errorf("failed to publish inference task %d: %w", taskId, err)
 		}
+
+		slog.Info("Created inference task", "report_id", reportId, "task_id", taskId, "chunk_size", chunkSize)
 
 		return nil
 	}
@@ -621,11 +629,11 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 		taskId++
 	}
 
-	slog.Info("Finished generating inference task chunks", "n_tasks", taskId, "report_id", reportId)
-
 	if err := database.UpdateShardDataTaskStatus(ctx, proc.db, reportId, database.JobCompleted); err != nil {
 		return fmt.Errorf("failed to update job final status: %w", err)
 	}
+
+	slog.Info("Finished generating inference task chunks", "n_tasks", taskId, "report_id", reportId)
 
 	return nil
 }

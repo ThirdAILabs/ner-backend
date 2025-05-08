@@ -6,9 +6,8 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
-	"ner-backend/cmd" // Adjust import path
+	"ner-backend/cmd"
 	"ner-backend/internal/api"
-	"ner-backend/internal/core"
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/storage"
@@ -37,35 +36,6 @@ type APIConfig struct {
 	WorkerConcurrency int    `env:"CONCURRENCY" envDefault:"1"`
 	APIPort           string `env:"API_PORT" envDefault:"8001"`
 	ChunkTargetBytes  int64  `env:"S3_CHUNK_TARGET_BYTES" envDefault:"10737418240"`
-}
-
-func initializePresidioModel(db *gorm.DB) {
-	presidio, err := core.NewPresidioModel()
-	if err != nil {
-		log.Fatalf("Failed to initialize model: %v", err)
-	}
-
-	modelId := uuid.New()
-
-	var tags []database.ModelTag
-	for _, tag := range presidio.GetTags() {
-		tags = append(tags, database.ModelTag{
-			ModelId: modelId,
-			Tag:     tag,
-		})
-	}
-
-	var model database.Model
-
-	if err := db.Where(database.Model{Name: "basic"}).Attrs(database.Model{
-		Id:           modelId,
-		Type:         "presidio",
-		Status:       database.ModelTrained,
-		CreationTime: time.Now(),
-		Tags:         tags,
-	}).FirstOrCreate(&model).Error; err != nil {
-		log.Fatalf("Failed to create model record: %v", err)
-	}
 }
 
 func initializeCnnNerExtractor(ctx context.Context, db *gorm.DB, s3p *storage.S3Provider, bucket string) error {
@@ -163,7 +133,8 @@ func main() {
 		log.Fatalf("Worker: Failed to create S3 client: %v", err)
 	}
 
-	initializePresidioModel(db)
+	cmd.InitializePresidioModel(db)
+
 	if err := initializeCnnNerExtractor(context.Background(), db, s3Client, cfg.ModelBucketName); err != nil {
 		log.Fatalf("Failed to init & upload CNN NER model: %v", err)
 	}

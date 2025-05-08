@@ -3,6 +3,7 @@ package messaging
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"sync"
 )
 
@@ -38,9 +39,11 @@ type InMemoryQueue struct {
 
 func NewInMemoryQueue() *InMemoryQueue {
 	return &InMemoryQueue{
-		tasks: make(chan Task, 100),
+		tasks: make(chan Task, 1000),
 	}
 }
+
+var ErrQueueFull = fmt.Errorf("queue is full")
 
 func (q *InMemoryQueue) publishTaskInternal(queue string, payload interface{}) error {
 	data, err := json.Marshal(payload)
@@ -48,9 +51,16 @@ func (q *InMemoryQueue) publishTaskInternal(queue string, payload interface{}) e
 		return err
 	}
 
-	q.tasks <- &inMemoryTask{queue: queue, payload: data}
-
-	return nil
+	// This is to prevent a deadlock case if the shard data task in the worker tries to 
+	// publish a task to the same queue and the queue is full. The deadlock occurs because 
+	// only the worker can pull from the queue, but it is blocked waiting for the task to
+	// be published.
+	select {
+	case q.tasks <- &inMemoryTask{queue: queue, payload: data}:
+		return nil
+	default:
+		return ErrQueueFull
+	}
 }
 
 func (q *InMemoryQueue) PublishFinetuneTask(ctx context.Context, payload FinetuneTaskPayload) error {
