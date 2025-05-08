@@ -111,8 +111,6 @@ func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publish
 		apiHandler.AddRoutes(r)
 	})
 
-	r.Handle("/*", http.FileServerFS(os.DirFS("/Users/nmeisburger/ThirdAI/ner-backend/frontend/out")))
-
 	return &http.Server{
 		Addr:    fmt.Sprintf(":%d", port),
 		Handler: r,
