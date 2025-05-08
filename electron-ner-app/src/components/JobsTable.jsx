@@ -107,7 +107,7 @@ const ReportStatus = ({ report }) => {
   );
 };
 
-const JobsTable = ({ onViewReport }) => {
+const JobsTable = ({ onViewReport, onCreateNewJob }) => {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -196,6 +196,7 @@ const JobsTable = ({ onViewReport }) => {
             <Button
               variant="contained"
               color="primary"
+              onClick={onCreateNewJob}
               sx={{
                 bgcolor: '#1976d2',
                 '&:hover': {
@@ -233,6 +234,7 @@ const JobsTable = ({ onViewReport }) => {
             <Button
               variant="contained"
               color="primary"
+              onClick={onCreateNewJob}
               sx={{
                 bgcolor: '#1976d2',
                 '&:hover': {
@@ -269,6 +271,7 @@ const JobsTable = ({ onViewReport }) => {
           <Button
             variant="contained"
             color="primary"
+            onClick={onCreateNewJob}
             sx={{
               bgcolor: '#1976d2',
               '&:hover': {
