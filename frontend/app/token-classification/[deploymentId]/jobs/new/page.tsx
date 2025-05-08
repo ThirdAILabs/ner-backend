@@ -664,34 +664,34 @@ export default function NewJobPage() {
                         placeholder="CUSTOM_TAG_NAME"
                       />
                     </div>
-                    
+
                     <div>
-                    <div className="flex items-center space-x-4 mb-1">
-                      <label className="flex items-center text-sm text-gray-700">
-                        <input
-                          type="radio"
-                          value="string"
-                          checked={patternType === 'string'}
-                          onChange={() => setPatternType('string')}
-                          className="mr-1"
-                        />
-                        <span className="block text-sm font-medium text-gray-700">
-                          String
-                        </span>
-                      </label>
-                      <label className="flex items-center text-sm text-gray-700">
-                        <input
-                          type="radio"
-                          value="regex"
-                          checked={patternType === 'regex'}
-                          onChange={() => setPatternType('regex')}
-                          className="mr-1"
-                        />
-                        <span className="block text-sm font-medium text-gray-700">
-                          Regex
-                        </span>
-                      </label>
-                    </div>
+                      <div className="flex items-center space-x-4 mb-1">
+                        <label className="flex items-center text-sm text-gray-700">
+                          <input
+                            type="radio"
+                            value="string"
+                            checked={patternType === 'string'}
+                            onChange={() => setPatternType('string')}
+                            className="mr-1"
+                          />
+                          <span className="block text-sm font-medium text-gray-700">
+                            String
+                          </span>
+                        </label>
+                        <label className="flex items-center text-sm text-gray-700">
+                          <input
+                            type="radio"
+                            value="regex"
+                            checked={patternType === 'regex'}
+                            onChange={() => setPatternType('regex')}
+                            className="mr-1"
+                          />
+                          <span className="block text-sm font-medium text-gray-700">
+                            Regex
+                          </span>
+                        </label>
+                      </div>
 
                       <input
                         type="text"
@@ -702,7 +702,7 @@ export default function NewJobPage() {
                           patternType === 'regex' ? '\\b[A-Z]{2}\\d{6}\\b' : 'John Doe'
                         }
                       />
-                      
+
                       {patternType === 'string' && (
                         <p className="text-xs text-gray-500 mt-1">
                           Example: <code>John Doe</code> for matching an exact name

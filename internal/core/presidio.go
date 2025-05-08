@@ -16,8 +16,6 @@ type RecognizerResult struct {
 	Match      string
 	Score      float64
 	Start, End int
-	LContext   string
-	RContext   string
 }
 
 type PatternRegex struct {
@@ -165,7 +163,6 @@ func isLuhnValid(d string) bool {
 }
 
 func (pr *PatternRecognizer) Recognize(text string, threshold float64) []RecognizerResult {
-	const ctxLen = 20
 	var results []RecognizerResult
 
 	// multiple regexps of same entity can give same matches for the text, so we need to deduplicate
@@ -201,26 +198,12 @@ func (pr *PatternRecognizer) Recognize(text string, threshold float64) []Recogni
 			if pr.Validate != nil && !pr.Validate(match) {
 				continue
 			}
-
-			lctxStart := start - ctxLen
-			if lctxStart < 0 {
-				lctxStart = 0
-			}
-			rctxEnd := end + ctxLen
-			if rctxEnd > len(text) {
-				rctxEnd = len(text)
-			}
-			lctx := strings.ToValidUTF8(text[lctxStart:start], "")
-			rctx := strings.ToValidUTF8(text[end:rctxEnd], "")
-
 			results = append(results, RecognizerResult{
 				EntityType: mapped,
 				Match:      match,
 				Score:      rx.Score,
 				Start:      start,
 				End:        end,
-				LContext:   lctx,
-				RContext:   rctx,
 			})
 		}
 	}
@@ -251,14 +234,12 @@ func (m *PresidioModel) Predict(text string) ([]types.Entity, error) {
 
 	entities := make([]types.Entity, 0, len(results))
 	for _, r := range results {
-		entities = append(entities, types.Entity{
-			Text:     r.Match,
-			Label:    r.EntityType,
-			Start:    r.Start,
-			End:      r.End,
-			LContext: r.LContext,
-			RContext: r.RContext,
-		})
+		entities = append(entities, types.CreateEntity(
+			r.EntityType,
+			text,
+			r.Start,
+			r.End,
+		))
 	}
 	return entities, nil
 }
