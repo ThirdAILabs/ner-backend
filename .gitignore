@@ -6,6 +6,8 @@ env.local
 # Compiled Go binaries
 /api             # Binary in root from local builds (adjust if build output dir changes)
 /worker          # Binary in root from local builds
+/main            # Main executable
+main             # Main executable in any directory
 *.exe            # Windows binaries
 *.dll            # Windows DLLs
 *.so             # Linux shared objects
@@ -19,6 +21,11 @@ cmd/worker/worker
 /bin/
 /build/
 /dist/
+/pocket-shield/
+pocket-shield/
+
+# Scripts in root directory (not part of the codebase)
+/scripts/
 
 # Dependency directory (if using vendor) - Less common with Go modules
 /vendor/

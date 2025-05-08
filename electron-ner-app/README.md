@@ -69,4 +69,59 @@ If you encounter issues:
 
 1. Check the developer console for errors (View > Toggle Developer Tools)
 2. Ensure all dependencies are installed
-3. Verify that API endpoints are correctly configured 
+3. Verify that API endpoints are correctly configured
+
+## Running with Integrated Backend
+
+This Electron app now has the Go backend integrated. Here's how to run it:
+
+### Development Mode
+
+1. Make sure you have the Go backend built:
+   ```
+   cd ..
+   go build -o main
+   cd electron-ner-app
+   ```
+
+2. Start the integrated app:
+   ```
+   npm run dev
+   ```
+   This will:
+   - Copy the Go backend to the `bin` directory
+   - Start the Vite development server
+   - Start Electron
+   - Start the Go backend
+
+### Production Build (macOS)
+
+To build a macOS DMG with integrated backend:
+
+```
+npm run build-dmg
+```
+
+This will:
+1. Build the Go backend for macOS
+2. Copy it to the Electron app
+3. Build the React frontend
+4. Package everything into a DMG file
+
+The resulting DMG file will be in the `dist` directory.
+
+### Troubleshooting
+
+If you encounter issues with the backend not starting:
+
+1. Check that the Go backend executable exists and is executable:
+   ```
+   ls -la bin/main
+   ```
+
+2. Try running the backend manually:
+   ```
+   ./bin/main
+   ```
+
+3. Check the Electron logs for any errors when starting the backend 

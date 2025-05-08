@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, Tabs, Tab, CircularProgress } from '@mui/material';
+import { Box, Typography, Tabs, Tab, CircularProgress, Alert } from '@mui/material';
 import JobsTable from '../components/JobsTable';
 import JobDetail from './JobDetail';
 import CreateJob from './CreateJob';
+import { api } from '../lib/api';
 
 // These components would be imported from their actual locations
 // For now we'll create placeholder components
@@ -33,8 +34,29 @@ const TokenClassification = () => {
   const [selectedReportId, setSelectedReportId] = useState(null);
   const [showCreateJob, setShowCreateJob] = useState(false);
   const workflowName = 'PII'; // Default workflow name
+  const [backendStatus, setBackendStatus] = useState({ checked: false, connected: false, error: null });
 
   useEffect(() => {
+    // Check backend connection
+    const checkBackend = async () => {
+      try {
+        const healthCheck = await api.checkHealth();
+        setBackendStatus({
+          checked: true,
+          connected: healthCheck.ok,
+          error: healthCheck.error || null
+        });
+      } catch (error) {
+        setBackendStatus({
+          checked: true,
+          connected: false,
+          error: error.message
+        });
+      }
+    };
+
+    checkBackend();
+
     // Simulate loading for a short time
     const timer = setTimeout(() => {
       setIsLoading(false);
@@ -95,6 +117,12 @@ const TokenClassification = () => {
           >
             {workflowName}
           </Typography>
+          
+          {backendStatus.checked && !backendStatus.connected && (
+            <Alert severity="error" sx={{ mt: 1 }}>
+              Cannot connect to backend: {backendStatus.error || 'Server appears to be offline'}
+            </Alert>
+          )}
         </div>
       </header>
 

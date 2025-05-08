@@ -1,9 +1,11 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
 const isDev = require('electron-is-dev');
+const { startBackend } = require('./scripts/start-backend');
 
 // Keep a global reference of the window object to prevent it from being garbage collected
 let mainWindow;
+let backendStarted = false;
 
 function createWindow() {
   // Create the browser window
@@ -11,8 +13,8 @@ function createWindow() {
     width: 1200,
     height: 800,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
+      nodeIntegration: false,
+      contextIsolation: true,  // Enable context isolation for security
       preload: path.join(__dirname, 'preload.js')
     }
   });
@@ -38,8 +40,19 @@ function createWindow() {
   });
 }
 
+// Start backend if running in production
+// In development, backend is started via npm script
+function ensureBackendStarted() {
+  if (!backendStarted && !isDev) {
+    console.log('Starting backend in production mode...');
+    startBackend();
+    backendStarted = true;
+  }
+}
+
 // This method will be called when Electron has finished initialization
 app.whenReady().then(() => {
+  ensureBackendStarted();
   createWindow();
 
   app.on('activate', () => {
