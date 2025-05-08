@@ -157,13 +157,12 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 	}
 
 	slog.Info("processing inference task", "report_id", reportId, "task_id", payload.TaskId)
-	now := time.Now().UTC()
 	if err := proc.db.
 		Model(&database.InferenceTask{}).
 		Where("report_id = ? AND task_id = ?", reportId, taskId).
 		Updates(map[string]interface{}{
-			"status":       database.JobRunning,
-			"started_time": now,
+			"status":     database.JobRunning,
+			"start_time": time.Now().UTC(),
 		}).Error; err != nil {
 		slog.Error("error marking task as running", "error", err)
 	}

@@ -772,7 +772,7 @@ func (s *BackendService) GetThroughputMetrics(r *http.Request) (any, error) {
 
 	var rows []struct {
 		TotalSize      int64        `gorm:"column:total_size"`
-		StartedTime    sql.NullTime `gorm:"column:started_time"`
+		StartTime      sql.NullTime `gorm:"column:start_time"`
 		CompletionTime sql.NullTime `gorm:"column:completion_time"`
 	}
 	q := s.db.Model(&database.InferenceTask{}).
@@ -783,7 +783,7 @@ func (s *BackendService) GetThroughputMetrics(r *http.Request) (any, error) {
 		q = q.Where("inference_tasks.report_id = ?", reportID)
 	}
 	if err := q.
-		Select("inference_tasks.total_size, inference_tasks.started_time, inference_tasks.completion_time").
+		Select("inference_tasks.total_size, inference_tasks.start_time, inference_tasks.completion_time").
 		Scan(&rows).Error; err != nil {
 		slog.Error("error fetching throughput rows", "error", err)
 		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving throughput")
@@ -793,8 +793,8 @@ func (s *BackendService) GetThroughputMetrics(r *http.Request) (any, error) {
 	var totalSeconds float64
 	for _, r := range rows {
 		totalBytes += r.TotalSize
-		if r.StartedTime.Valid && r.CompletionTime.Valid {
-			totalSeconds += r.CompletionTime.Time.Sub(r.StartedTime.Time).Seconds()
+		if r.StartTime.Valid && r.CompletionTime.Valid {
+			totalSeconds += r.CompletionTime.Time.Sub(r.StartTime.Time).Seconds()
 		}
 	}
 

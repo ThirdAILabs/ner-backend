@@ -102,7 +102,7 @@ type InferenceTask struct {
 
 	Status         string `gorm:"size:20;not null"`
 	CreationTime   time.Time
-	StartedTime    sql.NullTime
+	StartTime      sql.NullTime
 	CompletionTime sql.NullTime
 
 	SourceS3Keys string

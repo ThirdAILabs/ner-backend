@@ -604,7 +604,7 @@ func TestGetInferenceMetrics_WithTasks(t *testing.T) {
 			TaskId:         42,
 			Status:         database.JobCompleted,
 			CreationTime:   now.Add(-1 * time.Hour),
-			StartedTime:    sql.NullTime{Time: now.Add(-1 * time.Hour), Valid: true},
+			StartTime:      sql.NullTime{Time: now.Add(-1 * time.Hour), Valid: true},
 			CompletionTime: sql.NullTime{Time: now, Valid: true},
 			TotalSize:      1 * 1024 * 1024,
 			TokenCount:     0,
