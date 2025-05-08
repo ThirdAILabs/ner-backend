@@ -41,21 +41,7 @@ MinIO UI: http://localhost:9090
 
 ## Setting models for downloading using MinIO 
 
-1. Get your **Access Key** and **Secret Key** from the MinIO web UI (typically at `http://localhost:9090`).  
-2. Run:  
-```bash
-# 1) Sync down from AWS to local
-aws s3 sync s3://ner-models/ ./ner-models/
-
-# 2) Sync back up to MinIO
-AWS_ACCESS_KEY=$MINIO_ACCESS_KEY \
-AWS_SECRET_ACCESS_KEY=$MINIO_SECRET_KEY \
-aws --endpoint-url http://localhost:9000 s3 mb s3://ner-models || true
-
-AWS_ACCESS_KEY=$MINIO_ACCESS_KEY \
-AWS_SECRET_ACCESS_KEY=$MINIO_SECRET_KEY \
-aws --endpoint-url http://localhost:9000 s3 sync ./ner-models/ s3://ner-models/
-```
+You need to update the mount volume path in docker compose file.
 
 # API Endpoints
 
