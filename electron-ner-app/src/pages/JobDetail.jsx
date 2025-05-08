@@ -26,6 +26,10 @@ import { nerService } from '../lib/backend';
 const ConfigurationTab = ({ report }) => {
   if (!report) return null;
   
+  // Determine if it's a file upload or S3 bucket
+  const isFileUpload = report.IsUpload === true;
+  const isS3 = !isFileUpload;
+  
   return (
     <Box sx={{ mt: 3 }}>
       <div className="space-y-8">
@@ -48,46 +52,59 @@ const ConfigurationTab = ({ report }) => {
               gap: 2 
             }}
           >
-            {report.SourceS3Bucket && (
-              <Paper 
-                elevation={0} 
-                sx={{ 
-                  p: 2, 
-                  border: '1px solid',
-                  borderColor: 'primary.main',
-                  borderRadius: 1,
-                  position: 'relative',
-                  '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    right: 10,
-                    top: 10,
-                    width: 10,
-                    height: 10,
-                    borderRadius: '50%',
-                    bgcolor: 'primary.main'
-                  }
-                }}
-              >
-                <Typography fontWeight="medium" gutterBottom>S3 Bucket</Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ wordBreak: 'break-all' }}>
-                  {report.SourceS3Bucket}/{report.SourceS3Prefix || ''}
-                </Typography>
-              </Paper>
-            )}
+            {/* S3 Bucket Option */}
             <Paper 
               elevation={0} 
               sx={{ 
                 p: 2, 
                 border: '1px solid',
-                borderColor: 'divider',
+                borderColor: isS3 ? 'primary.main' : 'divider',
                 borderRadius: 1,
-                opacity: 0.5
+                position: 'relative',
+                opacity: isS3 ? 1 : 0.5,
+                '&::before': isS3 ? {
+                  content: '""',
+                  position: 'absolute',
+                  right: 10,
+                  top: 10,
+                  width: 10,
+                  height: 10,
+                  borderRadius: '50%',
+                  bgcolor: 'primary.main'
+                } : {}
+              }}
+            >
+              <Typography fontWeight="medium" gutterBottom>S3 Bucket</Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ wordBreak: 'break-all' }}>
+                {report.SourceS3Bucket}/{report.SourceS3Prefix || ''}
+              </Typography>
+            </Paper>
+            
+            {/* File Upload Option */}
+            <Paper 
+              elevation={0} 
+              sx={{ 
+                p: 2, 
+                border: '1px solid',
+                borderColor: isFileUpload ? 'primary.main' : 'divider',
+                borderRadius: 1,
+                opacity: isFileUpload ? 1 : 0.5,
+                position: 'relative',
+                '&::before': isFileUpload ? {
+                  content: '""',
+                  position: 'absolute',
+                  right: 10,
+                  top: 10,
+                  width: 10,
+                  height: 10,
+                  borderRadius: '50%',
+                  bgcolor: 'primary.main'
+                } : {}
               }}
             >
               <Typography fontWeight="medium" gutterBottom>File Upload</Typography>
               <Typography variant="body2" color="text.secondary">
-                
+                {isFileUpload ? "Files were uploaded directly" : ""}
               </Typography>
             </Paper>
           </Box>
