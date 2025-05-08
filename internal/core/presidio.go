@@ -178,11 +178,12 @@ func (pr *PatternRecognizer) Recognize(text string, threshold float64) []Recogni
 		for _, loc := range rx.Regex.FindAllStringIndex(text, -1) {
 			start, end := loc[0], loc[1]
 
-			// Check if this combination has been seen
 			mapped, ok := entitiesMap[pr.EntityType]
 			if !ok || mapped == "" {
 				mapped = pr.EntityType
 			}
+
+			// Check if this combination has been seen
 			matchKey := fmt.Sprintf("%s|%d|%d", mapped, start, end)
 			if _, exists := seen[matchKey]; exists {
 				continue
