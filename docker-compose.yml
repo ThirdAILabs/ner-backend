@@ -80,6 +80,7 @@ services:
     volumes:
       # - .:/app # Mount code for development (requires Go toolchain in container or local build)
       - /etc/localtime:/etc/localtime:ro
+      - ${MODEL_HOST_PATH:-/share/ner/models}:/app/models:ro # Mount models directory (read-only)
     depends_on:
       rabbitmq:
         condition: service_healthy
