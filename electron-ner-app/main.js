@@ -5,6 +5,7 @@ const { startBackend } = require('./scripts/start-backend');
 
 // Keep a global reference of the window object to prevent it from being garbage collected
 let mainWindow;
+let backendProcess = null;
 let backendStarted = false;
 
 function createWindow() {
@@ -29,8 +30,16 @@ function createWindow() {
       mainWindow.webContents.openDevTools();
     }, 3000); // 3 second delay
   } else {
+    console.log("Production mode: Loading built app");
+    // Path to the built HTML file
+    const htmlPath = path.join(__dirname, 'src/dist/index.html');
+    console.log("Loading HTML from:", htmlPath);
+    
     // Load built app in production
-    mainWindow.loadFile(path.join(__dirname, 'src/dist/index.html'));
+    mainWindow.loadFile(htmlPath);
+    
+    // Uncomment to open DevTools in production for debugging
+    mainWindow.webContents.openDevTools();
   }
 
   // Emitted when the window is closed
@@ -40,18 +49,28 @@ function createWindow() {
   });
 }
 
-// Start backend if running in production
-// In development, backend is started via npm script
+// Start backend and return the process
 function ensureBackendStarted() {
-  if (!backendStarted && !isDev) {
-    console.log('Starting backend in production mode...');
-    startBackend();
-    backendStarted = true;
+  if (!backendStarted) {
+    console.log('Starting backend...');
+    try {
+      backendProcess = startBackend();
+      if (backendProcess) {
+        console.log('Backend started successfully');
+        backendStarted = true;
+      } else {
+        console.error('Failed to start backend process');
+      }
+    } catch (error) {
+      console.error('Error starting backend:', error);
+    }
   }
+  return backendProcess;
 }
 
 // This method will be called when Electron has finished initialization
 app.whenReady().then(() => {
+  // Always start the backend first, regardless of dev/prod mode
   ensureBackendStarted();
   createWindow();
 
@@ -64,4 +83,12 @@ app.whenReady().then(() => {
 // Quit when all windows are closed, except on macOS
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
+});
+
+// Clean up backend on app quit
+app.on('will-quit', () => {
+  console.log('App is quitting, cleaning up backend...');
+  if (backendProcess) {
+    backendProcess.kill('SIGINT');
+  }
 }); 

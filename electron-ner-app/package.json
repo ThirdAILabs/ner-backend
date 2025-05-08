@@ -11,7 +11,13 @@
     "build": "cd src && vite build && npm run copy-backend && electron-builder",
     "vite-build": "cd src && vite build",
     "electron-build": "npm run copy-backend && electron-builder",
-    "build-dmg": "node scripts/build-dmg.js"
+    "build-dmg": "node scripts/build-dmg.js",
+    "debug:check-backend": "node scripts/debug-build.js check-backend",
+    "debug:frontend-only": "node scripts/debug-build.js build-frontend-only",
+    "debug:quick-package": "node scripts/debug-build.js quick-package",
+    "debug:test-backend": "node scripts/debug-build.js test-backend-in-package",
+    "debug:run-app": "node scripts/debug-build.js run-app-with-logging",
+    "debug-pkg": "node scripts/debug-packaging.js"
   },
   "keywords": [
     "electron",
@@ -52,6 +58,7 @@
     "chart.js": "^4.4.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "commander": "^12.1.0",
     "date-fns": "^4.1.0",
     "electron-is-dev": "^2.0.0",
     "lucide-react": "^0.508.0",
@@ -69,24 +76,44 @@
     "appId": "com.electron.ner-app",
     "productName": "NER Electron App",
     "directories": {
-      "output": "dist"
+      "output": "dist",
+      "buildResources": "build"
     },
     "files": [
       "main.js",
       "preload.js",
       "src/dist/**/*",
-      "scripts/**/*",
-      "bin/**/*"
+      "scripts/**/*"
     ],
     "extraResources": [
       {
         "from": "bin",
         "to": "bin",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
+    "extraFiles": [
+      {
+        "from": "bin",
+        "to": "Resources/bin",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "asarUnpack": [
+      "scripts/**/*"
+    ],
     "mac": {
-      "category": "public.app-category.developer-tools"
+      "category": "public.app-category.developer-tools",
+      "target": [
+        "dir",
+        "dmg"
+      ],
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false
     },
     "win": {
       "target": "nsis"
