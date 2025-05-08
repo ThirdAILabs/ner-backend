@@ -345,15 +345,12 @@ func (proc *TaskProcessor) loadModel(ctx context.Context, modelId uuid.UUID, mod
 	if IsStatelessModel(modelType) {
 		localDir = ""
 	} else {
-		var prefix string
-
 		localDir = proc.getModelDir(modelId)
-		prefix = modelId.String()
 
 		if _, err := os.Stat(localDir); os.IsNotExist(err) {
 			slog.Info("model not found locally, downloading from S3", "modelId", modelId)
 
-			if err := proc.storage.DownloadDir(ctx, proc.modelBucket, prefix, localDir); err != nil {
+			if err := proc.storage.DownloadDir(ctx, proc.modelBucket, modelId.String(), localDir); err != nil {
 				return nil, fmt.Errorf("failed to download model from S3: %w", err)
 			}
 		}
@@ -451,7 +448,7 @@ func (proc *TaskProcessor) runInferenceOnObject(
 		sizeMB := float64(len(chunk.Text)) / float64(bytesPerMB)
 		slog.Info("processed chunk",
 			"chunk_size_mb", fmt.Sprintf("%.2f", sizeMB),
-			"duration",     duration,
+			"duration", duration,
 		)
 		if err != nil {
 			return nil, nil, nil, nil, fmt.Errorf("error running model inference: %w", err)
