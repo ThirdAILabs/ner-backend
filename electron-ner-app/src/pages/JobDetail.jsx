@@ -21,6 +21,7 @@ import {
 } from '@mui/material';
 import { format } from 'date-fns';
 import { nerService } from '../lib/backend';
+import { AnalyticsDashboard } from '../components/AnalyticsDashboard';
 
 // Configuration tab component
 const ConfigurationTab = ({ report }) => {
@@ -158,35 +159,8 @@ const ConfigurationTab = ({ report }) => {
 const AnalyticsTab = ({ report }) => {
   if (!report) return null;
   
-  // Calculate completion status
-  const getStatusDisplay = () => {
-    if (!report.InferenceTaskStatuses) {
-      return 'Pending';
-    }
-    
-    const completed = report.InferenceTaskStatuses?.COMPLETED?.TotalTasks || 0;
-    const running = report.InferenceTaskStatuses?.RUNNING?.TotalTasks || 0;
-    const queued = report.InferenceTaskStatuses?.QUEUED?.TotalTasks || 0;
-    const failed = report.InferenceTaskStatuses?.FAILED?.TotalTasks || 0;
-    
-    const totalTasks = completed + running + queued + failed;
-    
-    if (failed > 0) {
-      return 'Failed';
-    }
-    
-    if (totalTasks === 0) {
-      return report.ShardDataTaskStatus || 'Pending';
-    }
-    
-    if (completed === totalTasks) {
-      return 'Completed';
-    }
-    
-    return `In Progress (${Math.round((completed / totalTasks) * 100)}%)`;
-  };
-  
-  const getProgressPercentage = () => {
+  // Calculate progress percentage
+  const calculateProgress = () => {
     if (!report.InferenceTaskStatuses) return 0;
     
     const completed = report.InferenceTaskStatuses?.COMPLETED?.TotalTasks || 0;
@@ -198,94 +172,33 @@ const AnalyticsTab = ({ report }) => {
     return totalTasks > 0 ? Math.round((completed / totalTasks) * 100) : 0;
   };
   
+  // Get processed tokens
+  const getProcessedTokens = () => {
+    // This is actually bytes processed, not tokens
+    if (!report || !report.InferenceTaskStatuses || !report.InferenceTaskStatuses.COMPLETED) {
+      return 0;
+    }
+    
+    return report.InferenceTaskStatuses.COMPLETED.TotalSize || 0;
+  };
+  
+  // Convert tag counts to format expected by AnalyticsDashboard
+  const formatTagCounts = () => {
+    if (!report.TagCounts) return [];
+    
+    return Object.entries(report.TagCounts).map(([type, count]) => ({
+      type,
+      count
+    }));
+  };
+  
   return (
     <Box sx={{ mt: 3 }}>
-      <Grid container spacing={2}>
-        <Grid item xs={12} md={6}>
-          <Card sx={{ p: 2, bgcolor: '#f5f5f5' }}>
-            <Typography variant="subtitle1" fontWeight="bold">Status</Typography>
-            <Box sx={{ mt: 2, mb: 1 }}>
-              <Chip 
-                label={getStatusDisplay()} 
-                color={
-                  getStatusDisplay() === 'Failed' ? 'error' :
-                  getStatusDisplay() === 'Completed' ? 'success' :
-                  'primary'
-                }
-              />
-            </Box>
-            
-            {/* Progress bar */}
-            {getStatusDisplay().includes('In Progress') && (
-              <Box sx={{ mt: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <Typography variant="body2" fontWeight="medium">Progress</Typography>
-                  <Typography variant="body2" ml="auto">{getProgressPercentage()}%</Typography>
-                </Box>
-                <Box sx={{ 
-                  width: '100%', 
-                  height: 8, 
-                  bgcolor: '#e0e0e0', 
-                  borderRadius: 1, 
-                  overflow: 'hidden' 
-                }}>
-                  <Box sx={{ 
-                    width: `${getProgressPercentage()}%`, 
-                    height: '100%', 
-                    bgcolor: '#1976d2',
-                    borderRadius: 1
-                  }} />
-                </Box>
-              </Box>
-            )}
-          </Card>
-        </Grid>
-
-        <Grid item xs={12} md={6}>
-          <Card sx={{ p: 2, bgcolor: '#f5f5f5' }}>
-            <Typography variant="subtitle1" fontWeight="bold">Entity Counts</Typography>
-            {report.TagCounts && Object.keys(report.TagCounts).length > 0 ? (
-              <Box sx={{ mt: 2 }}>
-                {Object.entries(report.TagCounts).map(([tag, count], index) => (
-                  <Chip 
-                    key={index} 
-                    label={`${tag}: ${count}`} 
-                    size="small" 
-                    sx={{ mr: 0.5, mb: 0.5 }} 
-                  />
-                ))}
-              </Box>
-            ) : (
-              <Typography color="text.secondary" mt={1}>No entity counts available</Typography>
-            )}
-          </Card>
-        </Grid>
-      </Grid>
-      
-      {/* Task Statistics */}
-      <Card sx={{ mt: 3, p: 2, bgcolor: '#f5f5f5' }}>
-        <Typography variant="subtitle1" fontWeight="bold">Task Statistics</Typography>
-        <Grid container spacing={2} mt={0.5}>
-          <Grid item xs={6} md={3}>
-            <Typography variant="body2" color="text.secondary">Completed Tasks</Typography>
-            <Typography variant="h6">{report.InferenceTaskStatuses?.COMPLETED?.TotalTasks || 0}</Typography>
-          </Grid>
-          <Grid item xs={6} md={3}>
-            <Typography variant="body2" color="text.secondary">Running Tasks</Typography>
-            <Typography variant="h6">{report.InferenceTaskStatuses?.RUNNING?.TotalTasks || 0}</Typography>
-          </Grid>
-          <Grid item xs={6} md={3}>
-            <Typography variant="body2" color="text.secondary">Queued Tasks</Typography>
-            <Typography variant="h6">{report.InferenceTaskStatuses?.QUEUED?.TotalTasks || 0}</Typography>
-          </Grid>
-          <Grid item xs={6} md={3}>
-            <Typography variant="body2" color="text.secondary">Failed Tasks</Typography>
-            <Typography variant="h6" color={report.InferenceTaskStatuses?.FAILED?.TotalTasks > 0 ? 'error' : 'inherit'}>
-              {report.InferenceTaskStatuses?.FAILED?.TotalTasks || 0}
-            </Typography>
-          </Grid>
-        </Grid>
-      </Card>
+      <AnalyticsDashboard
+        progress={calculateProgress()}
+        tokensProcessed={getProcessedTokens()}
+        tags={formatTagCounts()}
+      />
     </Box>
   );
 };
