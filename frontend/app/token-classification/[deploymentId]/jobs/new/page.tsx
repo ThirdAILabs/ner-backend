@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Plus, RefreshCw, Edit } from 'lucide-react';
+import { ArrowLeft, Plus, RefreshCw, Edit, Trash } from 'lucide-react';
 import { nerService } from '@/lib/backend';
 
 // Tag chip component - reused from the detail page but with interactive mode
@@ -607,7 +607,7 @@ export default function NewJobPage() {
                 <div key={customTag.name} className="border border-gray-200 rounded-md overflow-hidden">
                   <div className="p-4 border-b border-gray-200 flex justify-between items-center">
                     <Tag tag={customTag.name} custom={true} selected />
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center">
                       <Button
                         type="button"
                         variant="ghost"
@@ -616,7 +616,6 @@ export default function NewJobPage() {
                         className="text-blue-500"
                       >
                         <Edit className="h-4 w-4 mr-1" />
-                        Edit
                       </Button>
                       <Button
                         type="button"
@@ -625,7 +624,7 @@ export default function NewJobPage() {
                         onClick={() => handleRemoveCustomTag(customTag.name)}
                         className="text-red-500"
                       >
-                        Remove
+                        <Trash className="h-4 w-4 mr-1" />                        
                       </Button>
                     </div>
                   </div>

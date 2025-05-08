@@ -19,7 +19,8 @@ interface ClusterSpecs {
   modelName: string;
   cpuMhz: number;
 }
-interface Tag {
+
+export interface Tag {
   type: string,
   count: number
 }
