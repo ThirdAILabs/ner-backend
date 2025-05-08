@@ -379,15 +379,13 @@ export default function NewJobPage() {
       </div>
 
       {/* Title and Back Button */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-medium">Create New Report</h1>
-
+      {/* <div className="flex items-center justify-between mb-6">
         <Button variant="outline" size="sm" asChild>
           <Link href={`/?tab=jobs`} className="flex items-center">
             <ArrowLeft className="mr-1 h-4 w-4" /> Back to Reports
           </Link>
         </Button>
-      </div>
+      </div> */}
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
@@ -403,7 +401,7 @@ export default function NewJobPage() {
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Job Name Field */}
           <div>
-            <h2 className="text-lg font-medium mb-4">Report Name</h2>
+            <h2 className="text-lg font-medium mb-4">1. Report Name</h2>
             <div className="w-full md:w-1/2">
               <input
                 type="text"
@@ -423,26 +421,9 @@ export default function NewJobPage() {
             </div>
           </div>
 
-          {/* Model Selection */}
-          <div>
-            <h2 className="text-lg font-medium mb-4">Model</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {models.map(model => (
-                <SourceOption
-                  key={model.Id}
-                  title={model.Name}
-                  description={`Description: TBD`}
-                  // description={`Type: ${model.Type}`}
-                  isSelected={selectedModelId === model.Id}
-                  onClick={() => setSelectedModelId(model.Id)}
-                />
-              ))}
-            </div>
-          </div>
-
           {/* Source Section */}
           <div>
-            <h2 className="text-lg font-medium mb-4">Source</h2>
+            <h2 className="text-lg font-medium mb-4">2. Source</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <SourceOption
                 title="S3 Bucket"
@@ -561,12 +542,27 @@ export default function NewJobPage() {
               </div>
             )}
           </div>
-
+          {/* Model Selection */}
+          <div>
+            <h2 className="text-lg font-medium mb-4">3. Model</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {models.map(model => (
+                <SourceOption
+                  key={model.Id}
+                  title={model.Name}
+                  description={`Description: TBD`}
+                  // description={`Type: ${model.Type}`}
+                  isSelected={selectedModelId === model.Id}
+                  onClick={() => setSelectedModelId(model.Id)}
+                />
+              ))}
+            </div>
+          </div>
           {/* Tags Section - Only show if a model is selected */}
           {selectedModelId && (
             <div>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-medium">Tags</h2>
+              <div className="flex justify-between items-center mb-2">  {/* Changed mb-4 to mb-2 */}
+                <h2 className="text-lg font-medium">4. Tags</h2>
                 <div className="flex space-x-2">
                   <Button
                     variant="outline"
@@ -601,6 +597,11 @@ export default function NewJobPage() {
                 </div>
               </div>
 
+              {/* Added descriptive note */}
+              <p className="text-sm text-gray-500 mb-4">
+                Click on any tag to select/unselect it. By default, all tags are selected.
+              </p>
+
               {isTagsLoading ? (
                 <div className="flex justify-center py-4">
                   <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
@@ -624,7 +625,7 @@ export default function NewJobPage() {
 
           {/* Custom Tags Section */}
           <div>
-            <h2 className="text-lg font-medium mb-4">Custom Tags</h2>
+            <h2 className="text-lg font-medium mb-4">5. Custom Tags</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {customTags.map((customTag) => (
                 <div key={customTag.name} className="border border-gray-200 rounded-md overflow-hidden">
@@ -758,7 +759,7 @@ export default function NewJobPage() {
 
           {/* Groups Section */}
           <div>
-            <h2 className="text-lg font-medium mb-4">Groups</h2>
+            <h2 className="text-lg font-medium mb-4">6. Groups</h2>
 
             {/* Group creation form */}
             <div className="mb-4 p-4 border border-gray-200 rounded-md">
