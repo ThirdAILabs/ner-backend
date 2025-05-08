@@ -1,6 +1,8 @@
 package main
 
 import (
+	"io/fs"
+	"embed"
 	"context"
 	"fmt"
 	"log"
@@ -26,6 +28,9 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
+
+//go:embed out/*
+var FrontendAssets embed.FS
 
 type Config struct {
 	Root    string `env:"ROOT" envDefault:"./pocket-shield"`
@@ -110,6 +115,13 @@ func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publish
 	r.Route("/api/v1", func(r chi.Router) {
 		apiHandler.AddRoutes(r)
 	})
+
+	frontend, err := fs.Sub(FrontendAssets, "out")
+	if err != nil {
+		log.Fatalf("error finding the out folder: %v", err)
+	}
+
+	r.Handle("/*", http.FileServerFS(frontend))
 
 	return &http.Server{
 		Addr:    fmt.Sprintf(":%d", port),
