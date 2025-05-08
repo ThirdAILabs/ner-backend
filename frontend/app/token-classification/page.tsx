@@ -4,12 +4,13 @@ import { useEffect, useState } from 'react';
 import { Tabs, Tab, Box } from '@mui/material';
 import { Link as MuiLink, Typography } from '@mui/material';
 import * as _ from 'lodash';
-import { useParams, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 
 // Import our implemented components
 import Interact from './interact';
 import Dashboard from './dashboard';
 import Jobs from './jobs';
+import { Suspense } from 'react';
 
 interface ModelUpdateProps {
   username: string;
@@ -66,11 +67,11 @@ const getTrainReport = async (workflowName: string) => {
   return { data: emptyReport };
 };
 
-export default function Page() {
-  const params = useParams();
-  const workflowName = params.deploymentId as string || 'PII';
+function PageImpl() {
+  const params = useSearchParams();
+  const workflowName = params.get('deploymentId') as string || 'PII';
   const searchParams = useSearchParams();
-  const defaultTab = searchParams.get('tab') || 'testing';
+  const defaultTab = searchParams.get('tab') || 'monitoring';
   const [tabValue, setTabValue] = useState(defaultTab);
   const [trainReport, setTrainReport] = useState<TrainReportData>(emptyReport);
   const [isLoadingReport, setIsLoadingReport] = useState(false);
@@ -179,3 +180,9 @@ export default function Page() {
     </div>
   );
 } 
+
+export default function Page() {
+  return <Suspense>
+    <PageImpl />
+  </Suspense>
+}

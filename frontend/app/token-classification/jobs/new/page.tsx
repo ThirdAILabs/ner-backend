@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Plus, RefreshCw, Edit } from 'lucide-react';
 import { nerService } from '@/lib/backend';
+import { Suspense } from 'react';
 
 // Tag chip component - reused from the detail page but with interactive mode
 interface TagProps {
@@ -86,10 +87,10 @@ interface CustomTag {
   pattern: string;
 }
 
-export default function NewJobPage() {
-  const params = useParams();
+function NewJobPage() {
+  const searchParams = useSearchParams();
   const router = useRouter();
-  const deploymentId = params.deploymentId as string;
+  const deploymentId = searchParams.get('deploymentId') as string;
 
   // Essential state
   const [selectedSource, setSelectedSource] = useState<'s3' | 'files'>('s3');
@@ -349,7 +350,7 @@ export default function NewJobPage() {
 
       // Redirect after success
       setTimeout(() => {
-        router.push(`/token-classification/${deploymentId}/jobs/${response.ReportId}`);
+        router.push(`/token-classification/jobs?deploymentId=${deploymentId}&jobId=${response.ReportId}`);
       }, 2000);
     } catch (err) {
       setError('Failed to create report. Please try again.');
@@ -364,7 +365,7 @@ export default function NewJobPage() {
       {/* Breadcrumbs */}
       <div className="mb-6">
         <div className="flex items-center mb-2">
-          <Link href={`/token-classification/${deploymentId}?tab=jobs`} className="text-blue-500 hover:underline">
+          <Link href={`/token-classification/jobs?deploymentId=${deploymentId}&tab=jobs`} className="text-blue-500 hover:underline">
             Jobs
           </Link>
           <span className="mx-2 text-gray-400">/</span>
@@ -377,7 +378,7 @@ export default function NewJobPage() {
         <h1 className="text-2xl font-medium">Create New Job</h1>
 
         <Button variant="outline" size="sm" asChild>
-          <Link href={`/token-classification/${deploymentId}?tab=jobs`} className="flex items-center">
+          <Link href={`/token-classification?deploymentId=${deploymentId}&tab=jobs`} className="flex items-center">
             <ArrowLeft className="mr-1 h-4 w-4" /> Back to Jobs
           </Link>
         </Button>
@@ -816,3 +817,9 @@ export default function NewJobPage() {
     </div>
   );
 } 
+
+export default function Page() {
+  return <Suspense>
+    <NewJobPage />
+  </Suspense>
+}
