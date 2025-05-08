@@ -131,7 +131,7 @@ func initializeCnnNerExtractor(ctx context.Context, db *gorm.DB, s3p *storage.S3
 	}
 
 	if err := s3p.UploadDir(ctx, bucket, model.Id.String(), localDir); err != nil {
-		database.UpdateModelStatus(ctx, db, model.Id, database.ModelFailed)
+		database.UpdateModelStatus(ctx, db, model.Id, database.ModelFailed) //nolint:errcheck
 		return fmt.Errorf("error uploading model to S3: %w", err)
 	}
 	slog.Info("successfully uploaded model to S3", "model_id", model.Id)
