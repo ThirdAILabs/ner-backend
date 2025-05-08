@@ -104,6 +104,7 @@ services:
       - S3_ENDPOINT_URL=${S3_ENDPOINT_URL:-http://minio:9000}
       - INTERNAL_AWS_ACCESS_KEY_ID=${INTERNAL_AWS_ACCESS_KEY_ID:-YOURACCESSKEY}
       - INTERNAL_AWS_SECRET_ACCESS_KEY=${INTERNAL_AWS_SECRET_ACCESS_KEY:-YOURSECRETKEY}
+      - PYTHON_EXECUTABLE_PATH=${PYTHON_EXECUTABLE_PATH:-python}
     volumes:
       # - .:/app # Mount code for development (optional)
       - /etc/localtime:/etc/localtime:ro

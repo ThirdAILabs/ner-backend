@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"log/slog"
 	"ner-backend/internal/core/types"
 	"ner-backend/internal/database"
@@ -35,6 +34,8 @@ type TaskProcessor struct {
 	localModelDir string
 	modelBucket   string
 }
+
+const bytesPerMB = 1024 * 1024
 
 func NewTaskProcessor(db *gorm.DB, storage storage.Provider, publisher messaging.Publisher, reciever messaging.Reciever, licenseVerifier licensing.LicenseVerifier, localModelDir string, modelBucket string) *TaskProcessor {
 	return &TaskProcessor{
@@ -447,7 +448,11 @@ func (proc *TaskProcessor) runInferenceOnObject(
 		start := time.Now()
 		chunkEntities, err := model.Predict(chunk.Text)
 		duration := time.Since(start)
-		log.Printf("[DEBUG] model prediction took %s", duration)
+		sizeMB := float64(len(chunk.Text)) / float64(bytesPerMB)
+		slog.Info("processed chunk",
+			"chunk_size_mb", fmt.Sprintf("%.2f", sizeMB),
+			"duration",     duration,
+		)
 		if err != nil {
 			return nil, nil, nil, nil, fmt.Errorf("error running model inference: %w", err)
 		}
