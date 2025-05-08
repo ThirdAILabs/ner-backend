@@ -41,7 +41,7 @@ type APIConfig struct {
 func initializeCnnNerExtractor(ctx context.Context, db *gorm.DB, s3p *storage.S3Provider, bucket string) error {
 	var model database.Model
 	err := db.
-		Where("name = ?", "advance").
+		Where("name = ?", "advanced").
 		Preload("Tags").
 		First(&model).Error
 
@@ -52,7 +52,7 @@ func initializeCnnNerExtractor(ctx context.Context, db *gorm.DB, s3p *storage.S3
 
 	if isNew {
 		model.Id = uuid.New()
-		model.Name = "advance"
+		model.Name = "advanced"
 		model.Type = "cnn"
 		model.Status = database.ModelTrained
 		model.CreationTime = time.Now()
