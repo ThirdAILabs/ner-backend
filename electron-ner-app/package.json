@@ -88,19 +88,7 @@
     "extraResources": [
       {
         "from": "bin",
-        "to": "bin",
-        "filter": [
-          "**/*"
-        ]
-      }
-    ],
-    "extraFiles": [
-      {
-        "from": "bin",
-        "to": "Resources/bin",
-        "filter": [
-          "**/*"
-        ]
+        "to": "bin"
       }
     ],
     "asarUnpack": [
@@ -108,10 +96,7 @@
     ],
     "mac": {
       "category": "public.app-category.developer-tools",
-      "target": [
-        "dir",
-        "dmg"
-      ],
+      "target": ["dir", "dmg"],
       "hardenedRuntime": false,
       "gatekeeperAssess": false
     },

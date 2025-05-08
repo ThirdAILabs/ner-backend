@@ -3,6 +3,12 @@ const path = require('path');
 const isDev = require('electron-is-dev');
 const { startBackend } = require('./scripts/start-backend');
 
+// Force NODE_ENV to 'production' when not in development mode
+if (!isDev) {
+  process.env.NODE_ENV = 'production';
+  console.log('Setting NODE_ENV to production');
+}
+
 // Keep a global reference of the window object to prevent it from being garbage collected
 let mainWindow;
 let backendProcess = null;
