@@ -1,10 +1,13 @@
-from presidio_analyzer import AnalyzerEngine, RecognizerResult, RecognizerRegistry
 import os
 import warnings
 from typing import List
 
-# blade hosting shouldnt use GPU
-# spacy.require_gpu()
+from presidio_analyzer import (
+    AnalyzerEngine,
+    RecognizerRegistry,
+    RecognizerResult,
+    BatchAnalyzerEngine,
+)
 
 warnings.filterwarnings("ignore")
 
@@ -19,6 +22,11 @@ def get_analyzer() -> AnalyzerEngine:
     # Remove the ML-based Spacy recognizer
     registry.remove_recognizer("SpacyRecognizer")
     return AnalyzerEngine(registry=registry, supported_languages=["en"])
+
+
+def get_batch_analyzer() -> BatchAnalyzerEngine:
+    analyzer = get_analyzer()
+    return BatchAnalyzerEngine(analyzer_engine=analyzer)
 
 
 entities_map = {
@@ -61,4 +69,21 @@ def analyze_text(
     )
     for res in results:
         transform_existing_tags(text, res)
+    return results
+
+
+def analyze_text_batch(
+    texts: List[str], analyzer: BatchAnalyzerEngine, threshold: float
+) -> List[List[RecognizerResult]]:
+    results = analyzer.analyze_iterator(
+        texts=texts,
+        entities=entities,
+        language="en",
+        score_threshold=threshold,
+    )
+
+    for text, text_results in zip(texts, results):
+        for res in text_results:
+            transform_existing_tags(text, res)
+
     return results

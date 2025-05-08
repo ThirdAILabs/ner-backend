@@ -1,18 +1,14 @@
 package main
 
 import (
-	"fmt"
 	"log" // Adjust import path
-	"log/slog"
 	"ner-backend/cmd"
 	"ner-backend/internal/core"
 	"ner-backend/internal/database"
-	"ner-backend/internal/licensing"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/storage"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	"github.com/caarlos0/env/v11"
@@ -24,7 +20,7 @@ type WorkerConfig struct {
 	S3EndpointURL               string `env:"S3_ENDPOINT_URL,notEmpty,required"`
 	S3AccessKeyID               string `env:"INTERNAL_AWS_ACCESS_KEY_ID,notEmpty,required"`
 	S3SecretAccessKey           string `env:"INTERNAL_AWS_SECRET_ACCESS_KEY,notEmpty,required"`
-	ModelBucketName             string `env:"MODEL_BUCKET_NAME" envDefault:"models"`
+	ModelBucketName             string `env:"MODEL_BUCKET_NAME" envDefault:"ner-models"`
 	QueueNames                  string `env:"QUEUE_NAMES" envDefault:"inference_queue,training_queue,shard_data_queue"`
 	WorkerConcurrency           int    `env:"CONCURRENCY" envDefault:"1"`
 	LicenseKey                  string `env:"LICENSE_KEY" envDefault:""`
@@ -68,24 +64,9 @@ func main() {
 		log.Fatalf("Failed to connect to RabbitMQ: %v", err)
 	}
 
-	var licenseVerifier licensing.LicenseVerifier
-	if strings.HasPrefix(cfg.LicenseKey, "local:") {
-		var err error
-		licenseVerifier, err = licensing.NewFileLicenseVerifier([]byte(licensing.FileLicensePublicKey), strings.TrimSpace(strings.TrimPrefix(cfg.LicenseKey, "local:")))
-		if err != nil {
-			log.Fatalf("Failed to create file license verifier: %v", err)
-		}
-	} else if cfg.LicenseKey != "" {
-		licenseVerifier, err = licensing.NewKeygenLicenseVerifier(cfg.LicenseKey)
-		if err != nil {
-			log.Fatalf("Failed to create license verifier: %v", err)
-		}
-	} else {
-		slog.Warn(fmt.Sprintf("License key not provided. Using free license verifier with %.2fGB total file size limit", float64(licensing.DefaultFreeLicenseMaxBytes)/(1024*1024*1024)))
-		licenseVerifier = licensing.NewFreeLicenseVerifier(db, licensing.DefaultFreeLicenseMaxBytes)
-	}
+	licensing := cmd.CreateLicenseVerifier(db, cfg.LicenseKey)
 
-	worker := core.NewTaskProcessor(db, s3Client, publisher, receiver, licenseVerifier, "./tmp_models_TODO", cfg.ModelBucketName)
+	worker := core.NewTaskProcessor(db, s3Client, publisher, receiver, licensing, "./tmp_models_TODO", cfg.ModelBucketName)
 
 	go worker.Start()
 

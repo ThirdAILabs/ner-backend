@@ -19,12 +19,23 @@ class ModelStub(object):
                 request_serializer=proto_dot_model__pb2.PredictRequest.SerializeToString,
                 response_deserializer=proto_dot_model__pb2.PredictResponse.FromString,
                 )
+        self.PredictBatch = channel.unary_unary(
+                '/proto.Model/PredictBatch',
+                request_serializer=proto_dot_model__pb2.PredictBatchRequest.SerializeToString,
+                response_deserializer=proto_dot_model__pb2.PredictBatchResponse.FromString,
+                )
 
 
 class ModelServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def Predict(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def PredictBatch(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -37,6 +48,11 @@ def add_ModelServicer_to_server(servicer, server):
                     servicer.Predict,
                     request_deserializer=proto_dot_model__pb2.PredictRequest.FromString,
                     response_serializer=proto_dot_model__pb2.PredictResponse.SerializeToString,
+            ),
+            'PredictBatch': grpc.unary_unary_rpc_method_handler(
+                    servicer.PredictBatch,
+                    request_deserializer=proto_dot_model__pb2.PredictBatchRequest.FromString,
+                    response_serializer=proto_dot_model__pb2.PredictBatchResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -62,5 +78,22 @@ class Model(object):
         return grpc.experimental.unary_unary(request, target, '/proto.Model/Predict',
             proto_dot_model__pb2.PredictRequest.SerializeToString,
             proto_dot_model__pb2.PredictResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def PredictBatch(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/proto.Model/PredictBatch',
+            proto_dot_model__pb2.PredictBatchRequest.SerializeToString,
+            proto_dot_model__pb2.PredictBatchResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

@@ -1,9 +1,10 @@
-from typing import List, Dict, Any
-from pydantic import BaseModel
 from abc import ABC, abstractmethod
+from typing import Any, Dict, List
+
+from pydantic import BaseModel
 
 
-class Entities(BaseModel):
+class Entity(BaseModel):
     text: str
     label: str
     score: float
@@ -11,9 +12,8 @@ class Entities(BaseModel):
     end: int
 
 
-class Predictions(BaseModel):
-    entities: List[Entities]
-    elapsed_ms: float
+class SentencePredictions(BaseModel):
+    entities: List[Entity]
 
     def to_go(self) -> List[Dict[str, Any]]:
         return [
@@ -21,14 +21,28 @@ class Predictions(BaseModel):
                 "text": entity.text,
                 "label": entity.label,
                 "start": entity.start,
-                "end": entity.end
+                "end": entity.end,
             }
             for entity in self.entities
         ]
-    
-    
+
+
+class BatchPredictions(BaseModel):
+    predictions: List[SentencePredictions]
+
+    def to_go(self) -> List[Dict[str, Any]]:
+        representations = [
+            {"entities": sentence.to_go()} for sentence in self.predictions
+        ]
+        return representations
+
+
 class Model(ABC):
 
     @abstractmethod
-    def predict(self, text: str) -> Predictions:
+    def predict(self, text: str) -> SentencePredictions:
+        pass
+
+    @abstractmethod
+    def predict_batch(self, texts: List[str]) -> BatchPredictions:
         pass

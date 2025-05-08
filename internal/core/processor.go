@@ -35,6 +35,8 @@ type TaskProcessor struct {
 	modelBucket   string
 }
 
+const bytesPerMB = 1024 * 1024
+
 func NewTaskProcessor(db *gorm.DB, storage storage.Provider, publisher messaging.Publisher, reciever messaging.Reciever, licenseVerifier licensing.LicenseVerifier, localModelDir string, modelBucket string) *TaskProcessor {
 	return &TaskProcessor{
 		db:            db,
@@ -142,8 +144,11 @@ func (proc *TaskProcessor) getStorageClient(report *database.Report) (storage.Pr
 }
 
 func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload messaging.InferenceTaskPayload) error {
+
 	reportId := payload.ReportId
 	taskId := payload.TaskId
+
+	slog.Info("processing inference task", "report_id", reportId, "task_id", payload.TaskId)
 
 	var task database.InferenceTask
 	if err := proc.db.Preload("Report").Preload("Report.Model").Preload("Report.Tags").Preload("Report.CustomTags").Preload("Report.Groups").First(&task, "report_id = ? AND task_id = ?", reportId, payload.TaskId).Error; err != nil {
@@ -363,7 +368,6 @@ func (proc *TaskProcessor) loadModel(ctx context.Context, modelId uuid.UUID, mod
 	} else {
 		localDir = proc.getModelDir(modelId)
 
-		// Check if the model file exists locally
 		if _, err := os.Stat(localDir); os.IsNotExist(err) {
 			slog.Info("model not found locally, downloading from S3", "modelId", modelId)
 
@@ -461,7 +465,14 @@ func (proc *TaskProcessor) runInferenceOnObject(
 			return 0, nil, nil, nil, nil, fmt.Errorf("error parsing document: %w", chunk.Error)
 		}
 
+		start := time.Now()
 		chunkEntities, err := model.Predict(chunk.Text)
+		duration := time.Since(start)
+		sizeMB := float64(len(chunk.Text)) / float64(bytesPerMB)
+		slog.Info("processed chunk",
+			"chunk_size_mb", fmt.Sprintf("%.2f", sizeMB),
+			"duration", duration,
+		)
 		if err != nil {
 			return 0, nil, nil, nil, nil, fmt.Errorf("error running model inference: %w", err)
 		}
@@ -543,6 +554,8 @@ func (proc *TaskProcessor) runInferenceOnObject(
 func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload messaging.ShardDataPayload) error {
 	reportId := payload.ReportId
 
+	slog.Info("processing shard data task", "report_id", reportId)
+
 	var task database.ShardDataTask
 	if err := proc.db.Preload("Report").First(&task, "report_id = ?", reportId).Error; err != nil {
 		slog.Error("error fetching shard data task", "report_id", reportId, "error", err)
@@ -572,6 +585,8 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 	}
 
 	createInferenceTask := func(ctx context.Context, taskId int, chunkKeys []string, chunkSize int64) error {
+		slog.Info("Creating inference task", "report_id", reportId, "task_id", taskId, "chunk_size", chunkSize)
+
 		task := database.InferenceTask{
 			ReportId:     reportId,
 			TaskId:       taskId,
@@ -596,6 +611,8 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 			database.UpdateShardDataTaskStatus(ctx, proc.db, reportId, database.JobFailed) //nolint:errcheck
 			return fmt.Errorf("failed to publish inference task %d: %w", taskId, err)
 		}
+
+		slog.Info("Created inference task", "report_id", reportId, "task_id", taskId, "chunk_size", chunkSize)
 
 		return nil
 	}
@@ -636,11 +653,11 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 		taskId++
 	}
 
-	slog.Info("Finished generating inference task chunks", "n_tasks", taskId, "report_id", reportId)
-
 	if err := database.UpdateShardDataTaskStatus(ctx, proc.db, reportId, database.JobCompleted); err != nil {
 		return fmt.Errorf("failed to update job final status: %w", err)
 	}
+
+	slog.Info("Finished generating inference task chunks", "n_tasks", taskId, "report_id", reportId)
 
 	return nil
 }

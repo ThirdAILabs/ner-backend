@@ -53,13 +53,17 @@ RUN CGO_ENABLED=1 GOOS=linux GOARCH=${TARGETARCH} go build -v -o /app/api ./cmd/
 # Build the Worker binary
 RUN CGO_ENABLED=1 GOOS=linux GOARCH=${TARGETARCH} go build -v -o /app/worker ./cmd/worker
 
-# Copy and make entrypoint script executable in the builder stage
-COPY ./entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
 
-# --- Final Stage ---
 FROM ubuntu:24.04
 
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    python3 python3-venv python3-pip libgomp1 ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
+ENV PATH="/opt/venv/bin:${PATH}"
+RUN python3 -m venv /opt/venv && \
+    pip install --upgrade pip
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     git \
@@ -67,13 +71,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     npm \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
 WORKDIR /app
 
+COPY plugin/plugin-python/requirements.txt ./requirements.txt
+
+RUN --mount=type=cache,id=pip_cache,target=/root/.cache/pip \
+    pip install --no-cache-dir \
+    -r requirements.txt
 # Copy only the necessary artifacts from the builder stage
 COPY --from=backend-builder /app/api /app/api
 COPY --from=backend-builder /app/worker /app/worker
-COPY --from=backend-builder /entrypoint.sh /entrypoint.sh
+COPY --from=backend-builder /app/entrypoint.sh /app/entrypoint.sh
+
+COPY --from=backend-builder /app/plugin/plugin-python /app/plugin/plugin-python
 
 # Copy necessary files for running 'next start'
 COPY --from=frontend-builder /frontend/package*.json ./
@@ -90,6 +100,9 @@ ENV NODE_ENV=production
 EXPOSE 3000
 EXPOSE 8001
 
-ENTRYPOINT ["/entrypoint.sh"]
+RUN chmod +x /app/entrypoint.sh
 
+EXPOSE 8001
+
+ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["--worker"]

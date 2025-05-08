@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log"
-	"ner-backend/cmd" // Adjust import path
+	"log/slog"
+	"ner-backend/cmd"
 	"ner-backend/internal/api"
-	"ner-backend/internal/core"
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/storage"
@@ -29,40 +31,81 @@ type APIConfig struct {
 	S3EndpointURL     string `env:"S3_ENDPOINT_URL,notEmpty,required"`
 	S3AccessKeyID     string `env:"INTERNAL_AWS_ACCESS_KEY_ID,notEmpty,required"`
 	S3SecretAccessKey string `env:"INTERNAL_AWS_SECRET_ACCESS_KEY,notEmpty,required"`
-	ModelBucketName   string `env:"MODEL_BUCKET_NAME" envDefault:"models"`
+	ModelBucketName   string `env:"MODEL_BUCKET_NAME" envDefault:"ner-models"`
 	QueueNames        string `env:"QUEUE_NAMES" envDefault:"inference_queue,training_queue,shard_data_queue"`
 	WorkerConcurrency int    `env:"CONCURRENCY" envDefault:"1"`
 	APIPort           string `env:"API_PORT" envDefault:"8001"`
 	ChunkTargetBytes  int64  `env:"S3_CHUNK_TARGET_BYTES" envDefault:"10737418240"`
 }
 
-func initializePresidioModel(db *gorm.DB) {
-	presidio, err := core.NewPresidioModel()
-	if err != nil {
-		log.Fatalf("Failed to initialize model: %v", err)
-	}
-
-	modelId := uuid.New()
-
-	var tags []database.ModelTag
-	for _, tag := range presidio.GetTags() {
-		tags = append(tags, database.ModelTag{
-			ModelId: modelId,
-			Tag:     tag,
-		})
-	}
-
+func initializeCnnNerExtractor(ctx context.Context, db *gorm.DB, s3p *storage.S3Provider, bucket string) error {
 	var model database.Model
+	err := db.
+		Where("name = ?", "advance").
+		Preload("Tags").
+		First(&model).Error
 
-	if err := db.Where(database.Model{Name: "presidio"}).Attrs(database.Model{
-		Id:           modelId,
-		Type:         "presidio",
-		Status:       database.ModelTrained,
-		CreationTime: time.Now(),
-		Tags:         tags,
-	}).FirstOrCreate(&model).Error; err != nil {
-		log.Fatalf("Failed to create model record: %v", err)
+	isNew := errors.Is(err, gorm.ErrRecordNotFound)
+	if err != nil && !isNew {
+		return fmt.Errorf("error querying model: %w", err)
 	}
+
+	if isNew {
+		model.Id = uuid.New()
+		model.Name = "advance"
+		model.Type = "cnn"
+		model.Status = database.ModelTrained
+		model.CreationTime = time.Now()
+
+		modelTags := []string{
+			"ADDRESS", "CARD_NUMBER", "COMPANY", "CREDIT_SCORE", "DATE",
+			"EMAIL", "ETHNICITY", "GENDER", "ID_NUMBER", "LICENSE_PLATE",
+			"LOCATION", "NAME", "PHONENUMBER", "SERVICE_CODE", "SEXUAL_ORIENTATION",
+			"SSN", "URL", "VIN", "O",
+		}
+		for _, tag := range modelTags {
+			model.Tags = append(model.Tags, database.ModelTag{
+				ModelId: model.Id,
+				Tag:     tag,
+			})
+		}
+
+		if err := db.Create(&model).Error; err != nil {
+			return fmt.Errorf("failed to create model record: %w", err)
+		}
+	}
+
+	s3Prefix := model.Id.String() + "/"
+
+	localDir := "/app/models/cnn_model"
+	info, err := os.Stat(localDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			slog.Warn("local model dir does not exist, skipping upload", "dir", localDir)
+			return nil
+		}
+		return fmt.Errorf("failed to stat local model dir %s: %w", localDir, err)
+	}
+	if !info.IsDir() {
+		slog.Warn("local model path exists but is not a directory, skipping upload", "path", localDir)
+		return nil
+	}
+
+	objs, err := s3p.ListObjects(ctx, bucket, s3Prefix)
+	if err != nil {
+		slog.Error("failed to list S3 objects for model", "model_id", model.Id, "error", err)
+		// we could choose to abort or continue; here we continue and try upload
+	} else if len(objs) > 0 {
+		slog.Info("model already uploaded to S3, skipping upload", "model_id", model.Id)
+		return nil
+	}
+
+	if err := s3p.UploadDir(ctx, bucket, model.Id.String(), localDir); err != nil {
+		database.UpdateModelStatus(ctx, db, model.Id, database.ModelFailed) //nolint:errcheck
+		return fmt.Errorf("error uploading model to S3: %w", err)
+	}
+	slog.Info("successfully uploaded model to S3", "model_id", model.Id)
+	return nil
 }
 
 func main() {
@@ -90,7 +133,11 @@ func main() {
 		log.Fatalf("Worker: Failed to create S3 client: %v", err)
 	}
 
-	initializePresidioModel(db)
+	cmd.InitializePresidioModel(db)
+
+	if err := initializeCnnNerExtractor(context.Background(), db, s3Client, cfg.ModelBucketName); err != nil {
+		log.Fatalf("Failed to init & upload CNN NER model: %v", err)
+	}
 
 	// Initialize RabbitMQ Publisher
 	publisher, err := messaging.NewRabbitMQPublisher(cfg.RabbitMQURL)

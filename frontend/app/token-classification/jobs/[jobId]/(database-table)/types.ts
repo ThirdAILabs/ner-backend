@@ -1,3 +1,5 @@
+import { Tag } from "@/components/AnalyticsDashboard"
+
 export interface ObjectDatabaseRecord {
   taggedTokens: [string, string][];
   tokenContexts?: { left: string; right: string }[];
@@ -22,7 +24,7 @@ export interface DatabaseTableProps {
   loadMoreObjectRecords: () => Promise<ObjectDatabaseRecord[]>;
   loadMoreClassifiedTokenRecords: () => Promise<ClassifiedTokenDatabaseRecord[]>;
   groups: string[];
-  tags: string[];
+  tags: Tag[];
 }
 
 export interface TableContentProps {
@@ -33,7 +35,7 @@ export interface TableContentProps {
   tagFilters: Record<string, boolean>;
   isLoadingObjectRecords: boolean;
   isLoadingTokenRecords: boolean;
-  tags: string[]; 
+  tags: Tag[]; 
   hasMoreTokens?: boolean;
   hasMoreObjects?: boolean;
   onLoadMore?: () => void;

@@ -269,11 +269,11 @@ export function DatabaseTable({
   };
 
   const handleSelectAllTags = () => {
-    setTagFilters(Object.fromEntries(tags.map((tag) => [tag, true])));
+    setTagFilters(Object.fromEntries(tags.map((tag) => [tag.type, true])));
   };
 
   const handleDeselectAllTags = () => {
-    setTagFilters(Object.fromEntries(tags.map((tag) => [tag, false])));
+    setTagFilters(Object.fromEntries(tags.map((tag) => [tag.type, false])));
   };
 
   // Handle view mode changes

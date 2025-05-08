@@ -326,7 +326,6 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 			slog.Error("error creating shard data task", "error", err)
 			return CodedErrorf(http.StatusInternalServerError, "failed to create shard data task")
 		}
-
 		return nil
 	}); err != nil {
 		return nil, err
