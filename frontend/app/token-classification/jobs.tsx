@@ -411,7 +411,16 @@ export default function Jobs() {
                     <TableCell>
                       {getStatusDisplay(report)}
                     </TableCell>
-                    <TableCell>{format(new Date(report.CreationTime), 'MMMM dd, yyyy')}</TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                        <Typography variant="body2">
+                          {format(new Date(report.CreationTime), 'MMMM d, yyyy')}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {format(new Date(report.CreationTime), 'h:mm a')}
+                        </Typography>
+                      </Box>
+                    </TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         <Link
