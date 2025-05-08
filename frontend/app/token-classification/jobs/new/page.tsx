@@ -263,33 +263,20 @@ export default function NewJobPage() {
   };
 
   // Add a custom tag
-  const handleAddCustomTag = () => {   
+  const handleAddCustomTag = () => {
     setDialogError(null);
-     
+    
     if (!customTagName.trim() || !customTagPattern.trim()) {
-      setDialogError('Custom tag name and pattern are required');
+      setError('Custom tag name and pattern are required');
       return;
     }
 
-    const newCustomTag = {
-      name: customTagName.toUpperCase(),
-      pattern: customTagPattern
-    };
-
-    if (editingTag) {
-      setCustomTags(prev => prev.map(tag =>
-        tag.name === editingTag.name ? newCustomTag : tag
-      ));
-    } else {
-      // Check for duplicate tag names
-      for (let index = 0; index < customTags.length; index++) {
-        const thisTag = customTags[index];
-        if (thisTag.name === customTagName.toUpperCase()) {
-          setDialogError('Custom Tag name must be unique');
-          return;
-        }
+    for (let index = 0; index < customTags.length; index++) {
+      const thisTag = customTags[index];
+      if (thisTag.name === customTagName.toUpperCase()) {
+        setError('Custom Tag name must be unique');
+        return;
       }
-      setCustomTags(prev => [...prev, newCustomTag]);
     }
 
     setCustomTags((prev) => [
