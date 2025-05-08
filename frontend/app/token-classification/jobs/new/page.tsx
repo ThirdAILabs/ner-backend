@@ -233,11 +233,14 @@ export default function NewJobPage() {
       for (let index = 0; index < customTags.length; index++) {
         const thisTag = customTags[index];
         if (thisTag.name === customTagName.toUpperCase()) {
-          setError(`${customTagName.toUpperCase()} is already taken. Please choose other tag name.`);
+          setError('Custom Tag name must be unique');
           return;
         }
       }
-      setCustomTags(prev => [...prev, newCustomTag]);
+      setCustomTags(prev => [...prev, {
+        name: customTagName.trim().toUpperCase(),
+        pattern: customTagPattern
+      }]);
     }
 
     setCustomTagName('');
@@ -255,6 +258,7 @@ export default function NewJobPage() {
     setCustomTagPattern(tag.pattern);
     setEditingTag(tag);
     setIsCustomTagDialogOpen(true);
+
   };
   const handleCancel = () => {
     setCustomTagName('');
@@ -628,16 +632,17 @@ export default function NewJobPage() {
                     <Tag tag={customTag.name} custom={true} selected />
                     <div className="flex items-center space-x-2">
                       <Button
+                        type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => handleEditCustomTag(customTag)}
                         className="text-blue-500"
-                        type="button"
                       >
                         <Edit className="h-4 w-4 mr-1" />
                         Edit
                       </Button>
                       <Button
+                        type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => handleRemoveCustomTag(customTag.name)}
@@ -735,9 +740,9 @@ export default function NewJobPage() {
                     </div>
                     <div className="flex justify-end space-x-2">
                       <Button
+                        type="button"
                         variant="outline"
                         onClick={handleCancel}
-                        type='button'
                       >
                         Cancel
                       </Button>
