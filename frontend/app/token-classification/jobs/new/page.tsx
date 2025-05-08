@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Plus, RefreshCw, Edit, Trash } from 'lucide-react';
+import { Box } from '@mui/material';
+import { ArrowLeft, Plus, RefreshCw, Edit } from 'lucide-react';
 import { nerService } from '@/lib/backend';
 
 // Tag chip component - reused from the detail page but with interactive mode
@@ -53,9 +54,10 @@ const SourceOption: React.FC<SourceOptionProps> = ({
   <div
     className={`relative p-6 border rounded-md transition-all
       ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200 border-2'}
-      ${disabled
-        ? 'opacity-50 cursor-not-allowed bg-gray-50'
-        : 'cursor-pointer hover:border-blue-300'
+      ${
+        disabled
+          ? 'opacity-50 cursor-not-allowed bg-gray-50'
+          : 'cursor-pointer hover:border-blue-300'
       }
     `}
     onClick={() => !disabled && onClick()}
@@ -128,7 +130,10 @@ export default function NewJobPage() {
   const [groups, setGroups] = useState<Record<string, string>>({});
   const [isGroupDialogOpen, setIsGroupDialogOpen] = useState(false);
   const [groupDialogError, setGroupDialogError] = useState<string | null>(null);
-  const [editingGroup, setEditingGroup] = useState<{ name: string, query: string } | null>(null);
+  const [editingGroup, setEditingGroup] = useState<{
+    name: string;
+    query: string;
+  } | null>(null);
 
   // Custom tags handling
   const [customTags, setCustomTags] = useState<CustomTag[]>([]);
@@ -241,7 +246,7 @@ export default function NewJobPage() {
       return;
     }
 
-    setGroups(prev => ({
+    setGroups((prev) => ({
       ...prev,
       [groupName]: groupQuery
     }));
@@ -265,7 +270,7 @@ export default function NewJobPage() {
   // Add a custom tag
   const handleAddCustomTag = () => {
     setDialogError(null);
-    
+
     if (!customTagName.trim() || !customTagPattern.trim()) {
       setError('Custom tag name and pattern are required');
       return;
@@ -415,8 +420,7 @@ export default function NewJobPage() {
   };
 
   return (
-    <div className="container px-4 py-8 mx-auto">
-
+    <div className="container px-4 py-8 w-3/4">
       {/* Title and Back Button */}
       <div className="flex items-center justify-between mb-6">
         <Button variant="outline" size="sm" asChild>
@@ -439,8 +443,8 @@ export default function NewJobPage() {
       ) : (
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Job Name Field */}
-          <div>
-            <h2 className="text-lg font-medium mb-4">1. Report Name</h2>
+          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
+            <h2 className="text-2xl font-medium mb-4">Report Name</h2>
             <div className="w-full md:w-1/2">
               <input
                 type="text"
@@ -458,11 +462,11 @@ export default function NewJobPage() {
                 Use only letters, numbers, and underscores. No spaces allowed.
               </p>
             </div>
-          </div>
+          </Box>
 
           {/* Source Section */}
-          <div>
-            <h2 className="text-lg font-medium mb-4">2. Source</h2>
+          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
+            <h2 className="text-2xl font-medium mb-4">Source</h2>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
               <SourceOption
                 title="S3 Bucket"
@@ -507,7 +511,7 @@ export default function NewJobPage() {
                 </div>
               </div>
             ) : (
-              <div className='w-full'>
+              <div className="w-full">
                 <input
                   type="file"
                   multiple
@@ -587,99 +591,112 @@ export default function NewJobPage() {
                 )}
               </div>
             )}
-          </div>
+          </Box>
+
           {/* Model Selection */}
-          <div>
-            <h2 className="text-lg font-medium mb-4">3. Model</h2>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {models.map(model => (
-                <SourceOption
-                  key={model.Id}
-                  title={model.Name}
-                  description={`Description: TBD`}
-                  // description={`Type: ${model.Type}`}
-                  isSelected={selectedModelId === model.Id}
-                  onClick={() => setSelectedModelId(model.Id)}
-                />
-              ))}
-            </div>
-          </div>
-          {/* Tags Section - Only show if a model is selected */}
-          {selectedModelId && (
+          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
             <div>
-              <div className="flex justify-between items-center mb-2">
-                <h2 className="text-lg font-medium">4. Tags</h2>
-                <div className="flex space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={selectAllTags}
-                    className="text-sm flex items-center"
-                    disabled={isTagsLoading || selectedTags.length === availableTags.length}
-                  >
-                    <span className="mr-1">Select All</span>
-                    <input
-                      type="checkbox"
-                      checked={selectedTags.length === availableTags.length}
-                      onChange={selectAllTags}
-                      className="rounded border-gray-300"
-                    />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSelectedTags([])}
-                    className="text-sm flex items-center"
-                    disabled={isTagsLoading || selectedTags.length === 0}
-                  >
-                    <span className="mr-1">Clear Selection</span>
-                    <input
-                      type="checkbox"
-                      checked={selectedTags.length === 0}
-                      onChange={() => setSelectedTags([])}
-                      className="rounded border-gray-300"
-                    />
-                  </Button>
-                </div>
+              <h2 className="text-2xl font-medium mb-4">Model</h2>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {models.map((model) => (
+                  <SourceOption
+                    key={model.Id}
+                    title={model.Name[0].toUpperCase() + model.Name.slice(1)}
+                    description={`Description: TBD`}
+                    // description={`Type: ${model.Type}`}
+                    isSelected={selectedModelId === model.Id}
+                    onClick={() => setSelectedModelId(model.Id)}
+                  />
+                ))}
               </div>
-
-              {/* Added descriptive note */}
-              <p className="text-sm text-gray-500 mb-4">
-                Click on any tag to select/unselect it. By default, all tags are selected.
-              </p>
-
-              {isTagsLoading ? (
-                <div className="flex justify-center py-4">
-                  <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
-                </div>
-              ) : availableTags.length === 0 ? (
-                <div className="text-gray-500 py-2">
-                  No tags available for this model
-                </div>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {availableTags.map((tag) => (
-                    <Tag
-                      key={tag}
-                      tag={tag}
-                      selected={selectedTags.includes(tag)}
-                      onClick={() => toggleTag(tag)}
-                    />
-                  ))}
-                </div>
-              )}
             </div>
-          )}
+
+            {/* Tags Section - Only show if a model is selected */}
+            {selectedModelId && (
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <h2 className="text-lg font-medium">Tags</h2>
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={selectAllTags}
+                      className="text-sm flex items-center"
+                      disabled={
+                        isTagsLoading ||
+                        selectedTags.length === availableTags.length
+                      }
+                    >
+                      <span className="mr-1">Select All</span>
+                      <input
+                        type="checkbox"
+                        checked={selectedTags.length === availableTags.length}
+                        onChange={selectAllTags}
+                        className="rounded border-gray-300"
+                      />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedTags([])}
+                      className="text-sm flex items-center"
+                      disabled={isTagsLoading || selectedTags.length === 0}
+                    >
+                      <span className="mr-1">Clear Selection</span>
+                      <input
+                        type="checkbox"
+                        checked={selectedTags.length === 0}
+                        onChange={() => setSelectedTags([])}
+                        className="rounded border-gray-300"
+                      />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Added descriptive note */}
+                <p className="text-sm text-gray-500 mb-4">
+                  Click on any tag to select/unselect it. By default, all tags
+                  are selected.
+                </p>
+
+                {isTagsLoading ? (
+                  <div className="flex justify-center py-4">
+                    <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
+                  </div>
+                ) : availableTags.length === 0 ? (
+                  <div className="text-gray-500 py-2">
+                    No tags available for this model
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {availableTags.map((tag) => (
+                      <Tag
+                        key={tag}
+                        tag={tag}
+                        selected={selectedTags.includes(tag)}
+                        onClick={() => toggleTag(tag)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </Box>
 
           {/* Custom Tags Section */}
-          <div>
-            <h2 className="text-lg font-medium mb-4">
-              5. Custom Tags
-              <span className="text-sm font-normal text-gray-500 ml-2">(Optional)</span>
+          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
+            <h2 className="text-2xl font-medium mb-4">
+              Custom Tags
+              <span className="text-sm font-normal text-gray-500 ml-2">
+                (Optional)
+              </span>
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {customTags.map((customTag) => (
-                <div key={customTag.name} className="border border-gray-200 rounded-md overflow-hidden">
+                <div
+                  key={customTag.name}
+                  className="border border-gray-200 rounded-md overflow-hidden"
+                >
                   <div className="py-1 px-4 border-b border-gray-200 flex justify-between items-center">
                     <Tag tag={customTag.name} custom={true} selected />
                     <div className="flex items-center space-x-1">
@@ -736,7 +753,9 @@ export default function NewJobPage() {
             {isCustomTagDialogOpen && (
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-lg p-6 w-full max-w-md">
-                  <h3 className="text-lg font-medium mb-4">Create Custom Tag</h3>
+                  <h3 className="text-lg font-medium mb-4">
+                    Create Custom Tag
+                  </h3>
                   {dialogError && (
                     <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded">
                       {dialogError}
@@ -799,10 +818,22 @@ export default function NewJobPage() {
                       />
 
                       {patternType === 'string' && (
-                        <p className="text-xs text-gray-500 mt-1">
-                          Example: <code>John Doe</code> for matching an exact
-                          name
-                        </p>
+                        // <p className="text-xs text-gray-500 mt-1">
+                        //   Example: <code>John Doe</code> for matching an exact
+                        //   name
+                        // </p>
+
+                        <div className="text-sm text-gray-500">
+                          <p>Example queries:</p>
+                          <ul className="list-disc pl-5 mt-1 space-y-1">
+                            <li>
+                              <code>John Doe</code> for an exact string
+                            </li>
+                            <li>
+                              <code>Alice|Bob</code> for a list of strings
+                            </li>
+                          </ul>
+                        </div>
                       )}
 
                       {patternType === 'regex' && (
@@ -823,7 +854,7 @@ export default function NewJobPage() {
                       >
                         Cancel
                       </Button>
-                      <Button onClick={handleAddCustomTag} type='button'>
+                      <Button onClick={handleAddCustomTag} type="button">
                         Add Tag
                       </Button>
                     </div>
@@ -831,19 +862,24 @@ export default function NewJobPage() {
                 </div>
               </div>
             )}
-          </div>
+          </Box>
 
           {/* Groups Section */}
-          <div>
-            <h2 className="text-lg font-medium mb-4">
-              6. Groups
-              <span className="text-sm font-normal text-gray-500 ml-2">(Optional)</span>
+          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
+            <h2 className="text-2xl font-medium mb-4">
+              Groups
+              <span className="text-sm font-normal text-gray-500 ml-2">
+                (Optional)
+              </span>
             </h2>
 
             {/* Display defined groups */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {Object.entries(groups).map(([name, query]) => (
-                <div key={name} className="border border-gray-200 rounded-md overflow-hidden">
+                <div
+                  key={name}
+                  className="border border-gray-200 rounded-md overflow-hidden"
+                >
                   <div className="py-1 px-4 border-b border-gray-200 flex justify-between items-center">
                     <span className="font-medium">{name}</span>
                     <div className="flex items-center space-x-1">
@@ -941,8 +977,16 @@ export default function NewJobPage() {
                     <div className="text-sm text-gray-500">
                       <p>Example queries:</p>
                       <ul className="list-disc pl-5 mt-1 space-y-1">
-                        <li><code>COUNT(SSN) &gt; 0</code> - Documents containing SSNs</li>
-                        <li><code>COUNT(NAME) &gt; 2 AND COUNT(PHONE) &gt; 0</code> - Documents with multiple names and a phone number</li>
+                        <li>
+                          <code>COUNT(SSN) &gt; 0</code> - Documents containing
+                          SSNs
+                        </li>
+                        <li>
+                          <code>
+                            COUNT(NAME) &gt; 2 AND COUNT(PHONE) &gt; 0
+                          </code>{' '}
+                          - Documents with multiple names and a phone number
+                        </li>
                       </ul>
                     </div>
 
@@ -954,7 +998,7 @@ export default function NewJobPage() {
                       >
                         Cancel
                       </Button>
-                      <Button onClick={handleAddGroupFromDialog} type='button'>
+                      <Button onClick={handleAddGroupFromDialog} type="button">
                         {editingGroup ? 'Save Changes' : 'Add Group'}
                       </Button>
                     </div>
@@ -962,12 +1006,31 @@ export default function NewJobPage() {
                 </div>
               </div>
             )}
-          </div>
-
+          </Box>
 
           {/* Submit Button */}
           <div className="flex justify-center pt-4">
             <Button
+              variant="default"
+              color="primary"
+              style={{
+                backgroundColor: '#1976d2',
+                textTransform: 'none',
+                fontWeight: 500,
+              }}
+              onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#1565c0')}
+              onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#1976d2')}
+            >
+              {isSubmitting ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                'Create Job'
+              )}{' '}
+            </Button>
+            {/* <Button
               type="submit"
               disabled={isSubmitting}
               className="w-full md:w-auto px-8"
@@ -980,7 +1043,7 @@ export default function NewJobPage() {
               ) : (
                 'Create Job'
               )}
-            </Button>
+            </Button> */}
           </div>
         </form>
       )}

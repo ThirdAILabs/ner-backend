@@ -134,8 +134,8 @@ function PageContents() {
               '& .MuiTabs-indicator': { backgroundColor: '#1a73e8' }
             }}
           >
-            <Tab label="Reports" value="jobs" />
-            <Tab label="Monitoring" value="monitoring" />
+            <Tab label="Reports Dashboard" value="jobs" />
+            <Tab label="Usage Stats" value="monitoring" />
           </Tabs>
         </Box>
 
