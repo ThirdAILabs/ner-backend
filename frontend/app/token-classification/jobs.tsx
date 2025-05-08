@@ -329,7 +329,7 @@ export default function Jobs() {
           </Typography>
         </Box>
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-          {`${completedTasks} completed, ${running} running, ${queued} queued`}
+          {`Files: ${completed}/${totalTasks}`}
         </Typography>
       </Box>
     );
@@ -390,11 +390,11 @@ export default function Jobs() {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Model</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Created At</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Action</TableCell>
+                <TableCell sx={{ fontWeight: 600, width: '20%' }}>Name</TableCell>
+                <TableCell sx={{ fontWeight: 600, width: '15%' }}>Model</TableCell>
+                <TableCell sx={{ fontWeight: 600, width: '35%' }}>Status</TableCell>
+                <TableCell sx={{ fontWeight: 600, width: '15%' }}>Created At</TableCell>
+                <TableCell sx={{ fontWeight: 600, width: '15%' }}>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
