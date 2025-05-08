@@ -1,8 +1,8 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useEffect, useState } from 'react';
-import { Tabs, Tab, Box } from '@mui/material';
-import { Link as MuiLink, Typography } from '@mui/material';
+import { Tabs, Tab, Box, CircularProgress, Typography, Link as MuiLink } from '@mui/material'; // Added CircularProgress
 import * as _ from 'lodash';
 import { useParams, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
@@ -21,7 +21,6 @@ interface ModelUpdateProps {
   modelId: string;
 }
 
-// Types included for completeness, but using Dashboard instead of ModelUpdate
 type LabelMetrics = {
   [key: string]: {
     precision: number;
@@ -43,31 +42,23 @@ type TrainReportData = {
 };
 
 const emptyMetrics: LabelMetrics = {
-  'O': {
-    precision: 0,
-    recall: 0,
-    fmeasure: 0
-  }
+  'O': { precision: 0, recall: 0, fmeasure: 0 }
 };
 
 const emptyExamples: ExampleCategories = {
-  true_positives: {},
-  false_positives: {},
-  false_negatives: {}
+  true_positives: {}, false_positives: {}, false_negatives: {}
 };
 
 const emptyReport: TrainReportData = {
-  before_train_metrics: emptyMetrics,
-  after_train_metrics: emptyMetrics,
-  after_train_examples: emptyExamples
+  before_train_metrics: emptyMetrics, after_train_metrics: emptyMetrics, after_train_examples: emptyExamples
 };
 
-// Mock API function until we implement the real one
 const getTrainReport = async (workflowName: string) => {
   return { data: emptyReport };
 };
 
-export default function Page() {
+// --- Renamed original Page component to PageContents ---
+function PageContents() {
   const params = useParams();
   const workflowName = params.deploymentId as string || 'PII';
   const searchParams = useSearchParams();
@@ -77,11 +68,15 @@ export default function Page() {
   const [isLoadingReport, setIsLoadingReport] = useState(false);
   const [reportError, setReportError] = useState('');
 
+  // Update tabValue if searchParams change after initial load (e.g., browser back/forward)
+  useEffect(() => {
+    setTabValue(searchParams.get('tab') || 'jobs');
+  }, [searchParams]);
+
   const handleTabChange = (_event: React.SyntheticEvent, newValue: string) => {
     setTabValue(newValue);
   };
 
-  // Fetch training report for monitoring tab
   useEffect(() => {
     const fetchReport = async () => {
       try {
@@ -91,7 +86,6 @@ export default function Page() {
         setTrainReport(response.data);
       } catch (error) {
         setReportError(error instanceof Error ? error.message : 'Failed to fetch training report');
-        // Even on error, we want to show the TrainingResults component with empty data
         setTrainReport(emptyReport);
       } finally {
         setIsLoadingReport(false);
@@ -101,7 +95,7 @@ export default function Page() {
     fetchReport();
   }, [workflowName]);
 
-  // Mock data for ModelUpdate component
+  // Mock data for ModelUpdateProps (not used in current JSX, consider removing if unused)
   const mockModelData: ModelUpdateProps = {
     username: 'testuser',
     modelName: 'token-classifier',
@@ -123,16 +117,11 @@ export default function Page() {
             style={{ objectFit: 'contain' }}
             priority
           />
-
-          <Typography
-            variant="h5"
-            title={"Pocket Shield"}
-            sx={{ mt: 0.5 }}
-          >
+          <Typography variant="h5" title={"Pocket Shield"} sx={{ mt: 0.5 }}>
             {"Pocket Shield"}
           </Typography>
         </div>
-      </header >
+      </header>
 
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px' }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
@@ -141,21 +130,8 @@ export default function Page() {
             onChange={handleTabChange}
             aria-label="token classification tabs"
             sx={{
-              '& .MuiTab-root': {
-                textTransform: 'none',
-                fontWeight: 500,
-                fontSize: '1rem',
-                color: '#5F6368',
-                minWidth: 100,
-                padding: '12px 16px',
-                '&.Mui-selected': {
-                  color: '#1a73e8',
-                  fontWeight: 500
-                }
-              },
-              '& .MuiTabs-indicator': {
-                backgroundColor: '#1a73e8'
-              }
+              '& .MuiTab-root': { textTransform: 'none', fontWeight: 500, fontSize: '1rem', color: '#5F6368', minWidth: 100, padding: '12px 16px', '&.Mui-selected': { color: '#1a73e8', fontWeight: 500 }},
+              '& .MuiTabs-indicator': { backgroundColor: '#1a73e8' }
             }}
           >
             <Tab label="Reports" value="jobs" />
@@ -164,14 +140,35 @@ export default function Page() {
         </Box>
 
         {/* Tab Content Sections */}
-        <div style={{ display: tabValue === 'monitoring' ? 'block' : 'none' }}>
-          <Dashboard />
-        </div>
-
-        <div style={{ display: tabValue === 'jobs' ? 'block' : 'none' }}>
+        {/* Using conditional rendering for clarity; display:none also works */}
+        {tabValue === 'monitoring' && (
+          <Dashboard /> // Assuming Dashboard might also use data like trainReport
+        )}
+        {tabValue === 'jobs' && (
           <Jobs />
-        </div>
+        )}
+
+        {/* Example of how you might show loading/error for the report if it's tied to a tab */}
+        {tabValue === 'monitoring' && isLoadingReport && <CircularProgress />}
+        {tabValue === 'monitoring' && reportError && <Typography color="error">{reportError}</Typography>}
+
       </main>
-    </div >
+    </div>
   );
-} 
+}
+
+// --- The default export Page component ---
+export default function Page() {
+  // This component now just sets up the Suspense boundary.
+  // The fallback can be a simple loading message or a more sophisticated skeleton UI.
+  return (
+    <Suspense fallback={
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+        <CircularProgress />
+        <Typography variant="h6" component="p" sx={{ml: 2}}>Loading page...</Typography>
+      </Box>
+    }>
+      <PageContents />
+    </Suspense>
+  );
+}
