@@ -168,12 +168,8 @@ func (pr *PatternRecognizer) Recognize(text string, threshold float64) []Recogni
 	const ctxLen = 20
 	var results []RecognizerResult
 
-	// multiple regexps of same entity can match the same text, so we need to deduplicate
-	type uniqueMatchesKey struct {
-		entityType string
-		start, end int
-	}
-	seen := make(map[uniqueMatchesKey]struct{})
+	// multiple regexps of same entity can give same matches for the text, so we need to deduplicate
+	seen := make(map[string]struct{})
 
 	for _, rx := range pr.Regexps {
 		if rx.Score < threshold {
@@ -187,15 +183,11 @@ func (pr *PatternRecognizer) Recognize(text string, threshold float64) []Recogni
 			if !ok || mapped == "" {
 				mapped = pr.EntityType
 			}
-			recognizedResultkey := uniqueMatchesKey{
-				entityType: mapped,
-				start:      start,
-				end:        end,
-			}
-			if _, exists := seen[recognizedResultkey]; exists {
+			matchKey := fmt.Sprintf("%s|%d|%d", mapped, start, end)
+			if _, exists := seen[matchKey]; exists {
 				continue
 			}
-			seen[recognizedResultkey] = struct{}{}
+			seen[matchKey] = struct{}{}
 
 			match := text[start:end]
 
