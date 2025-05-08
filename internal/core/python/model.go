@@ -3,6 +3,7 @@ package python
 import (
 	"fmt"
 	"ner-backend/internal/core/types"
+	"ner-backend/internal/core/utils"
 	"ner-backend/pkg/api"
 	"ner-backend/plugin/proto"
 	"ner-backend/plugin/shared"
@@ -55,15 +56,6 @@ func LoadPythonModel(PythonExecutable, PluginScript, PluginModelName, KwargsJSON
 	}, nil
 }
 
-func (ner *PythonModel) Predict(text string) ([]types.Entity, error) {
-	result, err := ner.model.Predict(text)
-	if err != nil {
-		return nil, err
-	}
-
-	return convertProtoEntitiesToTypes(result, text), nil
-}
-
 func (ner *PythonModel) Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sample) error {
 	return fmt.Errorf("Finetune not implemented")
 }
@@ -82,18 +74,33 @@ func (ner *PythonModel) Release() {
 	ner.model = nil
 }
 
-func convertProtoEntitiesToTypes(protoEntities []*proto.Entity, text string) []types.Entity {
+func (ner *PythonModel) Predict(text string) ([]types.Entity, error) {
+	sentences, startOffsets := utils.SplitText(text)
+
+	batchEntities, err := ner.model.PredictBatch(sentences)
+	if err != nil {
+		return nil, err
+	}
+
+	chunkEntities := make([]types.Entity, 0)
+
+	for i, sentenceEntities := range batchEntities {
+		chunkEntities = append(chunkEntities, convertProtoEntitiesToTypes(sentenceEntities.Entities, sentences[i], startOffsets[i])...)
+	}
+
+	return chunkEntities, nil
+}
+
+func convertProtoEntitiesToTypes(protoEntities []*proto.Entity, text string, startOffset int) []types.Entity {
 
 	typesEntities := make([]types.Entity, len(protoEntities))
 
 	for i, pe := range protoEntities {
 		if pe != nil {
-			typesEntities[i].Label = pe.Label
-			typesEntities[i].Text = pe.Text
-			typesEntities[i].Start = int(pe.Start)
-			typesEntities[i].End = int(pe.End)
+			start := int(pe.Start) + startOffset
+			end := int(pe.End) + startOffset
+			typesEntities[i] = types.CreateEntity(pe.Label, text, start, end)
 		}
-		typesEntities[i].UpdateContext(text)
 	}
 	return typesEntities
 }

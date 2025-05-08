@@ -13,11 +13,14 @@ type Entity struct {
 	RContext string
 }
 
-func (e *Entity) UpdateContext(text string) {
-	if e.LContext == "" {
-		e.LContext = strings.ToValidUTF8(text[max(0, e.Start-contextLength):e.Start], "")
+func CreateEntity(label string, context string, start int, end int) Entity {
+	entity := Entity{
+		Label:    label,
+		Text:     strings.ToValidUTF8(context[start:end], ""),
+		Start:    start,
+		End:      end,
+		LContext: strings.ToValidUTF8(context[max(0, start-contextLength):start], ""),
+		RContext: strings.ToValidUTF8(context[end:min(len(context), end+contextLength)], ""),
 	}
-	if e.RContext == "" {
-		e.RContext = strings.ToValidUTF8(text[e.End-1:min(len(text), e.End+contextLength)], "")
-	}
+	return entity
 }

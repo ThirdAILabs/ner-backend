@@ -31,7 +31,10 @@ class BatchPredictions(BaseModel):
     predictions: List[SentencePredictions]
 
     def to_go(self) -> List[Dict[str, Any]]:
-        return [sentence.to_go() for sentence in self.predictions]
+        representations = [
+            {"entities": sentence.to_go()} for sentence in self.predictions
+        ]
+        return representations
 
 
 class Model(ABC):
