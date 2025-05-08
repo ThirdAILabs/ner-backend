@@ -20,10 +20,14 @@ type RecognizerResult struct {
 	RContext   string
 }
 
+type PatternRegex struct {
+	Regex *regexp.Regexp
+	Score float64
+}
+
 type PatternRecognizer struct {
 	EntityType string
-	Regexps    []*regexp.Regexp
-	Score      float64
+	Regexps    []PatternRegex
 	Validate   func(string) bool
 }
 
@@ -66,7 +70,6 @@ func loadPatterns() ([]*PatternRecognizer, error) {
 	for _, rec := range raw.Recognizers {
 		pr := &PatternRecognizer{
 			EntityType: rec.Name,
-			Score:      0,
 			Validate:   nil,
 		}
 		for _, p := range rec.Patterns {
@@ -76,7 +79,10 @@ func loadPatterns() ([]*PatternRecognizer, error) {
 			if rec.Name == "InPanRecognizer" && strings.Contains(rxText, "(?=") {
 				base := `\b[\w@#$%^?~-]{10}\b`
 				rx := regexp.MustCompile(base)
-				pr.Regexps = append(pr.Regexps, rx)
+				pr.Regexps = append(pr.Regexps, PatternRegex{
+					Regex: rx,
+					Score: p.Score,
+				})
 				pr.Validate = func(s string) bool {
 					letters, digits := 0, 0
 					for _, r := range s {
@@ -89,9 +95,6 @@ func loadPatterns() ([]*PatternRecognizer, error) {
 					}
 					return letters >= 1 && digits >= 4
 				}
-				if p.Score > pr.Score {
-					pr.Score = p.Score
-				}
 				continue
 			}
 
@@ -99,12 +102,12 @@ func loadPatterns() ([]*PatternRecognizer, error) {
 			if rec.Name == "InVehicleRegistrationRecognizer" && strings.Contains(rxText, "(?!00000)") {
 				base := `\bI[0-9]{5}\b`
 				rx := regexp.MustCompile(base)
-				pr.Regexps = append(pr.Regexps, rx)
+				pr.Regexps = append(pr.Regexps, PatternRegex{
+					Regex: rx,
+					Score: p.Score,
+				})
 				pr.Validate = func(s string) bool {
 					return s[1:] != "00000"
-				}
-				if p.Score > pr.Score {
-					pr.Score = p.Score
 				}
 				continue
 			}
@@ -113,12 +116,12 @@ func loadPatterns() ([]*PatternRecognizer, error) {
 			if rec.Name == "InVehicleRegistrationRecognizer" && strings.Contains(rxText, "(?!00)") {
 				base := `\b[0-9]{2}[A-FH-KPRX][0-9]{6}[A-Z]\b`
 				rx := regexp.MustCompile(base)
-				pr.Regexps = append(pr.Regexps, rx)
+				pr.Regexps = append(pr.Regexps, PatternRegex{
+					Regex: rx,
+					Score: p.Score,
+				})
 				pr.Validate = func(s string) bool {
 					return s[0:2] != "00"
-				}
-				if p.Score > pr.Score {
-					pr.Score = p.Score
 				}
 				continue
 			}
@@ -135,10 +138,10 @@ func loadPatterns() ([]*PatternRecognizer, error) {
 				fmt.Printf("⚠️ skip invalid regex for %s: %v\n", rec.Name, err)
 				continue
 			}
-			pr.Regexps = append(pr.Regexps, rx)
-			if p.Score > pr.Score {
-				pr.Score = p.Score
-			}
+			pr.Regexps = append(pr.Regexps, PatternRegex{
+				Regex: rx,
+				Score: p.Score,
+			})
 		}
 		out = append(out, pr)
 	}
@@ -164,20 +167,43 @@ func isLuhnValid(d string) bool {
 func (pr *PatternRecognizer) Recognize(text string, threshold float64) []RecognizerResult {
 	const ctxLen = 20
 	var results []RecognizerResult
+
+	// multiple regexps of same entity can match the same text, so we need to deduplicate
+	type uniqueMatchesKey struct {
+		entityType string
+		start, end int
+	}
+	seen := make(map[uniqueMatchesKey]struct{})
+
 	for _, rx := range pr.Regexps {
-		for _, loc := range rx.FindAllStringIndex(text, -1) {
+		if rx.Score < threshold {
+			continue
+		}
+		for _, loc := range rx.Regex.FindAllStringIndex(text, -1) {
 			start, end := loc[0], loc[1]
+
+			// Check if this combination has been seen
+			mapped, ok := entitiesMap[pr.EntityType]
+			if !ok || mapped == "" {
+				mapped = pr.EntityType
+			}
+			recognizedResultkey := uniqueMatchesKey{
+				entityType: mapped,
+				start:      start,
+				end:        end,
+			}
+			if _, exists := seen[recognizedResultkey]; exists {
+				continue
+			}
+			seen[recognizedResultkey] = struct{}{}
+
 			match := text[start:end]
-			score := pr.Score
 
 			if pr.EntityType == "CreditCardRecognizer" {
 				digits := regexp.MustCompile(`\D`).ReplaceAllString(match, "")
 				if !isLuhnValid(digits) {
 					continue
 				}
-			}
-			if score < threshold {
-				continue
 			}
 			if pr.Validate != nil && !pr.Validate(match) {
 				continue
@@ -194,16 +220,12 @@ func (pr *PatternRecognizer) Recognize(text string, threshold float64) []Recogni
 			lctx := strings.ToValidUTF8(text[lctxStart:start], "")
 			rctx := strings.ToValidUTF8(text[end:rctxEnd], "")
 
-			mapped, ok := entitiesMap[pr.EntityType]
-			if !ok || mapped == "" {
-				mapped = pr.EntityType
-			}
 			results = append(results, RecognizerResult{
 				EntityType: mapped,
 				Match:      match,
-				Score:      score,
-				Start:      loc[0],
-				End:        loc[1],
+				Score:      rx.Score,
+				Start:      start,
+				End:        end,
 				LContext:   lctx,
 				RContext:   rctx,
 			})
