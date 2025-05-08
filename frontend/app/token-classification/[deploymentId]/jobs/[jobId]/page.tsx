@@ -443,7 +443,7 @@ export default function JobDetail() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {(reportData?.SourceS3Bucket) && <SourceOption
                   title="S3 Bucket"
-                  description={(reportData.SourceS3Bucket + "/" + reportData?.SourceS3Prefix) || "s3://thirdai-dev/customer-calls/2025/"}
+                  description={reportData.SourceS3Bucket === "uploads" ? "" : (reportData.SourceS3Bucket + "/" + reportData?.SourceS3Prefix) || "s3://thirdai-dev/customer-calls/2025/"}
                   isSelected={selectedSource === 's3'}
                   disabled={selectedSource === 'local'}
                   onClick={() => { }}
