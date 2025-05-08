@@ -111,6 +111,10 @@ export const nerService = {
     return response.data;
   },
 
+  deleteReport: async (reportId: string): Promise<void> => {
+    await axiosInstance.delete(`/reports/${reportId}`);
+  },
+
   getReportGroup: async (reportId: string, groupId: string): Promise<Group> => {
     const response = await axiosInstance.get(`/reports/${reportId}/groups/${groupId}`);
     return response.data;
