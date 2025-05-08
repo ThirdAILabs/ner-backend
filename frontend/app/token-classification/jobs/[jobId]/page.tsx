@@ -478,13 +478,13 @@ export default function JobDetail() {
             </div>
 
             {/* Custom Tags section */}
-            {reportData?.CustomTags && <div>
+            <div>
               <h2 className="text-lg font-medium mb-4">Custom Tags</h2>
               {isLoading ? (
                 <div className="flex justify-center py-4">
                   <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
                 </div>
-              ) : (
+              ) : customTags?.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {customTags.map((customTag) => (
                     <div key={customTag.name} className="border border-gray-200 rounded-md overflow-hidden">
@@ -497,30 +497,32 @@ export default function JobDetail() {
                     </div>
                   ))}
                 </div>
+              ) : (
+                <div className="text-center py-10 bg-gray-50 border border-dashed border-gray-200 rounded-lg w-[400px]">
+                  <p className="text-gray-500">No custom tags defined for this report</p>
+                </div>
               )}
-            </div>}
+            </div>
 
             {/* Groups section */}
-            {reportData?.Groups && <div>
+            <div>
               <h2 className="text-lg font-medium mb-4">Groups</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {reportData.Groups.map((group) => {
-                  return (
-                    <GroupCard key={group.Id} name={group.Name} definition={group.Query} />
-                  )
-                })}
-
-                <div
-                  className="border border-dashed border-gray-300 rounded-md flex items-center justify-center p-6 cursor-pointer hover:border-gray-400"
-                  onClick={() => console.log('Add new group')}
-                >
-                  <div className="flex flex-col items-center">
-                    <Plus className="h-8 w-8 text-gray-400 mb-2" />
-                    <span className="text-gray-600">Define new group</span>
-                  </div>
+              {isLoading ? (
+                <div className="flex justify-center py-4">
+                  <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
                 </div>
-              </div>
-            </div>}
+              ) : (reportData?.Groups ?? []).length > 0 ? (
+                <div className="grid grid-cols-3 md:grid-cols-3 gap-4">
+                  {reportData?.Groups?.map((group) => (
+                    <GroupCard key={group.Id} name={group.Name} definition={group.Query} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-10 bg-gray-50 border border-dashed border-gray-200 rounded-lg w-[400px]">
+                  <p className="text-gray-500">No groups defined for this report</p>
+                </div>
+              )}
+            </div>
           </div>
         </TabsContent>
 
