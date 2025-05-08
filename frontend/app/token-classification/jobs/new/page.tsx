@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Plus, RefreshCw, Edit } from 'lucide-react';
+import { ArrowLeft, Plus, RefreshCw, Edit, Trash } from 'lucide-react';
 import { nerService } from '@/lib/backend';
 
 // Tag chip component - reused from the detail page but with interactive mode

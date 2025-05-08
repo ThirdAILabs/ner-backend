@@ -539,7 +539,7 @@ export default function JobDetail() {
             loadMoreObjectRecords={loadRealObjectRecords}
             loadMoreClassifiedTokenRecords={loadRealClassifiedTokenRecords}
             groups={reportData?.Groups?.map(g => g.Name) || mockGroups}
-            tags={availableTags}
+            tags={availableTagsCount}
           />
         </TabsContent>
       </Tabs>

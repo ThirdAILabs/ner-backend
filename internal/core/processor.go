@@ -35,6 +35,8 @@ type TaskProcessor struct {
 	modelBucket   string
 }
 
+const bytesPerMB = 1024 * 1024
+
 func NewTaskProcessor(db *gorm.DB, storage storage.Provider, publisher messaging.Publisher, reciever messaging.Reciever, licenseVerifier licensing.LicenseVerifier, localModelDir string, modelBucket string) *TaskProcessor {
 	return &TaskProcessor{
 		db:            db,
@@ -142,6 +144,7 @@ func (proc *TaskProcessor) getStorageClient(report *database.Report) (storage.Pr
 }
 
 func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload messaging.InferenceTaskPayload) error {
+
 	reportId := payload.ReportId
 
 	var task database.InferenceTask
@@ -344,7 +347,6 @@ func (proc *TaskProcessor) loadModel(ctx context.Context, modelId uuid.UUID, mod
 	} else {
 		localDir = proc.getModelDir(modelId)
 
-		// Check if the model file exists locally
 		if _, err := os.Stat(localDir); os.IsNotExist(err) {
 			slog.Info("model not found locally, downloading from S3", "modelId", modelId)
 
@@ -440,7 +442,14 @@ func (proc *TaskProcessor) runInferenceOnObject(
 			return nil, nil, nil, nil, fmt.Errorf("error parsing document: %w", chunk.Error)
 		}
 
+		start := time.Now()
 		chunkEntities, err := model.Predict(chunk.Text)
+		duration := time.Since(start)
+		sizeMB := float64(len(chunk.Text)) / float64(bytesPerMB)
+		slog.Info("processed chunk",
+			"chunk_size_mb", fmt.Sprintf("%.2f", sizeMB),
+			"duration", duration,
+		)
 		if err != nil {
 			return nil, nil, nil, nil, fmt.Errorf("error running model inference: %w", err)
 		}

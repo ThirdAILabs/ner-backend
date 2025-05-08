@@ -18,6 +18,8 @@ A distributed system in Go for processing asynchronous Machine Learning tasks (t
 1. Prerequisites: Install Go (1.21+), Docker, and Docker Compose (v2+).
 2. Clone: `git clone <repository-url>` then `cd ner-backend`
 
+
+
 ## Running with Docker Compose
 
 ### Start Head Node Services (API, DB, Queue, Storage): \
@@ -36,6 +38,10 @@ Access Services (default ports): \
 API Health: http://localhost:8001/health \
 RabbitMQ UI: http://localhost:15672 \
 MinIO UI: http://localhost:9090
+
+## Setting models for downloading using MinIO 
+
+You need to update the mount volume path in docker compose file.
 
 # API Endpoints
 
