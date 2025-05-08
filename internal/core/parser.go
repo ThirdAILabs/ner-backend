@@ -25,7 +25,7 @@ type DefaultParser struct {
 }
 
 const (
-	defaultMaxChunkSize = 2 * 1024 * 1024 // 2 MB
+	defaultMaxChunkSize = 512 * 1024 * 1024 // 2 MB
 	queueBufferSize     = 4
 )
 

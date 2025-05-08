@@ -8,7 +8,7 @@ from presidio_analyzer import RecognizerResult
 from ..model_interface import Entity, Model, SentencePredictions, BatchPredictions
 from .make_analyzer import analyze_text_batch, get_batch_analyzer
 from .transformer_inference import predict_batch, punctuation_filter
-from ..utils import clean_text
+from ..utils import clean_text_with_spans
 
 
 def suppress_output():
@@ -107,35 +107,42 @@ class HuggingFaceModel(Model):
         self.batch_size = 4
 
     def _process_prediction(
-        self, text: str, entities: List[str]
-    ) -> SentencePredictions:
-        tokens = text.split()
-        if len(entities) != len(tokens):
-            raise ValueError("Model has different length of predictions.")
-        predictions = []
-        for entity in entities:
-            w, label, conf, span = entity
+        self,
+        raw_text,
+        spans,
+        tag_tuples,
+    ):
+        if len(spans) != len(tag_tuples):
+            raise ValueError(
+                f"Span count ({len(spans)}) != prediction count ({len(tag_tuples)})"
+            )
+
+        entities: List[Entity] = []
+        for (start, end), (_, label, score, _) in zip(spans, tag_tuples):
             if label in self.skipped_entites:
                 continue
-            predictions.append(
+            entities.append(
                 Entity(
-                    text=w,
+                    text=raw_text[start:end],
                     label=label,
-                    score=conf,
-                    start=span[0],
-                    end=span[1],
+                    score=score,
+                    start=start,
+                    end=end,
                 )
             )
-        return SentencePredictions(entities=predictions)
+        return SentencePredictions(entities=entities)
 
-    def predict_batch(self, texts: List[str]) -> BatchPredictions:
-        texts = [clean_text(text) for text in texts]
+    def predict_batch(self, texts: List[str]):
+        cleaned_and_spans = [clean_text_with_spans(t) for t in texts]
+        cleaned_texts, spans_list = zip(*cleaned_and_spans)
 
-        predictions = []
-        for i in range(0, len(texts), self.batch_size):
-            batch_texts = texts[i : i + self.batch_size]
-            batch_entities = predict_batch(
-                batch_texts,
+        all_preds: List[SentencePredictions] = []
+        for i in range(0, len(cleaned_texts), self.batch_size):
+            batch_clean = cleaned_texts[i : i + self.batch_size]
+            batch_spans = spans_list[i : i + self.batch_size]
+
+            batch_tag_tuples = predict_batch(
+                list(batch_clean),
                 self.model,
                 self.tokenizer,
                 aggregation_strategy=self.aggregation_strategy,
@@ -146,13 +153,13 @@ class HuggingFaceModel(Model):
                 top_k=self.top_k,
             )
 
-            sentence_predictions = [
-                self._process_prediction(text, entities)
-                for text, entities in zip(batch_texts, batch_entities)
-            ]
-            predictions.extend(sentence_predictions)
+            for raw, spans, tags in zip(
+                texts[i : i + self.batch_size], batch_spans, batch_tag_tuples
+            ):
+                sent = self._process_prediction(raw, spans, tags)
+                all_preds.append(sent)
 
-        return BatchPredictions(predictions=predictions)
+        return BatchPredictions(predictions=all_preds)
 
     def predict(self, text: str) -> SentencePredictions:
         return self.predict_batch([text]).predictions[0]
