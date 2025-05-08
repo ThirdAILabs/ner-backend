@@ -375,26 +375,20 @@ export default function JobDetail() {
 
   return (
     <div className="container px-4 py-8 mx-auto">
-      {/* Breadcrumbs */}
-      <div className="mb-6">
-        <div className="flex items-center mb-2">
-          <Link href={`/?tab=jobs`} className="text-blue-500 hover:underline">
-            Reports
-          </Link>
-          <span className="mx-2 text-gray-400">/</span>
-          <span className="text-gray-700">{reportData?.ReportName || '[Job Name]'}</span>
-        </div>
-      </div>
-
-      {/* Title and Back Button */}
+      {/* Header with Back Button and Title */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-medium">{reportData?.ReportName || '[Job Name]'}</h1>
-
         <Button variant="outline" size="sm" asChild>
           <Link href={`/?tab=jobs`} className="flex items-center">
             <ArrowLeft className="mr-1 h-4 w-4" /> Back to Reports
           </Link>
         </Button>
+
+        <h1 className="text-2xl font-medium text-center flex-1">
+          {reportData?.ReportName || '[Report Name]'}
+        </h1>
+
+        {/* Empty div to maintain spacing */}
+        <div className="w-[106px]"></div> {/* Width matches the Back button */}
       </div>
 
       {/* Tabs and Controls */}
