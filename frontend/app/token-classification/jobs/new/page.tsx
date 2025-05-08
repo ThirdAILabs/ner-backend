@@ -16,17 +16,23 @@ interface TagProps {
   addNew?: boolean;
 }
 
-const Tag: React.FC<TagProps> = ({ tag, selected = false, onClick, custom = false, addNew = false }) => {
+const Tag: React.FC<TagProps> = ({
+  tag,
+  selected = false,
+  onClick,
+  custom = false,
+  addNew = false
+}) => {
   return (
     <div
-      className={`px-3 py-1 text-sm font-medium rounded-sm ${!custom && "cursor-pointer"} ${selected ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+      className={`px-3 py-1 text-sm font-medium rounded-sm ${!custom && 'cursor-pointer'} ${selected ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
       style={{ userSelect: 'none' }}
       onClick={onClick}
     >
       {tag}
     </div>
   );
-}
+};
 
 // Source option card component - reused from the detail page
 interface SourceOptionProps {
@@ -70,7 +76,12 @@ const GroupCard: React.FC<GroupProps> = ({ name, definition, onRemove }) => (
   <div className="border border-gray-200 rounded-md overflow-hidden">
     <div className="p-4 border-b border-gray-200 flex justify-between items-center">
       <h3 className="text-base font-medium">{name}</h3>
-      <Button variant="ghost" size="sm" onClick={onRemove} className="text-red-500">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onRemove}
+        className="text-red-500"
+      >
         Remove
       </Button>
     </div>
@@ -139,7 +150,9 @@ export default function NewJobPage() {
       try {
         const modelData = await nerService.listModels();
         // Only show trained models that can be used for inference
-        const trainedModels = modelData.filter(model => model.Status === 'TRAINED');
+        const trainedModels = modelData.filter(
+          (model) => model.Status === 'TRAINED'
+        );
         setModels(trainedModels);
       } catch (err) {
         console.error('Error fetching models:', err);
@@ -162,14 +175,13 @@ export default function NewJobPage() {
 
         // Get tags from the model
         const modelTags = model.Tags || [];
-        console.log("Tags from model:", modelTags);
+        console.log('Tags from model:', modelTags);
 
         setAvailableTags(modelTags);
         setSelectedTags(modelTags); // By default, select all tags
-
       } catch (error) {
-        console.error("Error fetching tags:", error);
-        setError("Failed to load tags from the selected model");
+        console.error('Error fetching tags:', error);
+        setError('Failed to load tags from the selected model');
       } finally {
         setIsTagsLoading(false);
       }
@@ -181,7 +193,7 @@ export default function NewJobPage() {
   // Toggle tag selection
   const toggleTag = (tag: string) => {
     if (selectedTags.includes(tag)) {
-      setSelectedTags(selectedTags.filter(t => t !== tag));
+      setSelectedTags(selectedTags.filter((t) => t !== tag));
     } else {
       setSelectedTags([...selectedTags, tag]);
     }
@@ -251,9 +263,9 @@ export default function NewJobPage() {
   };
 
   // Add a custom tag
-  const handleAddCustomTag = () => {
+  const handleAddCustomTag = () => {   
     setDialogError(null);
-
+     
     if (!customTagName.trim() || !customTagPattern.trim()) {
       setDialogError('Custom tag name and pattern are required');
       return;
@@ -280,23 +292,32 @@ export default function NewJobPage() {
       setCustomTags(prev => [...prev, newCustomTag]);
     }
 
+    setCustomTags((prev) => [
+      ...prev,
+      {
+        name: customTagName.trim().toUpperCase(),
+        pattern: customTagPattern
+      }
+    ]);
+
     setCustomTagName('');
     setCustomTagPattern('');
     setEditingTag(null);
     setIsCustomTagDialogOpen(false);
   };
-
   const handleRemoveCustomTag = (tagName: string) => {
-    setCustomTags(prev => prev.filter(tag => tag.name !== tagName));
-    setAvailableTags(prev => prev.filter(tag => tag !== tagName));
-    setSelectedTags(prev => prev.filter(tag => tag !== tagName));
+    setCustomTags((prev) => prev.filter((tag) => tag.name !== tagName));
+    setAvailableTags((prev) => prev.filter((tag) => tag !== tagName));
+    setSelectedTags((prev) => prev.filter((tag) => tag !== tagName));
   };
+
   const handleEditCustomTag = (tag: CustomTag) => {
+    handleRemoveCustomTag(tag.name);
+
     setCustomTagName(tag.name);
     setCustomTagPattern(tag.pattern);
     setEditingTag(tag);
     setIsCustomTagDialogOpen(true);
-
   };
   const handleCancel = () => {
     setCustomTagName('');
@@ -316,21 +337,21 @@ export default function NewJobPage() {
       const fileArray = Array.from(files);
 
       // Filter out duplicates
-      const newFiles = fileArray.filter(newFile => {
+      const newFiles = fileArray.filter((newFile) => {
         // Check if this file already exists in selectedFiles
-        const isDuplicate = selectedFiles.some(existingFile =>
+        const isDuplicate = selectedFiles.some((existingFile) =>
           areFilesIdentical(existingFile, newFile)
         );
         return !isDuplicate;
       });
 
-      setSelectedFiles(prev => [...prev, ...newFiles]);
+      setSelectedFiles((prev) => [...prev, ...newFiles]);
       e.target.value = '';
     }
   };
 
   const removeFile = (index: number) => {
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   };
   // Submit the new job
   const handleSubmit = async (e: React.FormEvent) => {
@@ -370,22 +391,24 @@ export default function NewJobPage() {
 
       // Create custom tags object for API
       const customTagsObj: Record<string, string> = {};
-      customTags.forEach(tag => {
+      customTags.forEach((tag) => {
         customTagsObj[tag.name] = tag.pattern;
       });
 
       // Create the report
-      console.log("Job Name: ", jobName);
+      console.log('Job Name: ', jobName);
       const response = await nerService.createReport({
         ModelId: selectedModelId,
         Tags: selectedTags,
         CustomTags: customTagsObj,
-        ...(selectedSource === 's3' ? {
-          SourceS3Bucket: sourceS3Bucket,
-          SourceS3Prefix: sourceS3Prefix || undefined,
-        } : {
-          UploadId: uploadId,
-        }),
+        ...(selectedSource === 's3'
+          ? {
+              SourceS3Bucket: sourceS3Bucket,
+              SourceS3Prefix: sourceS3Prefix || undefined
+            }
+          : {
+              UploadId: uploadId
+            }),
         Groups: groups,
         report_name: jobName
       });
@@ -528,17 +551,24 @@ export default function NewJobPage() {
                         Select files
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500">Drag and drop files or click to browse</p>
+                    <p className="text-xs text-gray-500">
+                      Drag and drop files or click to browse
+                    </p>
                   </div>
                 </label>
 
                 {selectedFiles.length > 0 && (
                   <div className="mt-4">
-                    <h3 className="text-sm font-medium text-gray-700">Selected Files ({selectedFiles.length})</h3>
+                    <h3 className="text-sm font-medium text-gray-700">
+                      Selected Files ({selectedFiles.length})
+                    </h3>
                     <div className="mt-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2">
                       <ul className="space-y-1">
                         {selectedFiles.map((file, i) => (
-                          <li key={i} className="flex items-center justify-between py-1">
+                          <li
+                            key={i}
+                            className="flex items-center justify-between py-1"
+                          >
                             <span className="text-sm text-gray-500">
                               {file.name} ({(file.size / 1024).toFixed(1)} KB)
                             </span>
@@ -636,10 +666,12 @@ export default function NewJobPage() {
                   <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
                 </div>
               ) : availableTags.length === 0 ? (
-                <div className="text-gray-500 py-2">No tags available for this model</div>
+                <div className="text-gray-500 py-2">
+                  No tags available for this model
+                </div>
               ) : (
                 <div className="flex flex-wrap gap-2">
-                  {availableTags.map(tag => (
+                  {availableTags.map((tag) => (
                     <Tag
                       key={tag}
                       tag={tag}
@@ -731,7 +763,9 @@ export default function NewJobPage() {
                       <input
                         type="text"
                         value={customTagName}
-                        onChange={(e) => setCustomTagName(e.target.value.toUpperCase())}
+                        onChange={(e) =>
+                          setCustomTagName(e.target.value.toUpperCase())
+                        }
                         className="w-full p-2 border border-gray-300 rounded"
                         placeholder="CUSTOM_TAG_NAME"
                       />
@@ -771,19 +805,26 @@ export default function NewJobPage() {
                         onChange={(e) => setCustomTagPattern(e.target.value)}
                         className="w-full p-2 border border-gray-300 rounded"
                         placeholder={
-                          patternType === 'regex' ? '\\b[A-Z]{2}\\d{6}\\b' : 'John Doe'
+                          patternType === 'regex'
+                            ? '\\b[A-Z]{2}\\d{6}\\b'
+                            : 'John Doe'
                         }
                       />
 
                       {patternType === 'string' && (
                         <p className="text-xs text-gray-500 mt-1">
-                          Example: <code>John Doe</code> for matching an exact name
+                          Example: <code>John Doe</code> for matching an exact
+                          name
                         </p>
                       )}
 
                       {patternType === 'regex' && (
                         <p className="text-xs text-gray-500 mt-1">
-                          Example: <code>\d{3}[-.]?\d{3}[-.]?\d{4}</code> for phone numbers
+                          Example:{' '}
+                          <code>
+                            \d{3}[-.]?\d{3}[-.]?\d{4}
+                          </code>{' '}
+                          for phone numbers
                         </p>
                       )}
                     </div>
@@ -958,4 +999,4 @@ export default function NewJobPage() {
       )}
     </div>
   );
-} 
+}
