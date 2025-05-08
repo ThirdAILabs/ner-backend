@@ -20,6 +20,17 @@ func (m *GRPCClient) Predict(sentence string) ([]*proto.Entity, error) {
 	return resp.Entities, nil
 }
 
+func (m *GRPCClient) PredictBatch(sentences []string) ([]*proto.PredictResponse, error) {
+	resp, err := m.client.PredictBatch(context.Background(), &proto.PredictBatchRequest{
+		Sentences: sentences,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Predictions, nil
+}
+
 // Here is the gRPC server that GRPCClient talks to.
 type GRPCServer struct {
 	// This is the real implementation
@@ -31,4 +42,11 @@ func (m *GRPCServer) Predict(
 	req *proto.PredictRequest) (*proto.PredictResponse, error) {
 	v, err := m.Impl.Predict(req.Sentence)
 	return &proto.PredictResponse{Entities: v}, err
+}
+
+func (m *GRPCServer) PredictBatch(
+	ctx context.Context,
+	req *proto.PredictBatchRequest) (*proto.PredictBatchResponse, error) {
+	v, err := m.Impl.PredictBatch(req.Sentences)
+	return &proto.PredictBatchResponse{Predictions: v}, err
 }
