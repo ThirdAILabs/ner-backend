@@ -65,9 +65,13 @@ func (s *BackendService) AddRoutes(r chi.Router) {
 		r.Get("/{report_id}/search", RestHandler(s.ReportSearch))
 		r.Get("/{report_id}/objects", RestHandler(s.GetReportPreviews))
 	})
-
+	
 	r.Route("/uploads", func(r chi.Router) {
 		r.Post("/", RestHandler(s.UploadFiles))
+	})
+	
+	r.Route("/validate-group-definition", func(r chi.Router) {
+		r.Get("/", RestHandler(s.ValidateGroupDefinition))
 	})
 }
 
@@ -673,3 +677,16 @@ func (s *BackendService) UploadFiles(r *http.Request) (any, error) {
 
 	return api.UploadResponse{Id: uploadId}, nil
 }
+
+func (s *BackendService) ValidateGroupDefinition(r *http.Request) (any, error) {
+	groupQuery := r.URL.Query().Get("group_query")
+	if groupQuery == "" {
+		return nil, CodedErrorf(http.StatusBadRequest, "group query is required")
+	}
+	if _, err := core.ParseQuery(groupQuery); err != nil {
+		return nil, CodedErrorf(http.StatusUnprocessableEntity, "invalid query '%s': %v", groupQuery, err)
+	}
+	return nil, nil
+}
+
+

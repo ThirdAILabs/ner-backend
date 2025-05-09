@@ -208,4 +208,18 @@ export const nerService = {
     });
     return response.data;
   },
+
+  validateGroupDefinition: async (groupQuery: string): Promise<string | null> => {
+    try {
+      await axiosInstance.get('/validate-group-definition', {
+        params: { group_query: groupQuery }
+      });
+      return null;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.data) {
+        return error.response.data;
+      }
+      return 'An unexpected error occurred';
+    }
+  }
 };
