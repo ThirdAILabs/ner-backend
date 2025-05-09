@@ -133,6 +133,11 @@ func main() {
 		log.Fatalf("Worker: Failed to create S3 client: %v", err)
 	}
 
+	if err := s3Client.CreateBucket(context.Background(), cfg.ModelBucketName); err != nil {
+		slog.Error("error creating model bucket", "error", err)
+		panic("failed to create model bucket")
+	}
+
 	cmd.InitializePresidioModel(db)
 
 	if err := initializeCnnNerExtractor(context.Background(), db, s3Client, cfg.ModelBucketName); err != nil {
