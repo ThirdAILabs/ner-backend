@@ -1,6 +1,11 @@
 const { app, BrowserWindow, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const serve = require('electron-serve');
+
+const appServe = app.isPackaged ? serve({
+  directory: path.join(__dirname, "src/dist")
+}) : null;
 
 // Safely check if we're in development mode with fallback if module is missing
 let isDev = false;
@@ -70,22 +75,20 @@ function createWindow() {
   });
 
   if (isDev) {
-    // In development mode, add a delay to ensure Vite has time to start
-    console.log("Development mode: Waiting for Vite server to start...");
+    // In development mode, add a delay to ensure Next.js has time to start
+    console.log("Development mode: Waiting for Next.js server to start...");
     setTimeout(() => {
-      console.log("Attempting to load from Vite dev server...");
+      console.log("Attempting to load from Next.js server...");
       mainWindow.loadURL('http://localhost:3007/');
       // Open DevTools in development
       mainWindow.webContents.openDevTools();
     }, 3000); // 3 second delay
   } else {
     console.log("Production mode: Loading built app");
-    // Path to the built HTML file
-    const htmlPath = path.join(__dirname, 'src/dist/index.html');
-    console.log("Loading HTML from:", htmlPath);
-    
-    // Load built app in production
-    mainWindow.loadFile(htmlPath);
+    appServe(mainWindow).then(() => {
+      console.log("Loaded app from serve");
+      mainWindow.loadURL("app://-");
+    });
     
     // Uncomment to open DevTools in production for debugging
     mainWindow.webContents.openDevTools();
