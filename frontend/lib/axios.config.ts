@@ -1,7 +1,8 @@
 import axios from 'axios';
 
+
 // Use the Next.js API proxy instead of direct server URL
-const nerBaseUrl = '/api/v1'
+const nerBaseUrl = 'http://localhost:8000/api/v1'
 
 const axiosInstance = axios.create({
     baseURL: nerBaseUrl,
@@ -9,6 +10,16 @@ const axiosInstance = axios.create({
         'Content-Type': 'application/json',
     },
 });
+
+axiosInstance.interceptors.request.use(config => {
+    console.log('Request URL:', config.url);
+    console.log('Request Method:', config.method);
+    console.log('Request Headers:', config.headers);
+    return config;
+  }, error => {
+    console.error('Request Error:', error);
+    return Promise.reject(error);
+  });
 
 axiosInstance.interceptors.response.use(
     (response) => response,
