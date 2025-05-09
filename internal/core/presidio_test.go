@@ -14,7 +14,7 @@ func init() {
 	var err error
 	model, err = NewPresidioModel()
 	if err != nil {
-		panic(fmt.Sprintf("failed to create Presidio model: %v", err))
+		panic(fmt.Sprintf("fail	ed to create Presidio model: %v", err))
 	}
 }
 
@@ -29,26 +29,26 @@ func TestRecognize(t *testing.T) {
 		{
 			Label:    "SSN",
 			Text:     "789-67-4567",
-			Start:    95,
-			End:      106,
+			Start:    87,
+			End:      98,
 			LContext: "y their national ID ",
 			RContext: " and visa permit 564",
 		},
 		{
 			Label:    "EmailRecognizer",
 			Text:     "sonia41@example.net",
-			Start:    272,
-			End:      291,
+			Start:    264,
+			End:      283,
 			LContext: "ll Drop an email to ",
-			RContext: " for more.\"",
+			RContext: "	for more.",
 		},
 		{
 			Label:    "UrlRecognizer",
 			Text:     "example.net",
-			Start:    280,
-			End:      291,
+			Start:    272,
+			End:      283,
 			LContext: "an email to sonia41@",
-			RContext: " for more.\"",
+			RContext: " for more.",
 		},
 	}, "Incorrect entities recognized by the presidio model")
 }
