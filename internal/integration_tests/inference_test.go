@@ -234,3 +234,57 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 	entities := getReportEntities(t, router, reportId)
 	assert.Equal(t, 2, len(entities))
 }
+
+func TestInferenceWorkflowForCNN(t *testing.T) {
+	os.Setenv("HOST_MODEL_DIR", "/share/ner/model")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	minioUrl := setupMinioContainer(t, ctx)
+
+	s3, err := storage.NewS3Provider(storage.S3ProviderConfig{
+		S3EndpointURL:     minioUrl,
+		S3AccessKeyID:     minioUsername,
+		S3SecretAccessKey: minioPassword,
+	})
+	require.NoError(t, err)
+
+	db := createDB(t)
+
+	publisher, reciever := setupRabbitMQContainer(t, ctx)
+
+	backend := backend.NewBackendService(db, s3, publisher, 120)
+	router := chi.NewRouter()
+	backend.AddRoutes(router)
+
+	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket)
+
+	go worker.Start()
+	defer worker.Stop()
+
+	var model database.Model
+
+	db_err := db.Where("name = ?", "advance").First(&model).Error
+	require.NoError(t, db_err)
+
+	uploadId := createUpload(t, router)
+
+	reportId := createReport(t, router, api.CreateReportRequest{
+		ReportName: "test-report-cnn",
+		ModelId:    model.Id,
+		UploadId:   uploadId,
+		Tags: []string{"ADDRESS", "CARD_NUMBER", "COMPANY", "CREDIT_SCORE", "DATE",
+			"EMAIL", "ETHNICITY", "GENDER", "ID_NUMBER", "LICENSE_PLATE",
+			"LOCATION", "NAME", "PHONENUMBER", "SERVICE_CODE",
+			"SEXUAL_ORIENTATION", "SSN", "URL", "VIN", "O"},
+	})
+
+	report := waitForReport(t, router, reportId)
+
+	assert.Equal(t, model.Id, report.Model.Id)
+	assert.Equal(t, "uploads", report.SourceS3Bucket)
+	assert.Equal(t, uploadId.String(), report.SourceS3Prefix)
+
+	entities := getReportEntities(t, router, reportId)
+	fmt.Println(entities)
+}

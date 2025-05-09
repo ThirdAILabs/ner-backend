@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -77,7 +78,13 @@ func initializeCnnNerExtractor(ctx context.Context, db *gorm.DB, s3p *storage.S3
 
 	s3Prefix := model.Id.String() + "/"
 
-	localDir := "/app/models/cnn_model"
+	// HOST_MODEL_DIR can be used to pass models if backend is running locally
+	modelBaseDir := os.Getenv("HOST_MODEL_DIR")
+	if modelBaseDir == "" {
+		modelBaseDir = "/app/models"
+	}
+	localDir := filepath.Join(modelBaseDir, "cnn_model")
+
 	info, err := os.Stat(localDir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -102,7 +109,8 @@ func initializeCnnNerExtractor(ctx context.Context, db *gorm.DB, s3p *storage.S3
 
 	if err := s3p.UploadDir(ctx, bucket, model.Id.String(), localDir); err != nil {
 		database.UpdateModelStatus(ctx, db, model.Id, database.ModelFailed) //nolint:errcheck
-		return fmt.Errorf("error uploading model to S3: %w", err)
+		slog.Warn("failed to upload model to S3", "model_id", model.Id, "error", err)
+		return nil
 	}
 	slog.Info("successfully uploaded model to S3", "model_id", model.Id)
 	return nil
