@@ -2,15 +2,15 @@ package core
 
 import (
 	"fmt"
+	"ner-backend/internal/core/types"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var model *PresidioModel = nil
 
 func init() {
-	if model != nil {
-		return
-	}
 	var err error
 	model, err = NewPresidioModel()
 	if err != nil {
@@ -25,5 +25,30 @@ func TestRecognize(t *testing.T) {
 		t.Fatalf("failed to predict: %v", err)
 	}
 
-	entitiesDetected
+	assert.ElementsMatch(t, entities, []types.Entity{
+		{
+			Label:    "SSN",
+			Text:     "789-67-4567",
+			Start:    95,
+			End:      106,
+			LContext: "y their national ID ",
+			RContext: " and visa permit 564",
+		},
+		{
+			Label:    "EmailRecognizer",
+			Text:     "sonia41@example.net",
+			Start:    272,
+			End:      291,
+			LContext: "ll Drop an email to ",
+			RContext: " for more.\"",
+		},
+		{
+			Label:    "UrlRecognizer",
+			Text:     "example.net",
+			Start:    280,
+			End:      291,
+			LContext: "an email to sonia41@",
+			RContext: " for more.\"",
+		},
+	}, "Incorrect entities recognized by the presidio model")
 }
