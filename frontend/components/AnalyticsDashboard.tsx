@@ -62,7 +62,7 @@ export function AnalyticsDashboard({
   const tokenChartData = tags;
   console.log("Tags", tags, tokenChartData);
   return (
-    <div className="space-y-6 w-full w-3/4">
+    <div className="space-y-6 w-full">
       {/* Top Widgets */}
       <div className="grid grid-cols-4 gap-4">
         {/* Progress Widget */}

@@ -607,13 +607,12 @@ export default function NewJobPage() {
           <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
             <div>
               <h2 className="text-2xl font-medium mb-4">Model</h2>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {models.map((model) => (
                   <SourceOption
                     key={model.Id}
                     title={model.Name[0].toUpperCase() + model.Name.slice(1)}
-                    description={`Description: TBD`}
-                    // description={`Type: ${model.Type}`}
+                    description={model.Name === 'basic'? `Description: Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.` : `Description: Our most advanced AI model, requires an enterprise subscription, allows users to perpetually customize fields with user feedback (RLHF based fine-tuning), comes with an advanced dashboard for usage and performance metrics. Reach out to contact@thirdai.com for an enterprise subscription.`}
                     isSelected={selectedModelId === model.Id}
                     onClick={() => setSelectedModelId(model.Id)}
                   />
@@ -624,7 +623,7 @@ export default function NewJobPage() {
             {/* Tags Section - Only show if a model is selected */}
             {selectedModelId && (
               <div>
-                <div className="flex justify-between items-center mb-2">
+                <div className="flex justify-between items-center my-2">
                   <h2 className="text-lg font-medium">Tags</h2>
                   <div className="flex space-x-2">
                     <Button
@@ -828,11 +827,6 @@ export default function NewJobPage() {
                       />
 
                       {patternType === 'string' && (
-                        // <p className="text-xs text-gray-500 mt-1">
-                        //   Example: <code>John Doe</code> for matching an exact
-                        //   name
-                        // </p>
-
                         <div className="text-sm text-gray-500">
                           <p>Example queries:</p>
                           <ul className="list-disc pl-5 mt-1 space-y-1">

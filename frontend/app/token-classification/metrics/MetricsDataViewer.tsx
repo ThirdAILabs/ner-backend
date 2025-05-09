@@ -18,11 +18,7 @@ import {
   ResponsiveContainer,
   LabelList
 } from 'recharts';
-import {
-  nerService,
-  InferenceMetrics,
-  ThroughputMetrics
-} from '@/lib/backend';
+import { nerService, InferenceMetrics, ThroughputMetrics } from '@/lib/backend';
 
 interface MetricsDataViewerProps {
   modelId?: string;
@@ -33,12 +29,8 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
   modelId,
   days
 }) => {
-  const [infMetrics, setInfMetrics] = useState<InferenceMetrics | null>(
-    null
-  );
-  const [tpMetrics, setTpMetrics] = useState<ThroughputMetrics | null>(
-    null
-  );
+  const [infMetrics, setInfMetrics] = useState<InferenceMetrics | null>(null);
+  const [tpMetrics, setTpMetrics] = useState<ThroughputMetrics | null>(null);
   const [infSeries, setInfSeries] = useState<
     { day: number; dataMB: number; tokens: number }[]
   >([]);
@@ -53,18 +45,13 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
     (async () => {
       try {
         // 1) fetch the summary for the full window
-        const summary = await nerService.getInferenceMetrics(
-          modelId,
-          days
-        );
+        const summary = await nerService.getInferenceMetrics(modelId, days);
         if (!mounted) return;
         setInfMetrics(summary);
 
         // 2) fetch throughput summary card
         if (modelId) {
-          const tp = await nerService.getThroughputMetrics(
-            modelId
-          );
+          const tp = await nerService.getThroughputMetrics(modelId);
           if (!mounted) return;
           setTpMetrics(tp);
         } else {
@@ -119,71 +106,73 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
 
   return (
     <>
-      {/* 1) Summary cards */}
-      <Grid container spacing={2} mb={4}>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Typography variant="subtitle2">
+      <div className="space-y-6 w-full w-3/4">
+        <div className="grid grid-cols-4 gap-4">
+          {/* Completed Tasks */}
+          <Card className="flex flex-col justify-between">
+            <CardContent className="flex flex-col items-center justify-center flex-1 pt-6">
+              <div className="relative h-32 w-32">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-2xl font-bold text-gray-700">
+                    {infMetrics.Completed}
+                  </span>
+                </div>
+              </div>
+              <h3 className="mt-auto text-sm text-muted-foreground">
                 Completed Tasks
-              </Typography>
-              <Typography variant="h5">
-                {infMetrics.Completed}
-              </Typography>
+              </h3>
             </CardContent>
           </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Typography variant="subtitle2">
-                In-Progress
-              </Typography>
-              <Typography variant="h5">
-                {infMetrics.InProgress}
-              </Typography>
+
+          {/* In-Progress Tasks */}
+          <Card className="flex flex-col justify-between">
+            <CardContent className="flex flex-col items-center justify-center flex-1 pt-6">
+              <div className="relative h-32 w-32">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-2xl font-bold text-gray-700">
+                    {infMetrics.InProgress}
+                  </span>
+                </div>
+              </div>
+              <h3 className="mt-auto text-sm text-muted-foreground">
+                In-Progress Tasks
+              </h3>
             </CardContent>
           </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Typography variant="subtitle2">
-                Data Processed (MB)
-              </Typography>
-              <Typography variant="h5">
-                {infMetrics.DataProcessedMB.toFixed(2)}
-              </Typography>
+
+          {/* Data Processed */}
+          <Card className="flex flex-col justify-between">
+            <CardContent className="flex flex-col items-center justify-center flex-1 pt-6">
+              <div className="relative h-32 w-32">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-2xl font-bold text-gray-700">
+                  {infMetrics.DataProcessedMB.toFixed(2).toLocaleString()} MB
+                  </span>
+                </div>
+              </div>
+              <h3 className="mt-auto text-sm text-muted-foreground">
+                Data Processed
+              </h3>
             </CardContent>
           </Card>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Card>
-            <CardContent>
-              <Typography variant="subtitle2">
-                Tokens Processed
-              </Typography>
-              <Typography variant="h5">
-                {infMetrics.TokensProcessed}
-              </Typography>
+
+          {/* Tokens Processed */}
+          <Card className="flex flex-col justify-between">
+            <CardContent className="flex flex-col items-center justify-center flex-1 pt-6">
+              <div className="relative h-32 w-32">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-2xl font-bold text-gray-700">
+                  {infMetrics.TokensProcessed.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+              <h3 className="mt-auto text-sm text-muted-foreground">
+              Tokens Processed
+              </h3>
             </CardContent>
           </Card>
-        </Grid>
-        {tpMetrics && (
-          <Grid item xs={12}>
-            <Card>
-              <CardContent>
-                <Typography variant="subtitle2">
-                  Throughput (MB/hr)
-                </Typography>
-                <Typography variant="h4">
-                  {tpMetrics.ThroughputMBPerHour.toFixed(2)}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        )}
-      </Grid>
+        </div>
+      </div>
     </>
   );
 };
