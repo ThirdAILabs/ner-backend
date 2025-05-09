@@ -232,7 +232,7 @@ export default function NewJobPage() {
     setIsGroupDialogOpen(false);
   };
 
-  const handleAddGroupFromDialog = () => {
+  const handleAddGroupFromDialog = async () => {
     setGroupDialogError(null);
 
     if (!groupName.trim() || !groupQuery.trim()) {
@@ -242,6 +242,13 @@ export default function NewJobPage() {
 
     if (!editingGroup && groups[groupName]) {
       setGroupDialogError('Group name must be unique');
+      return;
+    }
+
+    const errorMessage = await nerService.validateGroupDefinition(groupQuery);
+    
+    if (errorMessage) {
+      setGroupDialogError(errorMessage);
       return;
     }
 
