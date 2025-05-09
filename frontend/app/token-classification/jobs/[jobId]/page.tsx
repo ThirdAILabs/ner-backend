@@ -483,7 +483,7 @@ export default function JobDetail() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {selectedSource === 's3' && reportData?.SourceS3Bucket && (
                 <Box
-                  sx={{ p: 2, bgcolor: 'white', borderRadius: 2, boxShadow: 1 }}
+                  sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 2, boxShadow: 1 }}
                 >
                   <h3 className="text-lg font-medium mb-1">S3 Bucket</h3>
                   <p className="text-sm text-gray-600">
@@ -496,7 +496,7 @@ export default function JobDetail() {
 
               {selectedSource === 'local' && (
                 <Box
-                  sx={{ p: 2, bgcolor: 'white', borderRadius: 2, boxShadow: 1 }}
+                  sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 2 }}
                 >
                   <h3 className="text-lg font-medium mb-1">File Upload</h3>
                   {/* <p className="text-sm text-gray-600">File Location...</p> */}
