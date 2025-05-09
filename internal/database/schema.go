@@ -58,7 +58,9 @@ type Report struct {
 	SourceS3Prefix sql.NullString
 	IsUpload       bool
 
-	CreationTime time.Time
+	CreationTime       time.Time
+	CompletedFileCount uint64 `gorm:"default:0"`
+	TotalFileCount     uint64 `gorm:"default:0"`
 
 	Tags       []ReportTag `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
 	CustomTags []CustomTag `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`

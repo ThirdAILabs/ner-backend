@@ -221,6 +221,15 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 		return fmt.Errorf("error updating inference task status to complete: %w", err)
 	}
 
+	delta := len(s3Objects)
+	if err := proc.db.
+		Model(&database.Report{}).
+		Where("id = ?", reportId).
+		UpdateColumn("completed_file_count", gorm.Expr("completed_file_count + ?", delta)).
+		Error; err != nil {
+		slog.Error("could not increment completed_file_count", "report_id", reportId, "delta", delta, "err", err)
+	}
+
 	slog.Info("inference task completed successfully", "report_id", reportId, "task_id", payload.TaskId)
 
 	return nil
@@ -577,6 +586,30 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 	}
 
 	slog.Info("Handling generate tasks", "jobId", task.ReportId, "sourceBucket", task.Report.SourceS3Bucket, "sourcePrefix", task.Report.SourceS3Prefix)
+
+	storageClient, _ := proc.getStorageClient(task.Report)
+	var allObjects []struct {
+		Name string
+		Size int64
+	}
+	for objInfo, err := range storageClient.IterObjects(ctx, task.Report.SourceS3Bucket, task.Report.SourceS3Prefix.String) {
+		if err != nil {
+			return fmt.Errorf("error listing objects: %w", err)
+		}
+		allObjects = append(allObjects, struct {
+			Name string
+			Size int64
+		}{objInfo.Name, objInfo.Size})
+	}
+
+	// 2) persist total file count
+	if err := proc.db.
+		Model(&database.Report{}).
+		Where("id = ?", reportId).
+		UpdateColumn("total_file_count", len(allObjects)).
+		Error; err != nil {
+		slog.Error("failed to update total_file_count", "report_id", reportId, "err", err)
+	}
 
 	targetBytes := task.ChunkTargetBytes
 	if targetBytes <= 0 {
