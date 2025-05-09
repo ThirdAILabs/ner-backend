@@ -69,6 +69,19 @@ interface CreateReportRequest {
   report_name: string;
 }
 
+export interface InferenceMetrics {
+  Completed: number;
+  InProgress: number;
+  DataProcessedMB: number;
+  TokensProcessed: number;
+}
+
+export interface ThroughputMetrics {
+  ModelID: string;
+  ReportID?: string;
+  ThroughputMBPerHour: number;
+}
+
 export const nerService = {
 
   checkHealth: async () => {
@@ -207,6 +220,27 @@ export const nerService = {
       }
     });
     return response.data;
+  },
+
+  getInferenceMetrics: async (
+    modelId?: string,
+    days?: number
+  ): Promise<InferenceMetrics> => {
+    const params: Record<string, any> = {};
+    if (modelId) params.model_id = modelId;
+    if (days !== undefined) params.days = days;
+    const { data } = await axiosInstance.get<InferenceMetrics>('/metrics', { params });
+    return data;
+  },
+
+  getThroughputMetrics: async (
+    modelId: string,
+    reportId?: string
+  ): Promise<ThroughputMetrics> => {
+    const params: Record<string, any> = { model_id: modelId };
+    if (reportId) params.report_id = reportId;
+    const { data } = await axiosInstance.get<ThroughputMetrics>('/metrics/throughput', { params });
+    return data;
   },
 
   validateGroupDefinition: async (groupQuery: string): Promise<string | null> => {
