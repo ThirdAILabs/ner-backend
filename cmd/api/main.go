@@ -69,7 +69,7 @@ func main() {
 	if err := cmd.InitializeCnnNerExtractor(context.Background(), db, s3Client, cfg.ModelBucketName); err != nil {
 		log.Fatalf("Failed to init & upload CNN NER model: %v", err)
 	}
-
+  
 	if err := cmd.InitializeTransformerModel(context.Background(), db, s3Client, cfg.ModelBucketName); err != nil {
 		log.Fatalf("Failed to init & upload Transformer model: %v", err)
 	}
