@@ -40,7 +40,7 @@ func TestRecognize(t *testing.T) {
 			Start:    264,
 			End:      283,
 			LContext: "ll Drop an email to ",
-			RContext: "\tfor more.",
+			RContext: " for more.",
 		},
 		{
 			Label:    "UrlRecognizer",
