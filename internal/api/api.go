@@ -74,6 +74,10 @@ func (s *BackendService) AddRoutes(r chi.Router) {
 		r.Get("/", RestHandler(s.GetInferenceMetrics))
 		r.Get("/throughput", RestHandler(s.GetThroughputMetrics))
 	})
+
+	r.Route("/validate-group-definition", func(r chi.Router) {
+		r.Get("/", RestHandler(s.ValidateGroupDefinition))
+	})
 }
 
 func (s *BackendService) ListModels(r *http.Request) (any, error) {
@@ -808,4 +812,15 @@ func (s *BackendService) GetThroughputMetrics(r *http.Request) (any, error) {
 		ReportID:            reportID,
 		ThroughputMBPerHour: throughputMBPerHour,
 	}, nil
+}
+
+func (s *BackendService) ValidateGroupDefinition(r *http.Request) (any, error) {
+	groupQuery := r.URL.Query().Get("group_query")
+	if groupQuery == "" {
+		return nil, CodedErrorf(http.StatusBadRequest, "group query is required")
+	}
+	if _, err := core.ParseQuery(groupQuery); err != nil {
+		return nil, CodedErrorf(http.StatusUnprocessableEntity, "invalid query '%s': %v", groupQuery, err)
+	}
+	return nil, nil
 }

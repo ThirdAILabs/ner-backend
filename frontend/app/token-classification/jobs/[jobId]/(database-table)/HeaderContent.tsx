@@ -53,7 +53,7 @@ export function HeaderContent({
             </TabsTrigger>
           </TabsList>
         </Tabs>
-        <div className="font-medium pl-2">Query</div>
+        {/* <div className="font-medium pl-2">Query</div>
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <div className="flex-1">
@@ -77,7 +77,7 @@ export function HeaderContent({
                 <Search className="h-5 w-5" />
               )}
             </Button>
-            {/* <SaveButton
+            <SaveButton
               onClick={onSave}
               style={{
                 width: '40px',
@@ -85,9 +85,9 @@ export function HeaderContent({
                 minWidth: '40px',
                 padding: '8px',
               }}
-            /> */}
+            />
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );
