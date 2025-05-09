@@ -391,7 +391,7 @@ export default function Jobs() {
   };
 
   return (
-    <Card sx={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)', bgcolor: 'white' }}>
+    <Card sx={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)', bgcolor: 'grey.100' }}>
       <CardContent sx={{ p: 3 }}>
         <Box
           sx={{
@@ -403,7 +403,7 @@ export default function Jobs() {
         >
           <Typography
             variant="h6"
-            sx={{ fontWeight: 600, fontSize: '1.125rem' }}
+            sx={{ fontWeight: 500, fontSize: '1.25rem' }}
           >
             Reports
           </Typography>

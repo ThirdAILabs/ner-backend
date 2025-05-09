@@ -106,18 +106,27 @@ function PageContents() {
   };
 
   return (
-    <div style={{ backgroundColor: '#F5F7FA', minHeight: '100vh' }}>
+    <div style={{ width:'75%', minHeight: '100vh', margin: '0 auto' }}>
       <header style={{ width: '100%', padding: '16px', borderBottom: '1px solid #e0e0e0' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', marginBottom: '8px', display: 'flex', flexDirection: 'row', gap: '20px' }}>
           <Image
-            src="/thirdai-small.png"
+            src="/thirdai-logo.png"
             alt="ThirdAI Logo"
             width={40}
             height={40}
             style={{ objectFit: 'contain' }}
             priority
           />
-          <Typography variant="h5" title={"Pocket Shield"} sx={{ mt: 0.5 }}>
+          <Typography 
+            variant="h5" 
+            title={"Pocket Shield"} 
+            sx={{ 
+              mt: 0.5,
+              fontFamily: '"Plus Jakarta Sans", sans-serif',
+              fontWeight: 600,
+              color: 'rgb(85,152,229)'
+            }}
+          >
             {"Pocket Shield"}
           </Typography>
         </div>

@@ -6,7 +6,14 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { CheckCircle, ArrowLeft, RefreshCw, Pause, Square, Plus } from 'lucide-react';
+import {
+  CheckCircle,
+  ArrowLeft,
+  RefreshCw,
+  Pause,
+  Square,
+  Plus
+} from 'lucide-react';
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
 import { DatabaseTable } from './(database-table)/DatabaseTable';
 import { nerService } from '@/lib/backend';
@@ -16,10 +23,19 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+  DialogTitle
+} from '@/components/ui/dialog';
+import {
+  Box,
+  Typography,
+  CircularProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
+} from '@mui/material';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Suspense } from 'react';
 
 // Calculate progress based on InferenceTaskStatuses
@@ -60,7 +76,11 @@ const calculateProgress = (report: Report | null): number => {
 
 // Get the total number of processed tokens
 const getProcessedTokens = (report: Report | null): number => {
-  if (!report || !report.InferenceTaskStatuses || !report.InferenceTaskStatuses.COMPLETED) {
+  if (
+    !report ||
+    !report.InferenceTaskStatuses ||
+    !report.InferenceTaskStatuses.COMPLETED
+  ) {
     return 0;
   }
 
@@ -89,9 +109,10 @@ const SourceOption: React.FC<SourceOptionProps> = ({
   <div
     className={`relative p-6 border rounded-md transition-all
       ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200'}
-      ${disabled
-        ? 'opacity-50 cursor-not-allowed bg-gray-50'
-        : 'cursor-pointer hover:border-blue-300'
+      ${
+        disabled
+          ? 'opacity-50 cursor-not-allowed bg-gray-50'
+          : 'cursor-pointer hover:border-blue-300'
       }
     `}
     onClick={() => !disabled && onClick()}
@@ -111,17 +132,24 @@ interface TagProps {
   displayOnly?: boolean;
 }
 
-const Tag: React.FC<TagProps> = ({ tag, selected = true, onClick, custom = false, addNew = false, displayOnly = false }) => {
+const Tag: React.FC<TagProps> = ({
+  tag,
+  selected = true,
+  onClick,
+  custom = false,
+  addNew = false,
+  displayOnly = false
+}) => {
   return (
     <div
-      className={`px-3 py-1 text-sm font-medium rounded-sm ${displayOnly ? "bg-blue-100 text-blue-800" : selected ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"} ${!displayOnly && onClick ? "cursor-pointer" : ""}`}
+      className={`px-3 py-1 text-sm font-medium rounded-sm ${displayOnly ? 'bg-blue-100 text-blue-800' : selected ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'} ${!displayOnly && onClick ? 'cursor-pointer' : ''}`}
       style={{ userSelect: 'none' }}
       onClick={displayOnly ? undefined : onClick}
     >
       {tag}
     </div>
   );
-}
+};
 
 // Group card component
 interface GroupProps {
@@ -203,8 +231,10 @@ const NewTagDialog: React.FC<{
                 placeholder="\b[A-Z]{2}\d{6}\b"
               />
               <p className="text-sm text-gray-500">
-                Example patterns:<br />
-                Phone: \d{3}[-.]?\d{3}[-.]?\d{4}<br />
+                Example patterns:
+                <br />
+                Phone: \d{3}[-.]?\d{3}[-.]?\d{4}
+                <br />
                 Custom ID: [A-Z]{2}\d{6}
               </p>
             </div>
@@ -214,7 +244,13 @@ const NewTagDialog: React.FC<{
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" variant="default" className='bg-blue-400 hover:bg-blue-500'>Create Tag</Button>
+            <Button
+              type="submit"
+              variant="default"
+              className="bg-blue-400 hover:bg-blue-500"
+            >
+              Create Tag
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -232,7 +268,9 @@ function JobDetail() {
 
   // Remove selectedTags state, just keep availableTags
   const [availableTags, setAvailableTags] = useState<string[]>([]);
-  const [availableTagsCount, setAvailableTagsCount] = useState<{ type: string, count: number }[]>([]);
+  const [availableTagsCount, setAvailableTagsCount] = useState<
+    { type: string; count: number }[]
+  >([]);
 
   const [reportData, setReportData] = useState<Report | null>(null);
   const [customTags, setCustomTags] = useState<CustomTag[]>([]);
@@ -242,7 +280,6 @@ function JobDetail() {
   const fetchTags = async () => {
     setIsLoading(true);
     try {
-
       const report = await nerService.getReport(reportId);
 
       setReportData(report as Report);
@@ -273,18 +310,15 @@ function JobDetail() {
         const tagObject = report.TagCounts;
         const tags = Object.keys(report.TagCounts);
         const allTagsCounts = tags.map((tag) => {
-          return (
-            {
-              type: tag,
-              count: tagObject[tag]
-            }
-          )
-        })
+          return {
+            type: tag,
+            count: tagObject[tag]
+          };
+        });
         setAvailableTagsCount(allTagsCounts);
       }
-
     } catch (error) {
-      console.error("Error fetching tags:", error);
+      console.error('Error fetching tags:', error);
     } finally {
       setIsLoading(false);
     }
@@ -295,7 +329,7 @@ function JobDetail() {
 
     // Set up refresh timer
     const timer = setInterval(() => {
-      setLastUpdated(prev => prev + 1);
+      setLastUpdated((prev) => prev + 1);
     }, 1000);
 
     return () => clearInterval(timer);
@@ -310,15 +344,24 @@ function JobDetail() {
   // Define real data loading functions for entities
   const loadRealClassifiedTokenRecords = async (offset = 0, limit = 50) => {
     try {
-      const entities = await nerService.getReportEntities(reportId, { offset, limit });
-      console.log("API entities response:", entities.length > 0 ? entities[0] : "No entities");
+      const entities = await nerService.getReportEntities(reportId, {
+        offset,
+        limit
+      });
+      console.log(
+        'API entities response:',
+        entities.length > 0 ? entities[0] : 'No entities'
+      );
 
       // Extract unique entity types from the API response
-      const uniqueTypes = new Set(entities.map(entity => entity.Label));
-      console.log("Unique entity types in API response:", Array.from(uniqueTypes));
-      console.log("Tag filters available in UI:", availableTags);
+      const uniqueTypes = new Set(entities.map((entity) => entity.Label));
+      console.log(
+        'Unique entity types in API response:',
+        Array.from(uniqueTypes)
+      );
+      console.log('Tag filters available in UI:', availableTags);
 
-      return entities.map(entity => {
+      return entities.map((entity) => {
         const record = {
           token: entity.Text,
           tag: entity.Label,
@@ -329,18 +372,21 @@ function JobDetail() {
           },
           start: entity.Start,
           end: entity.End,
-          groups: reportData?.Groups?.filter(group => group.Objects?.includes(entity.Object)).map(g => g.Name) || []
+          groups:
+            reportData?.Groups?.filter((group) =>
+              group.Objects?.includes(entity.Object)
+            ).map((g) => g.Name) || []
         };
 
         // Log the first transformed record for debugging
         if (entity === entities[0]) {
-          console.log("Transformed record:", record);
+          console.log('Transformed record:', record);
         }
 
         return record;
       });
     } catch (error) {
-      console.error("Error loading entities:", error);
+      console.error('Error loading entities:', error);
       return [];
     }
   };
@@ -351,9 +397,11 @@ function JobDetail() {
   const loadRealObjectRecords = async () => {
     try {
       // Get object previews (transformed from entities)
-      const objectPreviews = await nerService.getReportObjects(reportId, { limit: 100 });
+      const objectPreviews = await nerService.getReportObjects(reportId, {
+        limit: 100
+      });
 
-      return objectPreviews.map(preview => {
+      return objectPreviews.map((preview) => {
         // Create tagged tokens array from the parallel tokens and tags arrays
         const taggedTokens = preview.tokens.map((token, index) => [
           token,
@@ -364,19 +412,20 @@ function JobDetail() {
           taggedTokens,
           sourceObject: preview.object,
           // Get groups that include this object
-          groups: reportData?.Groups?.filter(group =>
-            group.Objects?.includes(preview.object)
-          ).map(g => g.Name) || []
+          groups:
+            reportData?.Groups?.filter((group) =>
+              group.Objects?.includes(preview.object)
+            ).map((g) => g.Name) || []
         };
       });
     } catch (error) {
-      console.error("Error loading object records:", error);
+      console.error('Error loading object records:', error);
       return [];
     }
   };
 
   return (
-    <div className="container px-4 py-8 mx-auto">
+    <div className="container px-4 py-8 w-3/4 mx-auto">
       {/* Header with Back Button and Title */}
       <div className="flex items-center justify-between mb-6">
         <Button variant="outline" size="sm" asChild>
@@ -384,17 +433,15 @@ function JobDetail() {
             <ArrowLeft className="mr-1 h-4 w-4" /> Back to Reports
           </Link>
         </Button>
-
         <h1 className="text-2xl font-medium text-center flex-1">
           {reportData?.ReportName || '[Report Name]'}
         </h1>
-
         {/* Empty div to maintain spacing */}
         <div className="w-[106px]"></div> {/* Width matches the Back button */}
       </div>
 
       {/* Tabs and Controls */}
-      <Tabs value={tabValue} onValueChange={setTabValue} className="w-full">
+      <Tabs value={tabValue} onValueChange={setTabValue}>
         <div className="flex items-center justify-between border-b mb-6">
           <TabsList className="border-0 bg-transparent p-0">
             <TabsTrigger
@@ -418,7 +465,9 @@ function JobDetail() {
           </TabsList>
 
           <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-500">Last updated: {lastUpdated} seconds ago</span>
+            <span className="text-sm text-gray-500">
+              Last updated: {lastUpdated} seconds ago
+            </span>
             <Button variant="ghost" size="icon" onClick={handleRefresh}>
               <RefreshCw className="h-4 w-4" />
             </Button>
@@ -429,34 +478,41 @@ function JobDetail() {
         </div>
 
         <TabsContent value="configuration" className="mt-0">
-          <div className="space-y-8">
-            {/* Source section */}
-            <div>
-              <h2 className="text-lg font-medium mb-4">Source</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {(reportData?.SourceS3Bucket) && <SourceOption
-                  title="S3 Bucket"
-                  description={reportData.SourceS3Bucket === "uploads" ? "" : (reportData.SourceS3Bucket + "/" + reportData?.SourceS3Prefix) || "s3://thirdai-dev/customer-calls/2025/"}
-                  isSelected={selectedSource === 's3'}
-                  disabled={selectedSource === 'local'}
-                  onClick={() => { }}
-                />}
-                <SourceOption
-                  title="File Upload"
-                  description=""
-                  isSelected={selectedSource === 'local'}
-                  disabled={selectedSource === "s3"}
-                  onClick={() => { }}
-                />
-              </div>
+          {/* STARTS */}
+          {/* Source */}
+          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
+            <h2 className="text-2xl font-medium mb-4">Source</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {selectedSource === 's3' && reportData?.SourceS3Bucket && (
+                <Box
+                  sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 2, boxShadow: 1 }}
+                >
+                  <h3 className="text-lg font-medium mb-1">S3 Bucket</h3>
+                  <p className="text-sm text-gray-600">
+                    {reportData.SourceS3Bucket === 'uploads'
+                      ? ''
+                      : `${reportData.SourceS3Bucket}/${reportData?.SourceS3Prefix || ''}`}
+                  </p>
+                </Box>
+              )}
+
+              {selectedSource === 'local' && (
+                <Box
+                  sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 2 }}
+                >
+                  <h3 className="text-lg font-medium mb-1">File Upload</h3>
+                  {/* <p className="text-sm text-gray-600">File Location...</p> */}
+                </Box>
+              )}
             </div>
+          </Box>
 
-            {/* Tags section */}
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-medium">Tags</h2>
-              </div>
-
+          {/* Tags */}
+          <Box
+            sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3, marginTop: 3 }}
+          >
+            <h2 className="text-2xl font-medium mb-4">Tags</h2>
+            <div className="flex justify-between items-center mb-4">
               {isLoading ? (
                 <div className="flex justify-center py-4">
                   <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
@@ -465,29 +521,32 @@ function JobDetail() {
                 <div className="text-gray-500 py-2">No tags available</div>
               ) : (
                 <div className="flex flex-wrap gap-2">
-                  {availableTags.map(tag => (
-                    <Tag
-                      key={tag}
-                      tag={tag}
-                      displayOnly={true}
-                    />
+                  {availableTags.map((tag) => (
+                    <Tag key={tag} tag={tag} displayOnly={true} />
                   ))}
                 </div>
               )}
             </div>
+          </Box>
 
-            {/* Custom Tags section */}
-            <div>
-              <h2 className="text-lg font-medium mb-4">Custom Tags</h2>
-              {isLoading ? (
+          {/* Custom Tags */}
+          <Box
+            sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3, marginTop: 3 }}
+          >
+            <h2 className="text-2xl font-medium mb-4">Tags</h2>
+            <div className="flex justify-between items-center mb-4">
+            {isLoading ? (
                 <div className="flex justify-center py-4">
                   <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
                 </div>
               ) : customTags?.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {customTags.map((customTag) => (
-                    <div key={customTag.name} className="border border-gray-200 rounded-md overflow-hidden">
-                      <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+                    <div
+                      key={customTag.name}
+                      className="border border-gray-300 rounded-md overflow-hidden"
+                    >
+                      <div className="p-4 border-b border-gray-300  flex justify-between items-center">
                         <Tag tag={customTag.name} custom displayOnly={true} />
                       </div>
                       <div className="p-4">
@@ -498,31 +557,46 @@ function JobDetail() {
                 </div>
               ) : (
                 <div className="text-center py-10 bg-gray-50 border border-dashed border-gray-200 rounded-lg w-[400px]">
-                  <p className="text-gray-500">No custom tags defined for this report</p>
+                  <p className="text-gray-500">
+                    No custom tags defined for this report
+                  </p>
                 </div>
               )}
             </div>
+          </Box>
 
-            {/* Groups section */}
-            <div>
-              <h2 className="text-lg font-medium mb-4">Groups</h2>
-              {isLoading ? (
+          {/* Groups */}
+          <Box
+            sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3, marginTop: 3 }}
+          >
+            <h2 className="text-2xl font-medium mb-4">Groups</h2>
+            <div className="flex justify-between items-center mb-4">
+            {isLoading ? (
                 <div className="flex justify-center py-4">
                   <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
                 </div>
               ) : (reportData?.Groups ?? []).length > 0 ? (
                 <div className="grid grid-cols-3 md:grid-cols-3 gap-4">
                   {reportData?.Groups?.map((group) => (
-                    <GroupCard key={group.Id} name={group.Name} definition={group.Query} />
+                    <GroupCard
+                      key={group.Id}
+                      name={group.Name}
+                      definition={group.Query}
+                    />
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-10 bg-gray-50 border border-dashed border-gray-200 rounded-lg w-[400px]">
-                  <p className="text-gray-500">No groups defined for this report</p>
+                  <p className="text-gray-500">
+                    No groups defined for this report
+                  </p>
                 </div>
               )}
             </div>
-          </div>
+          </Box>
+
+          {/* ENDS */}
+         
         </TabsContent>
 
         <TabsContent value="analytics">
@@ -537,7 +611,7 @@ function JobDetail() {
           <DatabaseTable
             loadMoreObjectRecords={loadRealObjectRecords}
             loadMoreClassifiedTokenRecords={loadRealClassifiedTokenRecords}
-            groups={reportData?.Groups?.map(g => g.Name) || mockGroups}
+            groups={reportData?.Groups?.map((g) => g.Name) || mockGroups}
             tags={availableTagsCount}
           />
         </TabsContent>

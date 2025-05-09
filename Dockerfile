@@ -78,6 +78,10 @@ COPY plugin/plugin-python/requirements.txt ./requirements.txt
 RUN --mount=type=cache,id=pip_cache,target=/root/.cache/pip \
     pip install --no-cache-dir \
     -r requirements.txt
+
+# Downloading the model here to avoid grpc plugin emitting download logs
+RUN python -m spacy download en_core_web_lg
+
 # Copy only the necessary artifacts from the builder stage
 COPY --from=backend-builder /app/api /app/api
 COPY --from=backend-builder /app/worker /app/worker

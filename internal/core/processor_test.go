@@ -79,7 +79,7 @@ func TestObjectInference(t *testing.T) {
 	}
 	close(chunks)
 
-	allEntities, groups, tagCount, customTagCount, err := inferenceJobProcessor.runInferenceOnObject(
+	totalTokens, allEntities, groups, tagCount, customTagCount, err := inferenceJobProcessor.runInferenceOnObject(
 		reportId,
 		chunks,
 		model,
@@ -112,4 +112,6 @@ func TestObjectInference(t *testing.T) {
 		"special_token": 1,
 	}, fmt.Sprintf("Expected: %v, got: %v", map[string]uint64{"special_token": 1}, customTagCount))
 
+	expected := int64(len(strings.Fields(testDoc)))
+	assert.Equal(t, expected, totalTokens, "totalTokens should match the number of whitespace-separated tokens in testDoc")
 }
