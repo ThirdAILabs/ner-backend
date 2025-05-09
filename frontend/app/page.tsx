@@ -117,7 +117,16 @@ function PageContents() {
             style={{ objectFit: 'contain' }}
             priority
           />
-          <Typography variant="h5" title={"Pocket Shield"} sx={{ mt: 0.5 }}>
+          <Typography 
+            variant="h5" 
+            title={"Pocket Shield"} 
+            sx={{ 
+              mt: 0.5,
+              fontFamily: '"Plus Jakarta Sans", sans-serif',
+              fontWeight: 600,
+              color: 'rgb(85,152,229)'
+            }}
+          >
             {"Pocket Shield"}
           </Typography>
         </div>
