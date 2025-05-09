@@ -46,7 +46,7 @@ export function DatabaseTable({
     Object.fromEntries(groups.map((group) => [group, true]))
   );
   const [tagFilters, setTagFilters] = useState<Record<string, boolean>>(
-    Object.fromEntries(tags.map((tag) => [tag, true]))
+    Object.fromEntries(tags.map((tag) => [tag.type, true]))
   );
 
   // Load records functions

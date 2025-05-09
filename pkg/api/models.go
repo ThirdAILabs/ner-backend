@@ -119,3 +119,16 @@ type ObjectPreviewResponse struct {
 	Tokens []string `json:"tokens"`
 	Tags   []string `json:"tags"`
 }
+
+type InferenceMetricsResponse struct {
+	Completed       int64   `json:"Completed"`
+	InProgress      int64   `json:"InProgress"`
+	DataProcessedMB float64 `json:"DataProcessedMB"`
+	TokensProcessed int64   `json:"TokensProcessed"`
+}
+
+type ThroughputResponse struct {
+	ModelID             uuid.UUID `json:"ModelId"`
+	ReportID            uuid.UUID `json:"ReportId"`
+	ThroughputMBPerHour float64   `json:"ThroughputMBPerHour"`
+}

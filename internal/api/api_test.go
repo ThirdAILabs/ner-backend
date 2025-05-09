@@ -514,3 +514,115 @@ func TestGetReportPreviews(t *testing.T) {
 	}
 	assert.ElementsMatch(t, want, resp)
 }
+
+func TestGetInferenceMetrics_NoTasks(t *testing.T) {
+	db := createDB(t)
+
+	svc := backend.NewBackendService(db, &mockStorage{}, nil /*chunkTargetBytes*/, 0)
+	router := chi.NewRouter()
+	svc.AddRoutes(router)
+
+	req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var m api.InferenceMetricsResponse
+	err := json.NewDecoder(rec.Body).Decode(&m)
+	require.NoError(t, err)
+
+	assert.Equal(t, int64(0), m.Completed)
+	assert.Equal(t, int64(0), m.InProgress)
+	assert.Equal(t, float64(0), m.DataProcessedMB)
+	assert.Equal(t, int64(0), m.TokensProcessed)
+}
+
+func TestGetInferenceMetrics_WithTasks(t *testing.T) {
+	db := createDB(t)
+	now := time.Now().UTC()
+
+	// A completed task 1 hour ago, 2 MiB, 200 tokens
+	db.Create(&database.InferenceTask{
+		ReportId:       uuid.New(),
+		TaskId:         1,
+		Status:         database.JobCompleted,
+		CreationTime:   now.Add(-1 * time.Hour),
+		CompletionTime: sql.NullTime{Time: now.Add(-1 * time.Hour), Valid: true},
+		TotalSize:      2 * 1024 * 1024,
+		TokenCount:     200,
+	})
+
+	// A running task 30 min ago, 4 MiB, 300 tokens
+	db.Create(&database.InferenceTask{
+		ReportId:     uuid.New(),
+		TaskId:       1,
+		Status:       database.JobRunning,
+		CreationTime: now.Add(-30 * time.Minute),
+		TotalSize:    4 * 1024 * 1024,
+		TokenCount:   300,
+	})
+
+	svc := backend.NewBackendService(db, &mockStorage{}, nil, 0)
+	router := chi.NewRouter()
+	svc.AddRoutes(router)
+
+	req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var m api.InferenceMetricsResponse
+	err := json.NewDecoder(rec.Body).Decode(&m)
+	require.NoError(t, err)
+
+	// We expect 1 completed, 1 in‐progress
+	assert.Equal(t, int64(1), m.Completed)
+	assert.Equal(t, int64(1), m.InProgress)
+	// DataProcessedMB = (2 + 4) MiB = 6.0
+	assert.InEpsilon(t, 6.0, m.DataProcessedMB, 1e-6)
+	// TokensProcessed = 200 + 300 = 500
+	assert.Equal(t, int64(500), m.TokensProcessed)
+	t.Run("GetThroughputMetrics", func(t *testing.T) {
+		modelID := uuid.New()
+		reportID := uuid.New()
+		require.NoError(t, db.Create(&database.Model{
+			Id:     modelID,
+			Name:   "M",
+			Type:   "regex",
+			Status: database.ModelTrained,
+		}).Error)
+		require.NoError(t, db.Create(&database.Report{
+			Id:      reportID,
+			ModelId: modelID,
+		}).Error)
+
+		now := time.Now().UTC()
+		require.NoError(t, db.Create(&database.InferenceTask{
+			ReportId:       reportID,
+			TaskId:         42,
+			Status:         database.JobCompleted,
+			CreationTime:   now.Add(-1 * time.Hour),
+			StartTime:      sql.NullTime{Time: now.Add(-1 * time.Hour), Valid: true},
+			CompletionTime: sql.NullTime{Time: now, Valid: true},
+			TotalSize:      1 * 1024 * 1024,
+			TokenCount:     0,
+		}).Error)
+
+		url := fmt.Sprintf(
+			"/metrics/throughput?model_id=%s&report_id=%s",
+			modelID.String(), reportID.String(),
+		)
+		req := httptest.NewRequest(http.MethodGet, url, nil)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var resp api.ThroughputResponse
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+		assert.Equal(t, modelID, resp.ModelID)
+		assert.Equal(t, reportID, resp.ReportID)
+		assert.InEpsilon(t, 1.0, resp.ThroughputMBPerHour, 1e-6)
+	})
+}

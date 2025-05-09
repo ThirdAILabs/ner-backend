@@ -374,7 +374,7 @@ export default function JobDetail() {
   };
 
   return (
-    <div className="container px-4 py-8 mx-auto">
+    <div className="container px-4 py-8 w-3/4 mx-auto">
       {/* Header with Back Button and Title */}
       <div className="flex items-center justify-between mb-6">
         <Button variant="outline" size="sm" asChild>
@@ -392,7 +392,7 @@ export default function JobDetail() {
       </div>
 
       {/* Tabs and Controls */}
-      <Tabs value={tabValue} onValueChange={setTabValue} className="w-full">
+      <Tabs value={tabValue} onValueChange={setTabValue}>
         <div className="flex items-center justify-between border-b mb-6">
           <TabsList className="border-0 bg-transparent p-0">
             <TabsTrigger
