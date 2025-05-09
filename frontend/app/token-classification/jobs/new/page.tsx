@@ -271,14 +271,18 @@ export default function NewJobPage() {
     setDialogError(null);
 
     if (!customTagName.trim() || !customTagPattern.trim()) {
-      setError('Custom tag name and pattern are required');
+      setDialogError('Custom tag name and pattern are required');
       return;
     }
 
     for (let index = 0; index < customTags.length; index++) {
       const thisTag = customTags[index];
       if (thisTag.name === customTagName.toUpperCase()) {
-        setError('Custom Tag name must be unique');
+        setDialogError('Custom Tag name must be unique');
+        return;
+      }
+      if (thisTag.pattern === customTagPattern) {
+        setDialogError('Custom Tag pattern must be unique');
         return;
       }
     }
