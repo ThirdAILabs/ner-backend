@@ -7,10 +7,10 @@ const { program } = require('commander');
 // Project paths
 const rootDir = path.join(__dirname, '..');
 const binDir = path.join(rootDir, 'bin');
-const appDir = path.join(rootDir, 'dist', 'mac', 'NER Electron App.app');
+const appDir = path.join(rootDir, 'dist', 'mac', 'PocketShield.app');
 const resourcesDir = path.join(appDir, 'Contents', 'Resources');
 const macosDir = path.join(appDir, 'Contents', 'MacOS');
-const appExecutable = path.join(macosDir, 'NER Electron App');
+const appExecutable = path.join(macosDir, 'PocketShield');
 
 // Define program and commands
 program

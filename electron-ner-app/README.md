@@ -1,4 +1,4 @@
-# NER Electron App
+# PocketShield
 
 This is an Electron application for Named Entity Recognition that migrates the functionality from the Next.js frontend app.
 

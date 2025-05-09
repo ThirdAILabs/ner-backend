@@ -120,9 +120,9 @@ function ensureBackendStarted() {
             `Failed to start the backend service. The application may not function correctly.
             
 Please try running the install script:
-sudo mkdir -p "/Applications/NER Electron App.app/Contents/Resources/bin"
-sudo cp "/path/to/main" "/Applications/NER Electron App.app/Contents/Resources/bin/main"
-sudo chmod 755 "/Applications/NER Electron App.app/Contents/Resources/bin/main"`);
+sudo mkdir -p "/Applications/PocketShield.app/Contents/Resources/bin"
+sudo cp "/path/to/main" "/Applications/PocketShield.app/Contents/Resources/bin/main"
+sudo chmod 755 "/Applications/PocketShield.app/Contents/Resources/bin/main"`);
         }
       }
     } catch (error) {

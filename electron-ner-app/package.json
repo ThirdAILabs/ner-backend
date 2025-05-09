@@ -79,7 +79,7 @@
   },
   "build": {
     "appId": "com.electron.ner-app",
-    "productName": "NER Electron App",
+    "productName": "PocketShield",
     "directories": {
       "output": "dist",
       "buildResources": "build"

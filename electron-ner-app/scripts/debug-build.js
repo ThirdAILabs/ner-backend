@@ -88,7 +88,7 @@ switch (command) {
       process.exit(1);
     }
     
-    const packagedBackend = path.join(appMacDir, 'NER Electron App.app', 'Contents', 'Resources', 'bin', 'main');
+    const packagedBackend = path.join(appMacDir, 'PocketShield.app', 'Contents', 'Resources', 'bin', 'main');
     
     if (!fs.existsSync(packagedBackend)) {
       console.error('❌ Backend not found in package:', packagedBackend);
@@ -125,7 +125,7 @@ switch (command) {
       process.exit(1);
     }
     
-    const appPath = path.join(appMacDir, 'NER Electron App.app', 'Contents', 'MacOS', 'NER Electron App');
+    const appPath = path.join(appMacDir, 'PocketShield.app', 'Contents', 'MacOS', 'PocketShield');
     
     if (!fs.existsSync(appPath)) {
       console.error('❌ App executable not found:', appPath);

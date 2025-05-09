@@ -7,8 +7,8 @@ const { execSync } = require('child_process');
 const rootDir = path.join(__dirname, '..');
 const distDir = path.join(rootDir, 'dist');
 const sourceBackend = path.join(rootDir, '..', 'main');
-const dmgFile = path.join(distDir, 'NER Electron App-1.0.0.dmg');
-const macAppDir = path.join(distDir, 'mac', 'NER Electron App.app');
+const dmgFile = path.join(distDir, 'PocketShield-1.0.0.dmg');
+const macAppDir = path.join(distDir, 'mac', 'PocketShield.app');
 const targetBinDir = path.join(macAppDir, 'Contents', 'Resources', 'bin');
 
 console.log('Fixing backend binary in DMG package...');
@@ -41,9 +41,9 @@ if (fs.existsSync(macAppDir)) {
 if (fs.existsSync(dmgFile)) {
   console.log('Found DMG file, but we cannot modify it directly.');
   console.log('Please install the app and run the following if needed:');
-  console.log(`sudo mkdir -p "/Applications/NER Electron App.app/Contents/Resources/bin"`);
-  console.log(`sudo cp "${sourceBackend}" "/Applications/NER Electron App.app/Contents/Resources/bin/main"`);
-  console.log(`sudo chmod 755 "/Applications/NER Electron App.app/Contents/Resources/bin/main"`);
+  console.log(`sudo mkdir -p "/Applications/PocketShield.app/Contents/Resources/bin"`);
+  console.log(`sudo cp "${sourceBackend}" "/Applications/PocketShield.app/Contents/Resources/bin/main"`);
+  console.log(`sudo chmod 755 "/Applications/PocketShield.app/Contents/Resources/bin/main"`);
 } else {
   console.log('⚠️ DMG file not found. Only directory package was updated.');
 }
@@ -53,9 +53,9 @@ const installScript = path.join(distDir, 'install-backend.sh');
 const scriptContent = `#!/bin/bash
 # Script to install backend binary into the application
 echo "Installing backend binary into the application..."
-sudo mkdir -p "/Applications/NER Electron App.app/Contents/Resources/bin"
-sudo cp "${sourceBackend}" "/Applications/NER Electron App.app/Contents/Resources/bin/main"
-sudo chmod 755 "/Applications/NER Electron App.app/Contents/Resources/bin/main"
+sudo mkdir -p "/Applications/PocketShield.app/Contents/Resources/bin"
+sudo cp "${sourceBackend}" "/Applications/PocketShield.app/Contents/Resources/bin/main"
+sudo chmod 755 "/Applications/PocketShield.app/Contents/Resources/bin/main"
 echo "Backend installed successfully!"
 `;
 

@@ -81,7 +81,7 @@ function getBackendPath() {
   // Primary location for packaged apps with absolute path for GUI launches
   const primaryLocations = [
     path.join(resourcesDir, 'bin', 'main'),
-    '/Applications/NER Electron App.app/Contents/Resources/bin/main'
+    '/Applications/PocketShield.app/Contents/Resources/bin/main'
   ];
   
   for (const primaryLocation of primaryLocations) {
@@ -113,9 +113,9 @@ function getBackendPath() {
   // Last resort - search common paths
   console.log('Searching standard macOS application paths...');
   const standardMacPaths = [
-    '/Applications/NER Electron App.app/Contents/Resources/bin/main',
-    '/Applications/NER Electron App.app/Contents/MacOS/bin/main',
-    path.join(process.env.HOME || '', 'Applications/NER Electron App.app/Contents/Resources/bin/main')
+    '/Applications/PocketShield.app/Contents/Resources/bin/main',
+    '/Applications/PocketShield.app/Contents/MacOS/bin/main',
+    path.join(process.env.HOME || '', 'Applications/PocketShield.app/Contents/Resources/bin/main')
   ];
   
   for (const stdPath of standardMacPaths) {
