@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -8,6 +10,9 @@ import (
 	"ner-backend/internal/core"
 	"ner-backend/internal/database"
 	"ner-backend/internal/licensing"
+	"ner-backend/internal/storage"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -61,6 +66,83 @@ func InitializePresidioModel(db *gorm.DB) {
 	}).FirstOrCreate(&model).Error; err != nil {
 		log.Fatalf("Failed to create model record: %v", err)
 	}
+}
+
+func InitializeCnnNerExtractor(ctx context.Context, db *gorm.DB, s3p *storage.S3Provider, bucket string) error {
+	var model database.Model
+	err := db.
+		Where("name = ?", "advance").
+		Preload("Tags").
+		First(&model).Error
+
+	isNew := errors.Is(err, gorm.ErrRecordNotFound)
+	if err != nil && !isNew {
+		return fmt.Errorf("error querying model: %w", err)
+	}
+
+	if isNew {
+		model.Id = uuid.New()
+		model.Name = "advance"
+		model.Type = "cnn"
+		model.Status = database.ModelTrained
+		model.CreationTime = time.Now()
+
+		modelTags := []string{
+			"ADDRESS", "CARD_NUMBER", "COMPANY", "CREDIT_SCORE", "DATE",
+			"EMAIL", "ETHNICITY", "GENDER", "ID_NUMBER", "LICENSE_PLATE",
+			"LOCATION", "NAME", "PHONENUMBER", "SERVICE_CODE", "SEXUAL_ORIENTATION",
+			"SSN", "URL", "VIN", "O",
+		}
+		for _, tag := range modelTags {
+			model.Tags = append(model.Tags, database.ModelTag{
+				ModelId: model.Id,
+				Tag:     tag,
+			})
+		}
+
+		if err := db.Create(&model).Error; err != nil {
+			return fmt.Errorf("failed to create model record: %w", err)
+		}
+	}
+
+	s3Prefix := model.Id.String() + "/"
+
+	// HOST_MODEL_DIR can be used to pass models if backend is running locally
+	modelBaseDir := os.Getenv("HOST_MODEL_DIR")
+	if modelBaseDir == "" {
+		modelBaseDir = "/app/models"
+	}
+	localDir := filepath.Join(modelBaseDir, "cnn_model")
+
+	info, err := os.Stat(localDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			slog.Warn("local model dir does not exist, skipping upload", "dir", localDir)
+			return nil
+		}
+		return fmt.Errorf("failed to stat local model dir %s: %w", localDir, err)
+	}
+	if !info.IsDir() {
+		slog.Warn("local model path exists but is not a directory, skipping upload", "path", localDir)
+		return nil
+	}
+
+	objs, err := s3p.ListObjects(ctx, bucket, s3Prefix)
+	if err != nil {
+		slog.Error("failed to list S3 objects for model", "model_id", model.Id, "error", err)
+		// we could choose to abort or continue; here we continue and try upload
+	} else if len(objs) > 0 {
+		slog.Info("model already uploaded to S3, skipping upload", "model_id", model.Id)
+		return nil
+	}
+
+	if err := s3p.UploadDir(ctx, bucket, model.Id.String(), localDir); err != nil {
+		database.UpdateModelStatus(ctx, db, model.Id, database.ModelFailed) //nolint:errcheck
+		slog.Warn("failed to upload model to S3", "model_id", model.Id, "error", err)
+		return nil
+	}
+	slog.Info("successfully uploaded model to S3", "model_id", model.Id)
+	return nil
 }
 
 func CreateLicenseVerifier(db *gorm.DB, license string) licensing.LicenseVerifier {

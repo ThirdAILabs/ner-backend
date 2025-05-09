@@ -40,7 +40,7 @@ var modelLoaders = map[string]modelLoader{
 		configJSON := fmt.Sprintf("{\"model_path\":\"%s\",\"threshold\": 0.5}", path)
 		return python.LoadPythonModel(
 			os.Getenv("PYTHON_EXECUTABLE_PATH"),
-			"plugin/plugin-python/plugin.py",
+			os.Getenv("PYTHON_PLUGIN_PATH"),
 			"python_combined_ner_model",
 			configJSON,
 		)
@@ -55,7 +55,7 @@ var modelLoaders = map[string]modelLoader{
 		configJSON := fmt.Sprintf("{\"model_path\":\"%s/cnn_model.pth\"}", path)
 		return python.LoadPythonModel(
 			os.Getenv("PYTHON_EXECUTABLE_PATH"),
-			"plugin/plugin-python/plugin.py",
+			os.Getenv("PYTHON_PLUGIN_PATH"),
 			"python_cnn_ner_model",
 			configJSON,
 		)

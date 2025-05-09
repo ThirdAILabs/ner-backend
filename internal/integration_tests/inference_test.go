@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"mime/multipart"
+	"ner-backend/cmd"
 	backend "ner-backend/internal/api"
 	"ner-backend/internal/core"
 	"ner-backend/internal/database"
@@ -236,7 +237,9 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 }
 
 func TestInferenceWorkflowForCNN(t *testing.T) {
-	os.Setenv("HOST_MODEL_DIR", "/share/ner/model")
+	os.Setenv("HOST_MODEL_DIR", "/Users/pratikqpranav/ThirdAI/models")
+	os.Setenv("PYTHON_EXECUTABLE_PATH", "/Users/pratikqpranav/ThirdAI/venv/bin/python3")
+	os.Setenv("PYTHON_PLUGIN_PATH", "/Users/pratikqpranav/ThirdAI/ner-backend/plugin/plugin-python/plugin.py")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
@@ -247,6 +250,8 @@ func TestInferenceWorkflowForCNN(t *testing.T) {
 		S3AccessKeyID:     minioUsername,
 		S3SecretAccessKey: minioPassword,
 	})
+
+	err = s3.CreateBucket(context.Background(), modelBucket)
 	require.NoError(t, err)
 
 	db := createDB(t)
@@ -261,6 +266,8 @@ func TestInferenceWorkflowForCNN(t *testing.T) {
 
 	go worker.Start()
 	defer worker.Stop()
+
+	cmd.InitializeCnnNerExtractor(ctx, db, s3, modelBucket)
 
 	var model database.Model
 
