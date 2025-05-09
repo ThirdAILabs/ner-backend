@@ -827,11 +827,6 @@ export default function NewJobPage() {
                       />
 
                       {patternType === 'string' && (
-                        // <p className="text-xs text-gray-500 mt-1">
-                        //   Example: <code>John Doe</code> for matching an exact
-                        //   name
-                        // </p>
-
                         <div className="text-sm text-gray-500">
                           <p>Example queries:</p>
                           <ul className="list-disc pl-5 mt-1 space-y-1">
