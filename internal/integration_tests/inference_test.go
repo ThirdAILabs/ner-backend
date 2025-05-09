@@ -63,10 +63,10 @@ func reportIsComplete(report api.Report) bool {
 		report.InferenceTaskStatuses[database.JobRunning].TotalTasks == 0
 }
 
-func waitForReport(t *testing.T, router http.Handler, jobId uuid.UUID) api.Report {
-	for i := 0; i < 20; i++ {
+func waitForReport(t *testing.T, router http.Handler, jobId uuid.UUID, timeoutSeconds int) api.Report {
+	for i := 0; i < timeoutSeconds; i++ {
 		var report api.Report
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(1 * time.Second)
 		err := httpRequest(router, "GET", fmt.Sprintf("/reports/%s", jobId), nil, &report)
 		require.NoError(t, err)
 
@@ -139,7 +139,7 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 		},
 	})
 
-	report := waitForReport(t, router, reportId)
+	report := waitForReport(t, router, reportId, 10)
 
 	assert.Equal(t, modelId, report.Model.Id)
 	assert.Equal(t, dataBucket, report.SourceS3Bucket)
@@ -226,7 +226,7 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 		Tags:       []string{"phone", "email"},
 	})
 
-	report := waitForReport(t, router, reportId)
+	report := waitForReport(t, router, reportId, 10)
 
 	assert.Equal(t, modelId, report.Model.Id)
 	assert.Equal(t, "uploads", report.SourceS3Bucket)
@@ -236,10 +236,21 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 	assert.Equal(t, 2, len(entities))
 }
 
-func TestInferenceWorkflowForCNN(t *testing.T) {
-	os.Setenv("HOST_MODEL_DIR", "/Users/pratikqpranav/ThirdAI/models")
-	os.Setenv("PYTHON_EXECUTABLE_PATH", "/Users/pratikqpranav/ThirdAI/venv/bin/python3")
-	os.Setenv("PYTHON_PLUGIN_PATH", "/Users/pratikqpranav/ThirdAI/ner-backend/plugin/plugin-python/plugin.py")
+func TestInferenceWorkflowForModels(t *testing.T) {
+	t.Run("CNN Model", func(t *testing.T) {
+		RunInferenceWorkflowForModel(t, "cnn")
+	})
+
+	t.Run("Transformer Model", func(t *testing.T) {
+		RunInferenceWorkflowForModel(t, "transformer")
+	})
+}
+
+func RunInferenceWorkflowForModel(t *testing.T, modelName string) {
+	os.Setenv("HOST_MODEL_DIR", "/home/ubuntu/shubh/ner/misc/ner-models")
+	os.Setenv("PYTHON_EXECUTABLE_PATH", "/opt/conda/envs/pii-presidio-3.10/bin/python3")
+	os.Setenv("PYTHON_PLUGIN_PATH", "/home/ubuntu/shubh/ner/ner-backend/plugin/plugin-python/plugin.py")
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
@@ -250,7 +261,7 @@ func TestInferenceWorkflowForCNN(t *testing.T) {
 		S3AccessKeyID:     minioUsername,
 		S3SecretAccessKey: minioPassword,
 	})
-
+	require.NoError(t, err)
 	err = s3.CreateBucket(context.Background(), modelBucket)
 	require.NoError(t, err)
 
@@ -267,17 +278,24 @@ func TestInferenceWorkflowForCNN(t *testing.T) {
 	go worker.Start()
 	defer worker.Stop()
 
-	cmd.InitializeCnnNerExtractor(ctx, db, s3, modelBucket)
-
 	var model database.Model
-
-	db_err := db.Where("name = ?", "advance").First(&model).Error
+	var db_err error
+	var init_err error
+	if modelName == "cnn" {
+		init_err = cmd.InitializeCnnNerExtractor(ctx, db, s3, modelBucket)
+		require.NoError(t, init_err)
+		db_err = db.Where("name = ?", "advance").First(&model).Error
+	} else if modelName == "transformer" {
+		init_err = cmd.InitializeTransformerModel(ctx, db, s3, modelBucket)
+		require.NoError(t, init_err)
+		db_err = db.Where("name = ?", "ultra").First(&model).Error
+	}
 	require.NoError(t, db_err)
 
 	uploadId := createUpload(t, router)
 
 	reportId := createReport(t, router, api.CreateReportRequest{
-		ReportName: "test-report-cnn",
+		ReportName: fmt.Sprintf("test-report-%s", modelName),
 		ModelId:    model.Id,
 		UploadId:   uploadId,
 		Tags: []string{"ADDRESS", "CARD_NUMBER", "COMPANY", "CREDIT_SCORE", "DATE",
@@ -286,12 +304,14 @@ func TestInferenceWorkflowForCNN(t *testing.T) {
 			"SEXUAL_ORIENTATION", "SSN", "URL", "VIN", "O"},
 	})
 
-	report := waitForReport(t, router, reportId)
+	report := waitForReport(t, router, reportId, 180)
 
 	assert.Equal(t, model.Id, report.Model.Id)
 	assert.Equal(t, "uploads", report.SourceS3Bucket)
 	assert.Equal(t, uploadId.String(), report.SourceS3Prefix)
 
 	entities := getReportEntities(t, router, reportId)
+
 	fmt.Println(entities)
+	assert.Greater(t, len(entities), 0)
 }
