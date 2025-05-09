@@ -1,6 +1,13 @@
 import argparse
 import json
 import sys
+import logging
+
+# grpc reads from stdout and hence, if any import prints anything, it will break the plugin
+# we redirect stdout to stderr to avoid this issue
+sys.stdout = sys.stderr
+logging.disable(logging.WARNING)
+
 import time
 from concurrent import futures
 from typing import Dict
@@ -55,9 +62,11 @@ def serve(model_name: str, **kwargs):
     port = server.add_insecure_port("127.0.0.1:0")
     server.start()
 
-    # Output information using the dynamically assigned port
-    print(f"1|1|tcp|127.0.0.1:{port}|grpc")
-    sys.stdout.flush()
+    # flush the port to the original stdout
+    # this port will be read by the main worker process to connect to the plugin
+    hs = f"1|1|tcp|127.0.0.1:{port}|grpc\n"
+    sys.__stdout__.write(hs)
+    sys.__stdout__.flush()
 
     try:
         while True:
