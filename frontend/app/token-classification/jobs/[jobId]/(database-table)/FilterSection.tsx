@@ -1,9 +1,11 @@
 import { useRef, useState } from 'react';
 import { ChevronDown, ChevronUp, ListFilter } from 'lucide-react';
 
+import { Tag } from '@/components/AnalyticsDashboard';
+
 interface FilterSectionProps {
   groups: string[];
-  tags: string[];
+  tags: Tag[];
   groupFilters: Record<string, boolean>;
   tagFilters: Record<string, boolean>;
   onGroupFilterChange: (filterKey: string) => void;
@@ -24,7 +26,7 @@ export function FilterSection({
   onSelectAllGroups,
   onDeselectAllGroups,
   onSelectAllTags,
-  onDeselectAllTags,
+  onDeselectAllTags
 }: FilterSectionProps) {
   const [isGroupsExpanded, setIsGroupsExpanded] = useState(true);
   const [isTagsExpanded, setIsTagsExpanded] = useState(true);
@@ -46,9 +48,7 @@ export function FilterSection({
       <div className="sticky top-0 p-6 pb-2 pt-4 z-10">
         <div className="flex items-center gap-2">
           <ListFilter className="h-5 w-5" />
-          <span className="flex font-medium h-[40px] items-center">
-            Filter
-          </span>
+          <span className="flex font-medium h-[40px] items-center">Filter</span>
         </div>
       </div>
 
@@ -60,7 +60,7 @@ export function FilterSection({
         style={{
           boxShadow: showShadow
             ? 'inset 0 4px 6px -4px rgba(0, 0, 0, 0.1)'
-            : 'none',
+            : 'none'
         }}
       >
         <div className="p-6 pt-4 space-y-6">
@@ -142,17 +142,20 @@ export function FilterSection({
                   </button>
                 </div>
                 <div className="space-y-2">
-                  {tags.map((filter) => (
-                    <label key={filter} className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={tagFilters[filter]}
-                        onChange={() => onTagFilterChange(filter)}
-                        className="mr-2"
-                      />
-                      {filter}
-                    </label>
-                  ))}
+                  {[...tags]
+                    .filter((filter) => filter.count > 0)
+                    .sort((a, b) => b.count - a.count)
+                    .map((filter) => (
+                      <label key={filter.type} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={tagFilters[filter.type]}
+                          onChange={() => onTagFilterChange(filter.type)}
+                          className="mr-2"
+                        />
+                        {filter.type} ({filter.count})
+                      </label>
+                    ))}
                 </div>
               </>
             )}
@@ -161,4 +164,4 @@ export function FilterSection({
       </div>
     </div>
   );
-} 
+}

@@ -46,7 +46,7 @@ export function DatabaseTable({
     Object.fromEntries(groups.map((group) => [group, true]))
   );
   const [tagFilters, setTagFilters] = useState<Record<string, boolean>>(
-    Object.fromEntries(tags.map((tag) => [tag, true]))
+    Object.fromEntries(tags.map((tag) => [tag.type, true]))
   );
 
   // Load records functions
@@ -269,11 +269,11 @@ export function DatabaseTable({
   };
 
   const handleSelectAllTags = () => {
-    setTagFilters(Object.fromEntries(tags.map((tag) => [tag, true])));
+    setTagFilters(Object.fromEntries(tags.map((tag) => [tag.type, true])));
   };
 
   const handleDeselectAllTags = () => {
-    setTagFilters(Object.fromEntries(tags.map((tag) => [tag, false])));
+    setTagFilters(Object.fromEntries(tags.map((tag) => [tag.type, false])));
   };
 
   // Handle view mode changes

@@ -146,6 +146,9 @@ func (proc *TaskProcessor) getStorageClient(report *database.Report) (storage.Pr
 func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload messaging.InferenceTaskPayload) error {
 
 	reportId := payload.ReportId
+	taskId := payload.TaskId
+
+	slog.Info("processing inference task", "report_id", reportId, "task_id", payload.TaskId)
 
 	var task database.InferenceTask
 	if err := proc.db.Preload("Report").Preload("Report.Model").Preload("Report.Tags").Preload("Report.CustomTags").Preload("Report.Groups").First(&task, "report_id = ? AND task_id = ?", reportId, payload.TaskId).Error; err != nil {
@@ -159,7 +162,15 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 	}
 
 	slog.Info("processing inference task", "report_id", reportId, "task_id", payload.TaskId)
-	database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobRunning) //nolint:errcheck
+	if err := proc.db.
+		Model(&database.InferenceTask{}).
+		Where("report_id = ? AND task_id = ?", reportId, taskId).
+		Updates(map[string]interface{}{
+			"status":     database.JobRunning,
+			"start_time": time.Now().UTC(),
+		}).Error; err != nil {
+		slog.Error("error marking task as running", "error", err)
+	}
 
 	if err := proc.licensing.VerifyLicense(ctx); err != nil {
 		slog.Error("license verification failed", "error", err)
@@ -190,12 +201,20 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 		return err
 	}
 
-	workerErr := proc.runInferenceOnBucket(ctx, task.ReportId, storage, task.Report.Model.Id, task.Report.Model.Type, tags, customTags, groupToQuery, task.Report.SourceS3Bucket, s3Objects)
+	totalTokens, workerErr := proc.runInferenceOnBucket(ctx, task.ReportId, storage, task.Report.Model.Id, task.Report.Model.Type, tags, customTags, groupToQuery, task.Report.SourceS3Bucket, s3Objects)
 	if workerErr != nil {
 		slog.Error("error running inference task", "report_id", reportId, "task_id", payload.TaskId, "error", workerErr)
 		database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobFailed) // nolint:errcheck
 		database.SaveReportError(ctx, proc.db, reportId, workerErr.Error())
 		return fmt.Errorf("error running inference task: %w", workerErr)
+	}
+
+	if err := proc.db.
+		Model(&database.InferenceTask{}).
+		Where("report_id = ? AND task_id = ?", reportId, taskId).
+		Update("token_count", totalTokens).
+		Error; err != nil {
+		slog.Error("unable to update token_count", "report_id", reportId, "task_id", taskId, "error", err)
 	}
 
 	if err := database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobCompleted); err != nil {
@@ -242,12 +261,13 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 	groupToQuery map[uuid.UUID]string,
 	bucket string,
 	objects []string,
-) error {
+) (int64, error) {
+	var totalTokens int64
 	parser := NewDefaultParser()
 
 	model, err := proc.loadModel(ctx, modelId, modelType)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer model.Release()
 
@@ -255,7 +275,7 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 	for groupId, query := range groupToQuery {
 		filter, err := ParseQuery(query)
 		if err != nil {
-			return fmt.Errorf("error loading model: %w", err)
+			return 0, fmt.Errorf("error loading model: %w", err)
 		}
 		groupToFilter[groupId] = filter
 	}
@@ -264,7 +284,7 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 	for tag, pat := range customTags {
 		re, err := regexp.Compile(pat)
 		if err != nil {
-			return fmt.Errorf("error compiling regex for tag %s: %w", tag, err)
+			return 0, fmt.Errorf("error compiling regex for tag %s: %w", tag, err)
 		}
 		customTagsRe[tag] = re
 	}
@@ -294,7 +314,7 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 			continue
 		}
 
-		entities, groups, objTagCount, objCustomTagCount, err := proc.runInferenceOnObject(reportId, object.chunks, model, tags, customTagsRe, groupToFilter, object.object)
+		tokens, entities, groups, objTagCount, objCustomTagCount, err := proc.runInferenceOnObject(reportId, object.chunks, model, tags, customTagsRe, groupToFilter, object.object)
 		if err != nil {
 			slog.Error("error processing object", "object", object, "error", err)
 			objectErrorCnt++
@@ -325,13 +345,14 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 			continue
 		}
 
+		totalTokens += tokens
 	}
 
 	if objectErrorCnt > 0 {
-		return fmt.Errorf("errors while processing %d/%d objects", objectErrorCnt, len(objects))
+		return 0, fmt.Errorf("errors while processing %d/%d objects", objectErrorCnt, len(objects))
 	}
 
-	return nil
+	return totalTokens, nil
 }
 
 func (proc *TaskProcessor) getModelDir(modelId uuid.UUID) string {
@@ -428,7 +449,9 @@ func (proc *TaskProcessor) runInferenceOnObject(
 	customTags map[string]*regexp.Regexp,
 	groupFilter map[uuid.UUID]Filter,
 	object string) (
-	[]database.ObjectEntity, []database.ObjectGroup, map[string]uint64, map[string]uint64, error) {
+	int64, []database.ObjectEntity, []database.ObjectGroup, map[string]uint64, map[string]uint64, error) {
+	var tokens int64
+
 	labelToEntities := make(map[string][]types.Entity)
 
 	const previewLimit = 1000
@@ -439,7 +462,7 @@ func (proc *TaskProcessor) runInferenceOnObject(
 
 	for chunk := range chunks {
 		if chunk.Error != nil {
-			return nil, nil, nil, nil, fmt.Errorf("error parsing document: %w", chunk.Error)
+			return 0, nil, nil, nil, nil, fmt.Errorf("error parsing document: %w", chunk.Error)
 		}
 
 		start := time.Now()
@@ -451,7 +474,7 @@ func (proc *TaskProcessor) runInferenceOnObject(
 			"duration", duration,
 		)
 		if err != nil {
-			return nil, nil, nil, nil, fmt.Errorf("error running model inference: %w", err)
+			return 0, nil, nil, nil, nil, fmt.Errorf("error running model inference: %w", err)
 		}
 
 		for _, entity := range chunkEntities {
@@ -488,6 +511,9 @@ func (proc *TaskProcessor) runInferenceOnObject(
 				previewTokens = append(previewTokens, toks...)
 			}
 		}
+
+		toks := strings.Fields(chunk.Text)
+		tokens += int64(len(toks))
 	}
 
 	previewText := strings.Join(previewTokens, " ")
@@ -522,11 +548,13 @@ func (proc *TaskProcessor) runInferenceOnObject(
 		}
 	}
 
-	return allEntities, groups, tagCount, customTagCount, nil
+	return tokens, allEntities, groups, tagCount, customTagCount, nil
 }
 
 func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload messaging.ShardDataPayload) error {
 	reportId := payload.ReportId
+
+	slog.Info("processing shard data task", "report_id", reportId)
 
 	var task database.ShardDataTask
 	if err := proc.db.Preload("Report").First(&task, "report_id = ?", reportId).Error; err != nil {
@@ -557,6 +585,8 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 	}
 
 	createInferenceTask := func(ctx context.Context, taskId int, chunkKeys []string, chunkSize int64) error {
+		slog.Info("Creating inference task", "report_id", reportId, "task_id", taskId, "chunk_size", chunkSize)
+
 		task := database.InferenceTask{
 			ReportId:     reportId,
 			TaskId:       taskId,
@@ -581,6 +611,8 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 			database.UpdateShardDataTaskStatus(ctx, proc.db, reportId, database.JobFailed) //nolint:errcheck
 			return fmt.Errorf("failed to publish inference task %d: %w", taskId, err)
 		}
+
+		slog.Info("Created inference task", "report_id", reportId, "task_id", taskId, "chunk_size", chunkSize)
 
 		return nil
 	}
@@ -621,11 +653,11 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 		taskId++
 	}
 
-	slog.Info("Finished generating inference task chunks", "n_tasks", taskId, "report_id", reportId)
-
 	if err := database.UpdateShardDataTaskStatus(ctx, proc.db, reportId, database.JobCompleted); err != nil {
 		return fmt.Errorf("failed to update job final status: %w", err)
 	}
+
+	slog.Info("Finished generating inference task chunks", "n_tasks", taskId, "report_id", reportId)
 
 	return nil
 }

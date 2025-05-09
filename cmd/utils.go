@@ -2,9 +2,18 @@ package cmd
 
 import (
 	"flag"
+	"fmt"
 	"log"
+	"log/slog"
+	"ner-backend/internal/core"
+	"ner-backend/internal/database"
+	"ner-backend/internal/licensing"
+	"strings"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
+	"gorm.io/gorm"
 )
 
 func LoadEnvFile() {
@@ -22,5 +31,54 @@ func LoadEnvFile() {
 	err := godotenv.Load(configPath)
 	if err != nil {
 		log.Fatalf("error loading .env file '%s': %v", configPath, err)
+	}
+}
+
+func InitializePresidioModel(db *gorm.DB) {
+	presidio, err := core.NewPresidioModel()
+	if err != nil {
+		log.Fatalf("Failed to initialize model: %v", err)
+	}
+
+	modelId := uuid.New()
+
+	var tags []database.ModelTag
+	for _, tag := range presidio.GetTags() {
+		tags = append(tags, database.ModelTag{
+			ModelId: modelId,
+			Tag:     tag,
+		})
+	}
+
+	var model database.Model
+
+	if err := db.Where(database.Model{Name: "basic"}).Attrs(database.Model{
+		Id:           modelId,
+		Type:         "presidio",
+		Status:       database.ModelTrained,
+		CreationTime: time.Now(),
+		Tags:         tags,
+	}).FirstOrCreate(&model).Error; err != nil {
+		log.Fatalf("Failed to create model record: %v", err)
+	}
+}
+
+func CreateLicenseVerifier(db *gorm.DB, license string) licensing.LicenseVerifier {
+	if strings.HasPrefix(license, "local:") {
+		var err error
+		licenseVerifier, err := licensing.NewFileLicenseVerifier([]byte(licensing.FileLicensePublicKey), strings.TrimSpace(strings.TrimPrefix(license, "local:")))
+		if err != nil {
+			log.Fatalf("Failed to create file license verifier: %v", err)
+		}
+		return licenseVerifier
+	} else if license != "" {
+		licenseVerifier, err := licensing.NewKeygenLicenseVerifier(license)
+		if err != nil {
+			log.Fatalf("Failed to create license verifier: %v", err)
+		}
+		return licenseVerifier
+	} else {
+		slog.Warn(fmt.Sprintf("License key not provided. Using free license verifier with %.2fGB total file size limit", float64(licensing.DefaultFreeLicenseMaxBytes)/(1024*1024*1024)))
+		return licensing.NewFreeLicenseVerifier(db, licensing.DefaultFreeLicenseMaxBytes)
 	}
 }

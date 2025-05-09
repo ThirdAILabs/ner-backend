@@ -1,8 +1,7 @@
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import SaveButton from '../../../../../semantic-search/[deploymentId]/components/buttons/SaveButton';
+import SaveButton from '../../../../semantic-search/[deploymentId]/components/buttons/SaveButton';
 import { ViewMode } from './types';
-import { useState } from 'react';
 import { Loader2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -54,7 +53,7 @@ export function HeaderContent({
             </TabsTrigger>
           </TabsList>
         </Tabs>
-        <div className="font-medium pl-2">Query</div>
+        {/* <div className="font-medium pl-2">Query</div>
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <div className="flex-1">
@@ -66,8 +65,8 @@ export function HeaderContent({
                 onKeyDown={handleKeyDown}
               />
             </div>
-            <Button 
-              onClick={handleSearch} 
+            <Button
+              onClick={handleSearch}
               disabled={searchLoading || !onSearch}
               className="h-10 w-10 p-2"
               variant="outline"
@@ -88,7 +87,7 @@ export function HeaderContent({
               }}
             />
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );

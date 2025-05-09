@@ -69,6 +69,15 @@ func (s *BackendService) AddRoutes(r chi.Router) {
 	r.Route("/uploads", func(r chi.Router) {
 		r.Post("/", RestHandler(s.UploadFiles))
 	})
+
+	r.Route("/metrics", func(r chi.Router) {
+		r.Get("/", RestHandler(s.GetInferenceMetrics))
+		r.Get("/throughput", RestHandler(s.GetThroughputMetrics))
+	})
+
+	r.Route("/validate-group-definition", func(r chi.Router) {
+		r.Get("/", RestHandler(s.ValidateGroupDefinition))
+	})
 }
 
 func (s *BackendService) ListModels(r *http.Request) (any, error) {
@@ -672,4 +681,146 @@ func (s *BackendService) UploadFiles(r *http.Request) (any, error) {
 	slog.Info("created upload record", "upload_id", uploadId, "filenames", filenames)
 
 	return api.UploadResponse{Id: uploadId}, nil
+}
+
+func (s *BackendService) GetInferenceMetrics(r *http.Request) (any, error) {
+	qs := r.URL.Query()
+
+	days := 7
+	if ds := qs.Get("days"); ds != "" {
+		d, err := strconv.Atoi(ds)
+		if err != nil || d < 0 {
+			return nil, CodedErrorf(http.StatusBadRequest, "invalid days parameter")
+		}
+		days = d
+	}
+
+	var modelID uuid.UUID
+	if ms := qs.Get("model_id"); ms != "" {
+		u, err := uuid.Parse(ms)
+		if err != nil {
+			return nil, CodedErrorf(http.StatusBadRequest, "invalid model_id")
+		}
+		modelID = u
+	}
+
+	since := time.Now().UTC().Add(-time.Duration(days) * 24 * time.Hour)
+
+	type statusMetrics struct {
+		Count  int64         `gorm:"column:count"`
+		Size   sql.NullInt64 `gorm:"column:size"`
+		Tokens sql.NullInt64 `gorm:"column:tokens"`
+	}
+
+	var completed, running statusMetrics
+
+	q1 := s.db.Model(&database.InferenceTask{}).
+		Select("COUNT(*) AS count, COALESCE(SUM(total_size),0) AS size, COALESCE(SUM(token_count),0) AS tokens").
+		Where("inference_tasks.status = ? AND inference_tasks.completion_time >= ?", database.JobCompleted, since)
+	if modelID != uuid.Nil {
+		q1 = q1.
+			Joins("JOIN reports ON reports.id = inference_tasks.report_id").
+			Where("reports.model_id = ?", modelID)
+	}
+	if err := q1.Scan(&completed).Error; err != nil {
+		slog.Error("error fetching completed metrics", "error", err)
+		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving metrics")
+	}
+
+	q2 := s.db.Model(&database.InferenceTask{}).
+		Select("COUNT(*) AS count, COALESCE(SUM(total_size),0) AS size, COALESCE(SUM(token_count),0) AS tokens").
+		Where("inference_tasks.status = ? AND inference_tasks.creation_time >= ?", database.JobRunning, since)
+	if modelID != uuid.Nil {
+		q2 = q2.
+			Joins("JOIN reports ON reports.id = inference_tasks.report_id").
+			Where("reports.model_id = ?", modelID)
+	}
+	if err := q2.Scan(&running).Error; err != nil {
+		slog.Error("error fetching in-progress metrics", "error", err)
+		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving metrics")
+	}
+
+	totalBytes := completed.Size.Int64 + running.Size.Int64
+	totalTokens := completed.Tokens.Int64 + running.Tokens.Int64
+	dataProcessedMB := float64(totalBytes) / (1024 * 1024)
+
+	return api.InferenceMetricsResponse{
+		Completed:       completed.Count,
+		InProgress:      running.Count,
+		DataProcessedMB: dataProcessedMB,
+		TokensProcessed: totalTokens,
+	}, nil
+}
+
+func (s *BackendService) GetThroughputMetrics(r *http.Request) (any, error) {
+	qs := r.URL.Query()
+
+	ms := qs.Get("model_id")
+	if ms == "" {
+		return nil, CodedErrorf(http.StatusBadRequest, "model_id query param is required")
+	}
+	modelID, err := uuid.Parse(ms)
+	if err != nil {
+		return nil, CodedErrorf(http.StatusBadRequest, "invalid model_id")
+	}
+
+	var reportID uuid.UUID
+	if rs := qs.Get("report_id"); rs != "" {
+		rid, err := uuid.Parse(rs)
+		if err != nil {
+			return nil, CodedErrorf(http.StatusBadRequest, "invalid report_id")
+		}
+		reportID = rid
+	}
+
+	var rows []struct {
+		TotalSize      int64        `gorm:"column:total_size"`
+		StartTime      sql.NullTime `gorm:"column:start_time"`
+		CompletionTime sql.NullTime `gorm:"column:completion_time"`
+	}
+	q := s.db.Model(&database.InferenceTask{}).
+		Joins("JOIN reports ON reports.id = inference_tasks.report_id").
+		Where("inference_tasks.status = ?", database.JobCompleted).
+		Where("reports.model_id = ?", modelID)
+	if reportID != uuid.Nil {
+		q = q.Where("inference_tasks.report_id = ?", reportID)
+	}
+	if err := q.
+		Select("inference_tasks.total_size, inference_tasks.start_time, inference_tasks.completion_time").
+		Scan(&rows).Error; err != nil {
+		slog.Error("error fetching throughput rows", "error", err)
+		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving throughput")
+	}
+
+	var totalBytes int64
+	var totalSeconds float64
+	for _, r := range rows {
+		totalBytes += r.TotalSize
+		if r.StartTime.Valid && r.CompletionTime.Valid {
+			totalSeconds += r.CompletionTime.Time.Sub(r.StartTime.Time).Seconds()
+		}
+	}
+
+	mb := float64(totalBytes) / (1024.0 * 1024.0)
+	var throughputMBPerHour float64
+	if totalSeconds > 0 {
+		throughputMBPerHour = mb / (totalSeconds / 3600.0)
+	}
+
+	return api.ThroughputResponse{
+		ModelID:             modelID,
+		ReportID:            reportID,
+		ThroughputMBPerHour: throughputMBPerHour,
+	}, nil
+}
+
+func (s *BackendService) ValidateGroupDefinition(r *http.Request) (any, error) {
+	groupQuery := r.URL.Query().Get("group_query")
+	if groupQuery == "" {
+		return nil, CodedErrorf(http.StatusBadRequest, "group query is required")
+	}
+	if _, err := core.ParseQuery(groupQuery); err != nil {
+		return nil, CodedErrorf(http.StatusUnprocessableEntity, "invalid query '%s': %v", groupQuery, err)
+	}
+	return nil, nil
 }

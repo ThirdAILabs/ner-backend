@@ -172,9 +172,9 @@ export function TableContent({
 
     // Filter out 'O' tag and assign colors to each tag
     tags
-      .filter(tag => tag !== 'O')
+      .filter(tag => tag.type !== 'O')
       .forEach((tag, index) => {
-        colors[tag] = {
+        colors[tag.type] = {
           text: PASTELS[index % PASTELS.length],
           tag: DARKERS[index % DARKERS.length],
         };

@@ -69,6 +69,19 @@ interface CreateReportRequest {
   report_name: string;
 }
 
+export interface InferenceMetrics {
+  Completed: number;
+  InProgress: number;
+  DataProcessedMB: number;
+  TokensProcessed: number;
+}
+
+export interface ThroughputMetrics {
+  ModelID: string;
+  ReportID?: string;
+  ThroughputMBPerHour: number;
+}
+
 export const nerService = {
 
   checkHealth: async () => {
@@ -109,6 +122,10 @@ export const nerService = {
   getReport: async (reportId: string): Promise<Report> => {
     const response = await axiosInstance.get(`/reports/${reportId}`);
     return response.data;
+  },
+
+  deleteReport: async (reportId: string): Promise<void> => {
+    await axiosInstance.delete(`/reports/${reportId}`);
   },
 
   getReportGroup: async (reportId: string, groupId: string): Promise<Group> => {
@@ -204,4 +221,39 @@ export const nerService = {
     });
     return response.data;
   },
+
+  getInferenceMetrics: async (
+    modelId?: string,
+    days?: number
+  ): Promise<InferenceMetrics> => {
+    const params: Record<string, any> = {};
+    if (modelId) params.model_id = modelId;
+    if (days !== undefined) params.days = days;
+    const { data } = await axiosInstance.get<InferenceMetrics>('/metrics', { params });
+    return data;
+  },
+
+  getThroughputMetrics: async (
+    modelId: string,
+    reportId?: string
+  ): Promise<ThroughputMetrics> => {
+    const params: Record<string, any> = { model_id: modelId };
+    if (reportId) params.report_id = reportId;
+    const { data } = await axiosInstance.get<ThroughputMetrics>('/metrics/throughput', { params });
+    return data;
+  },
+
+  validateGroupDefinition: async (groupQuery: string): Promise<string | null> => {
+    try {
+      await axiosInstance.get('/validate-group-definition', {
+        params: { group_query: groupQuery }
+      });
+      return null;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.data) {
+        return error.response.data;
+      }
+      return 'An unexpected error occurred';
+    }
+  }
 };
