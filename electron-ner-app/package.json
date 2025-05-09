@@ -8,7 +8,7 @@
     "copy-backend": "node scripts/copy-backend.js",
     "dev": "npm run copy-backend && concurrently --kill-others \"cd ../frontend && npm run dev && cd ../electron-ner-app\" \"wait-on http://localhost:3007 && electron .\" \"npm run start-backend\"",
     "start-backend": "node scripts/start-backend.js",
-    "build": "cd ../frontend && npm run build && rm -rf ../electron-ner-app/src/dist && mv out ../electron-ner-app/src/dist && cd ../electron-ner-app && npm run copy-backend && electron-builder",
+    "build": "cd ../frontend && npm run build && rm -rf ../electron-ner-app/frontend-dist && mv out ../electron-ner-app/frontend-dist && cd ../electron-ner-app && npm run copy-backend && electron-builder",
     "vite-build": "cd src && vite build",
     "electron-build": "npm run copy-backend && electron-builder",
     "build-dmg": "node scripts/build-dmg.js",
@@ -87,7 +87,7 @@
     "files": [
       "main.js",
       "preload.js",
-      "src/dist/**/*",
+      "frontend-dist/**/*",
       "scripts/**/*",
       "!**/node_modules/**/{CHANGELOG.md,README.md,README,readme.md,readme}",
       "!**/node_modules/**/{test,__tests__,tests,powered-test,example,examples}",

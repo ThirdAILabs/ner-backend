@@ -10,7 +10,7 @@ yarn-error.log
 dist/
 build/
 out/
-src/dist/
+frontend-dist/
 
 # Go backend executable and data
 bin/

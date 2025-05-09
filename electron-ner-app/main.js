@@ -4,7 +4,7 @@ const fs = require('fs');
 const serve = require('electron-serve');
 
 const appServe = app.isPackaged ? serve({
-  directory: path.join(__dirname, "src/dist")
+  directory: path.join(__dirname, "frontend-dist")
 }) : null;
 
 // Safely check if we're in development mode with fallback if module is missing
