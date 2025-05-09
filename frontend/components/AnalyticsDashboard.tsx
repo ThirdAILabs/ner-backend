@@ -62,7 +62,7 @@ export function AnalyticsDashboard({
   const tokenChartData = tags;
   console.log("Tags", tags, tokenChartData);
   return (
-    <div className="space-y-6 w-full">
+    <div className="space-y-6 w-full w-3/4">
       {/* Top Widgets */}
       <div className="grid grid-cols-4 gap-4">
         {/* Progress Widget */}
@@ -119,12 +119,13 @@ export function AnalyticsDashboard({
           </div>
         </CardHeader>
         <CardContent>
-          <div style={{ height: `${Math.max(400, tokenChartData.length * 50)}px` }}>
+          <div style={{ height: `${Math.max(300, tokenChartData.length * 50)}px` }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={tokenChartData}
                 layout="vertical"
                 margin={{ top: 20, right: 30, left: 120, bottom: 30 }}
+                barSize={30} 
               >
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
