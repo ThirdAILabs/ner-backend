@@ -110,7 +110,7 @@ function PageContents() {
       <header style={{ width: '100%', padding: '16px', borderBottom: '1px solid #e0e0e0' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', marginBottom: '8px', display: 'flex', flexDirection: 'row', gap: '20px' }}>
           <Image
-            src="/thirdai-small.png"
+            src="/thirdai-logo.png"
             alt="ThirdAI Logo"
             width={40}
             height={40}
