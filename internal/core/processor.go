@@ -587,30 +587,6 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 
 	slog.Info("Handling generate tasks", "jobId", task.ReportId, "sourceBucket", task.Report.SourceS3Bucket, "sourcePrefix", task.Report.SourceS3Prefix)
 
-	storageClient, _ := proc.getStorageClient(task.Report)
-	var allObjects []struct {
-		Name string
-		Size int64
-	}
-	for objInfo, err := range storageClient.IterObjects(ctx, task.Report.SourceS3Bucket, task.Report.SourceS3Prefix.String) {
-		if err != nil {
-			return fmt.Errorf("error listing objects: %w", err)
-		}
-		allObjects = append(allObjects, struct {
-			Name string
-			Size int64
-		}{objInfo.Name, objInfo.Size})
-	}
-
-	// 2) persist total file count
-	if err := proc.db.
-		Model(&database.Report{}).
-		Where("id = ?", reportId).
-		UpdateColumn("total_file_count", len(allObjects)).
-		Error; err != nil {
-		slog.Error("failed to update total_file_count", "report_id", reportId, "err", err)
-	}
-
 	targetBytes := task.ChunkTargetBytes
 	if targetBytes <= 0 {
 		targetBytes = 10 * 1024 * 1024 * 1024 // Default 10GB if not set or invalid
@@ -658,6 +634,7 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 	var currentChunkKeys []string
 	var currentChunkSize int64 = 0
 	var taskId int = 0
+	var totalFiles int = 0
 
 	for obj, err := range storage.IterObjects(ctx, task.Report.SourceS3Bucket, task.Report.SourceS3Prefix.String) {
 		if err != nil {
@@ -665,6 +642,8 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 			database.UpdateShardDataTaskStatus(ctx, proc.db, reportId, database.JobFailed) //nolint:errcheck
 			return fmt.Errorf("error iterating over S3 objects: %w", err)
 		}
+
+		totalFiles++
 
 		if currentChunkSize+obj.Size > targetBytes && len(currentChunkKeys) > 0 {
 			if err := createInferenceTask(ctx, taskId, currentChunkKeys, currentChunkSize); err != nil {
@@ -684,6 +663,14 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 			return err
 		}
 		taskId++
+	}
+
+	if err := proc.db.
+		Model(&database.Report{}).
+		Where("id = ?", reportId).
+		UpdateColumn("total_file_count", totalFiles).
+		Error; err != nil {
+		slog.Warn("failed to update total_file_count", "report_id", reportId, "totalFiles", totalFiles, "error", err)
 	}
 
 	if err := database.UpdateShardDataTaskStatus(ctx, proc.db, reportId, database.JobCompleted); err != nil {
