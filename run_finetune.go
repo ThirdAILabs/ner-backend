@@ -135,6 +135,14 @@ func run() error {
 	}
 	fmt.Printf("  Entities: %+v\n", after)
 
+	// 7) Save the model
+	fmt.Println("→ Saving the model")
+	start = time.Now()
+	if err := model.Save("/home/ubuntu/shubh/ner/misc/ner-models/transformer_model_finetuned"); err != nil {
+		return fmt.Errorf("save: %w", err)
+	}
+	fmt.Printf("  Done in %v\n\n", time.Since(start))
+
 	return nil
 }
 
