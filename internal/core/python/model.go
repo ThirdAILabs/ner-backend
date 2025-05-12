@@ -57,7 +57,7 @@ func LoadPythonModel(PythonExecutable, PluginScript, PluginModelName, KwargsJSON
 }
 
 
-func (pm *PythonModel) Finetune(prompt string, tags []api.TagInfo, samples []api.Sample) error {
+func (ner *PythonModel) Finetune(prompt string, tags []api.TagInfo, samples []api.Sample) error {
     const maxPayload = 2 * 1024 * 1024 // 2 MB
 
     // convert TagInfo
@@ -76,24 +76,18 @@ func (pm *PythonModel) Finetune(prompt string, tags []api.TagInfo, samples []api
     }
     var curr chunk
 
-    // helper to send one chunk
     flush := func() error {
-        if len(curr.samples) == 0 {
-            return nil
-        }
-        _, err := pm.model.Finetune(
-            context.Background(),
-            &proto.FinetuneRequest{
-                Prompt:  prompt,
-                Tags:    protoTags,
-                Samples: curr.samples,
-            },
-        )
-        curr.samples = nil
-        curr.size = 0
-        return err
-    }
-
+       if len(curr.samples) == 0 {
+           return nil
+       }
+       // CORRECT: call Finetune(prompt, tags, samples)
+       if err := ner.model.Finetune(prompt, protoTags, curr.samples); err != nil {
+           return fmt.Errorf("finetune chunk error: %w", err)
+       }
+       curr.samples = nil
+       curr.size = 0
+       return nil
+   }
     // accumulate samples until ~2 MB
     for _, s := range samples {
         p := &proto.Sample{

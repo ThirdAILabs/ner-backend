@@ -1,6 +1,6 @@
 import argparse
 import json
-import sys
+import sys, os
 import logging
 
 # grpc reads from stdout and hence, if any import prints anything, it will break the plugin
@@ -24,6 +24,8 @@ model_dict: Dict[str, Model] = {
     "python_cnn_ner_model": CnnNerExtractor,
 }
 
+from models.model_interface import TagInfo, Sample
+
 
 class ModelServicer(model_pb2_grpc.ModelServicer):
     """Implementation of Model service."""
@@ -46,17 +48,21 @@ class ModelServicer(model_pb2_grpc.ModelServicer):
     def Finetune(self, request, context):
         try:
             tags = [
-                {
-                    "name": t.name,
-                    "description": t.description,
-                    "examples": list(t.examples),
-                }
+                TagInfo(
+                    name=t.name,
+                    description=t.description,
+                    examples=list(t.examples),
+                )
                 for t in request.tags
             ]
             samples = [
-                {"tokens": list(s.tokens), "labels": list(s.labels)}
+                Sample(
+                    tokens=list(s.tokens),
+                    labels=list(s.labels),
+                )
                 for s in request.samples
             ]
+            # now call your extractor
             self.model.finetune(request.prompt, tags, samples)
             return model_pb2.FinetuneResponse(success=True)
         except Exception as e:
