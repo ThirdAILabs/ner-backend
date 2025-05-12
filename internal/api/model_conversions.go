@@ -54,15 +54,17 @@ func convertGroups(gs []database.Group) []api.Group {
 
 func convertReport(r database.Report) api.Report {
 	report := api.Report{
-		Id:             r.Id,
-		Model:          convertModel(*r.Model),
-		ReportName:     r.ReportName,
-		SourceS3Bucket: r.SourceS3Bucket,
-		SourceS3Prefix: r.SourceS3Prefix.String,
-		IsUpload:       r.IsUpload,
-		Stopped:        r.Stopped,
-		CreationTime:   r.CreationTime,
-		Groups:         convertGroups(r.Groups),
+		Id:                 r.Id,
+		Model:              convertModel(*r.Model),
+		ReportName:         r.ReportName,
+		SourceS3Bucket:     r.SourceS3Bucket,
+		SourceS3Prefix:     r.SourceS3Prefix.String,
+		IsUpload:           r.IsUpload,
+		Stopped:            r.Stopped,
+		CreationTime:       r.CreationTime,
+		Groups:             convertGroups(r.Groups),
+		TotalFileCount:     int(r.TotalFileCount),
+		CompletedFileCount: int(r.CompletedFileCount),
 	}
 	report.TagCounts = make(map[string]uint64)
 

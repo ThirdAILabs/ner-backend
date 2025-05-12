@@ -44,6 +44,8 @@ interface ReportWithStatus {
   SourceS3Bucket: string;
   SourceS3Prefix?: string;
   CreationTime: string;
+  FileCount: number;
+  CompletedFileCount: number;
   Tags?: string[];
   CustomTags?: { [key: string]: string };
   Groups?: {
@@ -280,9 +282,11 @@ export default function Jobs() {
     const queued = InferenceTaskStatuses?.QUEUED?.TotalTasks || 0;
     const failed = InferenceTaskStatuses?.FAILED?.TotalTasks || 0;
 
+    const fileCount = report.FileCount || 0;
+    const completedFileCount = report.CompletedFileCount || 0;
     const totalTasks = completed + running + queued + failed;
-    const completedTasks = completed;
-    const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+
+    const progress = completedFileCount > 0 ? (fileCount / completedFileCount) * 100 : 0;
 
     // If there are failed tasks, show failure status
     if (failed > 0) {
@@ -370,7 +374,7 @@ export default function Jobs() {
           </Typography>
         </Box>
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-          {`Files: ${completed}/${totalTasks}`}
+          {`Files: ${fileCount}/${completedFileCount}`}
         </Typography>
       </Box>
     );
