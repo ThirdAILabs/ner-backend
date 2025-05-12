@@ -32,3 +32,17 @@ class CNNModel:
     def predict(self, text: str):
         predictions = self.model.predict_batch([text])
         return predictions[0]
+
+    def finetune(
+        self,
+        raw_samples,
+        epochs: int = 5,
+        lr: float = 3e-4,
+        batch_size: int = 16,
+    ):
+        self.model.finetune(
+            raw_samples,
+            epochs=epochs,
+            lr=lr,
+            batch_size=batch_size,
+        )
