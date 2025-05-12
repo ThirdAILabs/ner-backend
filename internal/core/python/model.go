@@ -56,8 +56,72 @@ func LoadPythonModel(PythonExecutable, PluginScript, PluginModelName, KwargsJSON
 	}, nil
 }
 
-func (ner *PythonModel) Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sample) error {
-	return fmt.Errorf("Finetune not implemented")
+
+func (pm *PythonModel) Finetune(prompt string, tags []api.TagInfo, samples []api.Sample) error {
+    const maxPayload = 2 * 1024 * 1024 // 2 MB
+
+    // convert TagInfo
+    protoTags := make([]*proto.TagInfo, len(tags))
+    for i, t := range tags {
+        protoTags[i] = &proto.TagInfo{
+            Name:        t.Name,
+            Description: t.Description,
+            Examples:    t.Examples,
+        }
+    }
+
+    type chunk struct {
+        samples []*proto.Sample
+        size    int
+    }
+    var curr chunk
+
+    // helper to send one chunk
+    flush := func() error {
+        if len(curr.samples) == 0 {
+            return nil
+        }
+        _, err := pm.model.Finetune(
+            context.Background(),
+            &proto.FinetuneRequest{
+                Prompt:  prompt,
+                Tags:    protoTags,
+                Samples: curr.samples,
+            },
+        )
+        curr.samples = nil
+        curr.size = 0
+        return err
+    }
+
+    // accumulate samples until ~2 MB
+    for _, s := range samples {
+        p := &proto.Sample{
+            Tokens: s.Tokens,
+            Labels: s.Labels,
+        }
+        // rough size estimate
+        est := 0
+        for _, tok := range p.Tokens {
+            est += len(tok)
+        }
+        for _, lab := range p.Labels {
+            est += len(lab)
+        }
+        // flush if adding this would overflow
+        if curr.size+est > maxPayload {
+            if err := flush(); err != nil {
+                return fmt.Errorf("finetune chunk error: %w", err)
+            }
+        }
+        curr.samples = append(curr.samples, p)
+        curr.size += est
+    }
+    // final flush
+    if err := flush(); err != nil {
+        return fmt.Errorf("final finetune chunk error: %w", err)
+    }
+    return nil
 }
 
 func (ner *PythonModel) Save(path string) error {

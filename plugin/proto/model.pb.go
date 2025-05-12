@@ -265,6 +265,217 @@ func (x *Entity) GetEnd() int32 {
 	return 0
 }
 
+type TagInfo struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Name        string   `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Description string   `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+	Examples    []string `protobuf:"bytes,3,rep,name=examples,proto3" json:"examples,omitempty"`
+}
+
+func (x *TagInfo) Reset() {
+	*x = TagInfo{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_model_proto_msgTypes[5]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+func (x *TagInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+func (*TagInfo) ProtoMessage() {}
+func (x *TagInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_model_proto_msgTypes[5]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+// Deprecated: Use TagInfo.ProtoReflect.Descriptor instead.
+func (*TagInfo) Descriptor() ([]byte, []int) {
+	return file_proto_model_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *TagInfo) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+func (x *TagInfo) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+func (x *TagInfo) GetExamples() []string {
+	if x != nil {
+		return x.Examples
+	}
+	return nil
+}
+
+// Sample represents one training example: tokens + labels.
+type Sample struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Tokens []string `protobuf:"bytes,1,rep,name=tokens,proto3" json:"tokens,omitempty"`
+	Labels []string `protobuf:"bytes,2,rep,name=labels,proto3" json:"labels,omitempty"`
+}
+
+func (x *Sample) Reset() {
+	*x = Sample{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_model_proto_msgTypes[6]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+func (x *Sample) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+func (*Sample) ProtoMessage() {}
+func (x *Sample) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_model_proto_msgTypes[6]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+// Deprecated: Use Sample.ProtoReflect.Descriptor instead.
+func (*Sample) Descriptor() ([]byte, []int) {
+	return file_proto_model_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *Sample) GetTokens() []string {
+	if x != nil {
+		return x.Tokens
+	}
+	return nil
+}
+func (x *Sample) GetLabels() []string {
+	if x != nil {
+		return x.Labels
+	}
+	return nil
+}
+
+// FinetuneRequest carries prompt, tag definitions, and samples.
+type FinetuneRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Prompt  string     `protobuf:"bytes,1,opt,name=prompt,proto3" json:"prompt,omitempty"`
+	Tags    []*TagInfo `protobuf:"bytes,2,rep,name=tags,proto3" json:"tags,omitempty"`
+	Samples []*Sample  `protobuf:"bytes,3,rep,name=samples,proto3" json:"samples,omitempty"`
+}
+
+func (x *FinetuneRequest) Reset() {
+	*x = FinetuneRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_model_proto_msgTypes[7]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+func (x *FinetuneRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+func (*FinetuneRequest) ProtoMessage() {}
+func (x *FinetuneRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_model_proto_msgTypes[7]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+// Deprecated: Use FinetuneRequest.ProtoReflect.Descriptor instead.
+func (*FinetuneRequest) Descriptor() ([]byte, []int) {
+	return file_proto_model_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *FinetuneRequest) GetPrompt() string {
+	if x != nil {
+		return x.Prompt
+	}
+	return ""
+}
+func (x *FinetuneRequest) GetTags() []*TagInfo {
+	if x != nil {
+		return x.Tags
+	}
+	return nil
+}
+func (x *FinetuneRequest) GetSamples() []*Sample {
+	if x != nil {
+		return x.Samples
+	}
+	return nil
+}
+
+// FinetuneResponse indicates success/failure.
+type FinetuneResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Success bool `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+}
+
+func (x *FinetuneResponse) Reset() {
+	*x = FinetuneResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_model_proto_msgTypes[8]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+func (x *FinetuneResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+func (*FinetuneResponse) ProtoMessage() {}
+func (x *FinetuneResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_model_proto_msgTypes[8]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+// Deprecated: Use FinetuneResponse.ProtoReflect.Descriptor instead.
+func (*FinetuneResponse) Descriptor() ([]byte, []int) {
+	return file_proto_model_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *FinetuneResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+
 var File_proto_model_proto protoreflect.FileDescriptor
 
 const file_proto_model_proto_rawDesc = "" +
