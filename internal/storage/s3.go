@@ -32,37 +32,52 @@ type S3ProviderConfig struct {
 	S3Region          string
 }
 
-func NewS3Provider(cfg S3ProviderConfig) (*S3Provider, error) {
-	resolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) { // nolint:staticcheck
-		if cfg.S3EndpointURL != "" {
+func createS3Config(s3Endpoint, s3Region string, creds aws.CredentialsProvider) (aws.Config, error) {
+	opts := []func(*aws_config.LoadOptions) error{}
+
+	if s3Endpoint != "" {
+		resolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) { // nolint:staticcheck
 			return aws.Endpoint{ // nolint:staticcheck
 				PartitionID:       "aws",
-				URL:               cfg.S3EndpointURL,
-				SigningRegion:     cfg.S3Region,
+				URL:               s3Endpoint,
+				SigningRegion:     s3Region,
 				HostnameImmutable: true, // Important for MinIO
 			}, nil
-		}
-		// fallback to default AWS endpoint resolution
-		return aws.Endpoint{}, &aws.EndpointNotFoundError{} // nolint:staticcheck
-	})
+		})
 
-	opts := []func(*aws_config.LoadOptions) error{
-		aws_config.WithEndpointResolverWithOptions(resolver), // nolint:staticcheck
+		opts = append(opts, aws_config.WithEndpointResolverWithOptions(resolver)) // nolint:staticcheck
 	}
 
-	if cfg.S3Region != "" {
-		opts = append(opts, aws_config.WithRegion(cfg.S3Region))
+	if s3Region != "" {
+		opts = append(opts, aws_config.WithRegion(s3Region))
 	}
 
-	// If credentials are not provided then they will be resolved by the sdk.
-	// One way to pass credentials is to set them in the environment variables AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.
+	if creds != nil {
+		opts = append(opts, aws_config.WithCredentialsProvider(creds))
+	}
+
+	return aws_config.LoadDefaultConfig(context.Background(), opts...)
+}
+
+func NewS3Provider(cfg S3ProviderConfig) (*S3Provider, error) {
+	var creds aws.CredentialsProvider = nil
 	if cfg.S3AccessKeyID != "" && cfg.S3SecretAccessKey != "" {
-		opts = append(opts, aws_config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(cfg.S3AccessKeyID, cfg.S3SecretAccessKey, "")))
+		creds = credentials.NewStaticCredentialsProvider(cfg.S3AccessKeyID, cfg.S3SecretAccessKey, "")
 	}
 
-	awsCfg, err := aws_config.LoadDefaultConfig(context.Background(), opts...)
+	awsCfg, err := createS3Config(cfg.S3EndpointURL, cfg.S3Region, creds)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load AWS config: %w", err)
+		return nil, fmt.Errorf("failed to create aws config: %w", err)
+	}
+
+	// This checks if credentials can be loaded from the environment, for example from
+	// env variables or ~/.aws/credentials. If no credentials are found, then we fallback
+	// to anonymous credentials, this is needed to be able to access public s3 buckets.
+	if _, err := awsCfg.Credentials.Retrieve(context.Background()); err != nil {
+		awsCfg, err = createS3Config(cfg.S3EndpointURL, cfg.S3Region, aws.AnonymousCredentials{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create aws config with anonymous credentials: %w", err)
+		}
 	}
 
 	client := s3.NewFromConfig(awsCfg, func(o *s3.Options) {
