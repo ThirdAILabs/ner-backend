@@ -109,10 +109,9 @@ const SourceOption: React.FC<SourceOptionProps> = ({
   <div
     className={`relative p-6 border rounded-md transition-all
       ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200'}
-      ${
-        disabled
-          ? 'opacity-50 cursor-not-allowed bg-gray-50'
-          : 'cursor-pointer hover:border-blue-300'
+      ${disabled
+        ? 'opacity-50 cursor-not-allowed bg-gray-50'
+        : 'cursor-pointer hover:border-blue-300'
       }
     `}
     onClick={() => !disabled && onClick()}
@@ -429,7 +428,7 @@ function JobDetail() {
       {/* Header with Back Button and Title */}
       <div className="flex items-center justify-between mb-6">
         <Button variant="outline" size="sm" asChild>
-          <Link href={`/token-classification/jobs?jobId=${reportId}&tab=jobs`} className="flex items-center">
+          <Link href={`/?tab=jobs`} className="flex items-center">
             <ArrowLeft className="mr-1 h-4 w-4" /> Back to Reports
           </Link>
         </Button>
@@ -535,7 +534,7 @@ function JobDetail() {
           >
             <h2 className="text-2xl font-medium mb-4">Tags</h2>
             <div className="flex justify-between items-center mb-4">
-            {isLoading ? (
+              {isLoading ? (
                 <div className="flex justify-center py-4">
                   <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
                 </div>
@@ -571,7 +570,7 @@ function JobDetail() {
           >
             <h2 className="text-2xl font-medium mb-4">Groups</h2>
             <div className="flex justify-between items-center mb-4">
-            {isLoading ? (
+              {isLoading ? (
                 <div className="flex justify-center py-4">
                   <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
                 </div>
@@ -596,7 +595,7 @@ function JobDetail() {
           </Box>
 
           {/* ENDS */}
-         
+
         </TabsContent>
 
         <TabsContent value="analytics">
@@ -618,7 +617,7 @@ function JobDetail() {
       </Tabs>
     </div>
   );
-} 
+}
 
 export default function Page() {
   return <Suspense>
