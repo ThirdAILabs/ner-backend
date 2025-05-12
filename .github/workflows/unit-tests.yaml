@@ -21,18 +21,47 @@ jobs:
   unit-tests:
     runs-on: ubuntu-22.04
 
-    steps:
-      - uses: actions/checkout@v2
+    env:
+      AWS_ACCESS_KEY_ID:     ${{ secrets.AWS_SECRET_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      MODEL_DIR:             ${{ github.workspace }}/models
+      HOST_MODEL_DIR:        ${{ github.workspace }}/models
+      PYTHON_EXECUTABLE_PATH: ${{ env.PYTHON_EXECUTABLE_PATH }}
+      PYTHON_PLUGIN_PATH:     ${{ github.workspace }}/ner-backend/plugin/plugin-python/plugin.py
 
-      - name: set up go >=1.23.3
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Set up Go ≥1.23.3
         uses: actions/setup-go@v5
         with:
           go-version: '>=1.23.3'
 
-      - name: install dependencies
+      - name: Define CI env-vars
         run: |
-          go mod download
+          echo "MODEL_DIR=${{ github.workspace }}/models"    >> $GITHUB_ENV
+          echo "HOST_MODEL_DIR=${{ github.workspace }}/models" >> $GITHUB_ENV
+          echo "PYTHON_PLUGIN_PATH=${{ github.workspace }}/ner-backend/plugin/plugin-python/plugin.py" >> $GITHUB_ENV
 
-      - name: run unit tests
+      - name: Install Go modules
+        run: go mod download
+
+      - name: Download NER models from S3
         run: |
-          go test -v ./...
+          mkdir -p "$MODEL_DIR"
+          aws s3 cp s3://ner-models/cnn_model/         "$MODEL_DIR/cnn_model/"      --recursive
+          aws s3 cp s3://ner-models/transformer_model/ "$MODEL_DIR/transformer_model/" --recursive
+
+      - name: Install Python requirements
+        run: |
+          ${{ runner.python }} -m pip install --upgrade pip
+          ${{ runner.python }} -m pip install -r $(dirname "$PYTHON_PLUGIN_PATH")/requirements.txt
+
+      - name: Run unit tests
+        run: go test -v ./...
