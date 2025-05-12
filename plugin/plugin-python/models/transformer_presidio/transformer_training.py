@@ -93,9 +93,7 @@ def train_transformer(
         per_device_train_batch_size=batch_size,
         learning_rate=lr,
         logging_steps=10,
-        evaluation_strategy="no",
-        save_strategy="no",
-        report_to=[],  # disable external logging
+        report_to=[],
     )
 
     trainer = Trainer(

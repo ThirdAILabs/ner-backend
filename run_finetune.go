@@ -16,7 +16,8 @@ var sentence = "John lives in London."
 func run() error {
 	os.Setenv("PYTHON_EXECUTABLE_PATH", "/opt/conda/envs/pii-presidio-3.10/bin/python3")
 	os.Setenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH", "/home/ubuntu/shubh/ner/ner-backend/plugin/plugin-python/plugin.py")
-	model, err := core.LoadModel("transformer", "/home/ubuntu/shubh/ner/misc/ner-models/transformer_model")
+	// model, err := core.LoadModel("transformer", "/home/ubuntu/shubh/ner/misc/ner-models/transformer_model")
+	model, err := core.LoadModel("cnn", "/home/ubuntu/shubh/ner/misc/ner-models/cnn_model")
 	if err != nil {
 		return fmt.Errorf("error loading model: %w", err)
 	}
@@ -138,7 +139,7 @@ func run() error {
 	// 7) Save the model
 	fmt.Println("→ Saving the model")
 	start = time.Now()
-	if err := model.Save("/home/ubuntu/shubh/ner/misc/ner-models/transformer_model_finetuned"); err != nil {
+	if err := model.Save("/home/ubuntu/shubh/ner/misc/ner-models/cnn_model_finetuned"); err != nil {
 		return fmt.Errorf("save: %w", err)
 	}
 	fmt.Printf("  Done in %v\n\n", time.Since(start))
