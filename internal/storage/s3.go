@@ -70,8 +70,8 @@ func NewS3Provider(cfg S3ProviderConfig) (*S3Provider, error) {
 		return nil, fmt.Errorf("failed to create aws config: %w", err)
 	}
 
-	// This checks if credentials can be loaded from the environment, for example from 
-	// env variables or ~/.aws/credentials. If no credentials are found, then we fallback 
+	// This checks if credentials can be loaded from the environment, for example from
+	// env variables or ~/.aws/credentials. If no credentials are found, then we fallback
 	// to anonymous credentials, this is needed to be able to access public s3 buckets.
 	if _, err := awsCfg.Credentials.Retrieve(context.Background()); err != nil {
 		awsCfg, err = createS3Config(cfg.S3EndpointURL, cfg.S3Region, aws.AnonymousCredentials{})
