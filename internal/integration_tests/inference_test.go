@@ -247,10 +247,6 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 }
 
 func RunInferenceWorkflowForModel(t *testing.T, modelName string) {
-	os.Setenv("HOST_MODEL_DIR", "/home/ubuntu/shubh/ner/misc/ner-models")
-	os.Setenv("PYTHON_EXECUTABLE_PATH", "/opt/conda/envs/pii-presidio-3.10/bin/python3")
-	os.Setenv("PYTHON_PLUGIN_PATH", "/home/ubuntu/shubh/ner/ner-backend/plugin/plugin-python/plugin.py")
-
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
