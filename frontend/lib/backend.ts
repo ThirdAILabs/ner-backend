@@ -1,4 +1,4 @@
-import axiosInstance from './axios.config';
+import axiosInstance, { showApiErrorEvent } from './axios.config';
 import axios from 'axios';
 
 // Type definitions for API responses
@@ -84,21 +84,56 @@ export interface ThroughputMetrics {
   ThroughputMBPerHour: number;
 }
 
+// Add a utility function to handle API errors with custom messages
+const handleApiError = (error: unknown, customMessage?: string): never => {
+  console.error('API Error:', error);
+  
+  // Extract the error message
+  let errorMessage = 'An unexpected error occurred';
+  let status: number | undefined = undefined;
+  
+  if (axios.isAxiosError(error) && error.response) {
+    errorMessage = error.response.data?.message || error.message;
+    status = error.response.status;
+  } else if (error instanceof Error) {
+    errorMessage = error.message;
+  }
+  
+  // Show the error message (use custom message if provided)
+  if (typeof window !== 'undefined') {
+    showApiErrorEvent(customMessage || errorMessage, status);
+  }
+  
+  throw error;
+};
+
 export const nerService = {
 
   checkHealth: async () => {
-    const response = await axiosInstance.get('/health');
-    return response.data;
+    try {
+      const response = await axiosInstance.get('/health');
+      return response.data;
+    } catch (error) {
+      return handleApiError(error, 'Failed to connect to the backend service');
+    }
   },
 
   listModels: async (): Promise<Model[]> => {
-    const response = await axiosInstance.get('/models');
-    return response.data;
+    try {
+      const response = await axiosInstance.get('/models');
+      return response.data;
+    } catch (error) {
+      return handleApiError(error, 'Failed to load models');
+    }
   },
 
   getModel: async (modelId: string): Promise<Model> => {
-    const response = await axiosInstance.get(`/models/${modelId}`);
-    return response.data;
+    try {
+      const response = await axiosInstance.get(`/models/${modelId}`);
+      return response.data;
+    } catch (error) {
+      return handleApiError(error, `Failed to load model details for ${modelId}`);
+    }
   },
 
   getTagsFromModel: async (modelId: string): Promise<string[]> => {
@@ -112,22 +147,38 @@ export const nerService = {
   },
 
   listReports: async (): Promise<Report[]> => {
-    const response = await axiosInstance.get('/reports');
-    return response.data;
+    try {
+      const response = await axiosInstance.get('/reports');
+      return response.data;
+    } catch (error) {
+      return handleApiError(error, 'Failed to load reports');
+    }
   },
 
   createReport: async (data: CreateReportRequest): Promise<{ ReportId: string }> => {
-    const response = await axiosInstance.post('/reports', data);
-    return response.data;
+    try {
+      const response = await axiosInstance.post('/reports', data);
+      return response.data;
+    } catch (error) {
+      return handleApiError(error, 'Failed to create report');
+    }
   },
 
   getReport: async (reportId: string): Promise<Report> => {
-    const response = await axiosInstance.get(`/reports/${reportId}`);
-    return response.data;
+    try {
+      const response = await axiosInstance.get(`/reports/${reportId}`);
+      return response.data;
+    } catch (error) {
+      return handleApiError(error, `Failed to load report ${reportId}`);
+    }
   },
 
   deleteReport: async (reportId: string): Promise<void> => {
-    await axiosInstance.delete(`/reports/${reportId}`);
+    try {
+      await axiosInstance.delete(`/reports/${reportId}`);
+    } catch (error) {
+      return handleApiError(error, `Failed to delete report ${reportId}`);
+    }
   },
 
   getReportGroup: async (reportId: string, groupId: string): Promise<Group> => {
@@ -211,17 +262,21 @@ export const nerService = {
   },
 
   uploadFiles: async (files: File[]): Promise<{ Id: string }> => {
-    const formData = new FormData();
-    files.forEach(file => {
-      formData.append('files', file);
-    });
+    try {
+      const formData = new FormData();
+      files.forEach(file => {
+        formData.append('files', file);
+      });
 
-    const response = await axiosInstance.post(`/uploads`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      }
-    });
-    return response.data;
+      const response = await axiosInstance.post(`/uploads`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        }
+      });
+      return response.data;
+    } catch (error) {
+      return handleApiError(error, 'Failed to upload files');
+    }
   },
 
   getInferenceMetrics: async (
