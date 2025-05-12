@@ -114,7 +114,9 @@ export default function NewJobPage() {
 
   // Model selection
   const [models, setModels] = useState<any[]>([]);
-  const [selectedModelId, setSelectedModelId] = useState('');
+  //Bi-default Presidio model is selected.
+  const presidioModelId = 'ac6e9590-da54-4d6e-8fa4-2ccb31213abb';
+  const [selectedModelId, setSelectedModelId] = useState(presidioModelId);
   const [selectedModel, setSelectedModel] = useState<any>(null);
 
   // Tags handling
