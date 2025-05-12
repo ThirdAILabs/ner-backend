@@ -119,7 +119,7 @@ function PageContents() {
           />
           <Typography 
             variant="h5" 
-            title={"Pocket Shield"} 
+            title={"PocketShield"} 
             sx={{ 
               mt: 0.5,
               fontFamily: '"Plus Jakarta Sans", sans-serif',
@@ -127,7 +127,7 @@ function PageContents() {
               color: 'rgb(85,152,229)'
             }}
           >
-            {"Pocket Shield"}
+            {"PocketShield"}
           </Typography>
         </div>
       </header>
