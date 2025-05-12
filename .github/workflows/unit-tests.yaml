@@ -59,5 +59,9 @@ jobs:
           $PYTHON_EXECUTABLE_PATH -m pip install --upgrade pip
           $PYTHON_EXECUTABLE_PATH -m pip install -r $(dirname "$PYTHON_PLUGIN_PATH")/requirements.txt
 
+      - name: Download spaCy English model
+        run: |
+          $PYTHON_EXECUTABLE_PATH -m spacy download en_core_web_lg
+
       - name: Run unit tests
         run: go test -v ./...
