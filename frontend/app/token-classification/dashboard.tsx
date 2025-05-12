@@ -10,7 +10,7 @@ import {
   Select,
   MenuItem
 } from '@mui/material';
-import { useParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { nerService } from '@/lib/backend';
 import MetricsDataViewer from './metrics/MetricsDataViewer';
 import TrainingResults from './metrics/TrainingResults';
@@ -18,7 +18,8 @@ import ExamplesVisualizer from './metrics/ExamplesVisualizer';
 import ModelUpdate from './metrics/ModelUpdate';
 
 const Dashboard = () => {
-  const { deploymentId } = useParams();
+  const searchParams = useSearchParams();
+  const deploymentId = searchParams.get('deploymentId');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -78,7 +79,7 @@ const Dashboard = () => {
         <ModelUpdate 
           username="user"
           modelName={deploymentId as string}
-          deploymentUrl={`/api/token-classification/${deploymentId}`}
+          deploymentUrl={`/api/token-classification?deploymentId=${deploymentId}`}
           modelId={`user/${deploymentId}`}
         /> */}
         <Box mb={3} sx={{ display: 'flex', gap: 4, alignItems: 'flex-start' }}>
