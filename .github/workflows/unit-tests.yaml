@@ -21,13 +21,13 @@ jobs:
   unit-tests:
     runs-on: ubuntu-22.04
 
+    # Only refer to secrets and github.* contexts here
     env:
       AWS_ACCESS_KEY_ID:     ${{ secrets.AWS_SECRET_KEY }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       MODEL_DIR:             ${{ github.workspace }}/models
       HOST_MODEL_DIR:        ${{ github.workspace }}/models
-      PYTHON_EXECUTABLE_PATH: ${{ env.PYTHON_EXECUTABLE_PATH }}
-      PYTHON_PLUGIN_PATH:     ${{ github.workspace }}/ner-backend/plugin/plugin-python/plugin.py
+      PYTHON_PLUGIN_PATH:    ${{ github.workspace }}/ner-backend/plugin/plugin-python/plugin.py
 
     steps:
       - name: Check out code
@@ -38,16 +38,14 @@ jobs:
         with:
           python-version: '3.10'
 
+      # Capture the real python path into an env var for later steps
+      - name: Capture Python executable path
+        run: echo "PYTHON_EXECUTABLE_PATH=$(which python)" >> $GITHUB_ENV
+
       - name: Set up Go ≥1.23.3
         uses: actions/setup-go@v5
         with:
           go-version: '>=1.23.3'
-
-      - name: Define CI env-vars
-        run: |
-          echo "MODEL_DIR=${{ github.workspace }}/models"    >> $GITHUB_ENV
-          echo "HOST_MODEL_DIR=${{ github.workspace }}/models" >> $GITHUB_ENV
-          echo "PYTHON_PLUGIN_PATH=${{ github.workspace }}/ner-backend/plugin/plugin-python/plugin.py" >> $GITHUB_ENV
 
       - name: Install Go modules
         run: go mod download
@@ -60,8 +58,8 @@ jobs:
 
       - name: Install Python requirements
         run: |
-          ${{ runner.python }} -m pip install --upgrade pip
-          ${{ runner.python }} -m pip install -r $(dirname "$PYTHON_PLUGIN_PATH")/requirements.txt
+          $PYTHON_EXECUTABLE_PATH -m pip install --upgrade pip
+          $PYTHON_EXECUTABLE_PATH -m pip install -r $(dirname "$PYTHON_PLUGIN_PATH")/requirements.txt
 
       - name: Run unit tests
         run: go test -v ./...
