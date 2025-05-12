@@ -73,7 +73,4 @@ class Model(ABC):
         tags: List[TagInfo],
         samples: List[Sample],
     ) -> None:
-        """
-        Finetune the model on a given prompt, tag definitions, and labeled samples.
-        """
         pass
