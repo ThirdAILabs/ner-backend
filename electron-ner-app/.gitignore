@@ -8,7 +8,7 @@ yarn-error.log
 
 # Build outputs
 dist/
-build/
+# build/
 out/
 frontend-dist/
 
