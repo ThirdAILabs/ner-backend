@@ -80,8 +80,6 @@ function createWindow() {
     setTimeout(() => {
       console.log("Attempting to load from Next.js server...");
       mainWindow.loadURL('http://localhost:3007/');
-      // Open DevTools in development
-      mainWindow.webContents.openDevTools();
     }, 3000); // 3 second delay
   } else {
     console.log("Production mode: Loading built app");
@@ -89,9 +87,6 @@ function createWindow() {
       console.log("Loaded app from serve");
       mainWindow.loadURL("app://-");
     });
-    
-    // Uncomment to open DevTools in production for debugging
-    mainWindow.webContents.openDevTools();
   }
 
   // Emitted when the window is closed
