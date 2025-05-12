@@ -308,6 +308,5 @@ func RunInferenceWorkflowForModel(t *testing.T, modelName string) {
 
 	entities := getReportEntities(t, router, reportId)
 
-	fmt.Println(entities)
 	assert.Greater(t, len(entities), 0)
 }
