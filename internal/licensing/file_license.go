@@ -49,12 +49,12 @@ func NewFileLicenseVerifier(publicKeyPem []byte, licenseStr string) (*FileLicens
 	}, nil
 }
 
-func (v *FileLicenseVerifier) VerifyLicense(ctx context.Context) error {
+func (v *FileLicenseVerifier) VerifyLicense(ctx context.Context) (LicenseType, LicenseInfo, error) {
 	if v.licensePayload.Expiration.Before(time.Now().UTC()) {
-		return ErrExpiredLicense
+		return InvalidLicense, nil, ErrExpiredLicense
 	}
 
-	return nil
+	return LocalLicense, nil, nil
 }
 
 func DecodeLicense(publicKey *rsa.PublicKey, licenseStr string) (Payload, error) {

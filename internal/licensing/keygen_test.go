@@ -20,7 +20,7 @@ func TestKeygenLicensing(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := verifier.VerifyLicense(context.Background()); err != nil {
+		if _, _, err := verifier.VerifyLicense(context.Background()); err != nil {
 			t.Fatal(err)
 		}
 	})

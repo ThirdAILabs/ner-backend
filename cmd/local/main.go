@@ -11,6 +11,7 @@ import (
 	"ner-backend/internal/api"
 	"ner-backend/internal/core"
 	"ner-backend/internal/database"
+	"ner-backend/internal/licensing"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/storage"
 	"net/http"
@@ -88,7 +89,7 @@ func createQueue(db *gorm.DB) *messaging.InMemoryQueue {
 	return queue
 }
 
-func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publisher, port int) *http.Server {
+func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publisher, port int, licensing licensing.LicenseVerifier) *http.Server {
 	r := chi.NewRouter()
 
 	// Middleware
@@ -105,7 +106,7 @@ func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publish
 	r.Use(middleware.Recoverer)                 // Recover from panics
 	r.Use(middleware.Timeout(60 * time.Second)) // Set request timeout
 
-	apiHandler := api.NewBackendService(db, storage, queue, chunkTargetBytes)
+	apiHandler := api.NewBackendService(db, storage, queue, chunkTargetBytes, licensing)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		apiHandler.AddRoutes(r)
@@ -140,7 +141,7 @@ func main() {
 
 	worker := core.NewTaskProcessor(db, storage, queue, queue, licensing, filepath.Join(cfg.Root, "models"), "models")
 
-	server := createServer(db, storage, queue, cfg.Port)
+	server := createServer(db, storage, queue, cfg.Port, licensing)
 
 	slog.Info("starting worker")
 	go worker.Start()

@@ -24,7 +24,8 @@ func TestFileLicensing(t *testing.T) {
 
 		verifier, err := licensing.NewFileLicenseVerifier([]byte(publicKey), goodLicense)
 		assert.NoError(t, err)
-		assert.NoError(t, verifier.VerifyLicense(context.Background()))
+		_, _, err = verifier.VerifyLicense(context.Background())
+		assert.NoError(t, err)
 	})
 
 	t.Run("expired license", func(t *testing.T) {
@@ -33,7 +34,8 @@ func TestFileLicensing(t *testing.T) {
 
 		verifier, err := licensing.NewFileLicenseVerifier([]byte(publicKey), expiredLicense)
 		assert.NoError(t, err)
-		assert.ErrorIs(t, licensing.ErrExpiredLicense, verifier.VerifyLicense(context.Background()))
+		_, _, err = verifier.VerifyLicense(context.Background())
+		assert.ErrorIs(t, licensing.ErrExpiredLicense, err)
 	})
 
 	t.Run("invalid license", func(t *testing.T) {

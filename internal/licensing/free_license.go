@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"ner-backend/internal/database"
 
+	"fmt"
+
 	"gorm.io/gorm"
 )
 
@@ -20,16 +22,21 @@ func NewFreeLicenseVerifier(db *gorm.DB, maxBytes int) *FreeLicenseVerifier {
 	return &FreeLicenseVerifier{db: db, maxBytes: maxBytes}
 }
 
-func (verifier *FreeLicenseVerifier) VerifyLicense(ctx context.Context) error {
+func (verifier *FreeLicenseVerifier) VerifyLicense(ctx context.Context) (LicenseType, LicenseInfo, error) {
 	var totalBytes sql.NullInt64
 	if err := verifier.db.WithContext(ctx).Model(&database.InferenceTask{}).Select("SUM(total_size)").Scan(&totalBytes).Error; err != nil {
 		slog.Error("error getting total usage", "error", err)
-		return ErrLicenseVerificationFailed
+		return InvalidLicense, nil, ErrLicenseVerificationFailed
+	}
+
+	info := LicenseInfo{
+		"max_bytes":  fmt.Sprint(verifier.maxBytes),
+		"used_bytes": fmt.Sprint(totalBytes.Int64),
 	}
 
 	if totalBytes.Valid && int(totalBytes.Int64) > verifier.maxBytes {
-		return ErrQuotaExceeded
+		return InvalidLicense, info, ErrQuotaExceeded
 	}
 
-	return nil
+	return FreeLicense, info, nil
 }

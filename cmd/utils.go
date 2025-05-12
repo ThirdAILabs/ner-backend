@@ -68,13 +68,13 @@ func CreateLicenseVerifier(db *gorm.DB, license string) licensing.LicenseVerifie
 		var err error
 		licenseVerifier, err := licensing.NewFileLicenseVerifier([]byte(licensing.FileLicensePublicKey), strings.TrimSpace(strings.TrimPrefix(license, "local:")))
 		if err != nil {
-			log.Fatalf("Failed to create file license verifier: %v", err)
+			slog.Warn("Failed to create license verifier", slog.Any("error", err))
 		}
 		return licenseVerifier
 	} else if license != "" {
 		licenseVerifier, err := licensing.NewKeygenLicenseVerifier(license)
 		if err != nil {
-			log.Fatalf("Failed to create license verifier: %v", err)
+			slog.Warn("Failed to create license verifier", slog.Any("error", err))
 		}
 		return licenseVerifier
 	} else {

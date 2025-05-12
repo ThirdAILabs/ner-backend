@@ -20,14 +20,17 @@ func TestFreeLicensing(t *testing.T) {
 
 	verifier := licensing.NewFreeLicenseVerifier(db, 300)
 
-	assert.NoError(t, verifier.VerifyLicense(context.Background()))
+	_, _, err = verifier.VerifyLicense(context.Background())
+	assert.NoError(t, err)
 
 	require.NoError(t, db.Create(&database.InferenceTask{ReportId: uuid.New(), TotalSize: 200}).Error)
 	require.NoError(t, db.Create(&database.InferenceTask{ReportId: uuid.New(), TotalSize: 50}).Error)
 
-	assert.NoError(t, verifier.VerifyLicense(context.Background()))
+	_, _, err = verifier.VerifyLicense(context.Background())
+	assert.NoError(t, err)
 
 	require.NoError(t, db.Create(&database.InferenceTask{ReportId: uuid.New(), TotalSize: 100}).Error)
 
-	assert.ErrorIs(t, licensing.ErrQuotaExceeded, verifier.VerifyLicense(context.Background()))
+	_, _, err = verifier.VerifyLicense(context.Background())
+	assert.ErrorIs(t, licensing.ErrQuotaExceeded, err)
 }

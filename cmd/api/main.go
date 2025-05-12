@@ -36,6 +36,7 @@ type APIConfig struct {
 	WorkerConcurrency int    `env:"CONCURRENCY" envDefault:"1"`
 	APIPort           string `env:"API_PORT" envDefault:"8001"`
 	ChunkTargetBytes  int64  `env:"S3_CHUNK_TARGET_BYTES" envDefault:"10737418240"`
+	LicenseKey        string `env:"LICENSE_KEY" envDefault:""`
 }
 
 func initializeCnnNerExtractor(ctx context.Context, db *gorm.DB, s3p *storage.S3Provider, bucket string) error {
@@ -168,7 +169,9 @@ func main() {
 	r.Use(middleware.Recoverer)                 // Recover from panics
 	r.Use(middleware.Timeout(60 * time.Second)) // Set request timeout
 
-	apiHandler := api.NewBackendService(db, s3Client, publisher, cfg.ChunkTargetBytes)
+	licensing := cmd.CreateLicenseVerifier(db, cfg.LicenseKey)
+
+	apiHandler := api.NewBackendService(db, s3Client, publisher, cfg.ChunkTargetBytes, licensing)
 
 	// Your existing API routes should be prefixed with /api to avoid conflicts
 	r.Route("/api/v1", func(r chi.Router) {
