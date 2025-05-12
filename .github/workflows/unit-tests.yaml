@@ -21,13 +21,12 @@ jobs:
   unit-tests:
     runs-on: ubuntu-22.04
 
-    # Only refer to secrets and github.* contexts here
     env:
       AWS_ACCESS_KEY_ID:     ${{ secrets.AWS_SECRET_KEY }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       MODEL_DIR:             ${{ github.workspace }}/models
       HOST_MODEL_DIR:        ${{ github.workspace }}/models
-      PYTHON_PLUGIN_PATH:    ${{ github.workspace }}/ner-backend/plugin/plugin-python/plugin.py
+      PYTHON_PLUGIN_PATH:    ${{ github.workspace }}/plugin/plugin-python/plugin.py
 
     steps:
       - name: Check out code
@@ -38,7 +37,6 @@ jobs:
         with:
           python-version: '3.10'
 
-      # Capture the real python path into an env var for later steps
       - name: Capture Python executable path
         run: echo "PYTHON_EXECUTABLE_PATH=$(which python)" >> $GITHUB_ENV
 
