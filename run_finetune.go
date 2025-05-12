@@ -15,8 +15,8 @@ var sentence = "John lives in London."
 
 func run() error {
 	os.Setenv("PYTHON_EXECUTABLE_PATH", "/opt/conda/envs/pii-presidio-3.10/bin/python3")
-	os.Setenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH", "/home/ubuntu/pratik/ner-backend/plugin/plugin-python/plugin.py")
-	model, err := core.LoadModel("cnn", "/home/ubuntu/shubh/ner/misc/ner-models/cnn_model")
+	os.Setenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH", "/home/ubuntu/shubh/ner/ner-backend/plugin/plugin-python/plugin.py")
+	model, err := core.LoadModel("transformer", "/home/ubuntu/shubh/ner/misc/ner-models/transformer_model")
 	if err != nil {
 		return fmt.Errorf("error loading model: %w", err)
 	}
@@ -126,7 +126,6 @@ func run() error {
 		return fmt.Errorf("finetune: %w", err)
 	}
 	fmt.Printf("  Done in %v\n\n", time.Since(start))
-
 
 	// 6) Post‐finetune prediction
 	fmt.Println("→ Post-finetune prediction")

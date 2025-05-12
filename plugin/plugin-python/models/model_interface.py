@@ -74,3 +74,7 @@ class Model(ABC):
         samples: List[Sample],
     ) -> None:
         pass
+
+    @abstractmethod
+    def save(self, dir: str) -> None:
+        pass
