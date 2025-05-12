@@ -103,7 +103,7 @@ export default function NewJobPage() {
   const router = useRouter();
 
   // Essential state
-  const [selectedSource, setSelectedSource] = useState<'s3' | 'files'>('s3');
+  const [selectedSource, setSelectedSource] = useState<'s3' | 'files'>('files');
   const [sourceS3Bucket, setSourceS3Bucket] = useState('');
   const [sourceS3Prefix, setSourceS3Prefix] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -478,16 +478,16 @@ export default function NewJobPage() {
             <h2 className="text-2xl font-medium mb-4">Source</h2>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
               <SourceOption
-                title="S3 Bucket"
-                description="Use files from an S3 bucket"
-                isSelected={selectedSource === 's3'}
-                onClick={() => setSelectedSource('s3')}
-              />
-              <SourceOption
                 title="File Upload"
                 description="Upload files from your computer"
                 isSelected={selectedSource === 'files'}
                 onClick={() => setSelectedSource('files')}
+              />
+              <SourceOption
+                title="S3 Bucket"
+                description="Use files from an S3 bucket"
+                isSelected={selectedSource === 's3'}
+                onClick={() => setSelectedSource('s3')}
               />
             </div>
 
