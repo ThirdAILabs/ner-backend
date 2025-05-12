@@ -135,7 +135,7 @@ type ThroughputResponse struct {
 }
 
 type GetLicenseResponse struct {
-	LicenseType  licensing.LicenseType `json:"LicenseType"`
-	LicenseInfo  licensing.LicenseInfo `json:"LicenseInfo"`
-	LicenseError error                 `json:"LicenseError"`
+	LicenseType  licensing.LicenseType
+	LicenseInfo  licensing.LicenseInfo 
+	LicenseError error             
 }
