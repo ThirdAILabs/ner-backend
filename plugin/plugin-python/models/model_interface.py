@@ -37,6 +37,25 @@ class BatchPredictions(BaseModel):
         return representations
 
 
+class TagInfo(BaseModel):
+    """
+    Information about a label/tag, includes description and examples.
+    """
+
+    name: str
+    description: str
+    examples: List[str]
+
+
+class Sample(BaseModel):
+    """
+    A single training example, defined by tokens and corresponding labels.
+    """
+
+    tokens: List[str]
+    labels: List[str]
+
+
 class Model(ABC):
 
     @abstractmethod
@@ -45,4 +64,16 @@ class Model(ABC):
 
     @abstractmethod
     def predict_batch(self, texts: List[str]) -> BatchPredictions:
+        pass
+
+    @abstractmethod
+    def finetune(
+        self,
+        prompt: str,
+        tags: List[TagInfo],
+        samples: List[Sample],
+    ) -> None:
+        """
+        Finetune the model on a given prompt, tag definitions, and labeled samples.
+        """
         pass

@@ -43,6 +43,27 @@ class ModelServicer(model_pb2_grpc.ModelServicer):
         result = model_pb2.PredictBatchResponse(predictions=preds)
         return result
 
+    def Finetune(self, request, context):
+        try:
+            tags = [
+                {
+                    "name": t.name,
+                    "description": t.description,
+                    "examples": list(t.examples),
+                }
+                for t in request.tags
+            ]
+            samples = [
+                {"tokens": list(s.tokens), "labels": list(s.labels)}
+                for s in request.samples
+            ]
+            self.model.finetune(request.prompt, tags, samples)
+            return model_pb2.FinetuneResponse(success=True)
+        except Exception as e:
+            context.set_details(str(e))
+            context.set_code(grpc.StatusCode.INTERNAL)
+            return model_pb2.FinetuneResponse(success=False)
+
 
 def serve(model_name: str, **kwargs):
     health = HealthServicer()

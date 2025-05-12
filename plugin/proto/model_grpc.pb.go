@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion7
 const (
 	Model_Predict_FullMethodName      = "/proto.Model/Predict"
 	Model_PredictBatch_FullMethodName = "/proto.Model/PredictBatch"
+	Model_Finetune_FullMethodName     = "/proto.Model/Finetune"
 )
 
 // ModelClient is the client API for Model service.
@@ -29,6 +30,7 @@ const (
 type ModelClient interface {
 	Predict(ctx context.Context, in *PredictRequest, opts ...grpc.CallOption) (*PredictResponse, error)
 	PredictBatch(ctx context.Context, in *PredictBatchRequest, opts ...grpc.CallOption) (*PredictBatchResponse, error)
+	Finetune(ctx context.Context, in *FinetuneRequest, opts ...grpc.CallOption) (*FinetuneResponse, error)
 }
 
 type modelClient struct {
@@ -57,12 +59,22 @@ func (c *modelClient) PredictBatch(ctx context.Context, in *PredictBatchRequest,
 	return out, nil
 }
 
+func (c *modelClient) Finetune(ctx context.Context, in *FinetuneRequest, opts ...grpc.CallOption) (*FinetuneResponse, error) {
+	    out := new(FinetuneResponse)
+	    err := c.cc.Invoke(ctx, Model_Finetune_FullMethodName, in, out, opts...)
+	    if err != nil {
+	        return nil, err
+	    }
+	    return out, nil
+	}
+
 // ModelServer is the server API for Model service.
 // All implementations should embed UnimplementedModelServer
 // for forward compatibility
 type ModelServer interface {
 	Predict(context.Context, *PredictRequest) (*PredictResponse, error)
 	PredictBatch(context.Context, *PredictBatchRequest) (*PredictBatchResponse, error)
+	Finetune(context.Context, *FinetuneRequest) (*FinetuneResponse, error)
 }
 
 // UnimplementedModelServer should be embedded to have forward compatible implementations.
@@ -74,6 +86,9 @@ func (UnimplementedModelServer) Predict(context.Context, *PredictRequest) (*Pred
 }
 func (UnimplementedModelServer) PredictBatch(context.Context, *PredictBatchRequest) (*PredictBatchResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PredictBatch not implemented")
+}
+func (UnimplementedModelServer) Finetune(context.Context, *FinetuneRequest) (*FinetuneResponse, error) {
+	    return nil, status.Errorf(codes.Unimplemented, "method Finetune not implemented")
 }
 
 // UnsafeModelServer may be embedded to opt out of forward compatibility for this service.
@@ -123,6 +138,21 @@ func _Model_PredictBatch_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Model_Finetune_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+    in := new(FinetuneRequest)
+    if err := dec(in); err != nil {
+        return nil, err
+    }
+    if interceptor == nil {
+        return srv.(ModelServer).Finetune(ctx, in)
+    }
+    info := &grpc.UnaryServerInfo{ Server: srv, FullMethod: Model_Finetune_FullMethodName }
+    handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+        return srv.(ModelServer).Finetune(ctx, req.(*FinetuneRequest))
+    }
+    return interceptor(ctx, in, info, handler)
+}
+
 // Model_ServiceDesc is the grpc.ServiceDesc for Model service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -137,6 +167,10 @@ var Model_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "PredictBatch",
 			Handler:    _Model_PredictBatch_Handler,
+		},
+		{ 
+			MethodName: "Finetune",   
+			Handler: _Model_Finetune_Handler
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
