@@ -78,6 +78,10 @@ func (s *BackendService) AddRoutes(r chi.Router) {
 	r.Route("/validate-group-definition", func(r chi.Router) {
 		r.Get("/", RestHandler(s.ValidateGroupDefinition))
 	})
+
+	r.Route("/attempt-s3-connection", func(r chi.Router) {
+		r.Get("/", RestHandler(s.AttemptS3Connection))
+	})
 }
 
 func (s *BackendService) ListModels(r *http.Request) (any, error) {
@@ -822,5 +826,21 @@ func (s *BackendService) ValidateGroupDefinition(r *http.Request) (any, error) {
 	if _, err := core.ParseQuery(groupQuery); err != nil {
 		return nil, CodedErrorf(http.StatusUnprocessableEntity, "invalid query '%s': %v", groupQuery, err)
 	}
+	return nil, nil
+}
+
+func (s *BackendService) AttemptS3Connection(r *http.Request) (any, error) {
+	endpoint := r.URL.Query().Get("endpoint")
+	region := r.URL.Query().Get("region")
+
+	s3Client, err := storage.NewS3Provider(storage.S3ProviderConfig{
+		S3EndpointURL: endpoint,
+		S3Region:      region,
+	})
+	if err != nil {
+		slog.Error("error connecting to S3", "s3_endpoint", report.S3Endpoint.String, "region", report.S3Region.String, "error", err)
+		return nil, fmt.Errorf("error connecting to S3: %w", err)
+	}
+
 	return nil, nil
 }

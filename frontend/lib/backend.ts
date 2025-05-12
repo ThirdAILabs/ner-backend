@@ -257,5 +257,20 @@ export const nerService = {
       }
       return 'An unexpected error occurred';
     }
+  },
+
+  attemptS3Connection: async (endpoint: string, region: string): Promise<string | null> => {
+    try {
+      await axiosInstance.get('/attempt-s3-connection', {
+        params: { endpoint, region }
+      });
+  
+      return null;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.data) {
+        return error.response.data;
+      }
+      return 'An unexpected error occurred';
+    }
   }
 };
