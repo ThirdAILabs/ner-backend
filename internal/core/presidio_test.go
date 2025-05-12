@@ -35,7 +35,7 @@ func TestRecognize(t *testing.T) {
 			RContext: " and visa permit 564",
 		},
 		{
-			Label:    "EmailRecognizer",
+			Label:    "EMAIL",
 			Text:     "sonia41@example.net",
 			Start:    264,
 			End:      283,
@@ -43,7 +43,7 @@ func TestRecognize(t *testing.T) {
 			RContext: " for more.",
 		},
 		{
-			Label:    "UrlRecognizer",
+			Label:    "URL",
 			Text:     "example.net",
 			Start:    272,
 			End:      283,

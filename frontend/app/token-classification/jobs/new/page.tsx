@@ -115,8 +115,8 @@ export default function NewJobPage() {
   // Model selection
   const [models, setModels] = useState<any[]>([]);
   //Bi-default Presidio model is selected.
-  const presidioModelId = 'ac6e9590-da54-4d6e-8fa4-2ccb31213abb';
-  const [selectedModelId, setSelectedModelId] = useState(presidioModelId);
+  const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
+
   const [selectedModel, setSelectedModel] = useState<any>(null);
 
   // Tags handling
@@ -159,6 +159,7 @@ export default function NewJobPage() {
           (model) => model.Status === 'TRAINED'
         );
         setModels(trainedModels);
+        setSelectedModelId(trainedModels[0].Id);
       } catch (err) {
         console.error('Error fetching models:', err);
         setError('Failed to load models. Please try again.');

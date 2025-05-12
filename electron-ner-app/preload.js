@@ -3,7 +3,6 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 // The fixed proxy port will always be 3099 (which forwards to the dynamic backend port)
 const PROXY_PORT = 3099;
-
 // Expose API information to the renderer process
 contextBridge.exposeInMainWorld('electronAPI', {
   // Backend API connection information

@@ -27,6 +27,8 @@ interface Report {
     CustomTags?: {
         [key: string]: string;
     };
+    FileCount: number;
+    CompletedFileCount: number;
     Groups?: Group[];
     ShardDataTaskStatus?: string;
     InferenceTaskStatuses?: { [key: string]: TaskStatusCategory };

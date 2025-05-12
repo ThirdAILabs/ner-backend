@@ -170,7 +170,6 @@ function createWindow() {
       console.log("Loaded app from serve");
       mainWindow.loadURL("app://-");
     });
-    
     // Uncomment to open DevTools in production for debugging
     mainWindow.webContents.openDevTools();
   }
@@ -247,7 +246,6 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-// Clean up backend and proxy on app quit
 app.on('will-quit', () => {
   console.log('App is quitting, cleaning up backend and proxy...');
   if (backendProcess) {

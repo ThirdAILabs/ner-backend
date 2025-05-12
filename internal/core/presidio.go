@@ -30,14 +30,12 @@ type PatternRecognizer struct {
 }
 
 var entitiesMap = map[string]string{
-	"LOCATION":                        "ADDRESS",
 	"UsLicenseRecognizer":             "VIN", // AKA US_DRIVER_LICENSE
-	"PHONE_NUMBER":                    "PHONENUMBER",
-	"DATE_TIME":                       "DATE",
-	"EMAIL_ADDRESS":                   "EMAIL",
+	"DateRecognizer":                  "DATE",
+	"EmailRecognizer":                 "EMAIL",
 	"CreditCardRecognizer":            "CARD_NUMBER",
 	"UsSsnRecognizer":                 "SSN",
-	"URL":                             "URL",
+	"UrlRecognizer":                   "URL",
 	"UsPassportRecognizer":            "ID_NUMBER",
 	"UsItinRecognizer":                "ID_NUMBER",
 	"UsBankRecognizer":                "ID_NUMBER",

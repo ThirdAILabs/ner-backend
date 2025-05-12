@@ -89,6 +89,7 @@
       "buildResources": "build"
     },
     "files": [
+      "build/**/*",
       "main.js",
       "preload.js",
       "frontend-dist/**/*",
