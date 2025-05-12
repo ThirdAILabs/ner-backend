@@ -28,6 +28,7 @@ var PluginMap = map[string]plugin.Plugin{
 type Model interface {
 	Predict(sentence string) ([]*proto.Entity, error)
 	PredictBatch(sentences []string) ([]*proto.PredictResponse, error)
+	Finetune(prompt string, tags []*proto.TagInfo, samples []*proto.Sample) (error)
 }
 
 // This is the implementation of plugin.GRPCPlugin so we can serve/consume this.

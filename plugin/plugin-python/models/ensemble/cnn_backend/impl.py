@@ -6,6 +6,8 @@ import torch.nn.functional as F
 from torchcrf import CRF
 from torch.utils.data import Dataset, DataLoader
 
+import sys
+
 
 def manual_word_ids(text: str, offsets: list[tuple[int, int]]) -> list[int | None]:
     word_ids = []
@@ -267,4 +269,8 @@ class CNNNERModelSentenceTokenized(nn.Module):
                 loss.backward()
                 opt.step()
                 total += loss.item()
-            print(f"Ep {ep}/{epochs}, loss={total/len(loader):.4f}")
+            print(
+                f"Ep {ep}/{epochs}, loss={total/len(loader):.4f}",
+                flush=True,
+                file=sys.stderr,
+            )
