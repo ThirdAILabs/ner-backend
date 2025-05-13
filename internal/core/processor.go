@@ -370,14 +370,6 @@ func (proc *TaskProcessor) getModelDir(modelId uuid.UUID) string {
 	return filepath.Join(proc.localModelDir, modelId.String())
 }
 
-func (proc *TaskProcessor) RegisterModelLoader(modelType string, loader ModelLoader) {
-	if _, ok := proc.modelLoaders[modelType]; ok {
-		slog.Warn("model loader already registered", "modelType", modelType)
-		return
-	}
-	proc.modelLoaders[modelType] = loader
-}
-
 func (proc *TaskProcessor) loadModel(ctx context.Context, modelId uuid.UUID, modelType string) (Model, error) {
 
 	var localDir string
