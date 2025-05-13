@@ -239,14 +239,11 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 }
 
 func TestInferenceWorkflowForModels(t *testing.T) {
-	// Setup shared context and resources once
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
-	// Start MinIO
 	minioURL := setupMinioContainer(t, ctx)
 
-	// S3 provider
 	s3, err := storage.NewS3Provider(storage.S3ProviderConfig{
 		S3EndpointURL:     minioURL,
 		S3AccessKeyID:     minioUsername,
@@ -255,24 +252,19 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, s3.CreateBucket(ctx, modelBucket))
 
-	// Database
 	db := createDB(t)
 
-	// RabbitMQ
 	publisher, receiver := setupRabbitMQContainer(t, ctx)
 
-	// Backend & HTTP router
 	backendSvc := backend.NewBackendService(db, s3, publisher, 120)
 	router := chi.NewRouter()
 	backendSvc.AddRoutes(router)
 
-	// Worker
 	tempDir := t.TempDir()
 	worker := core.NewTaskProcessor(db, s3, publisher, receiver, &DummyLicenseVerifier{}, tempDir, modelBucket, cmd.NewModelLoaders(os.Getenv("PYTHON_EXECUTABLE_PATH"), os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH")))
 	go worker.Start()
 	t.Cleanup(worker.Stop)
 
-	// Define models to test, with corresponding init functions and DB names
 	models := []struct {
 		label      string
 		tag        string
@@ -300,13 +292,11 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 	for _, m := range models {
 		m := m // capture range variable
 		t.Run(m.label, func(t *testing.T) {
-			// Initialize model in storage & DB
 			require.NoError(t, m.initFn(ctx, db, s3, modelBucket))
 
 			var model database.Model
 			require.NoError(t, db.Where("name = ?", m.expectedDB).First(&model).Error)
 
-			// Create upload and report
 			uploadID := createUpload(t, router)
 			reportID := createReport(t, router, api.CreateReportRequest{
 				ReportName: fmt.Sprintf("test-report-%s", m.tag),
@@ -318,10 +308,8 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 					"SSN", "URL", "VIN", "O"},
 			})
 
-			// Wait for processing
 			report := waitForReport(t, router, reportID, 180)
 
-			// Assertions
 			assert.Equal(t, model.Id, report.Model.Id)
 			assert.Equal(t, "uploads", report.SourceS3Bucket)
 			assert.Equal(t, uploadID.String(), report.SourceS3Prefix)
