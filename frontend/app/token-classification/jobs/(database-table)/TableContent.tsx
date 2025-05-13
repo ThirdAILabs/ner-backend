@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 
 const PASTELS = ['#E5A49C', '#F6C886', '#FBE7AA', '#99E3B5', '#A6E6E7', '#A5A1E1', '#D8A4E2'];
 const DARKERS = ['#D34F3E', '#F09336', '#F7CF5F', '#5CC96E', '#65CFD0', '#597CE2', '#B64DC8'];
+
 const DEFAULT_COLOR = { text: '#E0E0E0', tag: '#A0A0A0' };
 
 interface HighlightColor {
@@ -36,6 +37,7 @@ const HighlightedToken = React.memo(({ token, tag, tagColors }: HighlightedToken
     token.match(/[.,;:!?]$/) ||       
     token.trim() === ''
   );
+
   if (tag === 'O') {
     return (
       <span>
@@ -116,6 +118,7 @@ const TokenContext = React.memo(({ context, tagColors }: TokenContextProps) => {
   const rightContent = context.right || '[empty right context]';
   const token = context.token || '[empty token]';
   const tag = context.tag || '[empty tag]';
+
   return (
     <div className="font-mono text-xs border border-gray-200 p-2 rounded bg-gray-50">
       <span className="text-gray-600">{leftContent}</span>
@@ -162,6 +165,7 @@ export function TableContent({
   hasMoreObjects = false,
   onLoadMore,
 }: TableContentProps) {
+
   const tagColors = useMemo(() => {
     const colors: Record<string, HighlightColor> = {};
     tags
@@ -181,6 +185,7 @@ export function TableContent({
       const groupMatches = record.groups.length === 0 || record.groups.some((group) => groupFilters[group] !== false);
       return tagMatches && groupMatches;
     });
+
     return (
       <>
         <TableHeader>
@@ -226,6 +231,7 @@ export function TableContent({
               </TableCell>
             </TableRow>
           )}
+
           {filteredRecords.length > 0 && (
             <TableRow>
               <TableCell colSpan={2}>
@@ -281,7 +287,7 @@ export function TableContent({
             ))
           ) : (
             <TableRow>
-<TableCell colSpan={2} className="text-center py-8 text-gray-500">
+              <TableCell colSpan={2} className="text-center py-8 text-gray-500">
                 {objectRecords.length === 0 ? (
                   isLoadingObjectRecords ? (
                     <div className="flex items-center justify-center gap-2">

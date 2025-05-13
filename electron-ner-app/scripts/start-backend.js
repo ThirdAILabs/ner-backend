@@ -148,17 +148,10 @@ function getBackendPath() {
   return null;
 }
 
-// Export a function to find an available port
-async function findAvailablePort() {
+async function startBackend() {
   const availablePort = await portfinder.getPortPromise();
-  console.log(`Found port available: ${availablePort}`);
-  return availablePort;
-}
 
-async function startBackend(port) {
-  // Use the provided port or find one dynamically if not provided
-  const backendPort = port || await findAvailablePort();
-  console.log(`Using port for backend: ${backendPort}`);
+  console.log(`Found port available: ${availablePort}`)
 
   const backendPath = getBackendPath();
   
@@ -185,7 +178,7 @@ async function startBackend(port) {
     cwd: backendDir, // Set working directory to where the binary is
     env: {
       ...process.env,
-      PORT: backendPort.toString(),
+      PORT: availablePort.toString(),
       DEBUG: process.env.DEBUG || '*',
       // Add any environment variables needed by the backend
     }
@@ -223,4 +216,4 @@ if (require.main === module) {
   startBackend();
 }
 
-module.exports = { startBackend, findAvailablePort }; 
+module.exports = { startBackend }; 
