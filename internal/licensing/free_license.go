@@ -30,8 +30,8 @@ func (verifier *FreeLicenseVerifier) VerifyLicense(ctx context.Context) (License
 	}
 
 	info := LicenseInfo{
-		"max_bytes":  fmt.Sprint(verifier.maxBytes),
-		"used_bytes": fmt.Sprint(totalBytes.Int64),
+		"maxBytes":  fmt.Sprint(verifier.maxBytes),
+		"usedBytes": fmt.Sprint(totalBytes.Int64),
 	}
 
 	if totalBytes.Valid && int(totalBytes.Int64) > verifier.maxBytes {
