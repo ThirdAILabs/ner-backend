@@ -242,7 +242,12 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		}
 	}
 
+	tagFormat := regexp.MustCompile(`^\w+$`)
 	for tag, pattern := range req.CustomTags {
+		if !tagFormat.MatchString(tag) {
+			return nil, CodedErrorf(http.StatusUnprocessableEntity, "invalid name for custom tag '%s': only alphanumeric characters and underscores are allowed", tag)
+		}
+
 		if _, err := regexp.Compile(pattern); err != nil {
 			return nil, CodedErrorf(http.StatusUnprocessableEntity, "invalid regex pattern '%s' for custom tag '%s': %v", pattern, tag, err)
 		}

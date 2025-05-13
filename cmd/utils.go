@@ -187,7 +187,7 @@ func InitializeBoltModel(db *gorm.DB, s3 storage.Provider, modelBucket, name, lo
 		return fmt.Errorf("failed to create model record: %w", err)
 	}
 
-	if result.RowsAffected == 0 {
+	if result.RowsAffected == 0 && model.Status == database.ModelTrained {
 		slog.Info("bolt model already exists, skipping initialization", "model_id", modelId)
 		return nil
 	}
