@@ -36,6 +36,7 @@ type BackendService struct {
 
 const (
 	uploadBucket = "uploads"
+	ErrCodeDB    = 1001 // Custom internal code for DB errors
 )
 
 func NewBackendService(db *gorm.DB, storage storage.Provider, pub messaging.Publisher, chunkTargetBytes int64) *BackendService {
@@ -85,7 +86,7 @@ func (s *BackendService) ListModels(r *http.Request) (any, error) {
 	var models []database.Model
 	if err := s.db.WithContext(ctx).Find(&models).Error; err != nil {
 		slog.Error("error getting models", "error", err)
-		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving model records")
+		return nil, CodedErrorf(ErrCodeDB, "error retrieving model records")
 	}
 
 	return convertModels(models), nil
@@ -105,7 +106,7 @@ func (s *BackendService) GetModel(r *http.Request) (any, error) {
 			return nil, CodedErrorf(http.StatusNotFound, "model not found")
 		}
 		slog.Error("error getting model from database", "error", err, "model_id", modelId)
-		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving model record")
+		return nil, CodedErrorf(ErrCodeDB, "error retrieving model record")
 	}
 
 	return convertModel(model), nil
@@ -136,7 +137,7 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 				return CodedErrorf(http.StatusNotFound, "base model not found")
 			}
 			slog.Error("error getting base model", "error", err)
-			return CodedErrorf(http.StatusInternalServerError, "error retrieving base model record")
+			return CodedErrorf(ErrCodeDB, "error retrieving base model record")
 		}
 
 		if baseModel.Status != database.ModelTrained {
@@ -154,7 +155,7 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 
 		if err := txn.WithContext(ctx).Create(&model).Error; err != nil {
 			slog.Error("error creating model entry", "error", err)
-			return CodedErrorf(http.StatusInternalServerError, "failed to create model entry")
+			return CodedErrorf(ErrCodeDB, "failed to create model entry")
 		}
 
 		return nil
@@ -184,7 +185,7 @@ func (s *BackendService) ListReports(r *http.Request) (any, error) {
 	var reports []database.Report
 	if err := s.db.WithContext(ctx).Preload("Model").Preload("Groups").Where("deleted = ?", false).Find(&reports).Error; err != nil {
 		slog.Error("error getting reports", "error", err)
-		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving report records")
+		return nil, CodedErrorf(ErrCodeDB, "error retrieving report records")
 	}
 
 	return convertReports(reports), nil
@@ -201,7 +202,7 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		result := s.db.WithContext(r.Context()).Limit(1).Find(&model, "name = ?", "basic")
 		if result.Error != nil {
 			slog.Error("error getting default model", "error", result.Error)
-			return nil, CodedErrorf(http.StatusInternalServerError, "error getting default model")
+			return nil, CodedErrorf(ErrCodeDB, "error getting default model")
 		}
 
 		if result.RowsAffected != 0 {
@@ -304,7 +305,7 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		result := txn.Where("report_name = ?", req.ReportName).Limit(1).Find(&existingReport)
 		if result.Error != nil {
 			slog.Error("error checking for duplicate report name", "error", result.Error)
-			return CodedErrorf(http.StatusInternalServerError, "error checking for duplicate report name")
+			return CodedErrorf(ErrCodeDB, "error checking for duplicate report name")
 		} else if result.RowsAffected > 0 {
 			return CodedErrorf(http.StatusUnprocessableEntity, "report name '%s' already exists", req.ReportName)
 		}
@@ -314,7 +315,7 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 				return CodedErrorf(http.StatusNotFound, "model not found")
 			}
 			slog.Error("error getting model", "error", err)
-			return CodedErrorf(http.StatusInternalServerError, "error retrieving model record")
+			return CodedErrorf(ErrCodeDB, "error retrieving model record")
 		}
 
 		if model.Status != database.ModelTrained {
@@ -334,12 +335,12 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 
 		if err := txn.WithContext(ctx).Create(&report).Error; err != nil {
 			slog.Error("error creating report entry", "error", err)
-			return CodedErrorf(http.StatusInternalServerError, "failed to create report entry")
+			return CodedErrorf(ErrCodeDB, "failed to create report entry")
 		}
 
 		if err := txn.WithContext(ctx).Create(&task).Error; err != nil {
 			slog.Error("error creating shard data task", "error", err)
-			return CodedErrorf(http.StatusInternalServerError, "failed to create shard data task")
+			return CodedErrorf(ErrCodeDB, "failed to create shard data task")
 		}
 		return nil
 	}); err != nil {
@@ -371,7 +372,7 @@ func (s *BackendService) GetReport(r *http.Request) (any, error) {
 			return nil, CodedErrorf(http.StatusNotFound, "report not found")
 		}
 		slog.Error("error getting report", "report_id", reportId, "error", err)
-		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving report data")
+		return nil, CodedErrorf(ErrCodeDB, "error retrieving report data")
 	}
 
 	if report.Deleted {
@@ -392,7 +393,7 @@ func (s *BackendService) GetReport(r *http.Request) (any, error) {
 		Group("status").
 		Find(&statusCategories).Error; err != nil {
 		slog.Error("error getting inference task statuses", "report_id", reportId, "error", err)
-		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving inference task statuses")
+		return nil, CodedErrorf(ErrCodeDB, "error retrieving inference task statuses")
 	}
 
 	apiReport := convertReport(report)
@@ -419,7 +420,7 @@ func (s *BackendService) DeleteReport(r *http.Request) (any, error) {
 		result := txn.Model(&database.Report{Id: reportId}).Update("deleted", true)
 		if err := result.Error; err != nil {
 			slog.Error("error deleting report", "report_id", reportId, "error", err)
-			return CodedErrorf(http.StatusInternalServerError, "error deleting report")
+			return CodedErrorf(ErrCodeDB, "error deleting report")
 		}
 
 		if result.RowsAffected == 0 {
@@ -429,17 +430,17 @@ func (s *BackendService) DeleteReport(r *http.Request) (any, error) {
 		// Delete the report data that takes up the most space
 		if err := txn.Delete(&database.ObjectGroup{}, "report_id = ?", reportId).Error; err != nil {
 			slog.Error("error deleting report groups", "report_id", reportId, "error", err)
-			return CodedErrorf(http.StatusInternalServerError, "error deleting report")
+			return CodedErrorf(ErrCodeDB, "error deleting report")
 		}
 
 		if err := txn.Delete(&database.ObjectEntity{}, "report_id = ?", reportId).Error; err != nil {
 			slog.Error("error deleting report entities", "report_id", reportId, "error", err)
-			return CodedErrorf(http.StatusInternalServerError, "error deleting report")
+			return CodedErrorf(ErrCodeDB, "error deleting report")
 		}
 
 		if err := txn.Delete(&database.ObjectPreview{}, "report_id = ?", reportId).Error; err != nil {
 			slog.Error("error deleting report entities", "report_id", reportId, "error", err)
-			return CodedErrorf(http.StatusInternalServerError, "error deleting report")
+			return CodedErrorf(ErrCodeDB, "error deleting report")
 		}
 
 		return nil
@@ -464,7 +465,7 @@ func (s *BackendService) StopReport(r *http.Request) (any, error) {
 		result := txn.Model(&database.Report{Id: reportId}).Update("stopped", true)
 		if err := result.Error; err != nil {
 			slog.Error("error stopping report", "report_id", reportId, "error", err)
-			return CodedErrorf(http.StatusInternalServerError, "error deleting report")
+			return CodedErrorf(ErrCodeDB, "error deleting report")
 		}
 
 		if result.RowsAffected == 0 {
@@ -499,7 +500,7 @@ func (s *BackendService) GetReportGroup(r *http.Request) (any, error) {
 			return nil, CodedErrorf(http.StatusNotFound, "report group not found")
 		}
 		slog.Error("error getting report group", "report_id", reportId, "group_id", groupId, "error", err)
-		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving report group record")
+		return nil, CodedErrorf(ErrCodeDB, "error retrieving report group record")
 	}
 
 	return convertGroup(group), nil
@@ -547,7 +548,7 @@ func (s *BackendService) GetReportEntities(r *http.Request) (any, error) {
 	var entities []database.ObjectEntity
 	if err := query.Find(&entities, "report_id = ?", reportId).Error; err != nil {
 		slog.Error("error getting job entities", "report_id", reportId, "error", err)
-		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving report entities")
+		return nil, CodedErrorf(ErrCodeDB, "error retrieving report entities")
 	}
 
 	return convertEntities(entities), nil
@@ -581,7 +582,7 @@ func (s *BackendService) GetReportPreviews(r *http.Request) (any, error) {
 		Order("object").
 		Find(&previews).Error; err != nil {
 		slog.Error("error fetching previews", "report_id", reportId, "err", err)
-		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving previews")
+		return nil, CodedErrorf(ErrCodeDB, "error retrieving previews")
 	}
 
 	resp := make([]api.ObjectPreviewResponse, len(previews))
@@ -624,7 +625,7 @@ func (s *BackendService) ReportSearch(r *http.Request) (any, error) {
 	var objects []string
 	if err := s.db.WithContext(ctx).Model(&database.ObjectEntity{}).Distinct("object").Where("report_id = ?", reportId).Where(filter).Find(&objects).Error; err != nil {
 		slog.Error("error getting job objects by search", "report_id", reportId, "error", err)
-		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving report objects")
+		return nil, CodedErrorf(ErrCodeDB, "error retrieving report objects")
 	}
 
 	return api.SearchResponse{Objects: objects}, nil
@@ -735,7 +736,7 @@ func (s *BackendService) GetInferenceMetrics(r *http.Request) (any, error) {
 	}
 	if err := q1.Scan(&completed).Error; err != nil {
 		slog.Error("error fetching completed metrics", "error", err)
-		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving metrics")
+		return nil, CodedErrorf(ErrCodeDB, "error retrieving metrics")
 	}
 
 	q2 := s.db.Model(&database.InferenceTask{}).
@@ -748,7 +749,7 @@ func (s *BackendService) GetInferenceMetrics(r *http.Request) (any, error) {
 	}
 	if err := q2.Scan(&running).Error; err != nil {
 		slog.Error("error fetching in-progress metrics", "error", err)
-		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving metrics")
+		return nil, CodedErrorf(ErrCodeDB, "error retrieving metrics")
 	}
 
 	totalBytes := completed.Size.Int64 + running.Size.Int64
@@ -800,7 +801,7 @@ func (s *BackendService) GetThroughputMetrics(r *http.Request) (any, error) {
 		Select("inference_tasks.total_size, inference_tasks.start_time, inference_tasks.completion_time").
 		Scan(&rows).Error; err != nil {
 		slog.Error("error fetching throughput rows", "error", err)
-		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving throughput")
+		return nil, CodedErrorf(ErrCodeDB, "error retrieving throughput")
 	}
 
 	var totalBytes int64
