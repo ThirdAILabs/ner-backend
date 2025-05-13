@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"log/slog"
 	"path/filepath"
@@ -125,6 +126,19 @@ func main() {
 	if err := env.Parse(&cfg); err != nil {
 		log.Fatalf("error parsing config: %v", err)
 	}
+
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	if err := os.MkdirAll(cfg.Root, os.ModePerm); err != nil {
+		log.Fatalf("error creating directory for log file: %v", err)
+	}
+
+	f, err := os.OpenFile(filepath.Join(cfg.Root, "backend.log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("error opening log file: %v", err)
+	}
+	defer f.Close()
+
+	log.SetOutput(io.MultiWriter(f, os.Stderr))
 
 	slog.Info("starting backend", "root", cfg.Root, "port", cfg.Port)
 
