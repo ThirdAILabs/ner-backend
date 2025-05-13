@@ -39,7 +39,7 @@ const Tag: React.FC<TagProps> = ({
 // Source option card component - reused from the detail page
 interface SourceOptionProps {
   title: string;
-  description: string;
+  description: React.ReactNode;
   isSelected?: boolean;
   disabled?: boolean;
   onClick: () => void;
@@ -56,7 +56,7 @@ const SourceOption: React.FC<SourceOptionProps> = ({
     className={`relative p-6 border rounded-md transition-all
       ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200 border-2'}
       ${disabled
-        ? 'opacity-50 cursor-not-allowed bg-gray-50'
+        ? 'opacity-85 cursor-not-allowed bg-gray-50'
         : 'cursor-pointer hover:border-blue-300'
       }
     `}
@@ -158,7 +158,7 @@ export default function NewJobPage() {
         const trainedModels = modelData.filter(
           (model) => model.Status === 'TRAINED'
         );
-        setModels(trainedModels);
+        setModels(trainedModels.reverse());
         setSelectedModelId(trainedModels[0].Id);
       } catch (err) {
         console.error('Error fetching models:', err);
@@ -451,6 +451,15 @@ export default function NewJobPage() {
     return true;
   };
 
+  const [showTooltip, setShowTooltip] = useState(false);
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setShowTooltip(true);
+    setTimeout(() => {
+      setShowTooltip(false);
+    }, 1000);
+  };
+
   return (
     <div className="container px-4 py-8 w-3/4">
       {/* Title and Back Button */}
@@ -639,12 +648,37 @@ export default function NewJobPage() {
                 {models.map((model) => (
                   <SourceOption
                     key={model.Id}
-                    title={model.Name[0].toUpperCase() + model.Name.slice(1)}
-                    description={model.Name === 'basic' ? `Description: Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.` : `Description: Our most advanced AI model, requires an enterprise subscription, allows users to perpetually customize fields with user feedback (RLHF based fine-tuning), comes with an advanced dashboard for usage and performance metrics. Reach out to contact@thirdai.com for an enterprise subscription.`}
+                    title={model.Name === "presidio" ? "Advanced" : model.Name[0].toUpperCase() + model.Name.slice(1)}
+                    description={
+                      model.Name === 'basic' ? (
+                        'Description: Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.'
+                      ) : (
+                        <>
+                          Description: Our most advanced AI model requires an enterprise subscription. It allows users to perpetually customize fields with user feedback (RLHF-based fine-tuning) and includes an advanced dashboard for usage and performance metrics. Reach out to{' '}
+                          <div className="relative inline-block">
+                            <span
+                              className="text-blue-500 underline cursor-pointer hover:text-blue-700"
+                              onClick={() => copyToClipboard('contact@thirdai.com')}
+                              title="Click to copy email"
+                            >
+                              contact@thirdai.com
+                            </span>
+                            {showTooltip && (
+                              <div className="absolute left-1/2 -translate-x-1/2 mt-1 w-max px-2 py-1 text-xs bg-gray-800 text-white rounded shadow-md z-10">
+                                Email Copied
+                              </div>
+                            )}
+                          </div>
+                          for an enterprise subscription.
+                        </>
+                      )
+                    }
                     isSelected={selectedModelId === model.Id}
                     onClick={() => setSelectedModelId(model.Id)}
+                    disabled={model.Name === "presidio"}
                   />
                 ))}
+
               </div>
             </div>
 
