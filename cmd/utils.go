@@ -161,14 +161,10 @@ func InitializeTransformerModel(ctx context.Context, db *gorm.DB, s3p *storage.S
 func InitializeBoltModel(db *gorm.DB, s3 storage.Provider, modelBucket, name, localModelPath string) error {
 	slog.Info("initializing bolt model", "model_name", name, "local_model_path", localModelPath)
 
-	tags := []string{"SSN", "PHONENUMBER", "CREDIT_SCORE", "LOCATION", "SEXUAL_ORIENTATION",
-		"VIN", "NAME", "URL", "ETHNICITY", "CARD_NUMBER", "SERVICE_CODE", "ADDRESS", "COMPANY",
-		"DATE", "EMAIL", "GENDER", "LICENSE_PLATE", "ID_NUMBER", "O"}
-
 	modelId := uuid.New()
 
 	var modelTags []database.ModelTag
-	for _, tag := range tags {
+	for _, tag := range commonModelTags {
 		modelTags = append(modelTags, database.ModelTag{
 			ModelId: modelId,
 			Tag:     tag,
