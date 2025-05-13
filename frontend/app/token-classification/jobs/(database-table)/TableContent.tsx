@@ -8,7 +8,6 @@ import {
 } from '@/components/ui/table';
 import { Loader2 } from 'lucide-react';
 import { ClassifiedTokenDatabaseRecord, ObjectDatabaseRecord, ViewMode, TableContentProps } from './types';
-import { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 
 const PASTELS = ['#E5A49C', '#F6C886', '#FBE7AA', '#99E3B5', '#A6E6E7', '#A5A1E1', '#D8A4E2'];
@@ -79,6 +78,8 @@ const HighlightedToken = React.memo(({ token, tag, tagColors }: HighlightedToken
       </span>
     </span>
   );
+});
+
 const HighlightedTag = React.memo(({ tag, tagColors }: { tag: string; tagColors: Record<string, HighlightColor> }) => {
   if (tag === 'O') {
     return <span>{tag}</span>;
