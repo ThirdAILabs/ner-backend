@@ -1,3 +1,4 @@
+// TODO: Remove this file before merging
 package main
 
 import (
@@ -126,7 +127,6 @@ func run() error {
 		return fmt.Errorf("finetune: %w", err)
 	}
 	fmt.Printf("  Done in %v\n\n", time.Since(start))
-
 
 	// 6) Post‐finetune prediction
 	fmt.Println("→ Post-finetune prediction")

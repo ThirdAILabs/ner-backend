@@ -62,7 +62,6 @@ class ModelServicer(model_pb2_grpc.ModelServicer):
                 )
                 for s in request.samples
             ]
-            # now call your extractor
             self.model.finetune(request.prompt, tags, samples)
             return model_pb2.FinetuneResponse(success=True)
         except Exception as e:
