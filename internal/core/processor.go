@@ -33,11 +33,12 @@ type TaskProcessor struct {
 
 	localModelDir string
 	modelBucket   string
+	modelLoaders  map[string]ModelLoader
 }
 
 const bytesPerMB = 1024 * 1024
 
-func NewTaskProcessor(db *gorm.DB, storage storage.Provider, publisher messaging.Publisher, reciever messaging.Reciever, licenseVerifier licensing.LicenseVerifier, localModelDir string, modelBucket string) *TaskProcessor {
+func NewTaskProcessor(db *gorm.DB, storage storage.Provider, publisher messaging.Publisher, reciever messaging.Reciever, licenseVerifier licensing.LicenseVerifier, localModelDir string, modelBucket string, modelLoaders map[string]ModelLoader) *TaskProcessor {
 	return &TaskProcessor{
 		db:            db,
 		storage:       storage,
@@ -46,6 +47,7 @@ func NewTaskProcessor(db *gorm.DB, storage storage.Provider, publisher messaging
 		licensing:     licenseVerifier,
 		localModelDir: localModelDir,
 		modelBucket:   modelBucket,
+		modelLoaders:  modelLoaders,
 	}
 }
 
@@ -221,6 +223,15 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 		return fmt.Errorf("error updating inference task status to complete: %w", err)
 	}
 
+	delta := len(s3Objects)
+	if err := proc.db.
+		Model(&database.Report{}).
+		Where("id = ?", reportId).
+		UpdateColumn("completed_file_count", gorm.Expr("completed_file_count + ?", delta)).
+		Error; err != nil {
+		slog.Error("could not increment completed_file_count", "report_id", reportId, "delta", delta, "err", err)
+	}
+
 	slog.Info("inference task completed successfully", "report_id", reportId, "task_id", payload.TaskId)
 
 	return nil
@@ -377,7 +388,7 @@ func (proc *TaskProcessor) loadModel(ctx context.Context, modelId uuid.UUID, mod
 		}
 	}
 
-	model, err := LoadModel(modelType, localDir)
+	model, err := proc.modelLoaders[modelType](localDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load model: %w", err)
 	}
@@ -625,6 +636,7 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 	var currentChunkKeys []string
 	var currentChunkSize int64 = 0
 	var taskId int = 0
+	var totalFiles int = 0
 
 	for obj, err := range storage.IterObjects(ctx, task.Report.SourceS3Bucket, task.Report.SourceS3Prefix.String) {
 		if err != nil {
@@ -632,6 +644,8 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 			database.UpdateShardDataTaskStatus(ctx, proc.db, reportId, database.JobFailed) //nolint:errcheck
 			return fmt.Errorf("error iterating over S3 objects: %w", err)
 		}
+
+		totalFiles++
 
 		if currentChunkSize+obj.Size > targetBytes && len(currentChunkKeys) > 0 {
 			if err := createInferenceTask(ctx, taskId, currentChunkKeys, currentChunkSize); err != nil {
@@ -651,6 +665,14 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 			return err
 		}
 		taskId++
+	}
+
+	if err := proc.db.
+		Model(&database.Report{}).
+		Where("id = ?", reportId).
+		UpdateColumn("total_file_count", totalFiles).
+		Error; err != nil {
+		slog.Warn("failed to update total_file_count", "report_id", reportId, "totalFiles", totalFiles, "error", err)
 	}
 
 	if err := database.UpdateShardDataTaskStatus(ctx, proc.db, reportId, database.JobCompleted); err != nil {

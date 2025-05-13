@@ -38,12 +38,14 @@ func TestFinetuning(t *testing.T) {
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
-	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket)
+	baseModelName, baseModelloader, baseModelId := createModel(t, s3, db, modelBucket)
+
+	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket, map[string]core.ModelLoader{
+		baseModelName: baseModelloader,
+	})
 
 	go worker.Start()
 	defer worker.Stop()
-
-	baseModelId := createModel(t, s3, db, modelBucket)
 
 	var res api.FinetuneResponse
 	err = httpRequest(router, "POST", fmt.Sprintf("/models/%s/finetune", baseModelId.String()), api.FinetuneRequest{

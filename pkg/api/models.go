@@ -11,7 +11,6 @@ type Model struct {
 	Id          uuid.UUID
 	BaseModelId *uuid.UUID
 	Name        string
-	Type        string
 	Status      string
 
 	Tags []string `json:"Tags,omitempty"`
@@ -39,8 +38,10 @@ type Report struct {
 	SourceS3Prefix string
 	IsUpload       bool
 
-	Stopped      bool
-	CreationTime time.Time
+	Stopped            bool
+	CreationTime       time.Time
+	TotalFileCount     int `json:"FileCount,omitempty"`
+	CompletedFileCount int `json:"CompletedFileCount,omitempty"`
 
 	Tags       []string          `json:"Tags,omitempty"`
 	CustomTags map[string]string `json:"CustomTags,omitempty"`

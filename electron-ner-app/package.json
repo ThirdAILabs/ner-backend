@@ -1,0 +1,105 @@
+{
+  "name": "electron-ner-app",
+  "version": "1.0.0",
+  "description": "Electron app for Named Entity Recognition",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "copy-model": "node scripts/copy-model.js",
+    "copy-backend": "node scripts/copy-backend.js",
+    "prepare-files": "rm -rf bin && npm run copy-backend && npm run copy-model",
+    "dev": "MODEL_PATH=\"/Users/t/Downloads/code/temp-ner-backend/udt_complete.model\" npm run prepare-files && concurrently --kill-others \"cd ../frontend && npm run dev && cd ../electron-ner-app\" \"wait-on http://localhost:3007 && electron .\"",
+    "start-backend": "node scripts/start-backend.js",
+    "build": "cd ../frontend && npm run build && rm -rf ../electron-ner-app/frontend-dist && mv out ../electron-ner-app/frontend-dist && cd ../electron-ner-app && npm run prepare-files && electron-builder",
+    "vite-build": "cd src && vite build",
+    "electron-build": "npm run copy-backend && electron-builder",
+    "build-dmg": "node scripts/build-dmg.js",
+    "build-win": "node scripts/build-win.js",
+    "build-linux": "node scripts/build-linux.js",
+    "debug:check-backend": "node scripts/debug-build.js check-backend",
+    "debug:frontend-only": "node scripts/debug-build.js build-frontend-only",
+    "debug:quick-package": "node scripts/debug-build.js quick-package",
+    "debug:test-backend": "node scripts/debug-build.js test-backend-in-package",
+    "debug:run-app": "node scripts/debug-build.js run-app-with-logging",
+    "debug-pkg": "node scripts/debug-packaging.js"
+  },
+  "keywords": [
+    "electron",
+    "ner",
+    "token-classification"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "@vitejs/plugin-react": "^4.2.1",
+    "concurrently": "^8.2.2",
+    "electron": "^28.0.0",
+    "electron-builder": "^24.6.4",
+    "typescript": "^5.5.3",
+    "vite": "^5.1.4"
+  },
+  "dependencies": {
+    "app-serve": "^1.0.3",
+    "axios": "^1.7.2",
+    "commander": "^12.0.0",
+    "electron-is-dev": "^2.0.0",
+    "electron-serve": "^1.3.0",
+    "get-port": "^7.1.0",
+    "http-proxy": "^1.18.1",
+    "portfinder": "^1.0.37",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "wait-on": "^8.0.3"
+  },
+  "build": {
+    "appId": "com.electron.ner-app",
+    "productName": "PocketShield",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "build/**/*",
+      "main.js",
+      "preload.js",
+      "frontend-dist/**/*",
+      "scripts/**/*",
+      "!**/node_modules/**/{CHANGELOG.md,README.md,README,readme.md,readme}",
+      "!**/node_modules/**/{test,__tests__,tests,powered-test,example,examples}",
+      "!**/node_modules/**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}",
+      "!**/node_modules/**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,.gitignore,.gitattributes}"
+    ],
+    "extraResources": [
+      {
+        "from": "bin",
+        "to": "bin"
+      },
+      {
+        "from": "node_modules/electron-is-dev",
+        "to": "node_modules/electron-is-dev"
+      }
+    ],
+    "asarUnpack": [
+      "scripts/**/*"
+    ],
+    "afterPack": "./scripts/after-pack.js",
+    "asar": true,
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [
+        "dmg"
+      ],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}

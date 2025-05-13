@@ -68,8 +68,8 @@ func TestListModels(t *testing.T) {
 	err := json.Unmarshal(rec.Body.Bytes(), &response)
 	assert.NoError(t, err)
 	assert.ElementsMatch(t, []api.Model{
-		{Id: id1, Name: "Model1", Type: "regex", Status: database.ModelTrained},
-		{Id: id2, Name: "Model2", Type: "bolt", Status: database.ModelTraining},
+		{Id: id1, Name: "Model1", Status: database.ModelTrained},
+		{Id: id2, Name: "Model2", Status: database.ModelTraining},
 	}, response)
 }
 
@@ -95,7 +95,7 @@ func TestGetModel(t *testing.T) {
 	var response api.Model
 	err := json.Unmarshal(rec.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	assert.Equal(t, api.Model{Id: modelId, Name: "Model2", Type: "bolt", Status: database.ModelTraining, Tags: []string{"name", "phone"}}, response)
+	assert.Equal(t, api.Model{Id: modelId, Name: "Model2", Status: database.ModelTraining, Tags: []string{"name", "phone"}}, response)
 }
 
 func TestFinetuneModel(t *testing.T) {
@@ -143,7 +143,6 @@ func TestFinetuneModel(t *testing.T) {
 
 		assert.Equal(t, response.ModelId, model.Id)
 		assert.Equal(t, "FinetunedModel", model.Name)
-		assert.Equal(t, "regex", model.Type)
 		assert.Equal(t, database.ModelQueued, model.Status)
 		assert.Equal(t, modelId, *model.BaseModelId)
 	})
@@ -203,7 +202,6 @@ func TestCreateReport(t *testing.T) {
 	assert.Equal(t, api.Model{
 		Id:     modelId,
 		Name:   "Model1",
-		Type:   "regex",
 		Status: database.ModelTrained,
 	}, report.Model)
 	assert.Equal(t, "test-bucket", report.SourceS3Bucket)
@@ -266,7 +264,6 @@ func TestGetReport(t *testing.T) {
 		assert.Equal(t, api.Model{
 			Id:     modelId,
 			Name:   "Model1",
-			Type:   "regex",
 			Status: database.ModelTrained,
 		}, report.Model)
 		assert.Equal(t, "test-bucket", report.SourceS3Bucket)

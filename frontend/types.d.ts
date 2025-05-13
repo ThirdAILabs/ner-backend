@@ -1,7 +1,6 @@
 interface Model {
     Id: string;
     Name: string;
-    Type: string;
     Status: string;
 }
 
@@ -27,6 +26,8 @@ interface Report {
     CustomTags?: {
         [key: string]: string;
     };
+    FileCount: number;
+    CompletedFileCount: number;
     Groups?: Group[];
     ShardDataTaskStatus?: string;
     InferenceTaskStatuses?: { [key: string]: TaskStatusCategory };
