@@ -87,7 +87,7 @@ func TestFinetuning_CNNModel(t *testing.T) {
 	// Remove before merging
 
 	os.Setenv("PYTHON_EXECUTABLE_PATH", "/opt/conda/envs/pii-presidio-3.10/bin/python3")
-	os.Setenv("PYTHON_PLUGIN_PATH", "/home/ubuntu/pratik/ner-backend/plugin/plugin-python/plugin.py")
+	os.Setenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH", "/home/ubuntu/pratik/ner-backend/plugin/plugin-python/plugin.py")
 	os.Setenv("HOST_MODEL_DIR", "/home/ubuntu/shubh/ner/misc/ner-models")
 
 	if os.Getenv("PYTHON_EXECUTABLE_PATH") == "" || os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH") == "" {
@@ -126,7 +126,7 @@ func TestFinetuning_CNNModel(t *testing.T) {
 	require.NoError(t, cmd.InitializeCnnNerExtractor(ctx, db, s3, modelBucket, os.Getenv("HOST_MODEL_DIR")))
 
 	var baseModel database.Model
-	require.NoError(t, db.Where("name = ?", "advance").First(&baseModel).Error)
+	require.NoError(t, db.Where("name = ?", "advanced").First(&baseModel).Error)
 
 	var ftResp api.FinetuneResponse
 	err = httpRequest(
