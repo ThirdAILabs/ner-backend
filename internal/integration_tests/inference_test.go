@@ -136,7 +136,7 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 		S3Endpoint:     minioUrl,
 		SourceS3Bucket: dataBucket,
 		Tags:           []string{"phone", "email"},
-		CustomTags:     map[string]string{"custom-token": `(\w\d){3}`},
+		CustomTags:     map[string]string{"custom_token": `(\w\d){3}`},
 		Groups: map[string]string{
 			"phone": `COUNT(phone) > 0`,
 			"email": `COUNT(email) > 0`,
