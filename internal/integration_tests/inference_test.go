@@ -19,6 +19,8 @@ import (
 	"testing"
 	"time"
 
+	"gorm.io/gorm"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -117,12 +119,12 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
-	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket)
+	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket, cmd.NewModelLoaders("python", "plugin/plugin-python/plugin.py"))
 
 	go worker.Start()
 	defer worker.Stop()
 
-	modelId := createModel(t, s3, db, modelBucket)
+	modelId := createModel(t, worker, s3, db, modelBucket)
 
 	createData(t, s3)
 
@@ -210,12 +212,12 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
-	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket)
+	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket, cmd.NewModelLoaders("python", "plugin/plugin-python/plugin.py"))
 
 	go worker.Start()
 	defer worker.Stop()
 
-	modelId := createModel(t, s3, db, modelBucket)
+	modelId := createModel(t, worker, s3, db, modelBucket)
 
 	uploadId := createUpload(t, router)
 
@@ -266,7 +268,7 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 
 	// Worker
 	tempDir := t.TempDir()
-	worker := core.NewTaskProcessor(db, s3, publisher, receiver, &DummyLicenseVerifier{}, tempDir, modelBucket)
+	worker := core.NewTaskProcessor(db, s3, publisher, receiver, &DummyLicenseVerifier{}, tempDir, modelBucket, cmd.NewModelLoaders(os.Getenv("PYTHON_EXECUTABLE_PATH"), os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH")))
 	go worker.Start()
 	t.Cleanup(worker.Stop)
 
@@ -274,19 +276,23 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 	models := []struct {
 		label      string
 		tag        string
-		initFn     func(context.Context, *database.Database, storage.Provider, string) error
+		initFn     func(context.Context, *gorm.DB, *storage.S3Provider, string) error
 		expectedDB string
 	}{
 		{
-			label:      "CNN Model",
-			tag:        "cnn",
-			initFn:     func(c context.Context, db *database.Database, s3 storage.Provider, bucket string) error { return cmd.InitializeCnnNerExtractor(c, db, s3, bucket) },
+			label: "CNN Model",
+			tag:   "cnn",
+			initFn: func(c context.Context, db *gorm.DB, s3 *storage.S3Provider, bucket string) error {
+				return cmd.InitializeCnnNerExtractor(c, db, s3, bucket, os.Getenv("HOST_MODEL_DIR"))
+			},
 			expectedDB: "advanced",
 		},
 		{
-			label:      "Transformer Model",
-			tag:        "transformer",
-			initFn:     func(c context.Context, db *database.Database, s3 storage.Provider, bucket string) error { return cmd.InitializeTransformerModel(c, db, s3, bucket) },
+			label: "Transformer Model",
+			tag:   "transformer",
+			initFn: func(c context.Context, db *gorm.DB, s3 *storage.S3Provider, bucket string) error {
+				return cmd.InitializeTransformerModel(c, db, s3, bucket, os.Getenv("HOST_MODEL_DIR"))
+			},
 			expectedDB: "ultra",
 		},
 	}
@@ -306,7 +312,10 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 				ReportName: fmt.Sprintf("test-report-%s", m.tag),
 				ModelId:    model.Id,
 				UploadId:   uploadID,
-				Tags: []string{"ADDRESS", "CARD_NUMBER", "COMPANY", /* ... */ "VIN", "O"},
+				Tags: []string{"ADDRESS", "CARD_NUMBER", "COMPANY", "CREDIT_SCORE", "DATE",
+					"EMAIL", "ETHNICITY", "GENDER", "ID_NUMBER", "LICENSE_PLATE",
+					"LOCATION", "NAME", "PHONENUMBER", "SERVICE_CODE", "SEXUAL_ORIENTATION",
+					"SSN", "URL", "VIN", "O"},
 			})
 
 			// Wait for processing

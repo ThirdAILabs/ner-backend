@@ -117,7 +117,7 @@ const (
 	modelBucket = "test-model-bucket"
 )
 
-func createModel(t *testing.T, storage storage.Provider, db *gorm.DB, modelBucket string) uuid.UUID {
+func createModel(t *testing.T, worker *core.TaskProcessor, storage storage.Provider, db *gorm.DB, modelBucket string) uuid.UUID {
 	modelData := `{"phone": "\\d{3}-\\d{3}-\\d{4}", "email": "\\w+@email\\.com"}`
 
 	require.NoError(t, storage.CreateBucket(context.Background(), modelBucket))
@@ -137,7 +137,7 @@ func createModel(t *testing.T, storage storage.Provider, db *gorm.DB, modelBucke
 
 	require.NoError(t, db.Create(&model).Error)
 
-	core.RegisterModelLoader("regex", loadRegexModel)
+	worker.RegisterModelLoader("regex", loadRegexModel)
 
 	return modelId
 }

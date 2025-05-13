@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"ner-backend/cmd"
 	backend "ner-backend/internal/api"
 	"ner-backend/internal/core"
 	"ner-backend/internal/database"
@@ -38,12 +39,12 @@ func TestFinetuning(t *testing.T) {
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
-	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket)
+	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket, cmd.NewModelLoaders("python", "plugin/plugin-python/plugin.py"))
 
 	go worker.Start()
 	defer worker.Stop()
 
-	baseModelId := createModel(t, s3, db, modelBucket)
+	baseModelId := createModel(t, worker, s3, db, modelBucket)
 
 	var res api.FinetuneResponse
 	err = httpRequest(router, "POST", fmt.Sprintf("/models/%s/finetune", baseModelId.String()), api.FinetuneRequest{

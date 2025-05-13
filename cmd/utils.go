@@ -8,6 +8,8 @@ import (
 	"log"
 	"log/slog"
 	"ner-backend/internal/core"
+	"ner-backend/internal/core/bolt"
+	"ner-backend/internal/core/python"
 	"ner-backend/internal/database"
 	"ner-backend/internal/licensing"
 	"ner-backend/internal/storage"
@@ -85,6 +87,7 @@ func initializeModel(
 	localSubdir string,
 	tags []string,
 	skipIfExistsCount int,
+	modelBase string,
 ) error {
 	var model database.Model
 	err := db.Where("name = ?", name).Preload("Tags").First(&model).Error
@@ -108,10 +111,6 @@ func initializeModel(
 	}
 
 	s3Prefix := model.Id.String() + "/"
-	modelBase := os.Getenv("HOST_MODEL_DIR")
-	if modelBase == "" {
-		modelBase = "/app/models"
-	}
 	localDir := filepath.Join(modelBase, localSubdir)
 
 	info, err := os.Stat(localDir)
@@ -143,18 +142,18 @@ func initializeModel(
 	return nil
 }
 
-func InitializeCnnNerExtractor(ctx context.Context, db *gorm.DB, s3p *storage.S3Provider, bucket string) error {
+func InitializeCnnNerExtractor(ctx context.Context, db *gorm.DB, s3p *storage.S3Provider, bucket string, hostModelDir string) error {
 	return initializeModel(ctx, db, s3p, bucket,
 		"advanced", "cnn", "cnn_model",
-		commonModelTags, 0,
+		commonModelTags, 0, hostModelDir,
 	)
 }
 
-func InitializeTransformerModel(ctx context.Context, db *gorm.DB, s3p *storage.S3Provider, bucket string) error {
+func InitializeTransformerModel(ctx context.Context, db *gorm.DB, s3p *storage.S3Provider, bucket string, hostModelDir string) error {
 	// transformer may have multiple files; skip if >4 objects exist
 	return initializeModel(ctx, db, s3p, bucket,
 		"ultra", "transformer", "transformer_model",
-		commonModelTags, 4,
+		commonModelTags, 4, hostModelDir,
 	)
 }
 
@@ -246,5 +245,35 @@ func CreateLicenseVerifier(db *gorm.DB, license string) licensing.LicenseVerifie
 	} else {
 		slog.Warn(fmt.Sprintf("License key not provided. Using free license verifier with %.2fGB total file size limit", float64(licensing.DefaultFreeLicenseMaxBytes)/(1024*1024*1024)))
 		return licensing.NewFreeLicenseVerifier(db, licensing.DefaultFreeLicenseMaxBytes)
+	}
+}
+
+func NewModelLoaders(pythonExec, pluginScript string) map[string]core.ModelLoader {
+
+	return map[string]core.ModelLoader{
+		"bolt": func(modelDir string) (core.Model, error) {
+			return bolt.LoadNER(filepath.Join(modelDir, "model.bin"))
+		},
+		"transformer": func(modelDir string) (core.Model, error) {
+			cfgJSON := fmt.Sprintf(`{"model_path":"%s","threshold":0.5}`, modelDir)
+			return python.LoadPythonModel(
+				pythonExec,
+				pluginScript,
+				"python_combined_ner_model",
+				cfgJSON,
+			)
+		},
+		"cnn": func(modelDir string) (core.Model, error) {
+			cfgJSON := fmt.Sprintf(`{"model_path":"%s/cnn_model.pth"}`, modelDir)
+			return python.LoadPythonModel(
+				pythonExec,
+				pluginScript,
+				"python_cnn_ner_model",
+				cfgJSON,
+			)
+		},
+		"presidio": func(_ string) (core.Model, error) {
+			return core.NewPresidioModel()
+		},
 	}
 }

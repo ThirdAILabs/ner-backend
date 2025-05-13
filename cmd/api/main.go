@@ -32,6 +32,7 @@ type APIConfig struct {
 	WorkerConcurrency int    `env:"CONCURRENCY" envDefault:"1"`
 	APIPort           string `env:"API_PORT" envDefault:"8001"`
 	ChunkTargetBytes  int64  `env:"S3_CHUNK_TARGET_BYTES" envDefault:"10737418240"`
+	HostModelDir      string `env:"HOST_MODEL_DIR" envDefault:"/app/models"`
 }
 
 func main() {
@@ -66,11 +67,11 @@ func main() {
 
 	cmd.InitializePresidioModel(db)
 
-	if err := cmd.InitializeCnnNerExtractor(context.Background(), db, s3Client, cfg.ModelBucketName); err != nil {
+	if err := cmd.InitializeCnnNerExtractor(context.Background(), db, s3Client, cfg.ModelBucketName, cfg.HostModelDir); err != nil {
 		log.Fatalf("Failed to init & upload CNN NER model: %v", err)
 	}
-  
-	if err := cmd.InitializeTransformerModel(context.Background(), db, s3Client, cfg.ModelBucketName); err != nil {
+
+	if err := cmd.InitializeTransformerModel(context.Background(), db, s3Client, cfg.ModelBucketName, cfg.HostModelDir); err != nil {
 		log.Fatalf("Failed to init & upload Transformer model: %v", err)
 	}
 
