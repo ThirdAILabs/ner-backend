@@ -67,17 +67,103 @@ func InitializePresidioModel(db *gorm.DB) {
 	}
 }
 
+var commonModelTags = []string{
+	"ADDRESS", "CARD_NUMBER", "COMPANY", "CREDIT_SCORE", "DATE",
+	"EMAIL", "ETHNICITY", "GENDER", "ID_NUMBER", "LICENSE_PLATE",
+	"LOCATION", "NAME", "PHONENUMBER", "SERVICE_CODE", "SEXUAL_ORIENTATION",
+	"SSN", "URL", "VIN", "O",
+}
+
+func initializeModel(
+	ctx context.Context,
+	db *gorm.DB,
+	s3p *storage.S3Provider,
+	bucket,
+	name,
+	modelType,
+	localDir string,
+	tags []string,
+) error {
+	var model database.Model
+	result := db.
+		Preload("Tags").
+		Where("name = ?", name).
+		Attrs(database.Model{
+			Id:           uuid.New(),
+			Name:         name,
+			Type:         modelType,
+			Status:       database.ModelQueued,
+			CreationTime: time.Now(),
+		}).
+		FirstOrCreate(&model)
+
+	if result.Error != nil {
+		return fmt.Errorf("error finding or creating model %q: %w", name, result.Error)
+	}
+
+	if result.RowsAffected == 0 && model.Status == database.ModelTrained {
+		slog.Info("model already exists, skipping initialization", "model_id", model.Id)
+		return nil
+	}
+
+	if result.RowsAffected > 0 {
+		modelTags := make([]database.ModelTag, len(tags))
+		for i, tag := range tags {
+			modelTags[i] = database.ModelTag{
+				ModelId: model.Id,
+				Tag:     tag,
+			}
+		}
+
+		if err := db.Model(&model).Association("Tags").Replace(modelTags); err != nil {
+			return fmt.Errorf("failed to attach tags to new model %q: %w", name, err)
+		}
+	}
+
+	info, err := os.Stat(localDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			slog.Warn("local model dir does not exist, skipping upload", "dir", localDir)
+			return nil
+		}
+		database.UpdateModelStatus(ctx, db, model.Id, database.ModelFailed) // nolint:errcheck
+		return fmt.Errorf("failed to stat local model dir %s: %w", localDir, err)
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("local model dir %s is not a directory", localDir)
+	}
+
+	if err := s3p.UploadDir(ctx, bucket, model.Id.String(), localDir); err != nil {
+		database.UpdateModelStatus(ctx, db, model.Id, database.ModelFailed) // nolint:errcheck
+		slog.Warn("failed to upload model to S3", "model_id", model.Id, "error", err)
+		return fmt.Errorf("error uploading model %s: %w", name, err)
+	}
+	database.UpdateModelStatus(ctx, db, model.Id, database.ModelTrained) // nolint:errcheck
+	slog.Info("successfully uploaded model to S3", "model_id", model.Id)
+	return nil
+}
+
+func InitializeCnnNerExtractor(ctx context.Context, db *gorm.DB, s3p *storage.S3Provider, bucket string, hostModelDir string) error {
+	return initializeModel(ctx, db, s3p, bucket,
+		"advanced", "cnn", filepath.Join(hostModelDir, "cnn_model"),
+		commonModelTags,
+	)
+}
+
+func InitializeTransformerModel(ctx context.Context, db *gorm.DB, s3p *storage.S3Provider, bucket string, hostModelDir string) error {
+	return initializeModel(ctx, db, s3p, bucket,
+		"ultra", "transformer", filepath.Join(hostModelDir, "transformer_model"),
+		commonModelTags,
+	)
+}
+
 func InitializeBoltModel(db *gorm.DB, s3 storage.Provider, modelBucket, name, localModelPath string) error {
 	slog.Info("initializing bolt model", "model_name", name, "local_model_path", localModelPath)
-
-	tags := []string{"SSN", "PHONENUMBER", "CREDIT_SCORE", "LOCATION", "SEXUAL_ORIENTATION",
-		"VIN", "NAME", "URL", "ETHNICITY", "CARD_NUMBER", "SERVICE_CODE", "ADDRESS", "COMPANY",
-		"DATE", "EMAIL", "GENDER", "LICENSE_PLATE", "ID_NUMBER", "O"}
 
 	modelId := uuid.New()
 
 	var modelTags []database.ModelTag
-	for _, tag := range tags {
+	for _, tag := range commonModelTags {
 		modelTags = append(modelTags, database.ModelTag{
 			ModelId: modelId,
 			Tag:     tag,
