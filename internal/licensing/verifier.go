@@ -17,10 +17,9 @@ type LicenseType string
 type LicenseInfo map[string]string
 
 const (
-	LocalLicense   LicenseType = "local"
-	KeygenLicense  LicenseType = "keygen"
-	FreeLicense    LicenseType = "free"
-	InvalidLicense LicenseType = ""
+	LocalLicense  LicenseType = "local"
+	KeygenLicense LicenseType = "keygen"
+	FreeLicense   LicenseType = "free"
 )
 
 type LicenseVerifier interface {

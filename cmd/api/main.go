@@ -170,6 +170,10 @@ func main() {
 	r.Use(middleware.Timeout(60 * time.Second)) // Set request timeout
 
 	licensing := cmd.CreateLicenseVerifier(db, cfg.LicenseKey)
+	licenseType, licenseInfo, err := licensing.VerifyLicense(context.Background())
+	if err != nil {
+		log.Fatalf("License verification failed - Type: %s, Info: %v, Error: %v", licenseType, licenseInfo, err)
+	}
 
 	apiHandler := api.NewBackendService(db, s3Client, publisher, cfg.ChunkTargetBytes, licensing)
 

@@ -18,19 +18,32 @@ func TestFreeLicensing(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, db.AutoMigrate(&database.InferenceTask{}))
 
-	verifier := licensing.NewFreeLicenseVerifier(db, 300)
+	maxBytes := 300
 
-	_, _, err = verifier.VerifyLicense(context.Background())
+	verifier := licensing.NewFreeLicenseVerifier(db, maxBytes)
+
+	licenseType, licenseInfo, err := verifier.VerifyLicense(context.Background())
 	assert.NoError(t, err)
+
+	assert.Equal(t, maxBytes, licenseInfo["maxBytes"])
+	assert.Equal(t, 0, licenseInfo["usedBytes"])
+	assert.Equal(t, licensing.FreeLicense, licenseType)
 
 	require.NoError(t, db.Create(&database.InferenceTask{ReportId: uuid.New(), TotalSize: 200}).Error)
 	require.NoError(t, db.Create(&database.InferenceTask{ReportId: uuid.New(), TotalSize: 50}).Error)
 
-	_, _, err = verifier.VerifyLicense(context.Background())
+	licenseType, licenseInfo, err = verifier.VerifyLicense(context.Background())
 	assert.NoError(t, err)
+
+	assert.Equal(t, maxBytes, licenseInfo["maxBytes"])
+	assert.Equal(t, 250, licenseInfo["usedBytes"])
+	assert.Equal(t, licensing.FreeLicense, licenseType)
 
 	require.NoError(t, db.Create(&database.InferenceTask{ReportId: uuid.New(), TotalSize: 100}).Error)
 
-	_, _, err = verifier.VerifyLicense(context.Background())
+	licenseType, licenseInfo, err = verifier.VerifyLicense(context.Background())
 	assert.ErrorIs(t, licensing.ErrQuotaExceeded, err)
+	assert.Equal(t, maxBytes, licenseInfo["maxBytes"])
+	assert.Equal(t, 350, licenseInfo["usedBytes"])
+	assert.Equal(t, licensing.FreeLicense, licenseType)
 }

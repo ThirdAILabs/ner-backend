@@ -26,7 +26,7 @@ func (verifier *FreeLicenseVerifier) VerifyLicense(ctx context.Context) (License
 	var totalBytes sql.NullInt64
 	if err := verifier.db.WithContext(ctx).Model(&database.InferenceTask{}).Select("SUM(total_size)").Scan(&totalBytes).Error; err != nil {
 		slog.Error("error getting total usage", "error", err)
-		return InvalidLicense, nil, ErrLicenseVerificationFailed
+		return FreeLicense, nil, ErrLicenseVerificationFailed
 	}
 
 	info := LicenseInfo{
@@ -35,7 +35,7 @@ func (verifier *FreeLicenseVerifier) VerifyLicense(ctx context.Context) (License
 	}
 
 	if totalBytes.Valid && int(totalBytes.Int64) > verifier.maxBytes {
-		return InvalidLicense, info, ErrQuotaExceeded
+		return FreeLicense, info, ErrQuotaExceeded
 	}
 
 	return FreeLicense, info, nil

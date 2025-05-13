@@ -19,23 +19,25 @@ func TestFileLicensing(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("valid license", func(t *testing.T) {
-		goodLicense, err := licensing.CreateLicense([]byte(privateKey), time.Now().Add(time.Hour))
+		expiration := time.Now().Add(time.Hour)
+		goodLicense, err := licensing.CreateLicense([]byte(privateKey), expiration)
 		require.NoError(t, err)
 
-		verifier, err := licensing.NewFileLicenseVerifier([]byte(publicKey), goodLicense)
+		verifier := licensing.NewFileLicenseVerifier([]byte(publicKey), goodLicense)
+		licenseType, licenseInfo, err := verifier.VerifyLicense(context.Background())
 		assert.NoError(t, err)
-		_, _, err = verifier.VerifyLicense(context.Background())
-		assert.NoError(t, err)
+		assert.Equal(t, expiration.Format(time.RFC3339), licenseInfo["expiration"])
+		assert.Equal(t, licensing.LocalLicense, licenseType)
 	})
 
 	t.Run("expired license", func(t *testing.T) {
 		expiredLicense, err := licensing.CreateLicense([]byte(privateKey), time.Now().Add(-time.Hour))
 		require.NoError(t, err)
 
-		verifier, err := licensing.NewFileLicenseVerifier([]byte(publicKey), expiredLicense)
-		assert.NoError(t, err)
-		_, _, err = verifier.VerifyLicense(context.Background())
+		verifier := licensing.NewFileLicenseVerifier([]byte(publicKey), expiredLicense)
+		licenseType, _, err := verifier.VerifyLicense(context.Background())
 		assert.ErrorIs(t, licensing.ErrExpiredLicense, err)
+		assert.Equal(t, licensing.LocalLicense, licenseType)
 	})
 
 	t.Run("invalid license", func(t *testing.T) {
@@ -56,7 +58,9 @@ func TestFileLicensing(t *testing.T) {
 
 		corruptedLicenseStr := base64.StdEncoding.EncodeToString(buf.Bytes())
 
-		_, err = licensing.NewFileLicenseVerifier([]byte(publicKey), corruptedLicenseStr)
+		verifier := licensing.NewFileLicenseVerifier([]byte(publicKey), corruptedLicenseStr)
+		licenseType, _, err := verifier.VerifyLicense(context.Background())
 		assert.ErrorIs(t, licensing.ErrInvalidLicense, err)
+		assert.Equal(t, licensing.LocalLicense, licenseType)
 	})
 }

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"mime"
@@ -834,6 +835,6 @@ func (s *BackendService) GetLicense(r *http.Request) (any, error) {
 	return api.GetLicenseResponse{
 		LicenseType:  licenseType,
 		LicenseInfo:  licenseInfo,
-		LicenseError: err,
+		LicenseError: fmt.Sprintf("%v", err),
 	}, nil
 }
