@@ -83,7 +83,6 @@ func initializeModel(
 	modelType,
 	localSubdir string,
 	tags []string,
-	skipIfExistsCount int,
 	modelBase string,
 ) error {
 	var model database.Model
@@ -92,6 +91,7 @@ func initializeModel(
 		Where("name = ?", name).
 		Attrs(database.Model{
 			Id:           uuid.New(),
+			Name:         name,
 			Type:         modelType,
 			Status:       database.ModelQueued,
 			CreationTime: time.Now(),
@@ -148,7 +148,7 @@ func initializeModel(
 func InitializeCnnNerExtractor(ctx context.Context, db *gorm.DB, s3p *storage.S3Provider, bucket string, hostModelDir string) error {
 	return initializeModel(ctx, db, s3p, bucket,
 		"advanced", "cnn", "cnn_model",
-		commonModelTags, 0, hostModelDir,
+		commonModelTags, hostModelDir,
 	)
 }
 
@@ -156,7 +156,7 @@ func InitializeTransformerModel(ctx context.Context, db *gorm.DB, s3p *storage.S
 	// transformer may have multiple files; skip if >4 objects exist
 	return initializeModel(ctx, db, s3p, bucket,
 		"ultra", "transformer", "transformer_model",
-		commonModelTags, 4, hostModelDir,
+		commonModelTags, hostModelDir,
 	)
 }
 
