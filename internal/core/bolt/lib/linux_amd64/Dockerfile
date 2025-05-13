@@ -13,12 +13,12 @@ COPY ./Universe /app/Universe
 
 RUN rm -rf /app/Universe/build
 
-# RUN export CXX=g++-11 && export CC=gcc-11 && /app/Universe/bin/build.py -t thirdai
+RUN export CXX=g++-11 && export CC=gcc-11 && /app/Universe/bin/build.py -t thirdai
 
-# RUN mkdir -p /app/lib
+RUN mkdir -p /app/lib
 
-# RUN cp /app/Universe/build/libthirdai.a /app/lib
-# RUN cp /app/Universe/build/deps/rocksdb/librocksdb.a /app/lib
-# RUN cp /app/Universe/build/deps/utf8proc/libutf8proc.a /app/lib
-# RUN cp /app/Universe/build/deps/spdlog/libspdlog.a /app/lib
+RUN cp /app/Universe/build/libthirdai.a /app/lib
+RUN cp /app/Universe/build/deps/rocksdb/librocksdb.a /app/lib
+RUN cp /app/Universe/build/deps/utf8proc/libutf8proc.a /app/lib
+RUN cp /app/Universe/build/deps/spdlog/libspdlog.a /app/lib
 
