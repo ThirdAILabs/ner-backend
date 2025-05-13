@@ -428,6 +428,28 @@ export default function NewJobPage() {
       setIsSubmitting(false);
     }
   };
+  const [isPressedSubmit, setIsPressedSubmit] = useState<boolean>(false);
+  const [nameError, setNameError] = useState<string | null>(null);
+
+  const validateJobName = (name: string): boolean => {
+    if (!name) {
+      setNameError('Report name is required');
+      return false;
+    }
+
+    if (!/^[A-Za-z0-9_]+$/.test(name)) {
+      setNameError('Report name can only contain letters, numbers, and underscores');
+      return false;
+    }
+
+    if (name.length > 50) {
+      setNameError('Report name must be less than 50 characters');
+      return false;
+    }
+
+    setNameError(null);
+    return true;
+  };
 
   return (
     <div className="container px-4 py-8 w-3/4">
@@ -440,7 +462,7 @@ export default function NewJobPage() {
         </Button>
       </div>
 
-      {error && (
+      {(error && !isPressedSubmit) && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
           {error}
         </div>
@@ -455,22 +477,28 @@ export default function NewJobPage() {
           {/* Job Name Field */}
           <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
             <h2 className="text-2xl font-medium mb-4">Report Name</h2>
-            <div className="w-full ">
+            <div className="w-full">
               <input
                 type="text"
                 value={jobName}
                 onChange={(e) => {
                   const value = e.target.value.replace(/\s/g, '_');
                   setJobName(value);
+                  validateJobName(value);
                 }}
-                className="w-full p-2 border border-gray-300 rounded"
+                onBlur={() => validateJobName(jobName)}
+                className={`w-full p-2 border ${nameError ? 'border-red-500' : 'border-gray-300'
+                  } rounded`}
                 placeholder="Enter_Report_Name"
                 required
-                pattern="^[^\s]+$"
               />
-              <p className="text-sm text-gray-500 mt-1">
-                Use only letters, numbers, and underscores. No spaces allowed.
-              </p>
+              {nameError ? (
+                <p className="text-red-700 text-sm mt-1"><sup className='text-red-700'>*</sup>{nameError}</p>
+              ) : (
+                <p className="text-sm text-gray-500 mt-1">
+                  Use only letters, numbers, and underscores. No spaces allowed.
+                </p>
+              )}
             </div>
           </Box>
 
@@ -1029,7 +1057,12 @@ export default function NewJobPage() {
           </Box>
 
           {/* Submit Button */}
-          <div className="flex justify-center pt-4">
+          <div className="flex flex-col items-center space-y-4 pt-4">
+            {(error && isPressedSubmit) && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded w-full max-w-md text-center">
+                {error}
+              </div>
+            )}
             <Button
               variant="default"
               color="primary"
@@ -1040,6 +1073,9 @@ export default function NewJobPage() {
               }}
               onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#1565c0')}
               onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#1976d2')}
+              onClick={() => {
+                setIsPressedSubmit(true);
+              }}
             >
               {isSubmitting ? (
                 <>
