@@ -155,7 +155,15 @@ app.on('window-all-closed', () => {
 // Clean up backend on app quit
 app.on('will-quit', () => {
   console.log('App is quitting, cleaning up backend...');
-  if (backendProcess) {
+  if (backendProcess && backendProcess.kill) {
     backendProcess.kill('SIGINT');
+  }
+});
+
+// Handle app quit
+app.on('quit', () => {
+  console.log('App is quitting, ensuring backend is cleaned up...');
+  if (backendProcess && backendProcess.kill) {
+    backendProcess.kill('SIGTERM');
   }
 }); 

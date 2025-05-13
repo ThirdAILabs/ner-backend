@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const portfinder = require('portfinder');
 const electron = require('electron');
+const { FIXED_PORT, ensurePortIsFree } = require('./check-port');
 
 // Determine if we're in Electron or standalone
 const isElectron = process.versions.hasOwnProperty('electron');
@@ -162,9 +163,14 @@ function getDefaultModelPath() {
 }
 
 async function startBackend() {
-  const availablePort = await portfinder.getPortPromise();
+  // Ensure our fixed port is available
+  const portAvailable = await ensurePortIsFree();
+  if (!portAvailable) {
+    console.error(`🔴 Could not secure port ${FIXED_PORT} for backend use`);
+    return null;
+  }
 
-  console.log(`Found port available: ${availablePort}`)
+  console.log(`Using fixed port: ${FIXED_PORT}`)
 
   const backendPath = getBackendPath();
   
@@ -191,7 +197,7 @@ async function startBackend() {
     cwd: backendDir, // Set working directory to where the binary is
     env: {
       ...process.env,
-      PORT: availablePort.toString(),
+      PORT: FIXED_PORT.toString(),
       DEBUG: process.env.DEBUG || '*',
       MODEL_PATH: getDefaultModelPath(),
       // Add any environment variables needed by the backend
@@ -214,15 +220,27 @@ async function startBackend() {
   // Handle termination signals
   process.on('SIGINT', () => {
     console.log('Stopping backend process...');
-    backend.kill('SIGINT');
+    if (backend && backend.kill) {
+      backend.kill('SIGINT');
+    }
   });
   
   process.on('SIGTERM', () => {
     console.log('Stopping backend process...');
-    backend.kill('SIGTERM');
+    if (backend && backend.kill) {
+      backend.kill('SIGTERM');
+    }
   });
   
-  return backend;
+  // Return a process object with a kill method
+  return {
+    process: backend,
+    kill: (signal) => {
+      if (backend && backend.kill) {
+        backend.kill(signal);
+      }
+    }
+  };
 }
 
 // Start the backend if this script is called directly
