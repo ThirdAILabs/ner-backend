@@ -5,7 +5,6 @@ import axios from 'axios';
 interface Model {
   Id: string;
   Name: string;
-  Type: string;
   Status: string;
   BaseModelId?: string;
   Tags?: string[];
