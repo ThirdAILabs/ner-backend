@@ -91,3 +91,12 @@ Results_t *NER_predict(const NER_t *self, const StringList_t *sentences,
     return nullptr;
   }
 }
+
+void NER_train(const NER_t *self, const char *filename, float learning_rate,
+               unsigned int epochs, const char **err_ptr) {
+  try {
+    self->ner->train(filename, learning_rate, epochs);
+  } catch (const std::exception &e) {
+    copyError(e, err_ptr);
+  }
+}
