@@ -109,7 +109,7 @@ services:
       - INTERNAL_AWS_ACCESS_KEY_ID=${INTERNAL_AWS_ACCESS_KEY_ID:-YOURACCESSKEY}
       - INTERNAL_AWS_SECRET_ACCESS_KEY=${INTERNAL_AWS_SECRET_ACCESS_KEY:-YOURSECRETKEY}
       - PYTHON_EXECUTABLE_PATH=${PYTHON_EXECUTABLE_PATH:-python}
-      - PYTHON_PLUGIN_PATH=${PYTHON_PLUGIN_PATH:-plugin/plugin-python/plugin.py}
+      - PYTHON_MODEL_PLUGIN_SCRIPT_PATH=${PYTHON_MODEL_PLUGIN_SCRIPT_PATH:-plugin/plugin-python/plugin.py}
     volumes:
       # - .:/app # Mount code for development (optional)
       - /etc/localtime:/etc/localtime:ro

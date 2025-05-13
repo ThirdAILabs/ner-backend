@@ -18,7 +18,7 @@ import { Plus } from 'lucide-react';
 
 import { Card, CardContent } from '@mui/material';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { format } from 'date-fns';
 import { nerService } from '@/lib/backend';
 import { IconButton, Tooltip } from '@mui/material';
@@ -44,6 +44,8 @@ interface ReportWithStatus {
   SourceS3Bucket: string;
   SourceS3Prefix?: string;
   CreationTime: string;
+  FileCount: number;
+  CompletedFileCount: number;
   Tags?: string[];
   CustomTags?: { [key: string]: string };
   Groups?: {
@@ -66,7 +68,8 @@ interface ReportWithStatus {
 }
 
 export default function Jobs() {
-  const params = useParams();
+  const searchParams = useSearchParams();
+  const deploymentId = searchParams.get('deploymentId');
   const [reports, setReports] = useState<ReportWithStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -110,6 +113,11 @@ export default function Jobs() {
       try {
         setLoading(true);
         const reportsData = await nerService.listReports();
+        reportsData.sort(
+          (a: ReportWithStatus, b: ReportWithStatus) =>
+            new Date(b.CreationTime).getTime() -
+            new Date(a.CreationTime).getTime()
+        );
         setReports(reportsData as ReportWithStatus[]);
 
         // Fetch status for each report
@@ -280,9 +288,11 @@ export default function Jobs() {
     const queued = InferenceTaskStatuses?.QUEUED?.TotalTasks || 0;
     const failed = InferenceTaskStatuses?.FAILED?.TotalTasks || 0;
 
+    const fileCount = report.FileCount || 0;
+    const completedFileCount = report.CompletedFileCount || 0;
     const totalTasks = completed + running + queued + failed;
-    const completedTasks = completed;
-    const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+
+    const progress = completedFileCount > 0 ? (fileCount / completedFileCount) * 100 : 0;
 
     // If there are failed tasks, show failure status
     if (failed > 0) {
@@ -370,7 +380,7 @@ export default function Jobs() {
           </Typography>
         </Box>
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-          {`Files: ${completed}/${totalTasks}`}
+          {`Files: ${fileCount}/${completedFileCount}`}
         </Typography>
       </Box>
     );
@@ -490,7 +500,7 @@ export default function Jobs() {
                         sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
                       >
                         <Link
-                          href={`/token-classification/jobs/${report.Id}`}
+                          href={`/token-classification/jobs?jobId=${report.Id}`}
                           style={{
                             color: '#1976d2',
                             textDecoration: 'none'

@@ -1,25 +1,16 @@
 'use client';
 
 import {
-  Container,
   Box,
   CircularProgress,
   Typography,
-  Switch,
-  FormControlLabel,
-  Alert,
-  Divider,
-  Paper,
 } from '@mui/material';
 import { Button } from '@mui/material';
 import React, {
-  CSSProperties,
-  ReactNode,
   useEffect,
   useRef,
   useState,
   ChangeEvent,
-  KeyboardEvent,
 } from 'react';
 import { Card, CardContent } from '@mui/material';
 import * as _ from 'lodash';
@@ -56,7 +47,6 @@ const useTokenClassificationEndpoints = () => {
 // Import components
 import { Input } from '@mui/material';
 import { Menu, MenuItem } from '@mui/material';
-import { useParams } from 'next/navigation';
 
 interface Token {
   text: string;
@@ -256,7 +246,6 @@ function TagSelector({ open, choices, onSelect, onNewLabel, currentTag, anchorEl
 }
 
 export default function Interact() {
-  const { deploymentId } = useParams();
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [tokens, setTokens] = useState<Token[]>([]);

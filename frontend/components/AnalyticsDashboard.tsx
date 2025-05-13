@@ -60,7 +60,6 @@ export function AnalyticsDashboard({
   // Convert token counts to chart data format
 
   const tokenChartData = tags;
-  console.log("Tags", tags, tokenChartData);
   return (
     <div className="space-y-6 w-full">
       {/* Top Widgets */}
@@ -125,7 +124,7 @@ export function AnalyticsDashboard({
                 data={tokenChartData}
                 layout="vertical"
                 margin={{ top: 20, right: 30, left: 120, bottom: 30 }}
-                barSize={30} 
+                barSize={30}
               >
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
