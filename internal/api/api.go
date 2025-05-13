@@ -85,7 +85,7 @@ func (s *BackendService) ListModels(r *http.Request) (any, error) {
 	var models []database.Model
 	if err := s.db.WithContext(ctx).Find(&models).Error; err != nil {
 		slog.Error("error getting models", "error", err)
-		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving model records: %s", err.Error())
+		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving model records")
 	}
 
 	return convertModels(models), nil
@@ -154,7 +154,7 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 
 		if err := txn.WithContext(ctx).Create(&model).Error; err != nil {
 			slog.Error("error creating model entry", "error", err)
-			return CodedErrorf(http.StatusInternalServerError, "failed to create model entry: %s", err.Error())
+			return CodedErrorf(http.StatusInternalServerError, "failed to create model entry")
 		}
 
 		return nil
@@ -334,7 +334,7 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 
 		if err := txn.WithContext(ctx).Create(&report).Error; err != nil {
 			slog.Error("error creating report entry", "error", err)
-			return CodedErrorf(http.StatusInternalServerError, "failed to create report entry: %v", err.Error())
+			return CodedErrorf(http.StatusInternalServerError, "failed to create report entry")
 		}
 
 		if err := txn.WithContext(ctx).Create(&task).Error; err != nil {
@@ -371,7 +371,7 @@ func (s *BackendService) GetReport(r *http.Request) (any, error) {
 			return nil, CodedErrorf(http.StatusNotFound, "report not found")
 		}
 		slog.Error("error getting report", "report_id", reportId, "error", err)
-		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving report data: %v", err.Error())
+		return nil, CodedErrorf(http.StatusInternalServerError, "error retrieving report data")
 	}
 
 	if report.Deleted {

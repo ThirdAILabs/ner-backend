@@ -58,7 +58,7 @@ func InitializePresidioModel(db *gorm.DB) {
 
 	if err := db.Where(database.Model{Name: "basic"}).Attrs(database.Model{
 		Id:           modelId,
-		Type:         "basic",
+		Type:         "presidio",
 		Status:       database.ModelTrained,
 		CreationTime: time.Now().UTC(),
 		Tags:         tags,

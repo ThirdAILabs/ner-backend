@@ -1,7 +1,6 @@
 interface Model {
     Id: string;
     Name: string;
-    Type: string;
     Status: string;
 }
 
