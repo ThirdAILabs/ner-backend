@@ -79,7 +79,6 @@ func (ner *PythonModel) Finetune(prompt string, tags []api.TagInfo, samples []ap
 		if len(curr.samples) == 0 {
 			return nil
 		}
-		// CORRECT: call Finetune(prompt, tags, samples)
 		if err := ner.model.Finetune(prompt, protoTags, curr.samples); err != nil {
 			return fmt.Errorf("finetune chunk error: %w", err)
 		}
@@ -87,13 +86,11 @@ func (ner *PythonModel) Finetune(prompt string, tags []api.TagInfo, samples []ap
 		curr.size = 0
 		return nil
 	}
-	// accumulate samples until ~2 MB
 	for _, s := range samples {
 		p := &proto.Sample{
 			Tokens: s.Tokens,
 			Labels: s.Labels,
 		}
-		// rough size estimate
 		est := 0
 		for _, tok := range p.Tokens {
 			est += len(tok)
@@ -101,7 +98,6 @@ func (ner *PythonModel) Finetune(prompt string, tags []api.TagInfo, samples []ap
 		for _, lab := range p.Labels {
 			est += len(lab)
 		}
-		// flush if adding this would overflow
 		if curr.size+est > maxPayload {
 			if err := flush(); err != nil {
 				return fmt.Errorf("finetune chunk error: %w", err)
@@ -110,7 +106,6 @@ func (ner *PythonModel) Finetune(prompt string, tags []api.TagInfo, samples []ap
 		curr.samples = append(curr.samples, p)
 		curr.size += est
 	}
-	// final flush
 	if err := flush(); err != nil {
 		return fmt.Errorf("final finetune chunk error: %w", err)
 	}
