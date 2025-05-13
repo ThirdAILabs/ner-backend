@@ -33,11 +33,12 @@ type TaskProcessor struct {
 
 	localModelDir string
 	modelBucket   string
+	modelLoaders  map[string]ModelLoader
 }
 
 const bytesPerMB = 1024 * 1024
 
-func NewTaskProcessor(db *gorm.DB, storage storage.Provider, publisher messaging.Publisher, reciever messaging.Reciever, licenseVerifier licensing.LicenseVerifier, localModelDir string, modelBucket string) *TaskProcessor {
+func NewTaskProcessor(db *gorm.DB, storage storage.Provider, publisher messaging.Publisher, reciever messaging.Reciever, licenseVerifier licensing.LicenseVerifier, localModelDir string, modelBucket string, modelLoaders map[string]ModelLoader) *TaskProcessor {
 	return &TaskProcessor{
 		db:            db,
 		storage:       storage,
@@ -46,6 +47,7 @@ func NewTaskProcessor(db *gorm.DB, storage storage.Provider, publisher messaging
 		licensing:     licenseVerifier,
 		localModelDir: localModelDir,
 		modelBucket:   modelBucket,
+		modelLoaders:  modelLoaders,
 	}
 }
 
@@ -386,7 +388,7 @@ func (proc *TaskProcessor) loadModel(ctx context.Context, modelId uuid.UUID, mod
 		}
 	}
 
-	model, err := LoadModel(modelType, localDir)
+	model, err := proc.modelLoaders[modelType](localDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load model: %w", err)
 	}
