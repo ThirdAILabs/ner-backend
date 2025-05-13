@@ -81,9 +81,8 @@ func initializeModel(
 	bucket,
 	name,
 	modelType,
-	localSubdir string,
+	localDir string,
 	tags []string,
-	modelBase string,
 ) error {
 	var model database.Model
 	result := db.
@@ -108,20 +107,18 @@ func initializeModel(
 	}
 
 	if result.RowsAffected > 0 {
-		tagsModels := make([]database.ModelTag, len(tags))
+		modelTags := make([]database.ModelTag, len(tags))
 		for i, tag := range tags {
-			tagsModels[i] = database.ModelTag{
+			modelTags[i] = database.ModelTag{
 				ModelId: model.Id,
 				Tag:     tag,
 			}
 		}
 
-		if err := db.Model(&model).Association("Tags").Replace(tagsModels); err != nil {
+		if err := db.Model(&model).Association("Tags").Replace(modelTags); err != nil {
 			return fmt.Errorf("failed to attach tags to new model %q: %w", name, err)
 		}
 	}
-
-	localDir := filepath.Join(modelBase, localSubdir)
 
 	info, err := os.Stat(localDir)
 	if err != nil {
@@ -148,16 +145,15 @@ func initializeModel(
 
 func InitializeCnnNerExtractor(ctx context.Context, db *gorm.DB, s3p *storage.S3Provider, bucket string, hostModelDir string) error {
 	return initializeModel(ctx, db, s3p, bucket,
-		"advanced", "cnn", "cnn_model",
-		commonModelTags, hostModelDir,
+		"advanced", "cnn", filepath.Join(hostModelDir, "cnn_model"),
+		commonModelTags,
 	)
 }
 
 func InitializeTransformerModel(ctx context.Context, db *gorm.DB, s3p *storage.S3Provider, bucket string, hostModelDir string) error {
-	// transformer may have multiple files; skip if >4 objects exist
 	return initializeModel(ctx, db, s3p, bucket,
-		"ultra", "transformer", "transformer_model",
-		commonModelTags, hostModelDir,
+		"ultra", "transformer", filepath.Join(hostModelDir, "transformer_model"),
+		commonModelTags,
 	)
 }
 

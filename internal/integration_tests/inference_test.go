@@ -119,12 +119,14 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
-	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket, core.NewModelLoaders("python", "plugin/plugin-python/plugin.py"))
+	modelName, modelLoader, modelId := createModel(t, s3, db, modelBucket)
+
+	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket, map[string]core.ModelLoader{
+		modelName: modelLoader,
+	})
 
 	go worker.Start()
 	defer worker.Stop()
-
-	modelId := createModel(t, worker, s3, db, modelBucket)
 
 	createData(t, s3)
 
@@ -212,12 +214,14 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
-	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket, core.NewModelLoaders("python", "plugin/plugin-python/plugin.py"))
+	modelName, modelLoader, modelId := createModel(t, s3, db, modelBucket)
+
+	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket, map[string]core.ModelLoader{
+		modelName: modelLoader,
+	})
 
 	go worker.Start()
 	defer worker.Stop()
-
-	modelId := createModel(t, worker, s3, db, modelBucket)
 
 	uploadId := createUpload(t, router)
 
