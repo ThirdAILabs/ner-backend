@@ -197,7 +197,18 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 	}
 
 	if req.ModelId == uuid.Nil {
-		return nil, CodedErrorf(http.StatusUnprocessableEntity, "the following fields are required: ModelId")
+		var model database.Model
+		result := s.db.WithContext(r.Context()).Limit(1).Find(&model, "name = ?", "basic")
+		if result.Error != nil {
+			slog.Error("error getting default model", "error", result.Error)
+			return nil, CodedErrorf(http.StatusInternalServerError, "error getting default model")
+		}
+
+		if result.RowsAffected != 0 {
+			req.ModelId = model.Id
+		} else {
+			return nil, CodedErrorf(http.StatusUnprocessableEntity, "the following fields are required: ModelId")
+		}
 	}
 
 	var (

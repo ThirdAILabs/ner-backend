@@ -1,7 +1,7 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'Pocket Shield',
+  title: 'PocketShield',
   description: 'Democratize AI for everyone.',
 };
 

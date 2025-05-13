@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -36,6 +36,7 @@ import {
 } from '@mui/material';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Suspense } from 'react';
 
 // Calculate progress based on InferenceTaskStatuses
 const calculateProgress = (report: Report | null): number => {
@@ -108,10 +109,9 @@ const SourceOption: React.FC<SourceOptionProps> = ({
   <div
     className={`relative p-6 border rounded-md transition-all
       ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200'}
-      ${
-        disabled
-          ? 'opacity-50 cursor-not-allowed bg-gray-50'
-          : 'cursor-pointer hover:border-blue-300'
+      ${disabled
+        ? 'opacity-50 cursor-not-allowed bg-gray-50'
+        : 'cursor-pointer hover:border-blue-300'
       }
     `}
     onClick={() => !disabled && onClick()}
@@ -257,9 +257,10 @@ const NewTagDialog: React.FC<{
   );
 };
 
-export default function JobDetail() {
-  const params = useParams();
-  const reportId: string = params.jobId as string;
+function JobDetail() {
+  const searchParams = useSearchParams();
+  const reportId: string = searchParams.get('jobId') as string;
+  const deploymentId = searchParams.get('deploymentId') as string;
   const [lastUpdated, setLastUpdated] = useState(0);
   const [tabValue, setTabValue] = useState('analytics');
   const [selectedSource, setSelectedSource] = useState<'s3' | 'local'>('s3');
@@ -533,7 +534,7 @@ export default function JobDetail() {
           >
             <h2 className="text-2xl font-medium mb-4">Tags</h2>
             <div className="flex justify-between items-center mb-4">
-            {isLoading ? (
+              {isLoading ? (
                 <div className="flex justify-center py-4">
                   <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
                 </div>
@@ -569,7 +570,7 @@ export default function JobDetail() {
           >
             <h2 className="text-2xl font-medium mb-4">Groups</h2>
             <div className="flex justify-between items-center mb-4">
-            {isLoading ? (
+              {isLoading ? (
                 <div className="flex justify-center py-4">
                   <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
                 </div>
@@ -594,7 +595,7 @@ export default function JobDetail() {
           </Box>
 
           {/* ENDS */}
-         
+
         </TabsContent>
 
         <TabsContent value="analytics">
@@ -616,4 +617,10 @@ export default function JobDetail() {
       </Tabs>
     </div>
   );
+}
+
+export default function Page() {
+  return <Suspense>
+    <JobDetail />
+  </Suspense>
 }

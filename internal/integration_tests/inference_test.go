@@ -19,6 +19,8 @@ import (
 	"testing"
 	"time"
 
+	"gorm.io/gorm"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -117,12 +119,14 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
-	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket)
+	modelName, modelLoader, modelId := createModel(t, s3, db, modelBucket)
+
+	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket, map[string]core.ModelLoader{
+		modelName: modelLoader,
+	})
 
 	go worker.Start()
 	defer worker.Stop()
-
-	modelId := createModel(t, s3, db, modelBucket)
 
 	createData(t, s3)
 
@@ -210,12 +214,14 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
-	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket)
+	modelName, modelLoader, modelId := createModel(t, s3, db, modelBucket)
+
+	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket, map[string]core.ModelLoader{
+		modelName: modelLoader,
+	})
 
 	go worker.Start()
 	defer worker.Stop()
-
-	modelId := createModel(t, s3, db, modelBucket)
 
 	uploadId := createUpload(t, router)
 
@@ -237,76 +243,87 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 }
 
 func TestInferenceWorkflowForModels(t *testing.T) {
-	t.Run("CNN Model", func(t *testing.T) {
-		RunInferenceWorkflowForModel(t, "cnn")
-	})
+	if os.Getenv("PYTHON_EXECUTABLE_PATH") == "" || os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH") == "" {
+		t.Fatalf("PYTHON_EXECUTABLE_PATH and PYTHON_MODEL_PLUGIN_SCRIPT_PATH must be set")
+	}
 
-	t.Run("Transformer Model", func(t *testing.T) {
-		RunInferenceWorkflowForModel(t, "transformer")
-	})
-}
-
-func RunInferenceWorkflowForModel(t *testing.T, modelName string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
-	minioUrl := setupMinioContainer(t, ctx)
+	minioURL := setupMinioContainer(t, ctx)
 
 	s3, err := storage.NewS3Provider(storage.S3ProviderConfig{
-		S3EndpointURL:     minioUrl,
+		S3EndpointURL:     minioURL,
 		S3AccessKeyID:     minioUsername,
 		S3SecretAccessKey: minioPassword,
 	})
 	require.NoError(t, err)
-	err = s3.CreateBucket(context.Background(), modelBucket)
-	require.NoError(t, err)
+	require.NoError(t, s3.CreateBucket(ctx, modelBucket))
 
 	db := createDB(t)
 
-	publisher, reciever := setupRabbitMQContainer(t, ctx)
+	publisher, receiver := setupRabbitMQContainer(t, ctx)
 
-	backend := backend.NewBackendService(db, s3, publisher, 120)
+	backendSvc := backend.NewBackendService(db, s3, publisher, 120)
 	router := chi.NewRouter()
-	backend.AddRoutes(router)
+	backendSvc.AddRoutes(router)
 
-	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket)
-
+	tempDir := t.TempDir()
+	worker := core.NewTaskProcessor(db, s3, publisher, receiver, &DummyLicenseVerifier{}, tempDir, modelBucket, core.NewModelLoaders(os.Getenv("PYTHON_EXECUTABLE_PATH"), os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH")))
 	go worker.Start()
-	defer worker.Stop()
+	t.Cleanup(worker.Stop)
 
-	var model database.Model
-	var db_err error
-	var init_err error
-	if modelName == "cnn" {
-		init_err = cmd.InitializeCnnNerExtractor(ctx, db, s3, modelBucket)
-		require.NoError(t, init_err)
-		db_err = db.Where("name = ?", "advance").First(&model).Error
-	} else if modelName == "transformer" {
-		init_err = cmd.InitializeTransformerModel(ctx, db, s3, modelBucket)
-		require.NoError(t, init_err)
-		db_err = db.Where("name = ?", "ultra").First(&model).Error
+	models := []struct {
+		label      string
+		tag        string
+		initFn     func(context.Context, *gorm.DB, *storage.S3Provider, string) error
+		expectedDB string
+	}{
+		{
+			label: "CNN Model",
+			tag:   "cnn",
+			initFn: func(c context.Context, db *gorm.DB, s3 *storage.S3Provider, bucket string) error {
+				return cmd.InitializeCnnNerExtractor(c, db, s3, bucket, os.Getenv("HOST_MODEL_DIR"))
+			},
+			expectedDB: "advanced",
+		},
+		{
+			label: "Transformer Model",
+			tag:   "transformer",
+			initFn: func(c context.Context, db *gorm.DB, s3 *storage.S3Provider, bucket string) error {
+				return cmd.InitializeTransformerModel(c, db, s3, bucket, os.Getenv("HOST_MODEL_DIR"))
+			},
+			expectedDB: "ultra",
+		},
 	}
-	require.NoError(t, db_err)
 
-	uploadId := createUpload(t, router)
+	for _, m := range models {
+		m := m // capture range variable
+		t.Run(m.label, func(t *testing.T) {
+			require.NoError(t, m.initFn(ctx, db, s3, modelBucket))
 
-	reportId := createReport(t, router, api.CreateReportRequest{
-		ReportName: fmt.Sprintf("test-report-%s", modelName),
-		ModelId:    model.Id,
-		UploadId:   uploadId,
-		Tags: []string{"ADDRESS", "CARD_NUMBER", "COMPANY", "CREDIT_SCORE", "DATE",
-			"EMAIL", "ETHNICITY", "GENDER", "ID_NUMBER", "LICENSE_PLATE",
-			"LOCATION", "NAME", "PHONENUMBER", "SERVICE_CODE",
-			"SEXUAL_ORIENTATION", "SSN", "URL", "VIN", "O"},
-	})
+			var model database.Model
+			require.NoError(t, db.Where("name = ?", m.expectedDB).First(&model).Error)
 
-	report := waitForReport(t, router, reportId, 180)
+			uploadID := createUpload(t, router)
+			reportID := createReport(t, router, api.CreateReportRequest{
+				ReportName: fmt.Sprintf("test-report-%s", m.tag),
+				ModelId:    model.Id,
+				UploadId:   uploadID,
+				Tags: []string{"ADDRESS", "CARD_NUMBER", "COMPANY", "CREDIT_SCORE", "DATE",
+					"EMAIL", "ETHNICITY", "GENDER", "ID_NUMBER", "LICENSE_PLATE",
+					"LOCATION", "NAME", "PHONENUMBER", "SERVICE_CODE", "SEXUAL_ORIENTATION",
+					"SSN", "URL", "VIN", "O"},
+			})
 
-	assert.Equal(t, model.Id, report.Model.Id)
-	assert.Equal(t, "uploads", report.SourceS3Bucket)
-	assert.Equal(t, uploadId.String(), report.SourceS3Prefix)
+			report := waitForReport(t, router, reportID, 180)
 
-	entities := getReportEntities(t, router, reportId)
+			assert.Equal(t, model.Id, report.Model.Id)
+			assert.Equal(t, "uploads", report.SourceS3Bucket)
+			assert.Equal(t, uploadID.String(), report.SourceS3Prefix)
 
-	assert.Greater(t, len(entities), 0)
+			entities := getReportEntities(t, router, reportID)
+			assert.Greater(t, len(entities), 0)
+		})
+	}
 }

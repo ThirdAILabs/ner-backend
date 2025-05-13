@@ -1,5 +1,5 @@
 import type { TrainReportData, LabelMetrics, ExampleCategories, TrainingExample } from '@/lib/types';
-import { ObjectDatabaseRecord, ClassifiedTokenDatabaseRecord } from '@/app/token-classification/jobs/[jobId]/(database-table)/types';
+import { ObjectDatabaseRecord, ClassifiedTokenDatabaseRecord } from '@/app/token-classification/jobs/(database-table)/types';
 
 // ===== WORKFLOWS =====
 export const mockWorkflows = [

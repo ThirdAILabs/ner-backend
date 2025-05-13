@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -61,58 +60,65 @@ func InitializePresidioModel(db *gorm.DB) {
 		Id:           modelId,
 		Type:         "presidio",
 		Status:       database.ModelTrained,
-		CreationTime: time.Now(),
+		CreationTime: time.Now().UTC(),
 		Tags:         tags,
 	}).FirstOrCreate(&model).Error; err != nil {
 		log.Fatalf("Failed to create model record: %v", err)
 	}
 }
 
-func InitializeCnnNerExtractor(ctx context.Context, db *gorm.DB, s3p *storage.S3Provider, bucket string) error {
-	var model database.Model
-	err := db.
-		Where("name = ?", "advance").
-		Preload("Tags").
-		First(&model).Error
+var commonModelTags = []string{
+	"ADDRESS", "CARD_NUMBER", "COMPANY", "CREDIT_SCORE", "DATE",
+	"EMAIL", "ETHNICITY", "GENDER", "ID_NUMBER", "LICENSE_PLATE",
+	"LOCATION", "NAME", "PHONENUMBER", "SERVICE_CODE", "SEXUAL_ORIENTATION",
+	"SSN", "URL", "VIN", "O",
+}
 
-	isNew := errors.Is(err, gorm.ErrRecordNotFound)
-	if err != nil && !isNew {
-		return fmt.Errorf("error querying model: %w", err)
+func initializeModel(
+	ctx context.Context,
+	db *gorm.DB,
+	s3p *storage.S3Provider,
+	bucket,
+	name,
+	modelType,
+	localDir string,
+	tags []string,
+) error {
+	var model database.Model
+	result := db.
+		Preload("Tags").
+		Where("name = ?", name).
+		Attrs(database.Model{
+			Id:           uuid.New(),
+			Name:         name,
+			Type:         modelType,
+			Status:       database.ModelQueued,
+			CreationTime: time.Now(),
+		}).
+		FirstOrCreate(&model)
+
+	if result.Error != nil {
+		return fmt.Errorf("error finding or creating model %q: %w", name, result.Error)
 	}
 
-	if isNew {
-		model.Id = uuid.New()
-		model.Name = "advance"
-		model.Type = "cnn"
-		model.Status = database.ModelTrained
-		model.CreationTime = time.Now()
+	if result.RowsAffected == 0 && model.Status == database.ModelTrained {
+		slog.Info("model already exists, skipping initialization", "model_id", model.Id)
+		return nil
+	}
 
-		modelTags := []string{
-			"ADDRESS", "CARD_NUMBER", "COMPANY", "CREDIT_SCORE", "DATE",
-			"EMAIL", "ETHNICITY", "GENDER", "ID_NUMBER", "LICENSE_PLATE",
-			"LOCATION", "NAME", "PHONENUMBER", "SERVICE_CODE", "SEXUAL_ORIENTATION",
-			"SSN", "URL", "VIN", "O",
-		}
-		for _, tag := range modelTags {
-			model.Tags = append(model.Tags, database.ModelTag{
+	if result.RowsAffected > 0 {
+		modelTags := make([]database.ModelTag, len(tags))
+		for i, tag := range tags {
+			modelTags[i] = database.ModelTag{
 				ModelId: model.Id,
 				Tag:     tag,
-			})
+			}
 		}
 
-		if err := db.Create(&model).Error; err != nil {
-			return fmt.Errorf("failed to create model record: %w", err)
+		if err := db.Model(&model).Association("Tags").Replace(modelTags); err != nil {
+			return fmt.Errorf("failed to attach tags to new model %q: %w", name, err)
 		}
 	}
-
-	s3Prefix := model.Id.String() + "/"
-
-	// HOST_MODEL_DIR can be used to pass models if backend is running locally
-	modelBaseDir := os.Getenv("HOST_MODEL_DIR")
-	if modelBaseDir == "" {
-		modelBaseDir = "/app/models"
-	}
-	localDir := filepath.Join(modelBaseDir, "cnn_model")
 
 	info, err := os.Stat(localDir)
 	if err != nil {
@@ -120,104 +126,105 @@ func InitializeCnnNerExtractor(ctx context.Context, db *gorm.DB, s3p *storage.S3
 			slog.Warn("local model dir does not exist, skipping upload", "dir", localDir)
 			return nil
 		}
+		database.UpdateModelStatus(ctx, db, model.Id, database.ModelFailed) // nolint:errcheck
 		return fmt.Errorf("failed to stat local model dir %s: %w", localDir, err)
 	}
 	if !info.IsDir() {
-		slog.Warn("local model path exists but is not a directory, skipping upload", "path", localDir)
-		return nil
-	}
-
-	objs, err := s3p.ListObjects(ctx, bucket, s3Prefix)
-	if err != nil {
-		slog.Error("failed to list S3 objects for model", "model_id", model.Id, "error", err)
-		// we could choose to abort or continue; here we continue and try upload
-	} else if len(objs) > 0 {
-		slog.Info("model already uploaded to S3, skipping upload", "model_id", model.Id)
-		return nil
+		return fmt.Errorf("local model dir %s is not a directory", localDir)
 	}
 
 	if err := s3p.UploadDir(ctx, bucket, model.Id.String(), localDir); err != nil {
-		database.UpdateModelStatus(ctx, db, model.Id, database.ModelFailed) //nolint:errcheck
+		database.UpdateModelStatus(ctx, db, model.Id, database.ModelFailed) // nolint:errcheck
 		slog.Warn("failed to upload model to S3", "model_id", model.Id, "error", err)
-		return nil
+		return fmt.Errorf("error uploading model %s: %w", name, err)
 	}
+	database.UpdateModelStatus(ctx, db, model.Id, database.ModelTrained) // nolint:errcheck
 	slog.Info("successfully uploaded model to S3", "model_id", model.Id)
 	return nil
 }
 
-func InitializeTransformerModel(ctx context.Context, db *gorm.DB, s3p *storage.S3Provider, bucket string) error {
+func InitializeCnnNerExtractor(ctx context.Context, db *gorm.DB, s3p *storage.S3Provider, bucket string, hostModelDir string) error {
+	return initializeModel(ctx, db, s3p, bucket,
+		"advanced", "cnn", filepath.Join(hostModelDir, "cnn_model"),
+		commonModelTags,
+	)
+}
+
+func InitializeTransformerModel(ctx context.Context, db *gorm.DB, s3p *storage.S3Provider, bucket string, hostModelDir string) error {
+	return initializeModel(ctx, db, s3p, bucket,
+		"ultra", "transformer", filepath.Join(hostModelDir, "transformer_model"),
+		commonModelTags,
+	)
+}
+
+func InitializeBoltModel(db *gorm.DB, s3 storage.Provider, modelBucket, name, localModelPath string) error {
+	slog.Info("initializing bolt model", "model_name", name, "local_model_path", localModelPath)
+
+	modelId := uuid.New()
+
+	var modelTags []database.ModelTag
+	for _, tag := range commonModelTags {
+		modelTags = append(modelTags, database.ModelTag{
+			ModelId: modelId,
+			Tag:     tag,
+		})
+	}
+
 	var model database.Model
-	err := db.
-		Where("name = ?", "ultra").
-		Preload("Tags").
-		First(&model).Error
 
-	isNew := errors.Is(err, gorm.ErrRecordNotFound)
-	if err != nil && !isNew {
-		return fmt.Errorf("error querying model: %w", err)
+	result := db.
+		Where(database.Model{Name: name}).
+		Attrs(database.Model{
+			Id:           modelId,
+			Type:         "bolt",
+			Status:       database.ModelQueued,
+			CreationTime: time.Now().UTC(),
+			Tags:         modelTags,
+		}).
+		FirstOrCreate(&model)
+
+	if err := result.Error; err != nil {
+		return fmt.Errorf("failed to create model record: %w", err)
 	}
 
-	if isNew {
-		model.Id = uuid.New()
-		model.Name = "ultra"
-		model.Type = "transformer"
-		model.Status = database.ModelTrained
-		model.CreationTime = time.Now()
-
-		modelTags := []string{
-			"ADDRESS", "CARD_NUMBER", "COMPANY", "CREDIT_SCORE", "DATE",
-			"EMAIL", "ETHNICITY", "GENDER", "ID_NUMBER", "LICENSE_PLATE",
-			"LOCATION", "NAME", "PHONENUMBER", "SERVICE_CODE", "SEXUAL_ORIENTATION",
-			"SSN", "URL", "VIN", "O",
-		}
-		for _, tag := range modelTags {
-			model.Tags = append(model.Tags, database.ModelTag{
-				ModelId: model.Id,
-				Tag:     tag,
-			})
-		}
-
-		if err := db.Create(&model).Error; err != nil {
-			return fmt.Errorf("failed to create model record: %w", err)
-		}
+	if result.RowsAffected == 0 {
+		slog.Info("bolt model already exists, skipping initialization", "model_id", modelId)
+		return nil
 	}
 
-	s3Prefix := model.Id.String() + "/"
+	status := database.ModelFailed
+	defer func() {
+		if err := database.UpdateModelStatus(context.Background(), db, modelId, status); err != nil {
+			slog.Error("failed to update model status during initialization", "model_id", modelId, "status", status, "error", err)
+		}
+	}()
 
-	// HOST_MODEL_DIR can be used to pass models if backend is running locally
-	modelBaseDir := os.Getenv("HOST_MODEL_DIR")
-	if modelBaseDir == "" {
-		modelBaseDir = "/app/models"
-	}
-	localDir := filepath.Join(modelBaseDir, "transformer_model")
-
-	info, err := os.Stat(localDir)
-	if err != nil {
+	if info, err := os.Stat(localModelPath); err != nil {
 		if os.IsNotExist(err) {
-			slog.Warn("local model dir does not exist, skipping upload", "dir", localDir)
-			return nil
+			slog.Error("local model path for bolt model does not exist, skipping upload", "path", localModelPath)
+			return fmt.Errorf("local model path does not exist: %v", err)
 		}
-		return fmt.Errorf("failed to stat local model dir %s: %w", localDir, err)
-	}
-	if !info.IsDir() {
-		slog.Warn("local model path exists but is not a directory, skipping upload", "path", localDir)
-		return nil
+	} else if info.IsDir() {
+		slog.Error("local model path for bolt model exists but is a directory, skipping upload", "path", localModelPath)
+		return fmt.Errorf("local model path exists but is a directory: %v", err)
 	}
 
-	objs, err := s3p.ListObjects(ctx, bucket, s3Prefix)
+	file, err := os.Open(localModelPath)
 	if err != nil {
-		slog.Error("failed to list S3 objects for model", "model_id", model.Id, "error", err)
-		// we could choose to abort or continue; here we continue and try upload
-	} else if len(objs) > 4 {
-		slog.Info("model already uploaded to S3, skipping upload", "model_id", model.Id)
-		return nil
+		slog.Error("failed to open local model file", "path", localModelPath, "error", err)
+		return fmt.Errorf("failed to open local model file: %w", err)
+	}
+	defer file.Close()
+
+	if err := s3.PutObject(context.Background(), modelBucket, filepath.Join(modelId.String(), "model.bin"), file); err != nil {
+		slog.Error("failed to upload bolt model to S3", "model_id", modelId, "error", err)
+		return fmt.Errorf("failed to upload model to S3: %w", err)
 	}
 
-	if err := s3p.UploadDir(ctx, bucket, model.Id.String(), localDir); err != nil {
-		database.UpdateModelStatus(ctx, db, model.Id, database.ModelFailed) //nolint:errcheck
-		return fmt.Errorf("error uploading model to S3: %w", err)
-	}
-	slog.Info("successfully uploaded model to S3", "model_id", model.Id)
+	slog.Info("successfully uploaded bolt model to S3", "model_id", modelId)
+
+	status = database.ModelTrained
+
 	return nil
 }
 

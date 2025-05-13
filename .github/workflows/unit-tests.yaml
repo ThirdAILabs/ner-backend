@@ -26,7 +26,7 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       MODEL_DIR:             ${{ github.workspace }}/models
       HOST_MODEL_DIR:        ${{ github.workspace }}/models
-      PYTHON_PLUGIN_PATH:    ${{ github.workspace }}/plugin/plugin-python/plugin.py
+      PYTHON_MODEL_PLUGIN_SCRIPT_PATH:    ${{ github.workspace }}/plugin/plugin-python/plugin.py
 
     steps:
       - name: Check out code
@@ -57,7 +57,7 @@ jobs:
       - name: Install Python requirements
         run: |
           $PYTHON_EXECUTABLE_PATH -m pip install --upgrade pip
-          $PYTHON_EXECUTABLE_PATH -m pip install -r $(dirname "$PYTHON_PLUGIN_PATH")/requirements.txt
+          $PYTHON_EXECUTABLE_PATH -m pip install -r $(dirname "$PYTHON_MODEL_PLUGIN_SCRIPT_PATH")/requirements.txt
 
       - name: Download spaCy English model
         run: |
