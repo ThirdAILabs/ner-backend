@@ -1,20 +1,16 @@
 // preload.js
 const { contextBridge, ipcRenderer } = require('electron');
+const { FIXED_PORT } = require('./scripts/check-port');
 
-// The fixed proxy port will always be 3099 (which forwards to the dynamic backend port)
-const PROXY_PORT = 3099;
 // Expose API information to the renderer process
 contextBridge.exposeInMainWorld('electronAPI', {
   // Backend API connection information
   backendAPI: {
-    baseUrl: `http://localhost:${PROXY_PORT}`,
+    baseUrl: `http://localhost:${FIXED_PORT}`,  // Use our fixed port for backend URL
     apiVersion: 'v1',
   },
   // You can add more IPC functions here if needed for direct Electron communication
 });
-
-// Log when preload script runs
-console.log(`Preload script is configuring API endpoint: http://localhost:${PROXY_PORT}/api/v1`);
 
 window.addEventListener('DOMContentLoaded', () => {
   const replaceText = (selector, text) => {

@@ -2,12 +2,6 @@ const { app, BrowserWindow, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const serve = require('electron-serve');
-const { initialize } = require('@electron/remote/main');
-const { createProxyMiddleware } = require('http-proxy-middleware');
-const express = require('express');
-
-// Initialize electron/remote
-initialize();
 
 const appServe = app.isPackaged ? serve({
   directory: path.join(__dirname, "frontend-dist")
@@ -23,7 +17,7 @@ try {
   isDev = false;
 }
 
-const { startBackend, findAvailablePort } = require('./scripts/start-backend');
+const { startBackend } = require('./scripts/start-backend');
 
 // Force NODE_ENV to 'production' when not in development mode
 if (!isDev) {
@@ -35,77 +29,6 @@ if (!isDev) {
 let mainWindow;
 let backendProcess = null;
 let backendStarted = false;
-// Store the backend port globally so it can be accessed by preload script
-global.backendPort = null;
-
-// Create a proxy server
-let proxyServer = null;
-
-// Setup proxy server to forward requests to backend
-function setupProxyServer(port) {
-  const http = require('http');
-  const httpProxy = require('http-proxy');
-
-  // Create a simple proxy server
-  const proxy = httpProxy.createProxyServer();
-  
-  // Add error handling
-  proxy.on('error', (err, req, res) => {
-    console.error('Proxy error:', err);
-    res.writeHead(500, { 'Content-Type': 'text/plain' });
-    res.end(`Proxy error: ${err.message}`);
-  });
-
-  // Create the server
-  proxyServer = http.createServer((req, res) => {
-    // Log all requests
-    console.log(`Proxy received: ${req.method} ${req.url}`);
-    
-    // Set CORS headers
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    
-    // Handle preflight requests
-    if (req.method === 'OPTIONS') {
-      res.writeHead(200);
-      res.end();
-      return;
-    }
-    
-    // Check if this is a request for the proxy status
-    if (req.url === '/proxy-status') {
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ 
-        status: 'running', 
-        backendPort: port,
-        proxyPort: 3099
-      }));
-      return;
-    }
-    
-    // Forward all API requests to the backend
-    if (req.url.startsWith('/api/')) {
-      console.log(`Proxying ${req.method} ${req.url} to backend port ${port}`);
-      proxy.web(req, res, { 
-        target: `http://localhost:${port}`,
-        changeOrigin: true
-      });
-      return;
-    }
-    
-    // Default response for any other path
-    res.writeHead(404, { 'Content-Type': 'text/plain' });
-    res.end('Not found');
-  });
-
-  // Start the proxy server
-  proxyServer.listen(3099, () => {
-    console.log(`Proxy server started on port 3099, forwarding to backend port ${port}`);
-  });
-  
-  return proxyServer;
-}
 
 // Ensure working directory is set to the app directory for backend
 function fixWorkingDirectory() {
@@ -147,13 +70,9 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,  // Enable context isolation for security
-      preload: path.join(__dirname, 'preload.js'),
-      enableRemoteModule: true // Enable remote module
+      preload: path.join(__dirname, 'preload.js')
     }
   });
-  
-  // Enable remote module for this window
-  require('@electron/remote/main').enable(mainWindow.webContents);
 
   if (isDev) {
     // In development mode, add a delay to ensure Next.js has time to start
@@ -161,8 +80,6 @@ function createWindow() {
     setTimeout(() => {
       console.log("Attempting to load from Next.js server...");
       mainWindow.loadURL('http://localhost:3007/');
-      // Open DevTools in development
-      mainWindow.webContents.openDevTools();
     }, 3000); // 3 second delay
   } else {
     console.log("Production mode: Loading built app");
@@ -170,8 +87,6 @@ function createWindow() {
       console.log("Loaded app from serve");
       mainWindow.loadURL("app://-");
     });
-    // Uncomment to open DevTools in production for debugging
-    mainWindow.webContents.openDevTools();
   }
 
   // Emitted when the window is closed
@@ -182,23 +97,14 @@ function createWindow() {
 }
 
 // Start backend and return the process
-async function ensureBackendStarted() {
+function ensureBackendStarted() {
   if (!backendStarted) {
     console.log('Starting backend...');
     try {
-      // Find an available port first
-      global.backendPort = await findAvailablePort();
-      console.log(`Backend will use port: ${global.backendPort}`);
-      
-      // Start the backend with the determined port
-      backendProcess = await startBackend(global.backendPort);
-      
+      backendProcess = startBackend();
       if (backendProcess) {
         console.log('Backend started successfully');
         backendStarted = true;
-        
-        // Setup proxy server to forward requests to the dynamic backend port
-        setupProxyServer(global.backendPort);
       } else {
         const errorMsg = 'Failed to start backend process. Backend executable not found.';
         console.error(errorMsg);
@@ -230,10 +136,10 @@ Please try running the install script from the terminal.`);
 }
 
 // This method will be called when Electron has finished initialization
-app.whenReady().then(async () => {
+app.whenReady().then(() => {
   // Always start the backend first, regardless of dev/prod mode
-  await ensureBackendStarted();
   createWindow();
+  ensureBackendStarted();
 
   app.on('activate', () => {
     // On macOS it's common to re-create a window when the dock icon is clicked
@@ -246,12 +152,18 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
+// Clean up backend on app quit
 app.on('will-quit', () => {
-  console.log('App is quitting, cleaning up backend and proxy...');
-  if (backendProcess) {
+  console.log('App is quitting, cleaning up backend...');
+  if (backendProcess && backendProcess.kill) {
     backendProcess.kill('SIGINT');
   }
-  if (proxyServer) {
-    proxyServer.close();
+});
+
+// Handle app quit
+app.on('quit', () => {
+  console.log('App is quitting, ensuring backend is cleaned up...');
+  if (backendProcess && backendProcess.kill) {
+    backendProcess.kill('SIGTERM');
   }
 }); 
