@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Box } from '@mui/material';
 import { ArrowLeft, Plus, RefreshCw, Edit } from 'lucide-react';
 import { nerService } from '@/lib/backend';
+import { Suspense } from 'react';
 
 // Tag chip component - reused from the detail page but with interactive mode
 interface TagProps {
@@ -54,10 +55,9 @@ const SourceOption: React.FC<SourceOptionProps> = ({
   <div
     className={`relative p-6 border rounded-md transition-all
       ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200 border-2'}
-      ${
-        disabled
-          ? 'opacity-50 cursor-not-allowed bg-gray-50'
-          : 'cursor-pointer hover:border-blue-300'
+      ${disabled
+        ? 'opacity-50 cursor-not-allowed bg-gray-50'
+        : 'cursor-pointer hover:border-blue-300'
       }
     `}
     onClick={() => !disabled && onClick()}
@@ -100,11 +100,10 @@ interface CustomTag {
 }
 
 export default function NewJobPage() {
-  const params = useParams();
   const router = useRouter();
 
   // Essential state
-  const [selectedSource, setSelectedSource] = useState<'s3' | 'files'>('s3');
+  const [selectedSource, setSelectedSource] = useState<'s3' | 'files'>('files');
   const [sourceS3Bucket, setSourceS3Bucket] = useState('');
   const [sourceS3Prefix, setSourceS3Prefix] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -115,7 +114,9 @@ export default function NewJobPage() {
 
   // Model selection
   const [models, setModels] = useState<any[]>([]);
-  const [selectedModelId, setSelectedModelId] = useState('');
+  //Bi-default Presidio model is selected.
+  const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
+
   const [selectedModel, setSelectedModel] = useState<any>(null);
 
   // Tags handling
@@ -158,6 +159,7 @@ export default function NewJobPage() {
           (model) => model.Status === 'TRAINED'
         );
         setModels(trainedModels);
+        setSelectedModelId(trainedModels[0].Id);
       } catch (err) {
         console.error('Error fetching models:', err);
         setError('Failed to load models. Please try again.');
@@ -246,7 +248,7 @@ export default function NewJobPage() {
     }
 
     const errorMessage = await nerService.validateGroupDefinition(groupQuery);
-    
+
     if (errorMessage) {
       setGroupDialogError(errorMessage);
       return;
@@ -282,25 +284,25 @@ export default function NewJobPage() {
       return;
     }
 
-    for (let index = 0; index < customTags.length; index++) {
-      const thisTag = customTags[index];
-      if (thisTag.name === customTagName.toUpperCase()) {
-        setDialogError('Custom Tag name must be unique');
-        return;
-      }
-      if (thisTag.pattern === customTagPattern) {
-        setDialogError('Custom Tag pattern must be unique');
-        return;
-      }
+    const newCustomTag = {
+      name: customTagName.trim().toUpperCase(),
+      pattern: customTagPattern
     }
 
-    setCustomTags((prev) => [
-      ...prev,
-      {
-        name: customTagName.trim().toUpperCase(),
-        pattern: customTagPattern
+    if (editingTag) {
+      setCustomTags(prev => prev.map(tag =>
+        tag.name === editingTag.name ? newCustomTag : tag
+      ));
+    } else {
+      for (let index = 0; index < customTags.length; index++) {
+        const thisTag = customTags[index];
+        if (thisTag.name === customTagName.toUpperCase()) {
+          setDialogError('Custom Tag name must be unique');
+          return;
+        }
       }
-    ]);
+      setCustomTags(prev => [...prev, newCustomTag]);
+    }
 
     setCustomTagName('');
     setCustomTagPattern('');
@@ -314,8 +316,6 @@ export default function NewJobPage() {
   };
 
   const handleEditCustomTag = (tag: CustomTag) => {
-    handleRemoveCustomTag(tag.name);
-
     setCustomTagName(tag.name);
     setCustomTagPattern(tag.pattern);
     setEditingTag(tag);
@@ -405,12 +405,12 @@ export default function NewJobPage() {
         CustomTags: customTagsObj,
         ...(selectedSource === 's3'
           ? {
-              SourceS3Bucket: sourceS3Bucket,
-              SourceS3Prefix: sourceS3Prefix || undefined
-            }
+            SourceS3Bucket: sourceS3Bucket,
+            SourceS3Prefix: sourceS3Prefix || undefined
+          }
           : {
-              UploadId: uploadId
-            }),
+            UploadId: uploadId
+          }),
         Groups: groups,
         report_name: jobName
       });
@@ -419,7 +419,7 @@ export default function NewJobPage() {
 
       // Redirect after success
       setTimeout(() => {
-        router.push(`/token-classification/jobs/${response.ReportId}`);
+        router.push(`/token-classification/jobs?jobId=${response.ReportId}`);
       }, 2000);
     } catch (err) {
       setError('Failed to create report. Please try again.');
@@ -479,16 +479,16 @@ export default function NewJobPage() {
             <h2 className="text-2xl font-medium mb-4">Source</h2>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
               <SourceOption
-                title="S3 Bucket"
-                description="Use files from an S3 bucket"
-                isSelected={selectedSource === 's3'}
-                onClick={() => setSelectedSource('s3')}
-              />
-              <SourceOption
                 title="File Upload"
                 description="Upload files from your computer"
                 isSelected={selectedSource === 'files'}
                 onClick={() => setSelectedSource('files')}
+              />
+              <SourceOption
+                title="S3 Bucket"
+                description="Use files from an S3 bucket"
+                isSelected={selectedSource === 's3'}
+                onClick={() => setSelectedSource('s3')}
               />
             </div>
 
@@ -612,7 +612,7 @@ export default function NewJobPage() {
                   <SourceOption
                     key={model.Id}
                     title={model.Name[0].toUpperCase() + model.Name.slice(1)}
-                    description={model.Name === 'basic'? `Description: Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.` : `Description: Our most advanced AI model, requires an enterprise subscription, allows users to perpetually customize fields with user feedback (RLHF based fine-tuning), comes with an advanced dashboard for usage and performance metrics. Reach out to contact@thirdai.com for an enterprise subscription.`}
+                    description={model.Name === 'basic' ? `Description: Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.` : `Description: Our most advanced AI model, requires an enterprise subscription, allows users to perpetually customize fields with user feedback (RLHF based fine-tuning), comes with an advanced dashboard for usage and performance metrics. Reach out to contact@thirdai.com for an enterprise subscription.`}
                     isSelected={selectedModelId === model.Id}
                     onClick={() => setSelectedModelId(model.Id)}
                   />
@@ -763,7 +763,7 @@ export default function NewJobPage() {
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-lg p-6 w-full max-w-md">
                   <h3 className="text-lg font-medium mb-4">
-                    Create Custom Tag
+                    {`${editingTag ? "Edit" : "Create"} Custom Tag`}
                   </h3>
                   {dialogError && (
                     <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded">
@@ -862,18 +862,18 @@ export default function NewJobPage() {
                         Cancel
                       </Button>
                       <Button
-                      type="button"
-                      variant="default"
-                      color="primary"
-                      style={{
-                        backgroundColor: '#1976d2',
-                        textTransform: 'none',
-                        fontWeight: 500,
-                      }}
-                      onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#1565c0')}
-                      onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#1976d2')}
-                      onClick={handleAddCustomTag}
-                    >Add Tag</Button>
+                        type="button"
+                        variant="default"
+                        color="primary"
+                        style={{
+                          backgroundColor: '#1976d2',
+                          textTransform: 'none',
+                          fontWeight: 500,
+                        }}
+                        onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#1565c0')}
+                        onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#1976d2')}
+                        onClick={handleAddCustomTag}
+                      >Add Tag</Button>
                       {/* <Button onClick={handleAddCustomTag} type="button">
                         Add Tag
                       </Button> */}
