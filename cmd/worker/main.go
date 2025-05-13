@@ -66,7 +66,7 @@ func main() {
 
 	licensing := cmd.CreateLicenseVerifier(db, cfg.LicenseKey)
 
-	loaders := cmd.NewModelLoaders(cfg.PythonExecutablePath, cfg.PythonModelPluginScriptPath)
+	loaders := core.NewModelLoaders(cfg.PythonExecutablePath, cfg.PythonModelPluginScriptPath)
 
 	worker := core.NewTaskProcessor(db, s3Client, publisher, receiver, licensing, "./tmp_models_TODO", cfg.ModelBucketName, loaders)
 

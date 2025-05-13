@@ -2,14 +2,11 @@ package cmd
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"log/slog"
 	"ner-backend/internal/core"
-	"ner-backend/internal/core/bolt"
-	"ner-backend/internal/core/python"
 	"ner-backend/internal/database"
 	"ner-backend/internal/licensing"
 	"ner-backend/internal/storage"
@@ -90,27 +87,40 @@ func initializeModel(
 	modelBase string,
 ) error {
 	var model database.Model
-	err := db.Where("name = ?", name).Preload("Tags").First(&model).Error
-	isNew := errors.Is(err, gorm.ErrRecordNotFound)
-	if err != nil && !isNew {
-		return fmt.Errorf("error querying model %s: %w", name, err)
+	result := db.
+		Preload("Tags").
+		Where("name = ?", name).
+		Attrs(database.Model{
+			Id:           uuid.New(),
+			Type:         modelType,
+			Status:       database.ModelQueued,
+			CreationTime: time.Now(),
+		}).
+		FirstOrCreate(&model)
+
+	if result.Error != nil {
+		return fmt.Errorf("error finding or creating model %q: %w", name, result.Error)
 	}
 
-	if isNew {
-		model.Id = uuid.New()
-		model.Name = name
-		model.Type = modelType
-		model.Status = database.ModelTrained
-		model.CreationTime = time.Now()
-		for _, tag := range tags {
-			model.Tags = append(model.Tags, database.ModelTag{ModelId: model.Id, Tag: tag})
+	if result.RowsAffected == 0 && model.Status == database.ModelTrained {
+		slog.Info("model already exists, skipping initialization", "model_id", model.Id)
+		return nil
+	}
+
+	if result.RowsAffected > 0 {
+		tagsModels := make([]database.ModelTag, len(tags))
+		for i, tag := range tags {
+			tagsModels[i] = database.ModelTag{
+				ModelId: model.Id,
+				Tag:     tag,
+			}
 		}
-		if err := db.Create(&model).Error; err != nil {
-			return fmt.Errorf("failed to create model record %s: %w", name, err)
+
+		if err := db.Model(&model).Association("Tags").Replace(tagsModels); err != nil {
+			return fmt.Errorf("failed to attach tags to new model %q: %w", name, err)
 		}
 	}
 
-	s3Prefix := model.Id.String() + "/"
 	localDir := filepath.Join(modelBase, localSubdir)
 
 	info, err := os.Stat(localDir)
@@ -119,18 +129,11 @@ func initializeModel(
 			slog.Warn("local model dir does not exist, skipping upload", "dir", localDir)
 			return nil
 		}
+		database.UpdateModelStatus(ctx, db, model.Id, database.ModelFailed) // nolint:errcheck
 		return fmt.Errorf("failed to stat local model dir %s: %w", localDir, err)
 	}
 	if !info.IsDir() {
 		return fmt.Errorf("local model dir %s is not a directory", localDir)
-	}
-
-	objs, err := s3p.ListObjects(ctx, bucket, s3Prefix)
-	if err != nil {
-		slog.Error("failed to list S3 objects for model", "model_id", model.Id, "error", err)
-	} else if len(objs) > skipIfExistsCount {
-		slog.Info("model already uploaded to S3, skipping upload", "model_id", model.Id)
-		return nil
 	}
 
 	if err := s3p.UploadDir(ctx, bucket, model.Id.String(), localDir); err != nil {
@@ -245,35 +248,5 @@ func CreateLicenseVerifier(db *gorm.DB, license string) licensing.LicenseVerifie
 	} else {
 		slog.Warn(fmt.Sprintf("License key not provided. Using free license verifier with %.2fGB total file size limit", float64(licensing.DefaultFreeLicenseMaxBytes)/(1024*1024*1024)))
 		return licensing.NewFreeLicenseVerifier(db, licensing.DefaultFreeLicenseMaxBytes)
-	}
-}
-
-func NewModelLoaders(pythonExec, pluginScript string) map[string]core.ModelLoader {
-
-	return map[string]core.ModelLoader{
-		"bolt": func(modelDir string) (core.Model, error) {
-			return bolt.LoadNER(filepath.Join(modelDir, "model.bin"))
-		},
-		"transformer": func(modelDir string) (core.Model, error) {
-			cfgJSON := fmt.Sprintf(`{"model_path":"%s","threshold":0.5}`, modelDir)
-			return python.LoadPythonModel(
-				pythonExec,
-				pluginScript,
-				"python_combined_ner_model",
-				cfgJSON,
-			)
-		},
-		"cnn": func(modelDir string) (core.Model, error) {
-			cfgJSON := fmt.Sprintf(`{"model_path":"%s/cnn_model.pth"}`, modelDir)
-			return python.LoadPythonModel(
-				pythonExec,
-				pluginScript,
-				"python_cnn_ner_model",
-				cfgJSON,
-			)
-		},
-		"presidio": func(_ string) (core.Model, error) {
-			return core.NewPresidioModel()
-		},
 	}
 }

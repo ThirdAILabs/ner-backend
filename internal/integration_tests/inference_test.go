@@ -119,7 +119,7 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
-	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket, cmd.NewModelLoaders("python", "plugin/plugin-python/plugin.py"))
+	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket, core.NewModelLoaders("python", "plugin/plugin-python/plugin.py"))
 
 	go worker.Start()
 	defer worker.Stop()
@@ -212,7 +212,7 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
-	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket, cmd.NewModelLoaders("python", "plugin/plugin-python/plugin.py"))
+	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket, core.NewModelLoaders("python", "plugin/plugin-python/plugin.py"))
 
 	go worker.Start()
 	defer worker.Stop()
@@ -239,6 +239,10 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 }
 
 func TestInferenceWorkflowForModels(t *testing.T) {
+	if os.Getenv("PYTHON_EXECUTABLE_PATH") == "" || os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH") == "" {
+		t.Fatalf("PYTHON_EXECUTABLE_PATH and PYTHON_MODEL_PLUGIN_SCRIPT_PATH must be set")
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
@@ -261,7 +265,7 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 	backendSvc.AddRoutes(router)
 
 	tempDir := t.TempDir()
-	worker := core.NewTaskProcessor(db, s3, publisher, receiver, &DummyLicenseVerifier{}, tempDir, modelBucket, cmd.NewModelLoaders(os.Getenv("PYTHON_EXECUTABLE_PATH"), os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH")))
+	worker := core.NewTaskProcessor(db, s3, publisher, receiver, &DummyLicenseVerifier{}, tempDir, modelBucket, core.NewModelLoaders(os.Getenv("PYTHON_EXECUTABLE_PATH"), os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH")))
 	go worker.Start()
 	t.Cleanup(worker.Stop)
 

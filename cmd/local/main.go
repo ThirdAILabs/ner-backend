@@ -147,7 +147,7 @@ func main() {
 
 	licensing := cmd.CreateLicenseVerifier(db, cfg.License)
 
-	worker := core.NewTaskProcessor(db, storage, queue, queue, licensing, filepath.Join(cfg.Root, "models"), modelBucket, cmd.NewModelLoaders("python", "plugin/plugin-python/plugin.py"))
+	worker := core.NewTaskProcessor(db, storage, queue, queue, licensing, filepath.Join(cfg.Root, "models"), modelBucket, core.NewModelLoaders("python", "plugin/plugin-python/plugin.py"))
 
 	server := createServer(db, storage, queue, cfg.Port)
 
