@@ -10,7 +10,6 @@ type Model struct {
 	Id          uuid.UUID
 	BaseModelId *uuid.UUID
 	Name        string
-	Type        string
 	Status      string
 
 	Tags []string `json:"Tags,omitempty"`

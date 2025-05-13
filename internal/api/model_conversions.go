@@ -9,7 +9,6 @@ func convertModel(m database.Model) api.Model {
 	model := api.Model{
 		Id:     m.Id,
 		Name:   m.Name,
-		Type:   m.Type,
 		Status: m.Status,
 	}
 	if m.BaseModelId.Valid {
