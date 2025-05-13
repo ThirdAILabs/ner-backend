@@ -8,11 +8,13 @@ package bolt
 // #include <stdlib.h>
 import "C"
 import (
+	"encoding/csv"
 	"errors"
 	"fmt"
 	"ner-backend/internal/core/types"
 	"ner-backend/internal/core/utils"
 	"ner-backend/pkg/api"
+	"os"
 	"strings"
 	"unsafe"
 )
@@ -83,23 +85,53 @@ func (ner *NER) train(filename string, learningRate float32, epochs int) error {
 }
 
 func (ner *NER) Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sample) error {
-	return fmt.Errorf("Finetune not implemented")
+	// retrieve CSV column names for tokens and tags
+	var cTokensCol, cTagsCol *C.char
+	C.NER_source_target_cols(ner.model, &cTokensCol, &cTagsCol)
+	tokensCol := C.GoString(cTokensCol)
+	tagsCol := C.GoString(cTagsCol)
+	C.SourceTargetCols_free(cTokensCol, cTagsCol)
+
+	// create temporary CSV file
+	file, err := os.CreateTemp("", "ner_finetune_*.csv")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(file.Name())
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	// write header
+	if err := writer.Write([]string{tokensCol, tagsCol}); err != nil {
+		return err
+	}
+
+	// write sample rows
+	for _, sample := range samples {
+		tokensJoined := strings.Join(sample.Tokens, " ")
+		labelsJoined := strings.Join(sample.Labels, " ")
+		if err := writer.Write([]string{tokensJoined, labelsJoined}); err != nil {
+			return err
+		}
+	}
+
+	if err := writer.Error(); err != nil {
+		return err
+	}
+
+	// call train with default hyperparameters
+	const defaultLearningRate = 0.1
+	const defaultEpochs = 1
+	if err := ner.train(file.Name(), defaultLearningRate, defaultEpochs); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (ner *NER) Save(path string) error {
 	return fmt.Errorf("save not implemented")
-}
-
-func splitSentences(text string) []string {
-	tokens := strings.Fields(text)
-	const sentLen = 100
-	sentences := make([]string, 0, (len(tokens)+sentLen-1)/sentLen)
-
-	for start := 0; start < len(tokens); start += sentLen {
-		end := min(start+sentLen, len(tokens))
-		sentences = append(sentences, strings.Join(tokens[start:end], " "))
-	}
-	return sentences
 }
 
 func newStringList(values []string) *C.StringList_t {

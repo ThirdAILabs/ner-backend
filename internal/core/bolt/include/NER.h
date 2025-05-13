@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <utility>
 
 namespace thirdai::automl::udt {
 
@@ -19,6 +20,9 @@ public:
   predict(const std::vector<std::string> &sentences);
 
   void train(const std::string &filename, float learning_rate, uint32_t epochs);
+
+  // return the CSV column names for tokens and tags
+  std::pair<std::string, std::string> sourceTargetCols() const;
 
   static std::unique_ptr<NerModel> load(const std::string &path);
 };

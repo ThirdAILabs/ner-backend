@@ -41,6 +41,12 @@ Results_t *NER_predict(const NER_t *self, const StringList_t *sentences,
 void NER_train(const NER_t *self, const char *filename, float learning_rate,
                unsigned int epochs, const char **err_ptr);
 
+// get CSV column names: tokens and tags
+void NER_source_target_cols(const NER_t *self, const char **tokens_col, const char **tags_col);
+
+// free memory allocated by NER_source_target_cols
+void SourceTargetCols_free(const char *tokens_col, const char *tags_col);
+
 #ifdef __cplusplus
 }
 #endif
