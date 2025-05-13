@@ -39,7 +39,7 @@ const Tag: React.FC<TagProps> = ({
 // Source option card component - reused from the detail page
 interface SourceOptionProps {
   title: string;
-  description: string;
+  description: React.ReactNode;
   isSelected?: boolean;
   disabled?: boolean;
   onClick: () => void;
@@ -56,7 +56,7 @@ const SourceOption: React.FC<SourceOptionProps> = ({
     className={`relative p-6 border rounded-md transition-all
       ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200 border-2'}
       ${disabled
-        ? 'opacity-50 cursor-not-allowed bg-gray-50'
+        ? 'opacity-85 cursor-not-allowed bg-gray-50'
         : 'cursor-pointer hover:border-blue-300'
       }
     `}
@@ -158,7 +158,7 @@ export default function NewJobPage() {
         const trainedModels = modelData.filter(
           (model) => model.Status === 'TRAINED'
         );
-        setModels(trainedModels);
+        setModels(trainedModels.reverse());
         setSelectedModelId(trainedModels[0].Id);
       } catch (err) {
         console.error('Error fetching models:', err);
@@ -428,6 +428,37 @@ export default function NewJobPage() {
       setIsSubmitting(false);
     }
   };
+  const [isPressedSubmit, setIsPressedSubmit] = useState<boolean>(false);
+  const [nameError, setNameError] = useState<string | null>(null);
+
+  const validateJobName = (name: string): boolean => {
+    if (!name) {
+      setNameError('Report name is required');
+      return false;
+    }
+
+    if (!/^[A-Za-z0-9_]+$/.test(name)) {
+      setNameError('Report name can only contain letters, numbers, and underscores');
+      return false;
+    }
+
+    if (name.length > 50) {
+      setNameError('Report name must be less than 50 characters');
+      return false;
+    }
+
+    setNameError(null);
+    return true;
+  };
+
+  const [showTooltip, setShowTooltip] = useState(false);
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setShowTooltip(true);
+    setTimeout(() => {
+      setShowTooltip(false);
+    }, 1000);
+  };
 
   return (
     <div className="container px-4 py-8 w-3/4">
@@ -440,7 +471,7 @@ export default function NewJobPage() {
         </Button>
       </div>
 
-      {error && (
+      {(error && !isPressedSubmit) && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
           {error}
         </div>
@@ -455,22 +486,28 @@ export default function NewJobPage() {
           {/* Job Name Field */}
           <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
             <h2 className="text-2xl font-medium mb-4">Report Name</h2>
-            <div className="w-full ">
+            <div className="w-full">
               <input
                 type="text"
                 value={jobName}
                 onChange={(e) => {
                   const value = e.target.value.replace(/\s/g, '_');
                   setJobName(value);
+                  validateJobName(value);
                 }}
-                className="w-full p-2 border border-gray-300 rounded"
+                onBlur={() => validateJobName(jobName)}
+                className={`w-full p-2 border ${nameError ? 'border-red-500' : 'border-gray-300'
+                  } rounded`}
                 placeholder="Enter_Report_Name"
                 required
-                pattern="^[^\s]+$"
               />
-              <p className="text-sm text-gray-500 mt-1">
-                Use only letters, numbers, and underscores. No spaces allowed.
-              </p>
+              {nameError ? (
+                <p className="text-red-700 text-sm mt-1"><sup className='text-red-700'>*</sup>{nameError}</p>
+              ) : (
+                <p className="text-sm text-gray-500 mt-1">
+                  Use only letters, numbers, and underscores. No spaces allowed.
+                </p>
+              )}
             </div>
           </Box>
 
@@ -611,12 +648,37 @@ export default function NewJobPage() {
                 {models.map((model) => (
                   <SourceOption
                     key={model.Id}
-                    title={model.Name[0].toUpperCase() + model.Name.slice(1)}
-                    description={model.Name === 'basic' ? `Description: Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.` : `Description: Our most advanced AI model, requires an enterprise subscription, allows users to perpetually customize fields with user feedback (RLHF based fine-tuning), comes with an advanced dashboard for usage and performance metrics. Reach out to contact@thirdai.com for an enterprise subscription.`}
+                    title={model.Name === "presidio" ? "Advanced" : model.Name[0].toUpperCase() + model.Name.slice(1)}
+                    description={
+                      model.Name === 'basic' ? (
+                        'Description: Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.'
+                      ) : (
+                        <>
+                          Description: Our most advanced AI model requires an enterprise subscription. It allows users to perpetually customize fields with user feedback (RLHF-based fine-tuning) and includes an advanced dashboard for usage and performance metrics. Reach out to{' '}
+                          <div className="relative inline-block">
+                            <span
+                              className="text-blue-500 underline cursor-pointer hover:text-blue-700"
+                              onClick={() => copyToClipboard('contact@thirdai.com')}
+                              title="Click to copy email"
+                            >
+                              contact@thirdai.com
+                            </span>
+                            {showTooltip && (
+                              <div className="absolute left-1/2 -translate-x-1/2 mt-1 w-max px-2 py-1 text-xs bg-gray-800 text-white rounded shadow-md z-10">
+                                Email Copied
+                              </div>
+                            )}
+                          </div>
+                          for an enterprise subscription.
+                        </>
+                      )
+                    }
                     isSelected={selectedModelId === model.Id}
                     onClick={() => setSelectedModelId(model.Id)}
+                    disabled={model.Name === "presidio"}
                   />
                 ))}
+
               </div>
             </div>
 
@@ -1029,7 +1091,12 @@ export default function NewJobPage() {
           </Box>
 
           {/* Submit Button */}
-          <div className="flex justify-center pt-4">
+          <div className="flex flex-col items-center space-y-4 pt-4">
+            {(error && isPressedSubmit) && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded w-full max-w-md text-center">
+                {error}
+              </div>
+            )}
             <Button
               variant="default"
               color="primary"
@@ -1040,6 +1107,9 @@ export default function NewJobPage() {
               }}
               onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#1565c0')}
               onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#1976d2')}
+              onClick={() => {
+                setIsPressedSubmit(true);
+              }}
             >
               {isSubmitting ? (
                 <>
