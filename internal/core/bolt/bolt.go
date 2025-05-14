@@ -15,6 +15,7 @@ import (
 	"ner-backend/internal/core/utils"
 	"ner-backend/pkg/api"
 	"os"
+	"path/filepath"
 	"strings"
 	"unsafe"
 )
@@ -113,7 +114,8 @@ func (ner *NER) Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sa
 }
 
 func (ner *NER) Save(path string) error {
-	cPath := C.CString(path)
+	modelPath := filepath.Join(path, "model.bin")
+	cPath := C.CString(modelPath)
 	defer C.free(unsafe.Pointer(cPath))
 
 	var err *C.char

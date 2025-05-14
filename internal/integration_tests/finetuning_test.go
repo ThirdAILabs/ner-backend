@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -115,7 +116,7 @@ func TestFinetuning(t *testing.T) {
 	assert.Contains(t, data, "xyz")
 }
 
-func TestFinetuning_CNNModel(t *testing.T) {
+func TestFinetuningAllModels(t *testing.T) {
 	if os.Getenv("PYTHON_EXECUTABLE_PATH") == "" || os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH") == "" {
 		t.Fatalf("PYTHON_EXECUTABLE_PATH and PYTHON_MODEL_PLUGIN_SCRIPT_PATH must be set")
 	}
@@ -136,24 +137,50 @@ func TestFinetuning_CNNModel(t *testing.T) {
 	)
 	defer stop()
 
-	require.NoError(t, cmd.InitializeCnnNerExtractor(ctx, db, s3, modelBucket, os.Getenv("HOST_MODEL_DIR")))
-	var base database.Model
-	require.NoError(t, db.Where("name = ?", "advanced").First(&base).Error)
+	models := []string{"bolt", "cnn", "transformer"}
 
-	ftReq := api.FinetuneRequest{
-		Name:       "finetuned-cnn",
-		TaskPrompt: "CNN finetune test",
-		Tags:       []api.TagInfo{{Name: "xyz"}},
+	for _, modelType := range models {
+		var modelName string
+		if modelType == "bolt" {
+			require.NoError(t, cmd.InitializeBoltModel(db, s3, modelBucket, "basic", filepath.Join(os.Getenv("HOST_MODEL_DIR"), "model.bin")))
+			modelName = "basic"
+		} else if modelType == "cnn" {
+			require.NoError(t, cmd.InitializeCnnNerExtractor(ctx, db, s3, modelBucket, os.Getenv("HOST_MODEL_DIR")))
+			modelName = "advanced"
+		} else if modelType == "transformer" {
+			require.NoError(t, cmd.InitializeTransformerModel(ctx, db, s3, modelBucket, os.Getenv("HOST_MODEL_DIR")))
+			modelName = "ultra"
+		} else {
+			t.Fatalf("Invalid model type: %s", modelType)
+		}
+		var base database.Model
+		require.NoError(t, db.Where("name = ?", modelName).First(&base).Error)
+
+		ftReq := api.FinetuneRequest{
+			Name:       fmt.Sprintf("finetuned-%s", modelType),
+			TaskPrompt: fmt.Sprintf("%s finetune test", modelType),
+			Tags:       []api.TagInfo{{Name: "xyz"}},
+			Samples: []api.Sample{
+				{
+					Tokens: []string{"I", "started", "working", "at", "ThirdAI", "in", "2022"},
+					Labels: []string{"O", "O", "O", "O", "COMPANY", "O", "DATE"},
+				},
+				{
+					Tokens: []string{"I", "started", "working", "at", "ThirdAI", "in", "2022"},
+					Labels: []string{"O", "O", "O", "O", "COMPANY", "O", "DATE"},
+				},
+			},
+		}
+
+		_, model := finetune(
+			t, router,
+			base.Id.String(),
+			ftReq,
+			50, 5*time.Second,
+		)
+		assert.Equal(t, database.ModelTrained, model.Status)
+		assert.Equal(t, fmt.Sprintf("finetuned-%s", modelType), model.Name)
+		require.NotNil(t, model.BaseModelId)
+		assert.Equal(t, base.Id, *model.BaseModelId)
 	}
-	_, model := finetune(
-		t, router,
-		base.Id.String(),
-		ftReq,
-		50, 5*time.Second,
-	)
-
-	assert.Equal(t, database.ModelTrained, model.Status)
-	assert.Equal(t, "finetuned-cnn", model.Name)
-	require.NotNil(t, model.BaseModelId)
-	assert.Equal(t, base.Id, *model.BaseModelId)
 }
