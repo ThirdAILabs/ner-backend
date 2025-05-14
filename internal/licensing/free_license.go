@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"log/slog"
 	"ner-backend/internal/database"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -22,7 +23,14 @@ func NewFreeLicenseVerifier(db *gorm.DB, maxBytes int) *FreeLicenseVerifier {
 
 func (verifier *FreeLicenseVerifier) VerifyLicense(ctx context.Context) error {
 	var totalBytes sql.NullInt64
-	if err := verifier.db.WithContext(ctx).Model(&database.InferenceTask{}).Select("SUM(total_size)").Scan(&totalBytes).Error; err != nil {
+	// Get first day of current month
+	now := time.Now().UTC()
+	currentMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+
+	if err := verifier.db.WithContext(ctx).Model(&database.InferenceTask{}).
+		Select("SUM(total_size)").
+		Where("start_time >= ?", currentMonth).
+		Scan(&totalBytes).Error; err != nil {
 		slog.Error("error getting total usage", "error", err)
 		return ErrLicenseVerificationFailed
 	}
