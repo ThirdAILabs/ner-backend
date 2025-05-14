@@ -1,4 +1,5 @@
 import './globals.css';
+import { Providers } from './Providers';
 
 export const metadata = {
   title: 'PocketShield',
@@ -14,7 +15,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap" rel="stylesheet" />
       </head>
       <body className="flex min-h-screen w-full flex-col bg-muted/40">
-        {children}
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   );
