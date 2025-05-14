@@ -44,7 +44,7 @@ const (
 
 type Report struct {
 	Id         uuid.UUID `gorm:"type:uuid;primaryKey"`
-	ReportName string    `gorm:"unique;not null"`
+	ReportName string    `gorm:"not null"`
 
 	ModelId uuid.UUID `gorm:"type:uuid"`
 	Model   *Model    `gorm:"foreignKey:ModelId"`
