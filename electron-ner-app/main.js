@@ -142,8 +142,9 @@ Please try running the install script from the terminal.`);
 // This method will be called when Electron has finished initialization
 app.whenReady().then(() => {
   // Always start the backend first, regardless of dev/prod mode
-  createWindow();
   ensureBackendStarted();
+  createWindow();
+
 
   app.on('activate', () => {
     // On macOS it's common to re-create a window when the dock icon is clicked
