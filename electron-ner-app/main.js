@@ -97,11 +97,11 @@ function createWindow() {
 }
 
 // Start backend and return the process
-function ensureBackendStarted() {
+async function ensureBackendStarted() {
   if (!backendStarted) {
     console.log('Starting backend...');
     try {
-      backendProcess = startBackend();
+      backendProcess = await startBackend();  // Remove the comma and killFunc
       if (backendProcess) {
         console.log('Backend started successfully');
         backendStarted = true;
@@ -156,6 +156,7 @@ app.on('window-all-closed', () => {
 app.on('will-quit', () => {
   console.log('App is quitting, cleaning up backend...');
   if (backendProcess && backendProcess.kill) {
+    console.log('Sending SIGINT to backend process...');
     backendProcess.kill('SIGINT');
   }
 });
@@ -164,6 +165,7 @@ app.on('will-quit', () => {
 app.on('quit', () => {
   console.log('App is quitting, ensuring backend is cleaned up...');
   if (backendProcess && backendProcess.kill) {
+    console.log('Sending SIGTERM to backend process...');
     backendProcess.kill('SIGTERM');
   }
 }); 
