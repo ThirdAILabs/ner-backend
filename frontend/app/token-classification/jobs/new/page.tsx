@@ -661,7 +661,7 @@ export default function NewJobPage() {
                   title={"Advanced"}
                   description={
                     <>
-                      Description: Our most advanced AI model. Requires an enterprise subscription. It allows users to perpetually customize fields with user feedback and includes an advanced dashboard for usage and performance metrics. Reach out to{' '}
+                      Description: Our most advanced AI model, requires an enterprise subscription. It allows users to perpetually customize fields with user feedback and includes an advanced dashboard for usage and performance metrics. Reach out to{' '}
                       <div className="relative inline-block">
                         <span
                           className="text-blue-500 underline cursor-pointer hover:text-blue-700"
