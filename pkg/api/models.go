@@ -50,8 +50,8 @@ type Report struct {
 
 	ShardDataTaskStatus       string                        `json:"ShardDataTaskStatus,omitempty"`
 	InferenceTaskStatuses     map[string]TaskStatusCategory `json:"InferenceTaskStatuses,omitempty"`
-	TotalInferenceTimeSeconds float64                       `json:"total_inference_time_seconds"`
-	ShardDataTimeSeconds      float64                       `json:"shard_data_time_seconds"`
+	TotalInferenceTimeSeconds float64                       `json:"TotalInferenceTimeSeconds,omitempty"`
+	ShardDataTimeSeconds      float64                       `json:"ShardDataTimeSeconds,omitempty"`
 
 	Errors []string `json:"Errors,omitempty"`
 }
