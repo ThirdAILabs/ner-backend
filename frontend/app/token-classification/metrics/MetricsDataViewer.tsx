@@ -49,12 +49,17 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
         if (!mounted) return;
         setInfMetrics(summary);
 
+        console.log(modelId, days);
         // 2) fetch throughput summary card
         if (modelId) {
+          console.log('calling throughput metrics');
           const tp = await nerService.getThroughputMetrics(modelId);
           if (!mounted) return;
           setTpMetrics(tp);
+          console.log('Throughput Metrics:', tp);
         } else {
+          // fetch for all models
+          console.log("couldn't call throughpput metrics");
           setTpMetrics(null);
         }
 
@@ -107,23 +112,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
   return (
     <>
       <div className="space-y-6 w-full">
-        <div className="grid grid-cols-4 gap-4">
-          {/* Completed Tasks */}
-          <Card className="flex flex-col justify-between">
-            <CardContent className="flex flex-col items-center justify-center flex-1 pt-6">
-              <div className="relative h-32 w-32">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-2xl font-bold text-gray-700">
-                    {infMetrics.Completed}
-                  </span>
-                </div>
-              </div>
-              <h3 className="mt-auto text-sm text-muted-foreground">
-                Completed Tasks
-              </h3>
-            </CardContent>
-          </Card>
-
+        <div className="grid grid-cols-5 gap-4">
           {/* In-Progress Tasks */}
           <Card className="flex flex-col justify-between">
             <CardContent className="flex flex-col items-center justify-center flex-1 pt-6">
@@ -135,7 +124,50 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
                 </div>
               </div>
               <h3 className="mt-auto text-sm text-muted-foreground">
-                In-Progress Tasks
+                In-Progress Files
+              </h3>
+            </CardContent>
+          </Card>
+
+          {/* Completed Tasks */}
+          <Card className="flex flex-col justify-between">
+            <CardContent className="flex flex-col items-center justify-center flex-1 pt-6">
+              <div className="relative h-32 w-32">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-2xl font-bold text-gray-700">
+                    {infMetrics.Completed}
+                  </span>
+                </div>
+              </div>
+              <h3 className="mt-auto text-sm text-muted-foreground">
+                Completed Files
+              </h3>
+            </CardContent>
+          </Card>
+
+          {/* Throughput */}
+          <Card className="flex flex-col justify-between">
+            <CardContent className="flex flex-col items-center justify-center flex-1 pt-6">
+              <div className="relative h-32 w-32">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span
+                    className={`font-bold text-gray-700 text-center ${
+                      tpMetrics?.ThroughputMBPerHour &&
+                      (tpMetrics?.ThroughputMBPerHour > 1000
+                        ? 'text-xl'
+                        : tpMetrics?.ThroughputMBPerHour > 100
+                          ? 'text-2xl'
+                          : 'text-3xl')
+                    }`}
+                  >
+                    {tpMetrics?.ThroughputMBPerHour == null
+                      ? '-'
+                      : `${tpMetrics?.ThroughputMBPerHour.toFixed(2).toLocaleString()} MB/Hour`}
+                  </span>
+                </div>
+              </div>
+              <h3 className="mt-auto text-sm text-muted-foreground">
+                Throughput
               </h3>
             </CardContent>
           </Card>
@@ -172,7 +204,6 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
             </CardContent>
           </Card>
         </div>
-
       </div>
     </>
   );
