@@ -101,7 +101,7 @@ async function ensureBackendStarted() {
   if (!backendStarted) {
     console.log('Starting backend...');
     try {
-      backendProcess = await startBackend();  // Remove the comma and killFunc
+      backendProcess = await startBackend();
       if (backendProcess) {
         console.log('Backend started successfully');
         backendStarted = true;
