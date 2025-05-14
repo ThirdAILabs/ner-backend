@@ -86,7 +86,6 @@ func (ner *PythonModel) Finetune(prompt string, tags []api.TagInfo, samples []ap
 		curr.size = 0
 		return nil
 	}
-
 	for _, s := range samples {
 		p := &proto.Sample{
 			Tokens: s.Tokens,
@@ -114,7 +113,7 @@ func (ner *PythonModel) Finetune(prompt string, tags []api.TagInfo, samples []ap
 }
 
 func (ner *PythonModel) Save(path string) error {
-	return fmt.Errorf("save not implemented")
+	return ner.model.Save(path)
 }
 
 func (ner *PythonModel) Release() {

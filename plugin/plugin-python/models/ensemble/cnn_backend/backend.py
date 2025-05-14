@@ -1,6 +1,7 @@
 from typing import List
 
 import torch
+import os
 from transformers import AutoTokenizer
 
 from .impl import CNNNERModelSentenceTokenized
@@ -46,3 +47,6 @@ class CNNModel:
             lr=lr,
             batch_size=batch_size,
         )
+
+    def save(self, dir: str) -> None:
+        torch.save(self.model.state_dict(), os.path.join(dir, "cnn_model.pth"))

@@ -46,6 +46,20 @@ func (m *GRPCClient) Finetune(prompt string, tags []*proto.TagInfo, samples []*p
 	return nil
 }
 
+func (m *GRPCClient) Save(dir string) error {
+	resp, err := m.client.Save(context.Background(), &proto.SaveRequest{
+		Dir: dir,
+	})
+	if err != nil {
+		return err
+	}
+
+	if !resp.Success {
+		return err
+	}
+	return nil
+}
+
 // Here is the gRPC server that GRPCClient talks to.
 type GRPCServer struct {
 	proto.UnimplementedModelServer
@@ -76,4 +90,15 @@ func (m *GRPCServer) Finetune(
 		return &proto.FinetuneResponse{Success: false}, err
 	}
 	return &proto.FinetuneResponse{Success: true}, nil
+}
+
+func (m *GRPCServer) Save(
+	ctx context.Context,
+	req *proto.SaveRequest,
+) (*proto.SaveResponse, error) {
+	err := m.Impl.Save(req.Dir)
+	if err != nil {
+		return &proto.SaveResponse{Success: false}, err
+	}
+	return &proto.SaveResponse{Success: true}, nil
 }

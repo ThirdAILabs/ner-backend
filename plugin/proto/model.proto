@@ -41,8 +41,15 @@ message FinetuneRequest {
 }
 message FinetuneResponse { bool success = 1; }
 
+
+message SaveRequest {
+  string dir = 1;
+}
+message SaveResponse { bool success = 1; }
+
 service Model {
   rpc Predict(PredictRequest)       returns (PredictResponse);
   rpc PredictBatch(PredictBatchRequest) returns (PredictBatchResponse);
   rpc Finetune(FinetuneRequest)     returns (FinetuneResponse);
+  rpc Save(SaveRequest)             returns (SaveResponse);
 }

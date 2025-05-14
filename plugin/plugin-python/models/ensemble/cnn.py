@@ -1,4 +1,5 @@
 from typing import List
+import os
 
 from ..model_interface import BatchPredictions, Entity, Model, SentencePredictions
 from .cnn_backend.backend import CNNModel
@@ -76,3 +77,7 @@ class CnnNerExtractor(Model):
         )
 
         return True
+
+    def save(self, dir: str) -> None:
+        os.makedirs(dir, exist_ok=True)
+        self.model.save(dir)
