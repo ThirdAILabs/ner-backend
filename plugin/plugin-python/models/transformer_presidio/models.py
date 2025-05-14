@@ -1,14 +1,23 @@
 import contextlib
 import io
+import os
 from typing import Any, Dict, List
 
 from transformers import AutoModelForTokenClassification, AutoTokenizer
 from presidio_analyzer import RecognizerResult
 
-from ..model_interface import Entity, Model, SentencePredictions, BatchPredictions
+from ..model_interface import (
+    Entity,
+    Model,
+    SentencePredictions,
+    BatchPredictions,
+    TagInfo,
+    Sample,
+)
 from .make_analyzer import analyze_text_batch, get_batch_analyzer
 from .transformer_inference import predict_batch, punctuation_filter
 from ..utils import clean_text_with_spans
+from .transformer_training import train_transformer
 
 
 def suppress_output():
@@ -92,7 +101,6 @@ def merge_predictions(
 
 class HuggingFaceModel(Model):
     def __init__(self, model_path: str):
-        self.model_path = model_path
         self.model = AutoModelForTokenClassification.from_pretrained(model_path)
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
 
@@ -164,6 +172,13 @@ class HuggingFaceModel(Model):
     def predict(self, text: str) -> SentencePredictions:
         return self.predict_batch([text]).predictions[0]
 
+    def finetune(self, prompt: str, tags: List[TagInfo], samples: List[Sample]) -> None:
+        train_transformer(self.model, self.tokenizer, samples)
+
+    def save(self, path: str) -> None:
+        self.model.save_pretrained(path)
+        self.tokenizer.save_pretrained(path)
+
 
 class PresidioWrappedNerModel(Model):
     def __init__(self, threshold: float):
@@ -196,6 +211,14 @@ class PresidioWrappedNerModel(Model):
 
     def predict(self, text: str) -> SentencePredictions:
         return self.predict_batch([text]).predictions[0]
+
+    def finetune(self, prompt: str, tags: List[TagInfo], samples: List[Sample]) -> None:
+        raise NotImplementedError(
+            "Finetuning is not supported for PresidioWrappedNerModel"
+        )
+
+    def save(self, path: str) -> None:
+        raise NotImplementedError("Saving is not supported for PresidioWrappedNerModel")
 
 
 class CombinedNERModel(Model):
@@ -230,3 +253,10 @@ class CombinedNERModel(Model):
 
     def predict(self, text: str) -> SentencePredictions:
         return self.predict_batch([text]).predictions[0]
+
+    def finetune(self, prompt: str, tags: List[TagInfo], samples: List[Sample]) -> None:
+        self.hf.finetune(prompt, tags, samples)
+
+    def save(self, dir: str) -> None:
+        os.makedirs(dir, exist_ok=True)
+        self.hf.save(dir)

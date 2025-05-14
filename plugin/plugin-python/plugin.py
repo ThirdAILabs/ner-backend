@@ -1,6 +1,6 @@
 import argparse
 import json
-import sys
+import sys, os
 import logging
 
 # grpc reads from stdout and hence, if any import prints anything, it will break the plugin
@@ -17,6 +17,7 @@ from grpc_health.v1 import health_pb2, health_pb2_grpc
 from grpc_health.v1.health import HealthServicer
 
 from models import CnnNerExtractor, CombinedNERModel, Model
+from models.model_interface import TagInfo, Sample
 from proto import model_pb2, model_pb2_grpc
 
 model_dict: Dict[str, Model] = {
@@ -42,6 +43,39 @@ class ModelServicer(model_pb2_grpc.ModelServicer):
         preds = self.model.predict_batch(sentences).to_go()
         result = model_pb2.PredictBatchResponse(predictions=preds)
         return result
+
+    def Finetune(self, request, context):
+        try:
+            tags = [
+                TagInfo(
+                    name=t.name,
+                    description=t.description,
+                    examples=list(t.examples),
+                )
+                for t in request.tags
+            ]
+            samples = [
+                Sample(
+                    tokens=list(s.tokens),
+                    labels=list(s.labels),
+                )
+                for s in request.samples
+            ]
+            self.model.finetune(request.prompt, tags, samples)
+            return model_pb2.FinetuneResponse(success=True)
+        except Exception as e:
+            context.set_details(str(e))
+            context.set_code(grpc.StatusCode.INTERNAL)
+            return model_pb2.FinetuneResponse(success=False)
+
+    def Save(self, request, context):
+        try:
+            self.model.save(request.dir)
+            return model_pb2.SaveResponse(success=True)
+        except Exception as e:
+            context.set_details(str(e))
+            context.set_code(grpc.StatusCode.INTERNAL)
+            return model_pb2.SaveResponse(success=False)
 
 
 def serve(model_name: str, **kwargs):

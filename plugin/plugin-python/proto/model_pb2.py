@@ -13,7 +13,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x11proto/model.proto\x12\x05proto\",\n\x0ePredictRequest\x12\x1a\n\x08sentence\x18\x01 \x01(\tR\x08sentence\"<\n\x0fPredictResponse\x12)\n\x08\x65ntities\x18\x01 \x03(\x0b\x32\r.proto.EntityR\x08\x65ntities\"3\n\x13PredictBatchRequest\x12\x1c\n\tsentences\x18\x01 \x03(\tR\tsentences\"P\n\x14PredictBatchResponse\x12\x38\n\x0bpredictions\x18\x01 \x03(\x0b\x32\x16.proto.PredictResponseR\x0bpredictions\"Z\n\x06\x45ntity\x12\x14\n\x05label\x18\x01 \x01(\tR\x05label\x12\x12\n\x04text\x18\x02 \x01(\tR\x04text\x12\x14\n\x05start\x18\x03 \x01(\x05R\x05start\x12\x10\n\x03\x65nd\x18\x04 \x01(\x05R\x03\x65nd2\x8a\x01\n\x05Model\x12\x38\n\x07Predict\x12\x15.proto.PredictRequest\x1a\x16.proto.PredictResponse\x12G\n\x0cPredictBatch\x12\x1a.proto.PredictBatchRequest\x1a\x1b.proto.PredictBatchResponseB\tZ\x07./protob\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x11proto/model.proto\x12\x05proto\",\n\x0ePredictRequest\x12\x1a\n\x08sentence\x18\x01 \x01(\tR\x08sentence\"<\n\x0fPredictResponse\x12)\n\x08\x65ntities\x18\x01 \x03(\x0b\x32\r.proto.EntityR\x08\x65ntities\"3\n\x13PredictBatchRequest\x12\x1c\n\tsentences\x18\x01 \x03(\tR\tsentences\"P\n\x14PredictBatchResponse\x12\x38\n\x0bpredictions\x18\x01 \x03(\x0b\x32\x16.proto.PredictResponseR\x0bpredictions\"Z\n\x06\x45ntity\x12\x14\n\x05label\x18\x01 \x01(\tR\x05label\x12\x12\n\x04text\x18\x02 \x01(\tR\x04text\x12\x14\n\x05start\x18\x03 \x01(\x05R\x05start\x12\x10\n\x03\x65nd\x18\x04 \x01(\x05R\x03\x65nd\"[\n\x07TagInfo\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12 \n\x0b\x64\x65scription\x18\x02 \x01(\tR\x0b\x64\x65scription\x12\x1a\n\x08\x65xamples\x18\x03 \x03(\tR\x08\x65xamples\"8\n\x06Sample\x12\x16\n\x06tokens\x18\x01 \x03(\tR\x06tokens\x12\x16\n\x06labels\x18\x02 \x03(\tR\x06labels\"v\n\x0f\x46inetuneRequest\x12\x16\n\x06prompt\x18\x01 \x01(\tR\x06prompt\x12\"\n\x04tags\x18\x02 \x03(\x0b\x32\x0e.proto.TagInfoR\x04tags\x12\'\n\x07samples\x18\x03 \x03(\x0b\x32\r.proto.SampleR\x07samples\",\n\x10\x46inetuneResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success\"\x1f\n\x0bSaveRequest\x12\x10\n\x03\x64ir\x18\x01 \x01(\tR\x03\x64ir\"(\n\x0cSaveResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success2\xf8\x01\n\x05Model\x12\x38\n\x07Predict\x12\x15.proto.PredictRequest\x1a\x16.proto.PredictResponse\x12G\n\x0cPredictBatch\x12\x1a.proto.PredictBatchRequest\x1a\x1b.proto.PredictBatchResponse\x12;\n\x08\x46inetune\x12\x16.proto.FinetuneRequest\x1a\x17.proto.FinetuneResponse\x12/\n\x04Save\x12\x12.proto.SaveRequest\x1a\x13.proto.SaveResponseB\tZ\x07./protob\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -31,6 +31,18 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _globals['_PREDICTBATCHRESPONSE']._serialized_end=269
   _globals['_ENTITY']._serialized_start=271
   _globals['_ENTITY']._serialized_end=361
-  _globals['_MODEL']._serialized_start=364
-  _globals['_MODEL']._serialized_end=502
+  _globals['_TAGINFO']._serialized_start=363
+  _globals['_TAGINFO']._serialized_end=454
+  _globals['_SAMPLE']._serialized_start=456
+  _globals['_SAMPLE']._serialized_end=512
+  _globals['_FINETUNEREQUEST']._serialized_start=514
+  _globals['_FINETUNEREQUEST']._serialized_end=632
+  _globals['_FINETUNERESPONSE']._serialized_start=634
+  _globals['_FINETUNERESPONSE']._serialized_end=678
+  _globals['_SAVEREQUEST']._serialized_start=680
+  _globals['_SAVEREQUEST']._serialized_end=711
+  _globals['_SAVERESPONSE']._serialized_start=713
+  _globals['_SAVERESPONSE']._serialized_end=753
+  _globals['_MODEL']._serialized_start=756
+  _globals['_MODEL']._serialized_end=1004
 # @@protoc_insertion_point(module_scope)

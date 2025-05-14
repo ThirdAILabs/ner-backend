@@ -25,7 +25,31 @@ message Entity {
     int32 end = 4;
 }
 
+message TagInfo {
+  string name        = 1;
+  string description = 2;
+  repeated string examples    = 3;
+}
+message Sample {
+  repeated string tokens = 1;
+  repeated string labels = 2;
+}
+message FinetuneRequest {
+  string prompt            = 1;
+  repeated TagInfo tags    = 2;
+  repeated Sample samples  = 3;
+}
+message FinetuneResponse { bool success = 1; }
+
+
+message SaveRequest {
+  string dir = 1;
+}
+message SaveResponse { bool success = 1; }
+
 service Model {
-    rpc Predict(PredictRequest) returns (PredictResponse);
-    rpc PredictBatch(PredictBatchRequest) returns (PredictBatchResponse);
+  rpc Predict(PredictRequest)       returns (PredictResponse);
+  rpc PredictBatch(PredictBatchRequest) returns (PredictBatchResponse);
+  rpc Finetune(FinetuneRequest)     returns (FinetuneResponse);
+  rpc Save(SaveRequest)             returns (SaveResponse);
 }
