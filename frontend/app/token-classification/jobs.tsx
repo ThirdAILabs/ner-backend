@@ -434,6 +434,7 @@ export default function Jobs() {
                 padding: 0,
                 borderRadius: '50%'
               }}
+              disabled={!healthStatus}
             >
               <Plus size={24} />
             </Button>
