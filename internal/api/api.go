@@ -427,22 +427,7 @@ func (s *BackendService) GetReport(r *http.Request) (any, error) {
 		totalInfSecs = infBounds.MaxEnd.Time.Sub(infBounds.MinStart.Time).Seconds()
 	}
 
-	var runRows []struct{ StartTime sql.NullTime }
-	_ = s.db.WithContext(ctx).
-		Model(&database.InferenceTask{}).
-		Select("start_time").
-		Where("report_id = ? AND status = ?", reportId, database.JobRunning).
-		Scan(&runRows).Error
-
-	var activeInfSecs float64
-	for _, row := range runRows {
-		if row.StartTime.Valid {
-			activeInfSecs += now.Sub(row.StartTime.Time).Seconds()
-		}
-	}
-
 	apiReport.TotalInferenceTimeSeconds = totalInfSecs
-	apiReport.ActiveInferenceTimeSeconds = activeInfSecs
 
 	var shardSecs float64
 	if t := report.ShardDataTask; t != nil {
