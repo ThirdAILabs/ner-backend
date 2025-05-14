@@ -101,7 +101,6 @@ def merge_predictions(
 
 class HuggingFaceModel(Model):
     def __init__(self, model_path: str):
-        self.model_path = model_path
         self.model = AutoModelForTokenClassification.from_pretrained(model_path)
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
 
@@ -229,7 +228,6 @@ class CombinedNERModel(Model):
 
     def __init__(self, model_path, threshold):
         self.threshold = threshold
-        self.model_path = model_path
         with suppress_output()[0], suppress_output()[1]:
             self.hf = HuggingFaceModel(model_path)
             self.pres = PresidioWrappedNerModel(threshold)

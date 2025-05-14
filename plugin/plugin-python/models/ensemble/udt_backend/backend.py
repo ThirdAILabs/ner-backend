@@ -5,7 +5,6 @@ from thirdai import bolt
 
 class UDTModel:
     def __init__(self, model_path: str):
-        self.model_path = model_path
         self.model = bolt.UniversalDeepTransformer.load(model_path)
 
     def predict(self, text: str) -> List[List[str]]:
