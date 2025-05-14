@@ -2,6 +2,8 @@ const { app, BrowserWindow, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const serve = require('electron-serve');
+const { autoUpdater } = require('electron-updater');
+const log = require('electron-log');
 
 const appServe = app.isPackaged ? serve({
   directory: path.join(__dirname, "frontend-dist")
@@ -135,11 +137,45 @@ Please try running the install script from the terminal.`);
   return backendProcess;
 }
 
+// Ensure logger is set up for auto-updater
+autoUpdater.logger = log;
+autoUpdater.logger.transports.file.level = 'info';
+autoUpdater.autoDownload = true;
+
+// Set up auto-updater event listeners
+autoUpdater.on('checking-for-update', () => {
+  log.info('Checking for update...');
+});
+autoUpdater.on('update-available', () => {
+  dialog.showMessageBox({ type: 'info', title: 'Update available', message: 'A new version is available. Downloading now...' });
+});
+autoUpdater.on('update-not-available', () => {
+  log.info('Update not available.');
+});
+autoUpdater.on('error', (err) => {
+  log.error('Error in auto-updater:', err);
+});
+autoUpdater.on('download-progress', (progressObj) => {
+  let log_message = "Download speed: " + progressObj.bytesPerSecond;
+  log_message = log_message + ' - Downloaded ' + Math.round(progressObj.percent) + '%';
+  log.info(log_message);
+});
+autoUpdater.on('update-downloaded', () => {
+  dialog.showMessageBox({ title: 'Install updates', message: 'Updates downloaded, application will be quit for update...' })
+    .then(() => {
+      autoUpdater.quitAndInstall();
+    });
+});
+
 // This method will be called when Electron has finished initialization
 app.whenReady().then(() => {
   // Always start the backend first, regardless of dev/prod mode
   createWindow();
   ensureBackendStarted();
+  // Check for updates on launch (in production only)
+  if (!isDev) {
+    autoUpdater.checkForUpdatesAndNotify();
+  }
 
   app.on('activate', () => {
     // On macOS it's common to re-create a window when the dock icon is clicked
