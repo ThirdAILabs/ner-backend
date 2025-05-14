@@ -14,7 +14,7 @@ var (
 )
 
 type LicenseType string
-type LicenseInfo map[string]string
+type LicenseInfo map[string]any
 
 const (
 	LocalLicense  LicenseType = "local"

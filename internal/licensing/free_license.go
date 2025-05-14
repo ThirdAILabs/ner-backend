@@ -6,8 +6,6 @@ import (
 	"log/slog"
 	"ner-backend/internal/database"
 
-	"fmt"
-
 	"gorm.io/gorm"
 )
 
@@ -15,10 +13,10 @@ const DefaultFreeLicenseMaxBytes = 5 * 1024 * 1024 * 1024 // 5 GB
 
 type FreeLicenseVerifier struct {
 	db       *gorm.DB
-	maxBytes int
+	maxBytes int64
 }
 
-func NewFreeLicenseVerifier(db *gorm.DB, maxBytes int) *FreeLicenseVerifier {
+func NewFreeLicenseVerifier(db *gorm.DB, maxBytes int64) *FreeLicenseVerifier {
 	return &FreeLicenseVerifier{db: db, maxBytes: maxBytes}
 }
 
@@ -30,11 +28,11 @@ func (verifier *FreeLicenseVerifier) VerifyLicense(ctx context.Context) (License
 	}
 
 	info := LicenseInfo{
-		"maxBytes":  fmt.Sprint(verifier.maxBytes),
-		"usedBytes": fmt.Sprint(totalBytes.Int64),
+		"maxBytes":  verifier.maxBytes,
+		"usedBytes": totalBytes.Int64,
 	}
 
-	if totalBytes.Valid && int(totalBytes.Int64) > verifier.maxBytes {
+	if totalBytes.Valid && totalBytes.Int64 > verifier.maxBytes {
 		return FreeLicense, info, ErrQuotaExceeded
 	}
 

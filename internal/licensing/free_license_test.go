@@ -2,7 +2,6 @@ package licensing_test
 
 import (
 	"context"
-	"fmt"
 	"ner-backend/internal/database"
 	"ner-backend/internal/licensing"
 	"testing"
@@ -19,15 +18,15 @@ func TestFreeLicensing(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, db.AutoMigrate(&database.InferenceTask{}))
 
-	maxBytes := 300
+	maxBytes := int64(300)
 
 	verifier := licensing.NewFreeLicenseVerifier(db, maxBytes)
 
 	licenseType, licenseInfo, err := verifier.VerifyLicense(context.Background())
 	assert.NoError(t, err)
 
-	assert.Equal(t, fmt.Sprint(maxBytes), licenseInfo["maxBytes"])
-	assert.Equal(t, "0", licenseInfo["usedBytes"])
+	assert.Equal(t, maxBytes, licenseInfo["maxBytes"])
+	assert.Equal(t, int64(0), licenseInfo["usedBytes"])
 	assert.Equal(t, licensing.FreeLicense, licenseType)
 
 	require.NoError(t, db.Create(&database.InferenceTask{ReportId: uuid.New(), TotalSize: 200}).Error)
@@ -36,15 +35,15 @@ func TestFreeLicensing(t *testing.T) {
 	licenseType, licenseInfo, err = verifier.VerifyLicense(context.Background())
 	assert.NoError(t, err)
 
-	assert.Equal(t, fmt.Sprint(maxBytes), licenseInfo["maxBytes"])
-	assert.Equal(t, "250", licenseInfo["usedBytes"])
+	assert.Equal(t, maxBytes, licenseInfo["maxBytes"])
+	assert.Equal(t, int64(250), licenseInfo["usedBytes"])
 	assert.Equal(t, licensing.FreeLicense, licenseType)
 
 	require.NoError(t, db.Create(&database.InferenceTask{ReportId: uuid.New(), TotalSize: 100}).Error)
 
 	licenseType, licenseInfo, err = verifier.VerifyLicense(context.Background())
 	assert.ErrorIs(t, licensing.ErrQuotaExceeded, err)
-	assert.Equal(t, fmt.Sprint(maxBytes), licenseInfo["maxBytes"])
-	assert.Equal(t, "350", licenseInfo["usedBytes"])
+	assert.Equal(t, maxBytes, licenseInfo["maxBytes"])
+	assert.Equal(t, int64(350), licenseInfo["usedBytes"])
 	assert.Equal(t, licensing.FreeLicense, licenseType)
 }
