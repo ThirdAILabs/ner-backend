@@ -99,7 +99,7 @@ func (ner *NER) Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sa
 	defer tmpFile.Close()
 	defer os.Remove(tmpFile.Name())
 
-	if err := writeSamples(tmpFile, samples, tokensCol, tagsCol); err != nil {
+	if err := writeSamplesToCSV(tmpFile, samples, tokensCol, tagsCol); err != nil {
 		return err
 	}
 
@@ -144,7 +144,7 @@ func (ner *NER) Release() {
 	}
 }
 
-func writeSamples(w io.Writer, samples []api.Sample, tokensCol, tagsCol string) error {
+func writeSamplesToCSV(w io.Writer, samples []api.Sample, tokensCol, tagsCol string) error {
 	writer := csv.NewWriter(w)
 	// header
 	if err := writer.Write([]string{tokensCol, tagsCol}); err != nil {
