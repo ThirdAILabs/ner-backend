@@ -1,6 +1,12 @@
 // preload.js
-const { contextBridge, ipcRenderer } = require('electron');
-const { FIXED_PORT } = require('./scripts/check-port');
+import { contextBridge, ipcRenderer } from 'electron';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+import { FIXED_PORT } from './scripts/check-port.js';
+
+// Get __dirname equivalent in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Expose API information to the renderer process
 contextBridge.exposeInMainWorld('electronAPI', {
