@@ -23,7 +23,7 @@ import { format } from 'date-fns';
 import { nerService } from '@/lib/backend';
 import { IconButton, Tooltip } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-
+import { useHealth } from '@/contexts/HealthProvider';
 // Import the TaskStatusCategory from backend.ts
 interface TaskStatusCategory {
   TotalTasks: number;
@@ -107,38 +107,38 @@ export default function Jobs() {
     }
   };
 
-  const [healthStatus, setHealthStatus] = useState<boolean>(false);
+  const { healthStatus } = useHealth();
 
-  useEffect(() => {
-    const checkHealth = async () => {
-      try {
-        const response = await nerService.checkHealth();
-        return response.status === 200;
-      } catch (error) {
-        console.error('Health check failed:', error);
-        return false;
-      }
-    };
+  // useEffect(() => {
+  //   const checkHealth = async () => {
+  //     try {
+  //       const response = await nerService.checkHealth();
+  //       return response.status === 200;
+  //     } catch (error) {
+  //       console.error('Health check failed:', error);
+  //       return false;
+  //     }
+  //   };
 
-    let timeoutId: NodeJS.Timeout;
+  //   let timeoutId: NodeJS.Timeout;
 
-    const pollHealth = async () => {
-      const isHealthy = await checkHealth();
-      if (!isHealthy) {
-        timeoutId = setTimeout(pollHealth, 1000);
-      } else {
-        setHealthStatus(true);
-      }
-    };
+  //   const pollHealth = async () => {
+  //     const isHealthy = await checkHealth();
+  //     if (!isHealthy) {
+  //       timeoutId = setTimeout(pollHealth, 1000);
+  //     } else {
+  //       setHealthStatus(true);
+  //     }
+  //   };
 
-    pollHealth();
+  //   pollHealth();
 
-    return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-    };
-  }, []);
+  //   return () => {
+  //     if (timeoutId) {
+  //       clearTimeout(timeoutId);
+  //     }
+  //   };
+  // }, []);
 
   useEffect(() => {
     const fetchReports = async () => {
