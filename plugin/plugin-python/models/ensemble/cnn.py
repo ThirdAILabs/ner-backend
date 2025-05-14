@@ -1,4 +1,5 @@
 from typing import List
+import os
 
 from ..model_interface import BatchPredictions, Entity, Model, SentencePredictions
 from .cnn_backend.backend import CNNModel
@@ -55,3 +56,28 @@ class CnnNerExtractor(Model):
 
     def predict(self, text: str) -> SentencePredictions:
         return self.predict_batch([text]).predictions[0]
+
+    def finetune(
+        self,
+        prompt,
+        tags,
+        samples,
+    ):
+        raw_samples = []
+        for sample in samples:
+            tokens = sample.tokens
+            labels = sample.labels
+            raw_samples.append((tokens, labels))
+
+        self.model.finetune(
+            raw_samples,
+            epochs=5,
+            lr=3e-4,
+            batch_size=16,
+        )
+
+        return True
+
+    def save(self, dir: str) -> None:
+        os.makedirs(dir, exist_ok=True)
+        self.model.save(dir)
