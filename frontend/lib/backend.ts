@@ -87,7 +87,7 @@ export interface ThroughputMetrics {
 export const nerService = {
   checkHealth: async () => {
     const response = await axiosInstance.get('/health');
-    return response.data;
+    return response;
   },
 
   listModels: async (): Promise<Model[]> => {

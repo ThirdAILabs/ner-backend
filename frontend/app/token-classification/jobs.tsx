@@ -23,7 +23,7 @@ import { format } from 'date-fns';
 import { nerService } from '@/lib/backend';
 import { IconButton, Tooltip } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-
+import { useHealth } from '@/contexts/HealthProvider';
 // Import the TaskStatusCategory from backend.ts
 interface TaskStatusCategory {
   TotalTasks: number;
@@ -72,6 +72,7 @@ export default function Jobs() {
   const [reports, setReports] = useState<ReportWithStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { healthStatus } = useHealth();
 
   const fetchReportStatus = async (report: ReportWithStatus) => {
     try {
@@ -87,13 +88,13 @@ export default function Jobs() {
         prev.map((r) =>
           r.Id === report.Id
             ? {
-                ...r,
-                detailedStatus: {
-                  ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
-                  InferenceTaskStatuses: detailedReport.InferenceTaskStatuses
-                },
-                isLoadingStatus: false
-              }
+              ...r,
+              detailedStatus: {
+                ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
+                InferenceTaskStatuses: detailedReport.InferenceTaskStatuses
+              },
+              isLoadingStatus: false
+            }
             : r
         )
       );
@@ -106,6 +107,7 @@ export default function Jobs() {
       );
     }
   };
+
 
   useEffect(() => {
     const fetchReports = async () => {
@@ -130,9 +132,9 @@ export default function Jobs() {
         setLoading(false);
       }
     };
-
-    fetchReports();
-  }, []);
+    if (healthStatus)
+      fetchReports();
+  }, [healthStatus]);
 
   if (loading) {
     return (
@@ -432,6 +434,7 @@ export default function Jobs() {
                 padding: 0,
                 borderRadius: '50%'
               }}
+              disabled={!healthStatus}
             >
               <Plus size={24} />
             </Button>
