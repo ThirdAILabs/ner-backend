@@ -19,10 +19,10 @@ echo "--- Starting container in $ROLE mode ---"
 
 if [ "$ROLE" = "head" ]; then
   # --- Head Mode: Start Next.js + Go API ---
-  echo "Starting Next.js Server (background)..."
-  node_modules/.bin/next start --port 3000 &
-  NEXT_PID=$!
-  echo "Next.js PID: $NEXT_PID"
+  echo "Starting static file server (background)..."
+  serve out -p 3000 &
+  SERVE_PID=$!
+  echo "Serve PID: $SERVE_PID"
 
   echo "Starting Go API Server (foreground)..."
   exec /app/api "$@" # Replace shell with Go API
