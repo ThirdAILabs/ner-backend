@@ -100,3 +100,33 @@ void NER_train(const NER_t *self, const char *filename, float learning_rate,
     copyError(e, err_ptr);
   }
 }
+
+// get CSV column names: tokens and tags
+// since C does not have string support, we use char* to store the column names
+void NER_source_target_cols(const NER_t *self, const char **tokens_col, const char **tags_col) {
+  auto cols = self->ner->sourceTargetCols();
+  const std::string &tokens_str = cols.first;
+  const std::string &tags_str = cols.second;
+  size_t tok_len = tokens_str.size() + 1;
+  char *c_tokens = new char[tok_len];
+  std::strcpy(c_tokens, tokens_str.c_str());
+  *tokens_col = c_tokens;
+  size_t tag_len = tags_str.size() + 1;
+  char *c_tags = new char[tag_len];
+  std::strcpy(c_tags, tags_str.c_str());
+  *tags_col = c_tags;
+}
+
+// free memory allocated by NER_source_target_cols
+void NER_source_target_cols_free(const char *tokens_col, const char *tags_col) {
+  delete [] tokens_col;
+  delete [] tags_col;
+}
+
+void NER_save(const NER_t *self, const char *path, const char **err_ptr) {
+  try {
+    self->ner->save(path);
+  } catch (const std::exception &e) {
+    copyError(e, err_ptr);
+  }
+}

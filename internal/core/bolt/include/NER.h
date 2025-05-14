@@ -3,6 +3,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <utility>
 
 namespace thirdai::automl::udt {
 
@@ -21,6 +22,10 @@ public:
   void train(const std::string &filename, float learning_rate, uint32_t epochs);
 
   static std::unique_ptr<NerModel> load(const std::string &path);
+
+  std::pair<std::string, std::string> sourceTargetCols() const;
+
+  void save(const std::string &path) const;
 };
 
 } // namespace thirdai::automl::udt

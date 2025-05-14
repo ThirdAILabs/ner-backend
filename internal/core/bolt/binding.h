@@ -41,6 +41,13 @@ Results_t *NER_predict(const NER_t *self, const StringList_t *sentences,
 void NER_train(const NER_t *self, const char *filename, float learning_rate,
                unsigned int epochs, const char **err_ptr);
 
+
+void NER_source_target_cols(const NER_t *self, const char **tokens_col, const char **tags_col);
+
+void NER_source_target_cols_free(const char *tokens_col, const char *tags_col);
+
+void NER_save(const NER_t *self, const char *path, const char **err_ptr);
+
 #ifdef __cplusplus
 }
 #endif
