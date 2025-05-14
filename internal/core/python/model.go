@@ -56,12 +56,64 @@ func LoadPythonModel(PythonExecutable, PluginScript, PluginModelName, KwargsJSON
 	}, nil
 }
 
-func (ner *PythonModel) Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sample) error {
-	return fmt.Errorf("Finetune not implemented")
+func (ner *PythonModel) Finetune(prompt string, tags []api.TagInfo, samples []api.Sample) error {
+	const maxPayload = 2 * 1024 * 1024 // 2 MB
+
+	// convert TagInfo
+	protoTags := make([]*proto.TagInfo, len(tags))
+	for i, t := range tags {
+		protoTags[i] = &proto.TagInfo{
+			Name:        t.Name,
+			Description: t.Description,
+			Examples:    t.Examples,
+		}
+	}
+
+	type chunk struct {
+		samples []*proto.Sample
+		size    int
+	}
+	var curr chunk
+
+	flush := func() error {
+		if len(curr.samples) == 0 {
+			return nil
+		}
+		if err := ner.model.Finetune(prompt, protoTags, curr.samples); err != nil {
+			return fmt.Errorf("finetune chunk error: %w", err)
+		}
+		curr.samples = nil
+		curr.size = 0
+		return nil
+	}
+	for _, s := range samples {
+		p := &proto.Sample{
+			Tokens: s.Tokens,
+			Labels: s.Labels,
+		}
+		est := 0
+		for _, tok := range p.Tokens {
+			est += len(tok)
+		}
+		for _, lab := range p.Labels {
+			est += len(lab)
+		}
+		if curr.size+est > maxPayload {
+			if err := flush(); err != nil {
+				return fmt.Errorf("finetune chunk error: %w", err)
+			}
+		}
+		curr.samples = append(curr.samples, p)
+		curr.size += est
+	}
+	if err := flush(); err != nil {
+		return fmt.Errorf("final finetune chunk error: %w", err)
+	}
+	return nil
 }
 
 func (ner *PythonModel) Save(path string) error {
-	return fmt.Errorf("save not implemented")
+	return ner.model.Save(path)
 }
 
 func (ner *PythonModel) Release() {

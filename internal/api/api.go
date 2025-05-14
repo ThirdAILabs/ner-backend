@@ -307,7 +307,7 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 	if err := s.db.WithContext(ctx).Transaction(func(txn *gorm.DB) error {
 		// check if duplicate report name
 		var existingReport database.Report
-		result := txn.Where("report_name = ?", req.ReportName).Limit(1).Find(&existingReport)
+		result := txn.Where("report_name = ? AND deleted = ?", req.ReportName, false).Limit(1).Find(&existingReport)
 		if result.Error != nil {
 			slog.Error("error checking for duplicate report name", "error", result.Error)
 			return CodedErrorf(http.StatusInternalServerError, "error %d: error checking for duplicate report name", ErrCodeDB)
