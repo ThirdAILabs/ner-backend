@@ -69,6 +69,19 @@ func (ner *NER) Predict(text string) ([]types.Entity, error) {
 	return results, nil
 }
 
+func (ner *NER) train(filename string, learningRate float32, epochs int) error {
+	cFilename := C.CString(filename)
+	defer C.free(unsafe.Pointer(cFilename))
+
+	var err *C.char
+	C.NER_train(ner.model, cFilename, C.float(learningRate), C.uint(epochs), &err)
+	if err != nil {
+		defer C.free(unsafe.Pointer(err))
+		return errors.New(C.GoString(err))
+	}
+	return nil
+}
+
 func (ner *NER) Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sample) error {
 	return fmt.Errorf("Finetune not implemented")
 }
