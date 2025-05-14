@@ -410,6 +410,35 @@ func (s *BackendService) GetReport(r *http.Request) (any, error) {
 		}
 	}
 
+	now := time.Now().UTC()
+
+	var infBounds struct {
+		MinStart sql.NullTime `gorm:"column:min_start"`
+		MaxEnd   sql.NullTime `gorm:"column:max_end"`
+	}
+	_ = s.db.WithContext(ctx).
+		Model(&database.InferenceTask{}).
+		Select("MIN(start_time) AS min_start, MAX(completion_time) AS max_end").
+		Where("report_id = ? AND status = ?", reportId, database.JobCompleted).
+		Scan(&infBounds).Error
+
+	var totalInfSecs float64
+	if infBounds.MinStart.Valid && infBounds.MaxEnd.Valid {
+		totalInfSecs = infBounds.MaxEnd.Time.Sub(infBounds.MinStart.Time).Seconds()
+	}
+
+	apiReport.TotalInferenceTimeSeconds = totalInfSecs
+
+	var shardSecs float64
+	if t := report.ShardDataTask; t != nil {
+		end := now
+		if t.CompletionTime.Valid {
+			end = t.CompletionTime.Time
+		}
+		shardSecs = end.Sub(t.CreationTime).Seconds()
+	}
+	apiReport.ShardDataTimeSeconds = shardSecs
+
 	return apiReport, nil
 }
 

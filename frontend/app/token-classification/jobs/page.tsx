@@ -271,6 +271,8 @@ function JobDetail() {
     { type: string; count: number }[]
   >([]);
 
+  const [timeTaken, setTimeTaken] = useState(0);
+
   const [reportData, setReportData] = useState<Report | null>(null);
   const [customTags, setCustomTags] = useState<CustomTag[]>([]);
   const [isNewTagDialogOpen, setIsNewTagDialogOpen] = useState(false);
@@ -282,6 +284,8 @@ function JobDetail() {
       const report = await nerService.getReport(reportId);
 
       setReportData(report as Report);
+
+      setTimeTaken((report.TotalInferenceTimeSeconds || 0) + (report.ShardDataTimeSeconds || 0));
 
       // Set selectedSource based on IsUpload field
       if (report.IsUpload) {
@@ -603,6 +607,7 @@ function JobDetail() {
             progress={calculateProgress(reportData)}
             tokensProcessed={getProcessedTokens(reportData)}
             tags={availableTagsCount}
+            timeTaken={timeTaken}
           />
         </TabsContent>
 
