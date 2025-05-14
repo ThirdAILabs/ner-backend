@@ -73,6 +73,6 @@ func TestFreeLicensing(t *testing.T) {
 		CreationTime: juneTime,
 	}).Error)
 
-	// Should exceed quota in June
+	// License check should fail because quota is exceeded in June
 	assert.ErrorIs(t, verifier.VerifyLicense(context.Background()), licensing.ErrQuotaExceeded)
 }
