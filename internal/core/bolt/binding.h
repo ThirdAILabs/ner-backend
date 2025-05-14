@@ -47,6 +47,8 @@ void NER_source_target_cols(const NER_t *self, const char **tokens_col, const ch
 // free memory allocated by NER_source_target_cols
 void SourceTargetCols_free(const char *tokens_col, const char *tags_col);
 
+void NER_save(const NER_t *self, const char *path, const char **err_ptr);
+
 #ifdef __cplusplus
 }
 #endif

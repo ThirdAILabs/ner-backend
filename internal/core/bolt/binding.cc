@@ -5,7 +5,7 @@
 #include <memory>
 #include <string>
 #include <vector>
-
+#include <iostream>
 using thirdai::automl::udt::LabeledEntity;
 using thirdai::automl::udt::NerModel;
 
@@ -95,8 +95,10 @@ Results_t *NER_predict(const NER_t *self, const StringList_t *sentences,
 void NER_train(const NER_t *self, const char *filename, float learning_rate,
                unsigned int epochs, const char **err_ptr) {
   try {
+    std::cout << "Training model with filename: " << filename << std::endl;
     self->ner->train(filename, learning_rate, epochs);
   } catch (const std::exception &e) {
+    std::cout << "Error: " << e.what() << std::endl;
     copyError(e, err_ptr);
   }
 }
@@ -120,4 +122,12 @@ void NER_source_target_cols(const NER_t *self, const char **tokens_col, const ch
 void SourceTargetCols_free(const char *tokens_col, const char *tags_col) {
   delete [] tokens_col;
   delete [] tags_col;
+}
+
+void NER_save(const NER_t *self, const char *path, const char **err_ptr) {
+  try {
+    self->ner->save(path);
+  } catch (const std::exception &e) {
+    copyError(e, err_ptr);
+  }
 }

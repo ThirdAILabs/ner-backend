@@ -25,6 +25,8 @@ public:
   std::pair<std::string, std::string> sourceTargetCols() const;
 
   static std::unique_ptr<NerModel> load(const std::string &path);
+
+  void save(const std::string &path) const;
 };
 
 } // namespace thirdai::automl::udt

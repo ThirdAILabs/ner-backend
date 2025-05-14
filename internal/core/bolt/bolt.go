@@ -72,6 +72,7 @@ func (ner *NER) Predict(text string) ([]types.Entity, error) {
 }
 
 func (ner *NER) train(filename string, learningRate float32, epochs int) error {
+	fmt.Println("Training model with filename", filename)
 	cFilename := C.CString(filename)
 	defer C.free(unsafe.Pointer(cFilename))
 
@@ -92,15 +93,17 @@ func (ner *NER) Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sa
 	tagsCol := C.GoString(cTagsCol)
 	C.SourceTargetCols_free(cTokensCol, cTagsCol)
 
+	fmt.Println("tokensCol", tokensCol)
+	fmt.Println("tagsCol", tagsCol)
+
 	// create temporary CSV file
-	file, err := os.CreateTemp("", "ner_finetune_*.csv")
+	file, err := os.Create("/home/ubuntu/shubh/ner/ner-backend/ner_finetune.csv")
 	if err != nil {
 		return err
 	}
-	defer os.Remove(file.Name())
+	// defer os.Remove(file.Name())
 
 	writer := csv.NewWriter(file)
-	defer writer.Flush()
 
 	// write header
 	if err := writer.Write([]string{tokensCol, tagsCol}); err != nil {
@@ -116,13 +119,15 @@ func (ner *NER) Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sa
 		}
 	}
 
+	writer.Flush()
+
 	if err := writer.Error(); err != nil {
 		return err
 	}
 
 	// call train with default hyperparameters
-	const defaultLearningRate = 0.1
-	const defaultEpochs = 1
+	const defaultLearningRate = 0.001
+	const defaultEpochs = 2
 	if err := ner.train(file.Name(), defaultLearningRate, defaultEpochs); err != nil {
 		return err
 	}
@@ -131,7 +136,16 @@ func (ner *NER) Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sa
 }
 
 func (ner *NER) Save(path string) error {
-	return fmt.Errorf("save not implemented")
+	cPath := C.CString(path)
+	defer C.free(unsafe.Pointer(cPath))
+
+	var err *C.char
+	C.NER_save(ner.model, cPath, &err)
+	if err != nil {
+		defer C.free(unsafe.Pointer(err))
+		return errors.New(C.GoString(err))
+	}
+	return nil
 }
 
 func newStringList(values []string) *C.StringList_t {
