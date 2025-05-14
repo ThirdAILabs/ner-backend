@@ -24,3 +24,15 @@ func CreateEntity(label string, context string, start int, end int) Entity {
 	}
 	return entity
 }
+
+func CreateEntityUnicode(label string, context []rune, start int, end int) Entity {
+	entity := Entity{
+		Label:    label,
+		Text:     string(context[start:end]),
+		Start:    start,
+		End:      end,
+		LContext: string(context[max(0, start-contextLength):start]),
+		RContext: string(context[end:min(len(context), end+contextLength)]),
+	}
+	return entity
+}
