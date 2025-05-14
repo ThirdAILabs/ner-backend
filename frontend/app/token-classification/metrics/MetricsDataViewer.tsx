@@ -59,18 +59,18 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
         }
 
         // 3) build inference‐series by calling summary for each day = 1..days
-        const infPromises = Array.from({ length: days }, (_, i) =>
-          nerService.getInferenceMetrics(modelId, i + 1)
-        );
-        const infResults = await Promise.all(infPromises);
-        if (!mounted) return;
-        setInfSeries(
-          infResults.map((res, i) => ({
-            day: i + 1,
-            dataMB: parseFloat(res.DataProcessedMB.toFixed(2)),
-            tokens: res.TokensProcessed
-          }))
-        );
+        // const infPromises = Array.from({ length: days }, (_, i) =>
+        //   nerService.getInferenceMetrics(modelId, i + 1)
+        // );
+        // const infResults = await Promise.all(infPromises);
+        // if (!mounted) return;
+        // setInfSeries(
+        //   infResults.map((res, i) => ({
+        //     day: i + 1,
+        //     dataMB: parseFloat(res.DataProcessedMB.toFixed(2)),
+        //     tokens: res.TokensProcessed
+        //   }))
+        // );
       } catch (e: any) {
         if (!mounted) return;
         setError(e.message || 'Failed to load metrics');
@@ -106,7 +106,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
 
   return (
     <>
-      <div className="space-y-6 w-full w-3/4">
+      <div className="space-y-6 w-full">
         <div className="grid grid-cols-4 gap-4">
           {/* Completed Tasks */}
           <Card className="flex flex-col justify-between">
@@ -146,7 +146,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
               <div className="relative h-32 w-32">
                 <div className="absolute inset-0 flex items-center justify-center">
                   <span className="text-2xl font-bold text-gray-700">
-                  {infMetrics.DataProcessedMB.toFixed(2).toLocaleString()} MB
+                    {infMetrics.DataProcessedMB.toFixed(2).toLocaleString()} MB
                   </span>
                 </div>
               </div>
@@ -162,16 +162,17 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
               <div className="relative h-32 w-32">
                 <div className="absolute inset-0 flex items-center justify-center">
                   <span className="text-2xl font-bold text-gray-700">
-                  {infMetrics.TokensProcessed.toLocaleString()}
+                    {infMetrics.TokensProcessed.toLocaleString()}
                   </span>
                 </div>
               </div>
               <h3 className="mt-auto text-sm text-muted-foreground">
-              Tokens Processed
+                Tokens Processed
               </h3>
             </CardContent>
           </Card>
         </div>
+
       </div>
     </>
   );
