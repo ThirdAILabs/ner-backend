@@ -48,8 +48,6 @@ func (ner *NER) Predict(text string) ([]types.Entity, error) {
 	}
 	defer C.Results_free(cResults)
 
-	textUnicode := []rune(text)
-
 	batchSize := C.Results_batch_size(cResults)
 	results := make([]types.Entity, 0)
 	for i := C.uint(0); i < batchSize; i++ {
@@ -58,9 +56,9 @@ func (ner *NER) Predict(text string) ([]types.Entity, error) {
 		for j := C.uint(0); j < itemResultsLen; j++ {
 			start := int(C.Results_start(cResults, i, j)) + globalOffset
 			end := int(C.Results_end(cResults, i, j)) + globalOffset
-			entity := types.CreateEntityUnicode(
+			entity := types.CreateEntity(
 				C.GoString(C.Results_label(cResults, i, j)),
-				textUnicode,
+				text,
 				start,
 				end,
 			)
