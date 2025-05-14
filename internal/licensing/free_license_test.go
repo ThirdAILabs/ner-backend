@@ -73,6 +73,6 @@ func TestFreeLicensing(t *testing.T) {
 		CreationTime: juneTime,
 	}).Error)
 
-	// Should not exceed quota since we're only counting June's tasks
+	// Should exceed quota in June
 	assert.ErrorIs(t, verifier.VerifyLicense(context.Background()), licensing.ErrQuotaExceeded)
 }
