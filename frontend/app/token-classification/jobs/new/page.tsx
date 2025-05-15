@@ -248,10 +248,10 @@ export default function NewJobPage() {
     setGroups((prev) => {
       const updatedGroups = { ...prev };
       if (editingGroup && editingGroup.name !== formattedGroupName) {
-          delete updatedGroups[editingGroup.name];
+        delete updatedGroups[editingGroup.name];
       }
       updatedGroups[formattedGroupName] = formattedGroupQuery;
-      return updatedGroups;  
+      return updatedGroups;
     });
 
     setGroups((prev) => ({
@@ -371,6 +371,12 @@ export default function NewJobPage() {
 
     setDialogError(null);
     return true;
+  };
+
+  const handleTagNameChange = (name: string) => {
+    const value = name.replace(/\s/g, '_');
+    setCustomTagName(value);
+    validateCustomTagName(value);
   };
 
   // Submit the new job
@@ -686,7 +692,7 @@ export default function NewJobPage() {
                     key={model.Id}
                     title={model.Name[0].toUpperCase() + model.Name.slice(1)}
                     description={
-                      'Description: Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.'
+                      'Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.'
                     }
                     isSelected={selectedModelId === model.Id}
                     onClick={() => setSelectedModelId(model.Id)}
@@ -698,10 +704,10 @@ export default function NewJobPage() {
                   title={'Advanced'}
                   description={
                     <>
-                      Description: Our most advanced AI model, available on
-                      enterprise platform. Allows users to perpetually customize
-                      fields with user feedback, includes advanced monitoring
-                      features. Reach out to{' '}
+                      Our most advanced AI model, available on enterprise
+                      platform. Allows users to perpetually customize fields
+                      with user feedback, includes advanced monitoring features.
+                      Reach out to{' '}
                       <div className="relative inline-block">
                         <span
                           className="text-blue-500 underline cursor-pointer hover:text-blue-700"
@@ -885,16 +891,8 @@ export default function NewJobPage() {
                       <Input
                         id="tagName"
                         value={customTagName}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\s/g, '_');
-                          setCustomTagName(value);
-                          validateCustomTagName(value);
-                        }}
-                        onBlur={(e) => {
-                          const value = e.target.value.replace(/\s/g, '_');
-                          setCustomTagName(value);
-                          validateCustomTagName(value);
-                        }}
+                        onChange={(e) => handleTagNameChange(e.target.value)}
+                        onBlur={(e) => handleTagNameChange(e.target.value)}
                         className={`w-full p-2 border ${
                           nameError ? 'border-red-500' : 'border-gray-300'
                         } rounded`}
