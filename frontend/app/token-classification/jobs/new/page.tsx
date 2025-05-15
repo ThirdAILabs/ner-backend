@@ -440,7 +440,7 @@ export default function NewJobPage() {
         router.push(`/token-classification/jobs?jobId=${response.ReportId}`);
       }, 2000);
     } catch (err: unknown) {
-      let theError = 'An unexpected error occurred';
+      let errorMessage = 'An unexpected error occurred';
 
       if (
         typeof err === 'object' &&
@@ -449,10 +449,10 @@ export default function NewJobPage() {
         typeof (err as any).response?.data === 'string'
       ) {
         const data = (err as any).response.data;
-        theError = (data.charAt(0).toUpperCase() + data.slice(1)).trim();
+        errorMessage = (data.charAt(0).toUpperCase() + data.slice(1)).trim();
       }
 
-      setError(`Failed to create report. ${theError}. Please try again.`);
+      setError(`Failed to create report. ${errorMessage}. Please try again.`);
       console.error(err);
     } finally {
       setIsSubmitting(false);
