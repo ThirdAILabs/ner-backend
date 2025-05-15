@@ -661,7 +661,7 @@ export default function NewJobPage() {
                   title={"Advanced"}
                   description={
                     <>
-                      Description: Our most advanced AI model requires an enterprise subscription. It allows users to perpetually customize fields with user feedback (RLHF-based fine-tuning) and includes an advanced dashboard for usage and performance metrics. Reach out to{' '}
+                      Description: Our most advanced AI model, available on enterprise platform. Allows users to perpetually customize fields with user feedback, includes advanced monitoring features. Reach out to{' '}
                       <div className="relative inline-block">
                         <span
                           className="text-blue-500 underline cursor-pointer hover:text-blue-700"
@@ -676,7 +676,7 @@ export default function NewJobPage() {
                           </div>
                         )}
                       </div>
-                      for an enterprise subscription.
+                      {' '}for an enterprise subscription.
                     </>
                   }
                   isSelected={false}
