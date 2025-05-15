@@ -8,6 +8,7 @@ import { Box } from '@mui/material';
 import { ArrowLeft, Plus, RefreshCw, Edit } from 'lucide-react';
 import { nerService } from '@/lib/backend';
 import { Suspense } from 'react';
+import { NO_GROUP } from '@/lib/utils';
 
 // Tag chip component - reused from the detail page but with interactive mode
 interface TagProps {
@@ -209,22 +210,6 @@ export default function NewJobPage() {
     setSelectedTags([...availableTags]);
   };
 
-  const handleAddGroup = () => {
-    if (!groupName.trim() || !groupQuery.trim()) {
-      setError('Group name and query are required');
-      return;
-    }
-
-    setGroups({
-      ...groups,
-      [groupName]: groupQuery
-    });
-
-    setGroupName('');
-    setGroupQuery('');
-    setError(null);
-  };
-
   const handleGroupCancel = () => {
     setGroupName('');
     setGroupQuery('');
@@ -243,6 +228,11 @@ export default function NewJobPage() {
 
     if (!editingGroup && groups[groupName]) {
       setGroupDialogError('Group name must be unique');
+      return;
+    }
+
+    if (groupName === NO_GROUP) {
+      setGroupDialogError(`Group name cannot be "${NO_GROUP}"`);
       return;
     }
 
