@@ -8,6 +8,8 @@ import { Box } from '@mui/material';
 import { ArrowLeft, Plus, RefreshCw, Edit } from 'lucide-react';
 import { nerService } from '@/lib/backend';
 import { Suspense } from 'react';
+import { Input } from '@/components/ui/input';
+import { EditNotificationsRounded } from '@mui/icons-material';
 
 // Tag chip component - reused from the detail page but with interactive mode
 interface TagProps {
@@ -55,9 +57,10 @@ const SourceOption: React.FC<SourceOptionProps> = ({
   <div
     className={`relative p-6 border rounded-md transition-all
       ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200 border-2'}
-      ${disabled
-        ? 'opacity-85 cursor-not-allowed bg-gray-50'
-        : 'cursor-pointer hover:border-blue-300'
+      ${
+        disabled
+          ? 'opacity-85 cursor-not-allowed bg-gray-50'
+          : 'cursor-pointer hover:border-blue-300'
       }
     `}
     onClick={() => !disabled && onClick()}
@@ -209,22 +212,6 @@ export default function NewJobPage() {
     setSelectedTags([...availableTags]);
   };
 
-  const handleAddGroup = () => {
-    if (!groupName.trim() || !groupQuery.trim()) {
-      setError('Group name and query are required');
-      return;
-    }
-
-    setGroups({
-      ...groups,
-      [groupName]: groupQuery
-    });
-
-    setGroupName('');
-    setGroupQuery('');
-    setError(null);
-  };
-
   const handleGroupCancel = () => {
     setGroupName('');
     setGroupQuery('');
@@ -233,29 +220,43 @@ export default function NewJobPage() {
     setIsGroupDialogOpen(false);
   };
 
-  const handleAddGroupFromDialog = async () => {
+  const handleAddGroup = async () => {
     setGroupDialogError(null);
 
     if (!groupName.trim() || !groupQuery.trim()) {
-      setGroupDialogError('Group name and query are required');
+      setGroupDialogError('Group name and query are required.');
       return;
     }
 
     if (!editingGroup && groups[groupName]) {
-      setGroupDialogError('Group name must be unique');
+      setGroupDialogError('Group name must be unique.');
       return;
     }
 
-    const errorMessage = await nerService.validateGroupDefinition(groupQuery);
+    const formattedGroupName = groupName.trim().toUpperCase();
+    const formattedGroupQuery = groupQuery.trim().toUpperCase();
+
+    const errorMessage =
+      await nerService.validateGroupDefinition(formattedGroupQuery);
+    console.log('Error message:', errorMessage);
 
     if (errorMessage) {
       setGroupDialogError(errorMessage);
       return;
     }
 
+    setGroups((prev) => {
+      const updatedGroups = { ...prev };
+      if (editingGroup && editingGroup.name !== formattedGroupName) {
+        delete updatedGroups[editingGroup.name];
+      }
+      updatedGroups[formattedGroupName] = formattedGroupQuery;
+      return updatedGroups;
+    });
+
     setGroups((prev) => ({
       ...prev,
-      [groupName]: groupQuery
+      [groupName.trim().toUpperCase()]: groupQuery.trim().toUpperCase()
     }));
 
     handleGroupCancel();
@@ -286,12 +287,12 @@ export default function NewJobPage() {
     const newCustomTag = {
       name: customTagName.trim().toUpperCase(),
       pattern: customTagPattern
-    }
+    };
 
     if (editingTag) {
-      setCustomTags(prev => prev.map(tag =>
-        tag.name === editingTag.name ? newCustomTag : tag
-      ));
+      setCustomTags((prev) =>
+        prev.map((tag) => (tag.name === editingTag.name ? newCustomTag : tag))
+      );
     } else {
       for (let index = 0; index < customTags.length; index++) {
         const thisTag = customTags[index];
@@ -300,7 +301,7 @@ export default function NewJobPage() {
           return;
         }
       }
-      setCustomTags(prev => [...prev, newCustomTag]);
+      setCustomTags((prev) => [...prev, newCustomTag]);
     }
 
     setCustomTagName('');
@@ -354,6 +355,30 @@ export default function NewJobPage() {
   const removeFile = (index: number) => {
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   };
+
+  const validateCustomTagName = (name: string): boolean => {
+    if (!name) {
+      setDialogError('Tag name is required');
+      return false;
+    }
+
+    if (!/^[A-Za-z0-9_]+$/.test(name)) {
+      setDialogError(
+        'Tag name can only contain letters, numbers, and underscores'
+      );
+      return false;
+    }
+
+    setDialogError(null);
+    return true;
+  };
+
+  const handleTagNameChange = (name: string) => {
+    const value = name.replace(/\s/g, '_');
+    setCustomTagName(value);
+    validateCustomTagName(value);
+  };
+
   // Submit the new job
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -404,12 +429,12 @@ export default function NewJobPage() {
         CustomTags: customTagsObj,
         ...(selectedSource === 's3'
           ? {
-            SourceS3Bucket: sourceS3Bucket,
-            SourceS3Prefix: sourceS3Prefix || undefined
-          }
+              SourceS3Bucket: sourceS3Bucket,
+              SourceS3Prefix: sourceS3Prefix || undefined
+            }
           : {
-            UploadId: uploadId
-          }),
+              UploadId: uploadId
+            }),
         Groups: groups,
         report_name: jobName
       });
@@ -420,8 +445,20 @@ export default function NewJobPage() {
       setTimeout(() => {
         router.push(`/token-classification/jobs?jobId=${response.ReportId}`);
       }, 2000);
-    } catch (err) {
-      setError('Failed to create report. Please try again.');
+    } catch (err: unknown) {
+      let errorMessage = 'An unexpected error occurred';
+
+      if (
+        typeof err === 'object' &&
+        err !== null &&
+        'response' in err &&
+        typeof (err as any).response?.data === 'string'
+      ) {
+        const data = (err as any).response.data;
+        errorMessage = (data.charAt(0).toUpperCase() + data.slice(1)).trim();
+      }
+
+      setError(`Failed to create report. ${errorMessage}. Please try again.`);
       console.error(err);
     } finally {
       setIsSubmitting(false);
@@ -437,7 +474,9 @@ export default function NewJobPage() {
     }
 
     if (!/^[A-Za-z0-9_]+$/.test(name)) {
-      setNameError('Report name can only contain letters, numbers, and underscores');
+      setNameError(
+        'Report name can only contain letters, numbers, and underscores'
+      );
       return false;
     }
 
@@ -470,7 +509,7 @@ export default function NewJobPage() {
         </Button>
       </div>
 
-      {(error && !isPressedSubmit) && (
+      {error && !isPressedSubmit && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
           {error}
         </div>
@@ -495,13 +534,17 @@ export default function NewJobPage() {
                   validateJobName(value);
                 }}
                 onBlur={() => validateJobName(jobName)}
-                className={`w-full p-2 border ${nameError ? 'border-red-500' : 'border-gray-300'
-                  } rounded`}
+                className={`w-full p-2 border ${
+                  nameError ? 'border-red-500' : 'border-gray-300'
+                } rounded`}
                 placeholder="Enter_Report_Name"
                 required
               />
               {nameError ? (
-                <p className="text-red-700 text-sm mt-1"><sup className='text-red-700'>*</sup>{nameError}</p>
+                <p className="text-red-700 text-sm mt-1">
+                  <sup className="text-red-700">*</sup>
+                  {nameError}
+                </p>
               ) : (
                 <p className="text-sm text-gray-500 mt-1">
                   Use only letters, numbers, and underscores. No spaces allowed.
@@ -649,19 +692,22 @@ export default function NewJobPage() {
                     key={model.Id}
                     title={model.Name[0].toUpperCase() + model.Name.slice(1)}
                     description={
-                      'Description: Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.'
+                      'Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.'
                     }
                     isSelected={selectedModelId === model.Id}
                     onClick={() => setSelectedModelId(model.Id)}
-                    disabled={model.Name === "presidio"}
+                    disabled={model.Name === 'presidio'}
                   />
                 ))}
                 <SourceOption
-                  key={"Advanced-Model"}
-                  title={"Advanced"}
+                  key={'Advanced-Model'}
+                  title={'Advanced'}
                   description={
                     <>
-                      Description: Our most advanced AI model, available on enterprise platform. Allows users to perpetually customize fields with user feedback, includes advanced monitoring features. Reach out to{' '}
+                      Our most advanced AI model, available on enterprise
+                      platform. Allows users to perpetually customize fields
+                      with user feedback, includes advanced monitoring features.
+                      Reach out to{' '}
                       <div className="relative inline-block">
                         <span
                           className="text-blue-500 underline cursor-pointer hover:text-blue-700"
@@ -675,12 +721,12 @@ export default function NewJobPage() {
                             Email Copied
                           </div>
                         )}
-                      </div>
-                      {' '}for an enterprise subscription.
+                      </div>{' '}
+                      for an enterprise subscription.
                     </>
                   }
                   isSelected={false}
-                  onClick={() => { }}
+                  onClick={() => {}}
                   disabled={true}
                 />
               </div>
@@ -829,7 +875,7 @@ export default function NewJobPage() {
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-lg p-6 w-full max-w-md">
                   <h3 className="text-lg font-medium mb-4">
-                    {`${editingTag ? "Edit" : "Create"} Custom Tag`}
+                    {`${editingTag ? 'Edit' : 'Create'} Custom Tag`}
                   </h3>
                   {dialogError && (
                     <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded">
@@ -841,14 +887,17 @@ export default function NewJobPage() {
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Tag Name
                       </label>
-                      <input
-                        type="text"
+
+                      <Input
+                        id="tagName"
                         value={customTagName}
-                        onChange={(e) =>
-                          setCustomTagName(e.target.value.toUpperCase())
-                        }
-                        className="w-full p-2 border border-gray-300 rounded"
+                        onChange={(e) => handleTagNameChange(e.target.value)}
+                        onBlur={(e) => handleTagNameChange(e.target.value)}
+                        className={`w-full p-2 border ${
+                          nameError ? 'border-red-500' : 'border-gray-300'
+                        } rounded`}
                         placeholder="CUSTOM_TAG_NAME"
+                        required
                       />
                     </div>
 
@@ -922,7 +971,7 @@ export default function NewJobPage() {
                         variant="outline"
                         onClick={handleCancel}
                         style={{
-                          color: '#1976d2',
+                          color: '#1976d2'
                         }}
                       >
                         Cancel
@@ -934,15 +983,18 @@ export default function NewJobPage() {
                         style={{
                           backgroundColor: '#1976d2',
                           textTransform: 'none',
-                          fontWeight: 500,
+                          fontWeight: 500
                         }}
-                        onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#1565c0')}
-                        onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#1976d2')}
+                        onMouseOver={(e) =>
+                          (e.currentTarget.style.backgroundColor = '#1565c0')
+                        }
+                        onMouseOut={(e) =>
+                          (e.currentTarget.style.backgroundColor = '#1976d2')
+                        }
                         onClick={handleAddCustomTag}
-                      >Add Tag</Button>
-                      {/* <Button onClick={handleAddCustomTag} type="button">
+                      >
                         Add Tag
-                      </Button> */}
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -1038,12 +1090,16 @@ export default function NewJobPage() {
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Group Name
                       </label>
-                      <input
+                      <Input
                         type="text"
                         value={groupName}
-                        onChange={(e) => setGroupName(e.target.value)}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\s/g, '_');
+                          setGroupName(value);
+                        }}
                         className="w-full p-2 border border-gray-300 rounded"
                         placeholder="sensitive_docs"
+                        required
                       />
                     </div>
 
@@ -1051,7 +1107,7 @@ export default function NewJobPage() {
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Group Query
                       </label>
-                      <input
+                      <Input
                         type="text"
                         value={groupQuery}
                         onChange={(e) => setGroupQuery(e.target.value)}
@@ -1081,10 +1137,29 @@ export default function NewJobPage() {
                         type="button"
                         variant="outline"
                         onClick={handleGroupCancel}
+                        style={{
+                          color: '#1976d2'
+                        }}
                       >
                         Cancel
                       </Button>
-                      <Button onClick={handleAddGroupFromDialog} type="button">
+                      <Button
+                        type="button"
+                        variant="default"
+                        color="primary"
+                        style={{
+                          backgroundColor: '#1976d2',
+                          textTransform: 'none',
+                          fontWeight: 500
+                        }}
+                        onMouseOver={(e) =>
+                          (e.currentTarget.style.backgroundColor = '#1565c0')
+                        }
+                        onMouseOut={(e) =>
+                          (e.currentTarget.style.backgroundColor = '#1976d2')
+                        }
+                        onClick={handleAddGroup}
+                      >
                         {editingGroup ? 'Save Changes' : 'Add Group'}
                       </Button>
                     </div>
@@ -1096,7 +1171,7 @@ export default function NewJobPage() {
 
           {/* Submit Button */}
           <div className="flex flex-col items-center space-y-4 pt-4">
-            {(error && isPressedSubmit) && (
+            {error && isPressedSubmit && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded w-full max-w-md text-center">
                 {error}
               </div>
@@ -1107,10 +1182,14 @@ export default function NewJobPage() {
               style={{
                 backgroundColor: '#1976d2',
                 textTransform: 'none',
-                fontWeight: 500,
+                fontWeight: 500
               }}
-              onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#1565c0')}
-              onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#1976d2')}
+              onMouseOver={(e) =>
+                (e.currentTarget.style.backgroundColor = '#1565c0')
+              }
+              onMouseOut={(e) =>
+                (e.currentTarget.style.backgroundColor = '#1976d2')
+              }
               onClick={() => {
                 setIsPressedSubmit(true);
               }}
