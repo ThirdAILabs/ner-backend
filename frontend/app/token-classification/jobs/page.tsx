@@ -87,9 +87,6 @@ const getProcessedTokens = (report: Report | null): number => {
   return report.InferenceTaskStatuses.COMPLETED.TotalSize;
 };
 
-// Mock data for database table
-const mockGroups = ['Reject', 'Sensitive', 'Safe'];
-
 // Source option card component
 interface SourceOptionProps {
   title: string;
@@ -271,6 +268,8 @@ function JobDetail() {
     { type: string; count: number }[]
   >([]);
 
+  const [timeTaken, setTimeTaken] = useState(0);
+
   const [reportData, setReportData] = useState<Report | null>(null);
   const [customTags, setCustomTags] = useState<CustomTag[]>([]);
   const [isNewTagDialogOpen, setIsNewTagDialogOpen] = useState(false);
@@ -282,6 +281,8 @@ function JobDetail() {
       const report = await nerService.getReport(reportId);
 
       setReportData(report as Report);
+
+      setTimeTaken((report.TotalInferenceTimeSeconds || 0) + (report.ShardDataTimeSeconds || 0));
 
       // Set selectedSource based on IsUpload field
       if (report.IsUpload) {
@@ -603,6 +604,7 @@ function JobDetail() {
             progress={calculateProgress(reportData)}
             tokensProcessed={getProcessedTokens(reportData)}
             tags={availableTagsCount}
+            timeTaken={timeTaken}
           />
         </TabsContent>
 
@@ -610,7 +612,7 @@ function JobDetail() {
           <DatabaseTable
             loadMoreObjectRecords={loadRealObjectRecords}
             loadMoreClassifiedTokenRecords={loadRealClassifiedTokenRecords}
-            groups={reportData?.Groups?.map((g) => g.Name) || mockGroups}
+            groups={reportData?.Groups?.map((g) => g.Name) || []}
             tags={availableTagsCount}
           />
         </TabsContent>

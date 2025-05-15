@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { act, useEffect, useRef, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table } from '@/components/ui/table';
 import {
@@ -60,8 +60,11 @@ export function DatabaseTable({
   );
 
   // Load records functions
-  const loadTokenRecords = (newOffset = 0, objectFilter?: string) => {
-    // Don't load if we're already loading or if we've reached the end
+  const loadTokenRecords = (
+    newOffset = 0,
+    tagFilter?: string[],
+    limit = TOKENS_LIMIT
+  ) => {
     if (isLoadingTokenRecords || (!hasMoreTokens && newOffset > 0)) {
       console.log(
         'Skipping token records load - already loading or no more data'
@@ -70,43 +73,39 @@ export function DatabaseTable({
     }
 
     console.log(
-      `Loading token records from offset=${newOffset}, objectFilter:`,
-      objectFilter
+      `Loading token records from offset=${newOffset}, tagFilter:`,
+      tagFilter
     );
     setIsLoadingTokenRecords(true);
 
-    // Use our custom function to fetch entities with pagination
     nerService
       .getReportEntities(reportId, {
         offset: newOffset,
-        limit: TOKENS_LIMIT,
-        ...(objectFilter && { object: objectFilter })
+        limit: limit,
+        ...(tagFilter && { tags: tagFilter })
       })
       .then((entities) => {
         console.log(
           `Loaded ${entities.length} token records from offset ${newOffset}`
         );
 
-        // Map API entities to our record format
         const mappedRecords = entities.map((entity) => ({
           token: entity.Text,
           tag: entity.Label,
           sourceObject: entity.Object,
-          groups: [], // This would need to be populated from somewhere if needed
+          groups: [],
           context: {
             left: entity.LContext || '',
             right: entity.RContext || ''
           }
         }));
 
-        // If resetting (offset=0), replace records; otherwise append
         if (newOffset === 0) {
           setTokenRecords(mappedRecords);
         } else {
           setTokenRecords((prev) => [...prev, ...mappedRecords]);
         }
 
-        // Update pagination state
         setHasMoreTokens(entities.length === TOKENS_LIMIT);
         setTokenOffset(newOffset + entities.length);
         setIsLoadingTokenRecords(false);
@@ -117,7 +116,11 @@ export function DatabaseTable({
       });
   };
 
-  const loadObjectRecords = (newOffset = 0, objectsFilter?: string[]) => {
+  const loadObjectRecords = (
+    newOffset = 0,
+    objectsFilter?: string[],
+    limit = OBJECTS_LIMIT
+  ) => {
     // Don't load if we're already loading or if we've reached the end
     if (isLoadingObjectRecords || (!hasMoreObjects && newOffset > 0)) {
       console.log(
@@ -133,20 +136,16 @@ export function DatabaseTable({
     nerService
       .getReportObjects(reportId, {
         offset: newOffset,
-        limit: OBJECTS_LIMIT
+        limit: limit,
+        ...(objectsFilter && { tags: objectsFilter })
       })
       .then((objects) => {
         console.log(
           `Loaded ${objects.length} object records from offset ${newOffset}`
         );
 
-        // Filter records if objectsFilter is provided
-        const filtered = objectsFilter?.length
-          ? objects.filter((obj) => objectsFilter.includes(obj.object))
-          : objects;
-
         // Map API objects to our record format
-        const mappedRecords = filtered.map((obj) => ({
+        const mappedRecords = objects.map((obj) => ({
           sourceObject: obj.object,
           taggedTokens: obj.tokens.map(
             (token, i) => [token, obj.tags[i]] as [string, string]
@@ -320,6 +319,17 @@ export function DatabaseTable({
       ...prev,
       [filterKey]: !prev[filterKey]
     }));
+
+    let activeTagsList = Object.entries(tagFilters)
+      .filter(([_, isActive]) => isActive)
+      .map(([tagName]) => tagName);
+
+    activeTagsList.push(filterKey);
+
+    setFilteredObjects([]);
+    resetPagination();
+    loadTokenRecords(0, activeTagsList, 100);
+    loadObjectRecords(0, activeTagsList, 100);
   };
 
   const handleSelectAllGroups = () => {
@@ -333,6 +343,11 @@ export function DatabaseTable({
   };
 
   const handleSelectAllTags = () => {
+    setFilteredObjects([]);
+    resetPagination();
+    loadTokenRecords(0);
+    loadObjectRecords(0);
+
     setTagFilters(Object.fromEntries(tags.map((tag) => [tag.type, true])));
   };
 

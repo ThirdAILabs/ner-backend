@@ -16,8 +16,10 @@ import MetricsDataViewer from './metrics/MetricsDataViewer';
 import TrainingResults from './metrics/TrainingResults';
 import ExamplesVisualizer from './metrics/ExamplesVisualizer';
 import ModelUpdate from './metrics/ModelUpdate';
+import { useHealth } from '@/contexts/HealthProvider';
 
 const Dashboard = () => {
+  const { healthStatus } = useHealth();
   const searchParams = useSearchParams();
   const deploymentId = searchParams.get('deploymentId');
   const [isLoading, setIsLoading] = useState(true);
@@ -29,24 +31,15 @@ const Dashboard = () => {
   const [selectedModel, setSelectedModel] = useState<string>('');
 
   useEffect(() => {
-    // Simulating loading for a short time
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 800);
-
     nerService
       .listModels()
       .then(ms => setModels(ms))
       .catch(err => {
         console.error('Failed to load models:', err);
       });
+  }, [healthStatus]);
 
-    return () => {
-      clearTimeout(timer);
-    };
-  }, []);
-
-  if (isLoading) {
+  if (!healthStatus) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
         <CircularProgress />
@@ -74,7 +67,7 @@ const Dashboard = () => {
       }}
     >
       <div className="space-y-6">
-      {/* <TrainingResults />
+        {/* <TrainingResults />
         <ExamplesVisualizer />
         <ModelUpdate 
           username="user"
@@ -83,52 +76,52 @@ const Dashboard = () => {
           modelId={`user/${deploymentId}`}
         /> */}
         <Box mb={3} sx={{ display: 'flex', gap: 4, alignItems: 'flex-start' }}>
-        {/* Days */}
-        <Box>
-          <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
-            Days
-          </Typography>
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <Select
-              value={days}
-              onChange={e => setDays(Number(e.target.value))}
-              displayEmpty
-            >
-              <MenuItem value={1}>1 day</MenuItem>
-              <MenuItem value={7}>7 days</MenuItem>
-              <MenuItem value={30}>30 days</MenuItem>
-            </Select>
-          </FormControl>
-        </Box>
+          {/* Days */}
+          <Box>
+            <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
+              Days
+            </Typography>
+            <FormControl size="small" sx={{ minWidth: 120 }}>
+              <Select
+                value={days}
+                onChange={e => setDays(Number(e.target.value))}
+                displayEmpty
+              >
+                <MenuItem value={1}>1 day</MenuItem>
+                <MenuItem value={7}>7 days</MenuItem>
+                <MenuItem value={30}>30 days</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
 
-        {/* Model Filter */}
-        <Box flex={1} sx={{ maxWidth: 300 }}>
-          <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
-            Model
-          </Typography>
-          <FormControl size="small" fullWidth>
-            <Select
-              value={selectedModel}
-              displayEmpty
-              onChange={e => setSelectedModel(e.target.value)}
-              renderValue={val =>
-                val === ''
-                  ? 'All Models'
-                  : models.find(m => m.Id === val)?.Name || val
-              }
-            >
-              <MenuItem value="">
-                <em>All Models</em>
-              </MenuItem>
-              {models.map(m => (
-                <MenuItem key={m.Id} value={m.Id}>
-                  {m.Name}
+          {/* Model Filter */}
+          <Box flex={1} sx={{ maxWidth: 300 }}>
+            <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
+              Model
+            </Typography>
+            <FormControl size="small" fullWidth>
+              <Select
+                value={selectedModel}
+                displayEmpty
+                onChange={e => setSelectedModel(e.target.value)}
+                renderValue={val =>
+                  val === ''
+                    ? 'All Models'
+                    : models.find(m => m.Id === val)?.Name || val
+                }
+              >
+                <MenuItem value="">
+                  <em>All Models</em>
                 </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+                {models.map(m => (
+                  <MenuItem key={m.Id} value={m.Id}>
+                    {m.Name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
         </Box>
-      </Box>
 
         {/* Your new metrics viewer */}
         <MetricsDataViewer modelId={selectedModel || undefined} days={days} />

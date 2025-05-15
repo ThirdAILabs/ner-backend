@@ -5,6 +5,7 @@ import (
 	"ner-backend/internal/database"
 	"ner-backend/internal/licensing"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -18,32 +19,65 @@ func TestFreeLicensing(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, db.AutoMigrate(&database.InferenceTask{}))
 
-	maxBytes := int64(300)
+	mayTime := time.Date(2025, 5, 14, 10, 0, 0, 0, time.UTC)
+	var mockNow = mayTime
 
-	verifier := licensing.NewFreeLicenseVerifier(db, maxBytes)
+	verifier := licensing.NewFreeLicenseVerifier(db, 300)
+	verifier.SetTimeNow(func() time.Time {
+		return mockNow
+	})
 
-	licenseType, licenseInfo, err := verifier.VerifyLicense(context.Background())
+	_, _, err = verifier.VerifyLicense(context.Background())
 	assert.NoError(t, err)
 
-	assert.Equal(t, maxBytes, licenseInfo["maxBytes"])
-	assert.Equal(t, int64(0), licenseInfo["usedBytes"])
-	assert.Equal(t, licensing.FreeLicense, licenseType)
+	// Create tasks in May 2025
+	require.NoError(t, db.Create(&database.InferenceTask{
+		ReportId:     uuid.New(),
+		TotalSize:    200,
+		CreationTime: mayTime,
+	}).Error)
+	require.NoError(t, db.Create(&database.InferenceTask{
+		ReportId:     uuid.New(),
+		TotalSize:    50,
+		CreationTime: mayTime,
+	}).Error)
 
-	require.NoError(t, db.Create(&database.InferenceTask{ReportId: uuid.New(), TotalSize: 200}).Error)
-	require.NoError(t, db.Create(&database.InferenceTask{ReportId: uuid.New(), TotalSize: 50}).Error)
-
-	licenseType, licenseInfo, err = verifier.VerifyLicense(context.Background())
+	_, _, err = verifier.VerifyLicense(context.Background())
 	assert.NoError(t, err)
 
-	assert.Equal(t, maxBytes, licenseInfo["maxBytes"])
-	assert.Equal(t, int64(250), licenseInfo["usedBytes"])
-	assert.Equal(t, licensing.FreeLicense, licenseType)
+	require.NoError(t, db.Create(&database.InferenceTask{
+		ReportId:     uuid.New(),
+		TotalSize:    100,
+		CreationTime: mayTime,
+	}).Error)
 
-	require.NoError(t, db.Create(&database.InferenceTask{ReportId: uuid.New(), TotalSize: 100}).Error)
+	// Should exceed quota in May
+	_, _, err = verifier.VerifyLicense(context.Background())
+	assert.ErrorIs(t, err, licensing.ErrQuotaExceeded)
 
-	licenseType, licenseInfo, err = verifier.VerifyLicense(context.Background())
-	assert.ErrorIs(t, licensing.ErrQuotaExceeded, err)
-	assert.Equal(t, maxBytes, licenseInfo["maxBytes"])
-	assert.Equal(t, int64(350), licenseInfo["usedBytes"])
-	assert.Equal(t, licensing.FreeLicense, licenseType)
+	// Move clock to June 2025
+	juneTime := time.Date(2025, 6, 1, 10, 0, 0, 0, time.UTC)
+	mockNow = juneTime
+
+	// Create a task in June that is equal to the quota
+	require.NoError(t, db.Create(&database.InferenceTask{
+		ReportId:     uuid.New(),
+		TotalSize:    300,
+		CreationTime: juneTime,
+	}).Error)
+
+	// Should not exceed quota since we're only counting June's tasks
+	_, _, err = verifier.VerifyLicense(context.Background())
+	assert.NoError(t, err)
+
+	// Create a task in june that exceeds the quota
+	require.NoError(t, db.Create(&database.InferenceTask{
+		ReportId:     uuid.New(),
+		TotalSize:    1,
+		CreationTime: juneTime,
+	}).Error)
+
+	// License check should fail because quota is exceeded in June
+	_, _, err = verifier.VerifyLicense(context.Background())
+	assert.ErrorIs(t, err, licensing.ErrQuotaExceeded)
 }

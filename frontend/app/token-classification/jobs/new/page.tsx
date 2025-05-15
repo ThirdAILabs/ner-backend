@@ -63,7 +63,7 @@ const SourceOption: React.FC<SourceOptionProps> = ({
     onClick={() => !disabled && onClick()}
   >
     <h3 className="text-base font-medium">{title}</h3>
-    <p className="text-sm text-gray-500 mt-1">{description}</p>
+    <div className="text-sm text-gray-500 mt-1">{description}</div>
   </div>
 );
 
@@ -647,37 +647,42 @@ export default function NewJobPage() {
                 {models.map((model) => (
                   <SourceOption
                     key={model.Id}
-                    title={model.Name === "presidio" ? "Advanced" : model.Name[0].toUpperCase() + model.Name.slice(1)}
+                    title={model.Name[0].toUpperCase() + model.Name.slice(1)}
                     description={
-                      model.Name === 'basic' ? (
-                        'Description: Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.'
-                      ) : (
-                        <>
-                          Description: Our most advanced AI model requires an enterprise subscription. It allows users to perpetually customize fields with user feedback (RLHF-based fine-tuning) and includes an advanced dashboard for usage and performance metrics. Reach out to{' '}
-                          <div className="relative inline-block">
-                            <span
-                              className="text-blue-500 underline cursor-pointer hover:text-blue-700"
-                              onClick={() => copyToClipboard('contact@thirdai.com')}
-                              title="Click to copy email"
-                            >
-                              contact@thirdai.com
-                            </span>
-                            {showTooltip && (
-                              <div className="absolute left-1/2 -translate-x-1/2 mt-1 w-max px-2 py-1 text-xs bg-gray-800 text-white rounded shadow-md z-10">
-                                Email Copied
-                              </div>
-                            )}
-                          </div>
-                          for an enterprise subscription.
-                        </>
-                      )
+                      'Description: Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.'
                     }
                     isSelected={selectedModelId === model.Id}
                     onClick={() => setSelectedModelId(model.Id)}
                     disabled={model.Name === "presidio"}
                   />
                 ))}
-
+                <SourceOption
+                  key={"Advanced-Model"}
+                  title={"Advanced"}
+                  description={
+                    <>
+                      Description: Our most advanced AI model, available on enterprise platform. Allows users to perpetually customize fields with user feedback, includes advanced monitoring features. Reach out to{' '}
+                      <div className="relative inline-block">
+                        <span
+                          className="text-blue-500 underline cursor-pointer hover:text-blue-700"
+                          onClick={() => copyToClipboard('contact@thirdai.com')}
+                          title="Click to copy email"
+                        >
+                          contact@thirdai.com
+                        </span>
+                        {showTooltip && (
+                          <div className="absolute left-1/2 -translate-x-1/2 mt-1 w-max px-2 py-1 text-xs bg-gray-800 text-white rounded shadow-md z-10">
+                            Email Copied
+                          </div>
+                        )}
+                      </div>
+                      {' '}for an enterprise subscription.
+                    </>
+                  }
+                  isSelected={false}
+                  onClick={() => { }}
+                  disabled={true}
+                />
               </div>
             </div>
 
