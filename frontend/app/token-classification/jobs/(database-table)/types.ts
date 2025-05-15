@@ -21,8 +21,6 @@ export interface ClassifiedTokenDatabaseRecord {
 }
 
 export interface DatabaseTableProps {
-  loadMoreObjectRecords: () => Promise<ObjectDatabaseRecord[]>;
-  loadMoreClassifiedTokenRecords: () => Promise<ClassifiedTokenDatabaseRecord[]>;
   groups: string[];
   tags: Tag[];
 }

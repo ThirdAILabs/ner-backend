@@ -91,3 +91,36 @@ Results_t *NER_predict(const NER_t *self, const StringList_t *sentences,
     return nullptr;
   }
 }
+
+void NER_train(const NER_t *self, const char *filename, float learning_rate,
+               unsigned int epochs, const char **err_ptr) {
+  try {
+    self->ner->train(filename, learning_rate, epochs);
+  } catch (const std::exception &e) {
+    copyError(e, err_ptr);
+  }
+}
+
+// get CSV column names: tokens and tags
+// since C does not have string support, we use char* to store the column names
+void NER_source_target_cols(const NER_t *self, char **tokens_col, char **tags_col) {
+  auto cols = self->ner->sourceTargetCols();
+  const std::string &tokens_str = cols.first;
+  const std::string &tags_str = cols.second;
+  *tokens_col = strdup(tokens_str.c_str());
+  *tags_col = strdup(tags_str.c_str());
+}
+
+// free memory allocated by NER_source_target_cols
+void NER_source_target_cols_free(char *tokens_col, char *tags_col) {
+  free(tokens_col);
+  free(tags_col);
+}
+
+void NER_save(const NER_t *self, const char *path, const char **err_ptr) {
+  try {
+    self->ner->save(path);
+  } catch (const std::exception &e) {
+    copyError(e, err_ptr);
+  }
+}
