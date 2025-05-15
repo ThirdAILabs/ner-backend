@@ -105,7 +105,7 @@ func (ner *NER) Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sa
 
 	// call train with default hyperparameters
 	const defaultLearningRate = 0.001
-	const defaultEpochs = 2
+	const defaultEpochs = 1
 	if err := ner.train(tmpFile.Name(), defaultLearningRate, defaultEpochs); err != nil {
 		return err
 	}
