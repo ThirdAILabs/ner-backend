@@ -610,8 +610,6 @@ function JobDetail() {
 
         <TabsContent value="output">
           <DatabaseTable
-            loadMoreObjectRecords={loadRealObjectRecords}
-            loadMoreClassifiedTokenRecords={loadRealClassifiedTokenRecords}
             groups={reportData?.Groups?.map((g) => g.Name) || []}
             tags={availableTagsCount}
           />
