@@ -421,7 +421,8 @@ export default function NewJobPage() {
         router.push(`/token-classification/jobs?jobId=${response.ReportId}`);
       }, 2000);
     } catch (err) {
-      setError('Failed to create report. Please try again.');
+      const theError = (err.response?.data.charAt(0).toUpperCase() + err.response?.data.slice(1)).trim();
+      setError(`Failed to create report. ${theError}. Please try again.`);
       console.error(err);
     } finally {
       setIsSubmitting(false);
