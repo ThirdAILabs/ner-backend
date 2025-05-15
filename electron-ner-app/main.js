@@ -146,11 +146,12 @@ autoUpdater.autoDownload = true;
 autoUpdater.on('checking-for-update', () => {
   log.info('Checking for update...');
 });
-autoUpdater.on('update-available', () => {
-  dialog.showMessageBox({ type: 'info', title: 'Update available', message: 'A new version is available. Downloading now...' });
+autoUpdater.on('update-available', (info) => {
+  log.info('Update available:', info);
+  dialog.showMessageBox({ type: 'info', title: 'Update available', message: `A new version (${info.version}) is available. Downloading now...` });
 });
-autoUpdater.on('update-not-available', () => {
-  log.info('Update not available.');
+autoUpdater.on('update-not-available', (info) => {
+  log.info('Update not available:', info);
 });
 autoUpdater.on('error', (err) => {
   log.error('Error in auto-updater:', err);
@@ -167,14 +168,26 @@ autoUpdater.on('update-downloaded', () => {
     });
 });
 
+// Allow update checks in dev for testing when DEBUG_UPDATER is true
+if (process.env.DEBUG_UPDATER === 'true') {
+  console.log('DEBUG_UPDATER is set; enabling update checks in dev mode');
+  // Monkey-patch app.isPackaged so autoUpdater will run even in dev
+  Object.defineProperty(app, 'isPackaged', { get: () => true });
+  console.log('Monkey-patched app.isPackaged to true for DEBUG_UPDATER');
+}
+
 // This method will be called when Electron has finished initialization
 app.whenReady().then(() => {
   // Always start the backend first, regardless of dev/prod mode
   createWindow();
   ensureBackendStarted();
-  // Check for updates on launch (in production only)
-  if (!isDev) {
-    autoUpdater.checkForUpdatesAndNotify();
+  
+  // Check for updates on launch (in production or when DEBUG_UPDATER is set)
+  if (!isDev || process.env.DEBUG_UPDATER === 'true') {
+    log.info(`Checking for updates (isDev=${isDev}), current version: ${app.getVersion()}`);
+    autoUpdater.checkForUpdatesAndNotify()
+      .then((result) => log.info('checkForUpdatesAndNotify result:', result))
+      .catch((error) => log.error('checkForUpdatesAndNotify error:', error));
   }
 
   app.on('activate', () => {
