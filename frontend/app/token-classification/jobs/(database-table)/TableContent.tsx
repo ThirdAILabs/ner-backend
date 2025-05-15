@@ -7,7 +7,7 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { Loader2 } from 'lucide-react';
-import { ClassifiedTokenDatabaseRecord, ObjectDatabaseRecord, ViewMode, TableContentProps } from './types';
+import { TableContentProps } from './types';
 import { Button } from '@/components/ui/button';
 
 const PASTELS = ['#E5A49C', '#F6C886', '#FBE7AA', '#99E3B5', '#A6E6E7', '#A5A1E1', '#D8A4E2'];
@@ -306,7 +306,7 @@ export function TableContent({
           {filteredRecords.length > 0 && (
             <TableRow>
               <TableCell colSpan={2}>
-                <LoadMoreButton hasMore={hasMoreTokens} isLoading={isLoadingTokenRecords} onClick={onLoadMore ?? (() => {})} />
+                <LoadMoreButton hasMore={hasMoreObjects} isLoading={isLoadingObjectRecords} onClick={onLoadMore ?? (() => {})} />
 
               </TableCell>
             </TableRow>
