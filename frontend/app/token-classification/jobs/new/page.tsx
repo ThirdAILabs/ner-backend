@@ -245,24 +245,14 @@ export default function NewJobPage() {
       return;
     }
 
-    if (editingGroup === null || formattedGroupName === editingGroup?.name) {
-      setGroups((prev) => ({
-        ...prev,
-        [formattedGroupName]: formattedGroupQuery
-      }));
-    } else {
-      setGroups((prev) => {
-        const updatedGroups = { ...prev };
-
-        if (editingGroup.name !== formattedGroupName) {
+    setGroups((prev) => {
+      const updatedGroups = { ...prev };
+      if (editingGroup && editingGroup.name !== formattedGroupName) {
           delete updatedGroups[editingGroup.name];
-        }
-
-        updatedGroups[formattedGroupName] = formattedGroupQuery;
-
-        return updatedGroups;
-      });
-    }
+      }
+      updatedGroups[formattedGroupName] = formattedGroupQuery;
+      return updatedGroups;  
+    });
 
     setGroups((prev) => ({
       ...prev,
