@@ -42,6 +42,8 @@ interface Report {
   Errors?: string[];
   ReportName: string;
   TagCounts: { [key: string]: number };
+  TotalInferenceTimeSeconds: number;
+  ShardDataTimeSeconds: number;
 }
 
 interface Entity {
