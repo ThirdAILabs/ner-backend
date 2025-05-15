@@ -70,6 +70,15 @@ function PageContents() {
   const [reportError, setReportError] = useState('');
   const recordEvent = useTelemetry();
 
+  // Record initial page load
+  useEffect(() => {
+    recordEvent({
+      UserAction: 'view',
+      UIComponent: 'Page Load',
+      UI: 'Token Classification Page'
+    });
+  }, []);
+
   // Update tabValue if searchParams change after initial load (e.g., browser back/forward)
   useEffect(() => {
     setTabValue(searchParams.get('tab') || 'jobs');
@@ -81,6 +90,12 @@ function PageContents() {
       recordEvent({
         UserAction: 'click',
         UIComponent: 'Usage Stats Tab',
+        UI: 'Token Classification Page'
+      });
+    } else if (newValue === 'jobs') {
+      recordEvent({
+        UserAction: 'click',
+        UIComponent: 'Reports Dashboard Tab',
         UI: 'Token Classification Page'
       });
     }

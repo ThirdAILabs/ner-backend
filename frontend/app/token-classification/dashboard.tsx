@@ -8,7 +8,8 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  SelectChangeEvent
 } from '@mui/material';
 import { useSearchParams } from 'next/navigation';
 import { nerService } from '@/lib/backend';
@@ -17,8 +18,17 @@ import TrainingResults from './metrics/TrainingResults';
 import ExamplesVisualizer from './metrics/ExamplesVisualizer';
 import ModelUpdate from './metrics/ModelUpdate';
 import { useHealth } from '@/contexts/HealthProvider';
+import useTelemetry from '@/hooks/useTelemetry';
 
 const Dashboard = () => {
+  const recordEvent = useTelemetry();
+  React.useEffect(() => {
+    recordEvent({
+      UserAction: 'view',
+      UIComponent: 'Usage Stats Dashboard Page',
+      UI: 'Token Classification Page'
+    });
+  }, []);
   const { healthStatus } = useHealth();
   const searchParams = useSearchParams();
   const deploymentId = searchParams.get('deploymentId');
@@ -27,8 +37,28 @@ const Dashboard = () => {
 
   // Models for the dropdown
   const [days, setDays] = useState<number>(7);
+  const handleDaysChange = (e: SelectChangeEvent<number>) => {
+    const newDays = Number(e.target.value);
+    setDays(newDays);
+    recordEvent({
+      UserAction: 'select',
+      UIComponent: 'Days Filter',
+      UI: 'Usage Stats Dashboard Page',
+      data: { days: newDays }
+    });
+  };
   const [models, setModels] = useState<Model[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>('');
+  const handleModelChange = (e: SelectChangeEvent<string>) => {
+    const model = e.target.value;
+    setSelectedModel(model);
+    recordEvent({
+      UserAction: 'select',
+      UIComponent: 'Model Filter',
+      UI: 'Usage Stats Dashboard Page',
+      data: { model }
+    });
+  };
 
   useEffect(() => {
     nerService
@@ -84,7 +114,7 @@ const Dashboard = () => {
             <FormControl size="small" sx={{ minWidth: 120 }}>
               <Select
                 value={days}
-                onChange={e => setDays(Number(e.target.value))}
+                onChange={handleDaysChange}
                 displayEmpty
               >
                 <MenuItem value={1}>1 day</MenuItem>
@@ -103,7 +133,7 @@ const Dashboard = () => {
               <Select
                 value={selectedModel}
                 displayEmpty
-                onChange={e => setSelectedModel(e.target.value)}
+                onChange={handleModelChange}
                 renderValue={val =>
                   val === ''
                     ? 'All Models'
