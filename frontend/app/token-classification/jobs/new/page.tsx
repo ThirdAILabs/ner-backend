@@ -232,7 +232,7 @@ export default function NewJobPage() {
       return;
     }
 
-    const errorMessage = await nerService.validateGroupDefinition(groupQuery);
+    const errorMessage = await nerService.validateGroupDefinition(groupQuery.trim().toUpperCase());
     console.log('Error message:', errorMessage);
 
     if (errorMessage) {
@@ -983,9 +983,6 @@ export default function NewJobPage() {
                       >
                         Add Tag
                       </Button>
-                      {/* <Button onClick={handleAddCustomTag} type="button">
-                        Add Tag
-                      </Button> */}
                     </div>
                   </div>
                 </div>
@@ -1128,10 +1125,29 @@ export default function NewJobPage() {
                         type="button"
                         variant="outline"
                         onClick={handleGroupCancel}
+                        style={{
+                          color: '#1976d2'
+                        }}
                       >
                         Cancel
                       </Button>
-                      <Button onClick={handleAddGroup} type="button">
+                      <Button
+                        type="button"
+                        variant="default"
+                        color="primary"
+                        style={{
+                          backgroundColor: '#1976d2',
+                          textTransform: 'none',
+                          fontWeight: 500
+                        }}
+                        onMouseOver={(e) =>
+                          (e.currentTarget.style.backgroundColor = '#1565c0')
+                        }
+                        onMouseOut={(e) =>
+                          (e.currentTarget.style.backgroundColor = '#1976d2')
+                        }
+                        onClick={handleAddGroup}
+                      >
                         {editingGroup ? 'Save Changes' : 'Add Group'}
                       </Button>
                     </div>
