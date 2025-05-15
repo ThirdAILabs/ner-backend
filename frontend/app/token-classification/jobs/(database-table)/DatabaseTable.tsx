@@ -54,7 +54,7 @@ export function DatabaseTable({
 }: DatabaseTableProps) {
   const searchParams = useSearchParams();
   const reportId: string = searchParams.get('jobId') as string;
-  const groups = [...groupsProp, NO_GROUP];
+  const groups = groupsProp.length > 0 ? [...groupsProp, NO_GROUP] : [];
 
   // Loading states and refs
   const [isLoadingTokenRecords, setIsLoadingTokenRecords] = useState(false);

@@ -5,4 +5,4 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export const NO_GROUP = 'No Group';
+export const NO_GROUP = 'Everything else';

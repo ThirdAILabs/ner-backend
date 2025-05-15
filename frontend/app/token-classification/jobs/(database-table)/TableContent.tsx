@@ -183,13 +183,16 @@ export function TableContent({
     return colors;
   }, [tags]);
 
+  const filterRecords = (recordGroups: string[], recordTags: string[]) => {
+    const matchTags = recordTags.some((tag) => tagFilters[tag] !== false);
+    const matchNoGroup = recordGroups.length === 0 && groupFilters[NO_GROUP];
+    const matchUserDefinedGroup = recordGroups.some((group) => groupFilters[group] !== false);
+    const noGroupConfigured = Object.keys(groupFilters).length === 0;
+    return matchTags && (matchNoGroup || matchUserDefinedGroup || noGroupConfigured);
+  }
+
   if (viewMode === 'classified-token') {
-    const filteredRecords = tokenRecords.filter((record) => {
-      const tagMatches = tagFilters[record.tag] !== false;
-      const matchNoGroup = record.groups.length === 0 && groupFilters[NO_GROUP];
-      const matchUserDefinedGroup = record.groups.some((group) => groupFilters[group] !== false);
-      return tagMatches && (matchNoGroup || matchUserDefinedGroup);
-    });
+    const filteredRecords = tokenRecords.filter((record) => filterRecords(record.groups, [record.tag]));
 
     return (
       <>
@@ -251,12 +254,7 @@ export function TableContent({
   }
 
   if (viewMode === 'object') {
-    const filteredRecords = objectRecords.filter((record) => {
-      const matchNoGroup = record.groups.length === 0 && groupFilters[NO_GROUP];
-      const matchUserDefinedGroup = record.groups.some((group) => groupFilters[group] !== false);
-      const matchTags = record.taggedTokens.some((token) => tagFilters[token[1]] !== false);
-      return matchTags && (matchNoGroup || matchUserDefinedGroup);
-    });
+    const filteredRecords = objectRecords.filter((record) => filterRecords(record.groups, record.taggedTokens.map((token) => token[1])));
 
     return (
       <>
