@@ -87,9 +87,6 @@ const getProcessedTokens = (report: Report | null): number => {
   return report.InferenceTaskStatuses.COMPLETED.TotalSize;
 };
 
-// Mock data for database table
-const mockGroups = ['Reject', 'Sensitive', 'Safe'];
-
 // Source option card component
 interface SourceOptionProps {
   title: string;
@@ -615,7 +612,7 @@ function JobDetail() {
           <DatabaseTable
             loadMoreObjectRecords={loadRealObjectRecords}
             loadMoreClassifiedTokenRecords={loadRealClassifiedTokenRecords}
-            groups={reportData?.Groups?.map((g) => g.Name) || mockGroups}
+            groups={reportData?.Groups?.map((g) => g.Name) || []}
             tags={availableTagsCount}
           />
         </TabsContent>
