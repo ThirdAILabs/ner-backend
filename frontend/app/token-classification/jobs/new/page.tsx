@@ -9,6 +9,7 @@ import { ArrowLeft, Plus, RefreshCw, Edit } from 'lucide-react';
 import { nerService } from '@/lib/backend';
 import { Suspense } from 'react';
 import { Input } from '@/components/ui/input';
+import { EditNotificationsRounded } from '@mui/icons-material';
 
 // Tag chip component - reused from the detail page but with interactive mode
 interface TagProps {
@@ -232,12 +233,35 @@ export default function NewJobPage() {
       return;
     }
 
-    const errorMessage = await nerService.validateGroupDefinition(groupQuery.trim().toUpperCase());
+    const formattedGroupName = groupName.trim().toUpperCase();
+    const formattedGroupQuery = groupQuery.trim().toUpperCase();
+
+    const errorMessage =
+      await nerService.validateGroupDefinition(formattedGroupQuery);
     console.log('Error message:', errorMessage);
 
     if (errorMessage) {
       setGroupDialogError(errorMessage);
       return;
+    }
+
+    if (editingGroup === null || formattedGroupName === editingGroup?.name) {
+      setGroups((prev) => ({
+        ...prev,
+        [formattedGroupName]: formattedGroupQuery
+      }));
+    } else {
+      setGroups((prev) => {
+        const updatedGroups = { ...prev };
+
+        if (editingGroup.name !== formattedGroupName) {
+          delete updatedGroups[editingGroup.name];
+        }
+
+        updatedGroups[formattedGroupName] = formattedGroupQuery;
+
+        return updatedGroups;
+      });
     }
 
     setGroups((prev) => ({
