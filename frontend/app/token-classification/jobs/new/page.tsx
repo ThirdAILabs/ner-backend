@@ -426,8 +426,8 @@ export default function NewJobPage() {
       return false;
     }
 
-    if (!/^[A-Za-z0-9_]+$/.test(name)) {
-      setNameError('Report name can only contain letters, numbers, and underscores');
+    if (!/^[A-Za-z0-9_-]+$/.test(name)) {
+      setNameError('Report name can only contain letters, numbers, underscores, and hyphens');
       return false;
     }
 
@@ -494,7 +494,7 @@ export default function NewJobPage() {
                 <p className="text-red-700 text-sm mt-1"><sup className='text-red-700'>*</sup>{nameError}</p>
               ) : (
                 <p className="text-sm text-gray-500 mt-1">
-                  Use only letters, numbers, and underscores. No spaces allowed.
+                  Use only letters, numbers, underscores, and hyphens. No spaces allowed.
                 </p>
               )}
             </div>
