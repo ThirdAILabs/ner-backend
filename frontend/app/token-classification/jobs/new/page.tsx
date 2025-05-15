@@ -55,9 +55,10 @@ const SourceOption: React.FC<SourceOptionProps> = ({
   <div
     className={`relative p-6 border rounded-md transition-all
       ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200 border-2'}
-      ${disabled
-        ? 'opacity-85 cursor-not-allowed bg-gray-50'
-        : 'cursor-pointer hover:border-blue-300'
+      ${
+        disabled
+          ? 'opacity-85 cursor-not-allowed bg-gray-50'
+          : 'cursor-pointer hover:border-blue-300'
       }
     `}
     onClick={() => !disabled && onClick()}
@@ -286,12 +287,12 @@ export default function NewJobPage() {
     const newCustomTag = {
       name: customTagName.trim().toUpperCase(),
       pattern: customTagPattern
-    }
+    };
 
     if (editingTag) {
-      setCustomTags(prev => prev.map(tag =>
-        tag.name === editingTag.name ? newCustomTag : tag
-      ));
+      setCustomTags((prev) =>
+        prev.map((tag) => (tag.name === editingTag.name ? newCustomTag : tag))
+      );
     } else {
       for (let index = 0; index < customTags.length; index++) {
         const thisTag = customTags[index];
@@ -300,7 +301,7 @@ export default function NewJobPage() {
           return;
         }
       }
-      setCustomTags(prev => [...prev, newCustomTag]);
+      setCustomTags((prev) => [...prev, newCustomTag]);
     }
 
     setCustomTagName('');
@@ -404,12 +405,12 @@ export default function NewJobPage() {
         CustomTags: customTagsObj,
         ...(selectedSource === 's3'
           ? {
-            SourceS3Bucket: sourceS3Bucket,
-            SourceS3Prefix: sourceS3Prefix || undefined
-          }
+              SourceS3Bucket: sourceS3Bucket,
+              SourceS3Prefix: sourceS3Prefix || undefined
+            }
           : {
-            UploadId: uploadId
-          }),
+              UploadId: uploadId
+            }),
         Groups: groups,
         report_name: jobName
       });
@@ -420,8 +421,19 @@ export default function NewJobPage() {
       setTimeout(() => {
         router.push(`/token-classification/jobs?jobId=${response.ReportId}`);
       }, 2000);
-    } catch (err) {
-      const theError = (err.response?.data.charAt(0).toUpperCase() + err.response?.data.slice(1)).trim();
+    } catch (err: unknown) {
+      let theError = 'An unexpected error occurred';
+      
+      if (
+        typeof err === 'object' &&
+        err !== null &&
+        'response' in err &&
+        typeof (err as any).response?.data === 'string'
+      ) {
+        const data = (err as any).response.data;
+        theError = (data.charAt(0).toUpperCase() + data.slice(1)).trim();
+      }
+
       setError(`Failed to create report. ${theError}. Please try again.`);
       console.error(err);
     } finally {
@@ -438,7 +450,9 @@ export default function NewJobPage() {
     }
 
     if (!/^[A-Za-z0-9_]+$/.test(name)) {
-      setNameError('Report name can only contain letters, numbers, and underscores');
+      setNameError(
+        'Report name can only contain letters, numbers, and underscores'
+      );
       return false;
     }
 
@@ -471,7 +485,7 @@ export default function NewJobPage() {
         </Button>
       </div>
 
-      {(error && !isPressedSubmit) && (
+      {error && !isPressedSubmit && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
           {error}
         </div>
@@ -496,13 +510,17 @@ export default function NewJobPage() {
                   validateJobName(value);
                 }}
                 onBlur={() => validateJobName(jobName)}
-                className={`w-full p-2 border ${nameError ? 'border-red-500' : 'border-gray-300'
-                  } rounded`}
+                className={`w-full p-2 border ${
+                  nameError ? 'border-red-500' : 'border-gray-300'
+                } rounded`}
                 placeholder="Enter_Report_Name"
                 required
               />
               {nameError ? (
-                <p className="text-red-700 text-sm mt-1"><sup className='text-red-700'>*</sup>{nameError}</p>
+                <p className="text-red-700 text-sm mt-1">
+                  <sup className="text-red-700">*</sup>
+                  {nameError}
+                </p>
               ) : (
                 <p className="text-sm text-gray-500 mt-1">
                   Use only letters, numbers, and underscores. No spaces allowed.
@@ -654,15 +672,18 @@ export default function NewJobPage() {
                     }
                     isSelected={selectedModelId === model.Id}
                     onClick={() => setSelectedModelId(model.Id)}
-                    disabled={model.Name === "presidio"}
+                    disabled={model.Name === 'presidio'}
                   />
                 ))}
                 <SourceOption
-                  key={"Advanced-Model"}
-                  title={"Advanced"}
+                  key={'Advanced-Model'}
+                  title={'Advanced'}
                   description={
                     <>
-                      Description: Our most advanced AI model, available on enterprise platform. Allows users to perpetually customize fields with user feedback, includes advanced monitoring features. Reach out to{' '}
+                      Description: Our most advanced AI model, available on
+                      enterprise platform. Allows users to perpetually customize
+                      fields with user feedback, includes advanced monitoring
+                      features. Reach out to{' '}
                       <div className="relative inline-block">
                         <span
                           className="text-blue-500 underline cursor-pointer hover:text-blue-700"
@@ -676,12 +697,12 @@ export default function NewJobPage() {
                             Email Copied
                           </div>
                         )}
-                      </div>
-                      {' '}for an enterprise subscription.
+                      </div>{' '}
+                      for an enterprise subscription.
                     </>
                   }
                   isSelected={false}
-                  onClick={() => { }}
+                  onClick={() => {}}
                   disabled={true}
                 />
               </div>
@@ -830,7 +851,7 @@ export default function NewJobPage() {
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-lg p-6 w-full max-w-md">
                   <h3 className="text-lg font-medium mb-4">
-                    {`${editingTag ? "Edit" : "Create"} Custom Tag`}
+                    {`${editingTag ? 'Edit' : 'Create'} Custom Tag`}
                   </h3>
                   {dialogError && (
                     <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded">
@@ -923,7 +944,7 @@ export default function NewJobPage() {
                         variant="outline"
                         onClick={handleCancel}
                         style={{
-                          color: '#1976d2',
+                          color: '#1976d2'
                         }}
                       >
                         Cancel
@@ -935,12 +956,18 @@ export default function NewJobPage() {
                         style={{
                           backgroundColor: '#1976d2',
                           textTransform: 'none',
-                          fontWeight: 500,
+                          fontWeight: 500
                         }}
-                        onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#1565c0')}
-                        onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#1976d2')}
+                        onMouseOver={(e) =>
+                          (e.currentTarget.style.backgroundColor = '#1565c0')
+                        }
+                        onMouseOut={(e) =>
+                          (e.currentTarget.style.backgroundColor = '#1976d2')
+                        }
                         onClick={handleAddCustomTag}
-                      >Add Tag</Button>
+                      >
+                        Add Tag
+                      </Button>
                       {/* <Button onClick={handleAddCustomTag} type="button">
                         Add Tag
                       </Button> */}
@@ -1097,7 +1124,7 @@ export default function NewJobPage() {
 
           {/* Submit Button */}
           <div className="flex flex-col items-center space-y-4 pt-4">
-            {(error && isPressedSubmit) && (
+            {error && isPressedSubmit && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded w-full max-w-md text-center">
                 {error}
               </div>
@@ -1108,10 +1135,14 @@ export default function NewJobPage() {
               style={{
                 backgroundColor: '#1976d2',
                 textTransform: 'none',
-                fontWeight: 500,
+                fontWeight: 500
               }}
-              onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#1565c0')}
-              onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#1976d2')}
+              onMouseOver={(e) =>
+                (e.currentTarget.style.backgroundColor = '#1565c0')
+              }
+              onMouseOut={(e) =>
+                (e.currentTarget.style.backgroundColor = '#1976d2')
+              }
               onClick={() => {
                 setIsPressedSubmit(true);
               }}
