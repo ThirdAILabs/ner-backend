@@ -293,7 +293,7 @@ export default function Jobs() {
     const completedFileCount = report.CompletedFileCount || 0;
     const totalTasks = completed + running + queued + failed;
 
-    const progress = completedFileCount > 0 ? (fileCount / completedFileCount) * 100 : 0;
+    const progress = completedFileCount > 0 ? (completedFileCount / fileCount) * 100 : 0;
 
     // If there are failed tasks, show failure status
     if (failed > 0) {
@@ -381,7 +381,7 @@ export default function Jobs() {
           </Typography>
         </Box>
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-          {`Files: ${fileCount}/${completedFileCount}`}
+          {`Files: ${completedFileCount}/${fileCount}`}
         </Typography>
       </Box>
     );
