@@ -8,6 +8,7 @@ import { Box } from '@mui/material';
 import { ArrowLeft, Plus, RefreshCw, Edit } from 'lucide-react';
 import { nerService } from '@/lib/backend';
 import { Suspense } from 'react';
+import { Input } from '@/components/ui/input';
 
 // Tag chip component - reused from the detail page but with interactive mode
 interface TagProps {
@@ -210,22 +211,6 @@ export default function NewJobPage() {
     setSelectedTags([...availableTags]);
   };
 
-  const handleAddGroup = () => {
-    if (!groupName.trim() || !groupQuery.trim()) {
-      setError('Group name and query are required');
-      return;
-    }
-
-    setGroups({
-      ...groups,
-      [groupName]: groupQuery
-    });
-
-    setGroupName('');
-    setGroupQuery('');
-    setError(null);
-  };
-
   const handleGroupCancel = () => {
     setGroupName('');
     setGroupQuery('');
@@ -234,20 +219,21 @@ export default function NewJobPage() {
     setIsGroupDialogOpen(false);
   };
 
-  const handleAddGroupFromDialog = async () => {
+  const handleAddGroup = async () => {
     setGroupDialogError(null);
 
     if (!groupName.trim() || !groupQuery.trim()) {
-      setGroupDialogError('Group name and query are required');
+      setGroupDialogError('Group name and query are required.');
       return;
     }
 
     if (!editingGroup && groups[groupName]) {
-      setGroupDialogError('Group name must be unique');
+      setGroupDialogError('Group name must be unique.');
       return;
     }
 
     const errorMessage = await nerService.validateGroupDefinition(groupQuery);
+    console.log('Error message:', errorMessage);
 
     if (errorMessage) {
       setGroupDialogError(errorMessage);
@@ -256,7 +242,7 @@ export default function NewJobPage() {
 
     setGroups((prev) => ({
       ...prev,
-      [groupName]: groupQuery
+      [groupName.trim().toUpperCase()]: groupQuery.trim().toUpperCase()
     }));
 
     handleGroupCancel();
@@ -355,6 +341,24 @@ export default function NewJobPage() {
   const removeFile = (index: number) => {
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   };
+
+  const validateCustomTagName = (name: string): boolean => {
+    if (!name) {
+      setDialogError('Tag name is required');
+      return false;
+    }
+
+    if (!/^[A-Za-z0-9_]+$/.test(name)) {
+      setDialogError(
+        'Tag name can only contain letters, numbers, and underscores'
+      );
+      return false;
+    }
+
+    setDialogError(null);
+    return true;
+  };
+
   // Submit the new job
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -423,7 +427,7 @@ export default function NewJobPage() {
       }, 2000);
     } catch (err: unknown) {
       let theError = 'An unexpected error occurred';
-      
+
       if (
         typeof err === 'object' &&
         err !== null &&
@@ -863,14 +867,25 @@ export default function NewJobPage() {
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Tag Name
                       </label>
-                      <input
-                        type="text"
+
+                      <Input
+                        id="tagName"
                         value={customTagName}
-                        onChange={(e) =>
-                          setCustomTagName(e.target.value.toUpperCase())
-                        }
-                        className="w-full p-2 border border-gray-300 rounded"
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\s/g, '_');
+                          setCustomTagName(value);
+                          validateCustomTagName(value);
+                        }}
+                        onBlur={(e) => {
+                          const value = e.target.value.replace(/\s/g, '_');
+                          setCustomTagName(value);
+                          validateCustomTagName(value);
+                        }}
+                        className={`w-full p-2 border ${
+                          nameError ? 'border-red-500' : 'border-gray-300'
+                        } rounded`}
                         placeholder="CUSTOM_TAG_NAME"
+                        required
                       />
                     </div>
 
@@ -1066,12 +1081,16 @@ export default function NewJobPage() {
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Group Name
                       </label>
-                      <input
+                      <Input
                         type="text"
                         value={groupName}
-                        onChange={(e) => setGroupName(e.target.value)}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\s/g, '_');
+                          setGroupName(value);
+                        }}
                         className="w-full p-2 border border-gray-300 rounded"
                         placeholder="sensitive_docs"
+                        required
                       />
                     </div>
 
@@ -1079,7 +1098,7 @@ export default function NewJobPage() {
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Group Query
                       </label>
-                      <input
+                      <Input
                         type="text"
                         value={groupQuery}
                         onChange={(e) => setGroupQuery(e.target.value)}
@@ -1112,7 +1131,7 @@ export default function NewJobPage() {
                       >
                         Cancel
                       </Button>
-                      <Button onClick={handleAddGroupFromDialog} type="button">
+                      <Button onClick={handleAddGroup} type="button">
                         {editingGroup ? 'Save Changes' : 'Add Group'}
                       </Button>
                     </div>
