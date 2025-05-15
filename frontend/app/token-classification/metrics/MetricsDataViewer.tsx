@@ -49,17 +49,12 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
         if (!mounted) return;
         setInfMetrics(summary);
 
-        console.log(modelId, days);
         // 2) fetch throughput summary card
         if (modelId) {
-          console.log('calling throughput metrics');
           const tp = await nerService.getThroughputMetrics(modelId);
           if (!mounted) return;
           setTpMetrics(tp);
-          console.log('Throughput Metrics:', tp);
         } else {
-          // fetch for all models
-          console.log("couldn't call throughpput metrics");
           setTpMetrics(null);
         }
 

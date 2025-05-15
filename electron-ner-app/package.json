@@ -1,6 +1,6 @@
 {
   "name": "electron-ner-app",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Electron app for Named Entity Recognition",
   "main": "main.js",
   "scripts": {
