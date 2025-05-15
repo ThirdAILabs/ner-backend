@@ -203,7 +203,7 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 		return err
 	}
 
-	totalTokens, workerErr := proc.runInferenceOnBucket(ctx, task.ReportId, storage, task.Report.Model.Id, task.Report.Model.Type, tags, customTags, groupToQuery, task.Report.SourceS3Bucket, s3Objects)
+	totalTokens, errorCount, workerErr := proc.runInferenceOnBucket(ctx, task.ReportId, storage, task.Report.Model.Id, task.Report.Model.Type, tags, customTags, groupToQuery, task.Report.SourceS3Bucket, s3Objects)
 	if workerErr != nil {
 		slog.Error("error running inference task", "report_id", reportId, "task_id", payload.TaskId, "error", workerErr)
 		database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobFailed) // nolint:errcheck
@@ -223,13 +223,15 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 		return fmt.Errorf("error updating inference task status to complete: %w", err)
 	}
 
-	delta := len(s3Objects)
-	if err := proc.db.
-		Model(&database.Report{}).
-		Where("id = ?", reportId).
-		UpdateColumn("completed_file_count", gorm.Expr("completed_file_count + ?", delta)).
-		Error; err != nil {
-		slog.Error("could not increment completed_file_count", "report_id", reportId, "delta", delta, "err", err)
+	delta := len(s3Objects) - errorCount
+	if delta > 0 {
+		if err := proc.db.
+			Model(&database.Report{}).
+			Where("id = ?", reportId).
+			UpdateColumn("completed_file_count", gorm.Expr("completed_file_count + ?", delta)).
+			Error; err != nil {
+			slog.Error("could not increment completed_file_count", "report_id", reportId, "delta", delta, "err", err)
+		}
 	}
 
 	slog.Info("inference task completed successfully", "report_id", reportId, "task_id", payload.TaskId)
@@ -272,13 +274,13 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 	groupToQuery map[uuid.UUID]string,
 	bucket string,
 	objects []string,
-) (int64, error) {
+) (int64, int, error) {
 	var totalTokens int64
 	parser := NewDefaultParser()
 
 	model, err := proc.loadModel(ctx, modelId, modelType)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 	defer model.Release()
 
@@ -286,7 +288,7 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 	for groupId, query := range groupToQuery {
 		filter, err := ParseQuery(query)
 		if err != nil {
-			return 0, fmt.Errorf("error loading model: %w", err)
+			return 0, 0, fmt.Errorf("error loading model: %w", err)
 		}
 		groupToFilter[groupId] = filter
 	}
@@ -295,7 +297,7 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 	for tag, pat := range customTags {
 		re, err := regexp.Compile(pat)
 		if err != nil {
-			return 0, fmt.Errorf("error compiling regex for tag %s: %w", tag, err)
+			return 0, 0, fmt.Errorf("error compiling regex for tag %s: %w", tag, err)
 		}
 		customTagsRe[tag] = re
 	}
@@ -360,10 +362,10 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 	}
 
 	if objectErrorCnt > 0 {
-		return 0, fmt.Errorf("errors while processing %d/%d objects", objectErrorCnt, len(objects))
+		return 0, objectErrorCnt, fmt.Errorf("errors while processing %d/%d objects", objectErrorCnt, len(objects))
 	}
 
-	return totalTokens, nil
+	return totalTokens, 0, nil
 }
 
 func (proc *TaskProcessor) getModelDir(modelId uuid.UUID) string {
