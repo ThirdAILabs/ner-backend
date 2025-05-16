@@ -419,7 +419,7 @@ func (s *BackendService) GetReport(r *http.Request) (any, error) {
 	_ = s.db.WithContext(ctx).
 		Model(&database.InferenceTask{}).
 		Select("MIN(start_time) AS min_start, MAX(completion_time) AS max_end").
-		Where("report_id = ? AND status = ?", reportId, database.JobCompleted).
+		Where("report_id = ? AND start_time IS NOT NULL AND completion_time IS NOT NULL", reportId).
 		Scan(&infBounds).Error
 
 	var totalInfSecs float64
