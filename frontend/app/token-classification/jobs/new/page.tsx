@@ -369,16 +369,27 @@ export default function NewJobPage() {
       
       const supportedFiles = fileArray.filter(file => isFileSupported(file.name));
       
-      if (selectedSource === 'directory') {
-        setPendingFiles(supportedFiles);
-        setIsConfirmDialogOpen(true);
-      } else {
+      if (supportedFiles.length > 0) {
         addFiles(supportedFiles);
+      } else {
+        setIsConfirmDialogOpen(true);
       }
     }
-    // Reset the input value properly
+    // Reset the input value
     const input = e.target as HTMLInputElement;
     input.value = '';
+  };
+
+  // Simplified dialog handling
+  const handleCloseDialog = () => {
+    setIsConfirmDialogOpen(false);
+    // Reset the input value
+    const input = document.getElementById(
+      selectedSource === 'directory' ? 'directory-upload' : 'file-upload'
+    ) as HTMLInputElement;
+    if (input) {
+      input.value = '';
+    }
   };
 
   // Update areFilesIdentical to handle FileWithPath
@@ -402,7 +413,7 @@ export default function NewJobPage() {
       return;
     }
 
-    if (selectedSource === 'files' && selectedFiles.length === 0) {
+    if (selectedSource !== 's3' && selectedFiles.length === 0) {
       setError('Please select at least one file');
       return;
     }
@@ -419,7 +430,7 @@ export default function NewJobPage() {
       let uploadId;
 
       // Handle file uploads if needed
-      if (selectedSource === 'files') {
+      if (selectedSource !== 's3') {
         const uploadResponse = await nerService.uploadFiles(selectedFiles);
         uploadId = uploadResponse.Id;
       }
@@ -508,12 +519,8 @@ export default function NewJobPage() {
   };
 
   // Update removeFile function to handle both selected and pending files
-  const removeFile = (index: number, fromPending: boolean = false) => {
-    if (fromPending) {
-      setPendingFiles((prev) => prev.filter((_, i) => i !== index));
-    } else {
-      setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
-    }
+  const removeFile = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   // Update file display sections to use new render function
@@ -533,14 +540,14 @@ export default function NewJobPage() {
   };
 
   // Update file list display sections to use new render function
-  const renderFileList = (files: FileWithPath[], isPending: boolean = false) => (
+  const renderFileList = (files: FileWithPath[]) => (
     <ul className="space-y-1">
       {files.map((file, i) => (
         <li key={i} className="flex items-center justify-between py-1">
           {renderFileName(file)}
           <button
             type="button"
-            onClick={() => removeFile(i, isPending)}
+            onClick={() => removeFile(i)}
             className="text-red-500 hover:text-red-700 p-1"
             aria-label="Remove file"
           >
@@ -1324,80 +1331,28 @@ export default function NewJobPage() {
         </form>
       )}
 
-      {/* Confirmation dialog for file uploads */}
+      {/* Simplified dialog - only shows when no supported files are found */}
       {isConfirmDialogOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
-          onClick={(e) => {
-            // Only close on outside click if there are no supported files
-            if (pendingFiles.length === 0) {
-              handleCancelUpload();
-            }
-          }}
-        >
-          <div 
-            className="bg-white rounded-lg p-6 w-full max-w-md"
-            onClick={(e) => e.stopPropagation()} // Prevent closing when clicking the dialog
-          >
-            <h3 className="text-lg font-medium mb-4">File Upload</h3>
-            
-            <div className="mb-4">
-              {pendingFiles.length > 0 ? (
-                <>
-                  <p className="text-sm text-gray-600">
-                    {pendingFiles.length} supported files found.
-                  </p>
-                  
-                  <div className="mt-4 max-h-60 overflow-y-auto">
-                    <h4 className="font-medium mb-2">Files to be uploaded:</h4>
-                    {renderFileList(pendingFiles, true)}
-                  </div>
-                </>
-              ) : (
-                <p className="text-sm text-amber-600">
-                  No supported files found in the selected directory.
-                  <br />
-                  Only .pdf, .txt, .csv, .html, .json, and .xml files are supported.
-                </p>
-              )}
-            </div>
-
-            <div className="flex justify-end space-x-2">
-              {pendingFiles.length > 0 ? (
-                <>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleCancelUpload}
-                    style={{ color: '#1976d2' }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="default"
-                    onClick={handleConfirmUpload}
-                    style={{
-                      backgroundColor: '#1976d2',
-                      color: 'white'
-                    }}
-                  >
-                    Upload Files
-                  </Button>
-                </>
-              ) : (
-                <Button
-                  type="button"
-                  variant="default"
-                  onClick={handleCancelUpload}
-                  style={{
-                    backgroundColor: '#1976d2',
-                    color: 'white'
-                  }}
-                >
-                  OK
-                </Button>
-              )}
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-medium mb-4">No Supported Files</h3>
+            <p className="text-sm text-amber-600 mb-4">
+              No supported files found in the selected directory.
+              <br />
+              Only .pdf, .txt, .csv, .html, .json, and .xml files are supported.
+            </p>
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="default"
+                onClick={handleCloseDialog}
+                style={{
+                  backgroundColor: '#1976d2',
+                  color: 'white'
+                }}
+              >
+                OK
+              </Button>
             </div>
           </div>
         </div>
