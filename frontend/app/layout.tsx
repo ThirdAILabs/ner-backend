@@ -1,4 +1,5 @@
 import './globals.css';
+import { ErrorPopup } from '@/components/ui/ErrorPopup';
 import { Providers } from './Providers';
 
 export const metadata = {
@@ -17,6 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="flex min-h-screen w-full flex-col bg-muted/40">
         <Providers>
           {children}
+          <ErrorPopup autoCloseTime={7000} />
         </Providers>
       </body>
     </html>
