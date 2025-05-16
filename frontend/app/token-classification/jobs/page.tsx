@@ -258,7 +258,6 @@ function JobDetail() {
   const searchParams = useSearchParams();
   const reportId: string = searchParams.get('jobId') as string;
   const deploymentId = searchParams.get('deploymentId') as string;
-  const [lastUpdated, setLastUpdated] = useState(0);
   const [tabValue, setTabValue] = useState('analytics');
   const [selectedSource, setSelectedSource] = useState<'s3' | 'local'>('s3');
 
@@ -272,7 +271,6 @@ function JobDetail() {
 
   const [reportData, setReportData] = useState<Report | null>(null);
   const [customTags, setCustomTags] = useState<CustomTag[]>([]);
-  const [isNewTagDialogOpen, setIsNewTagDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchTags = async () => {
@@ -325,104 +323,20 @@ function JobDetail() {
   };
 
   useEffect(() => {
-    fetchTags();
+    const pollInterval = setInterval(async () => {
+      await fetchTags();
 
-    // Set up refresh timer
-    const timer = setInterval(() => {
-      setLastUpdated((prev) => prev + 1);
+      const currentProgress = calculateProgress(reportData);
+
+      if (currentProgress === 100) {
+        clearInterval(pollInterval);
+      }
     }, 1000);
 
-    return () => clearInterval(timer);
-  }, [reportId]);
-
-  // Optional: Add a refresh function that gets called when the refresh button is clicked
-  const handleRefresh = () => {
-    setLastUpdated(0);
-    fetchTags();
-  };
-
-  // Define real data loading functions for entities
-  const loadRealClassifiedTokenRecords = async (offset = 0, limit = 50) => {
-    try {
-      const entities = await nerService.getReportEntities(reportId, {
-        offset,
-        limit
-      });
-      console.log(
-        'API entities response:',
-        entities.length > 0 ? entities[0] : 'No entities'
-      );
-
-      // Extract unique entity types from the API response
-      const uniqueTypes = new Set(entities.map((entity) => entity.Label));
-      console.log(
-        'Unique entity types in API response:',
-        Array.from(uniqueTypes)
-      );
-      console.log('Tag filters available in UI:', availableTags);
-
-      return entities.map((entity) => {
-        const record = {
-          token: entity.Text,
-          tag: entity.Label,
-          sourceObject: entity.Object,
-          context: {
-            left: entity.LContext || '',
-            right: entity.RContext || ''
-          },
-          start: entity.Start,
-          end: entity.End,
-          groups:
-            reportData?.Groups?.filter((group) =>
-              group.Objects?.includes(entity.Object)
-            ).map((g) => g.Name) || []
-        };
-
-        // Log the first transformed record for debugging
-        if (entity === entities[0]) {
-          console.log('Transformed record:', record);
-        }
-
-        return record;
-      });
-    } catch (error) {
-      console.error('Error loading entities:', error);
-      return [];
-    }
-  };
-
-  // Loads data for the Objects tab view, showing complete sentences with tagged tokens
-  // Uses the GET /reports/{report_id}/entities endpoint and transforms the data
-  // since the /objects endpoint doesn't exist yet in the backend
-  const loadRealObjectRecords = async () => {
-    try {
-      // Get object previews (transformed from entities)
-      const objectPreviews = await nerService.getReportObjects(reportId, {
-        limit: 100
-      });
-
-      return objectPreviews.map((preview) => {
-        // Create tagged tokens array from the parallel tokens and tags arrays
-        const taggedTokens = preview.tokens.map((token, index) => [
-          token,
-          preview.tags[index]
-        ]) as [string, string][];
-
-        return {
-          taggedTokens,
-          sourceObject: preview.object,
-          // Get groups that include this object
-          groups:
-            reportData?.Groups?.filter((group) =>
-              group.Objects?.includes(preview.object)
-            ).map((g) => g.Name) || []
-        };
-      });
-    } catch (error) {
-      console.error('Error loading object records:', error);
-      return [];
-    }
-  };
+    return () => {
+      clearInterval(pollInterval);
+    };
+  }, [reportId, reportData?.CompletedFileCount]);
 
   return (
     <div className="container px-4 py-8 w-3/4 mx-auto">
@@ -463,18 +377,6 @@ function JobDetail() {
               Info
             </TabsTrigger>
           </TabsList>
-
-          <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-500">
-              Last updated: {lastUpdated} seconds ago
-            </span>
-            <Button variant="ghost" size="icon" onClick={handleRefresh}>
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon">
-              <Square className="h-4 w-4" />
-            </Button>
-          </div>
         </div>
 
         <TabsContent value="configuration" className="mt-0">

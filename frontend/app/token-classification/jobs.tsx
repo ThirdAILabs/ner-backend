@@ -75,37 +75,56 @@ export default function Jobs() {
   const { healthStatus } = useHealth();
 
   const fetchReportStatus = async (report: ReportWithStatus) => {
-    try {
-      setReports((prev) =>
-        prev.map((r) =>
-          r.Id === report.Id ? { ...r, isLoadingStatus: true } : r
-        )
-      );
+    const pollStatus = async () => {
+      try {
+        setReports((prev) =>
+          prev.map((r) =>
+            r.Id === report.Id ? { ...r, isLoadingStatus: true } : r
+          )
+        );
 
-      const detailedReport = await nerService.getReport(report.Id);
+        const detailedReport = await nerService.getReport(report.Id);
 
-      setReports((prev) =>
-        prev.map((r) =>
-          r.Id === report.Id
-            ? {
-              ...r,
-              detailedStatus: {
-                ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
-                InferenceTaskStatuses: detailedReport.InferenceTaskStatuses
-              },
-              isLoadingStatus: false
-            }
-            : r
-        )
-      );
-    } catch (err) {
-      console.error(`Error fetching status for report ${report.Id}:`, err);
-      setReports((prev) =>
-        prev.map((r) =>
-          r.Id === report.Id ? { ...r, isLoadingStatus: false } : r
-        )
-      );
-    }
+        setReports((prev) =>
+          prev.map((r) =>
+            r.Id === report.Id
+              ? {
+                ...r,
+                CompletedFileCount: detailedReport.CompletedFileCount,
+                detailedStatus: {
+                  ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
+                  InferenceTaskStatuses: detailedReport.InferenceTaskStatuses
+                },
+                isLoadingStatus: false
+              }
+              : r
+          )
+        );
+
+        // If files are complete, return true to stop polling
+        return detailedReport.CompletedFileCount === detailedReport.FileCount;
+      } catch (err) {
+        console.error(`Error fetching status for report ${report.Id}:`, err);
+        setReports((prev) =>
+          prev.map((r) =>
+            r.Id === report.Id ? { ...r, isLoadingStatus: false } : r
+          )
+        );
+        return false;
+      }
+    };
+
+    const pollInterval = setInterval(async () => {
+      const isComplete = await pollStatus();
+
+      if (isComplete) {
+        clearInterval(pollInterval);
+      }
+    }, 1000);
+
+    return () => {
+      clearInterval(pollInterval);
+    };
   };
 
 
@@ -134,6 +153,9 @@ export default function Jobs() {
     };
     if (healthStatus)
       fetchReports();
+    return () => {
+
+    }
   }, [healthStatus]);
 
   if (loading) {
@@ -227,9 +249,9 @@ export default function Jobs() {
       return (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
           <CircularProgress size={16} />
-          {/* <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
             Loading status...
-          </Typography> */}
+          </Typography>
         </Box>
       );
     }
@@ -237,8 +259,9 @@ export default function Jobs() {
     if (!report.detailedStatus) {
       return (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <CircularProgress size={16} />
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            Status unavailable
+            Loading status...
           </Typography>
         </Box>
       );
