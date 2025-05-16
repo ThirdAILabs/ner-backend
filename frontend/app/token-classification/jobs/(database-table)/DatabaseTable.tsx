@@ -11,6 +11,7 @@ import { HeaderContent } from './HeaderContent';
 import { TableContent } from './TableContent';
 import { nerService } from '@/lib/backend';
 import { useSearchParams } from 'next/navigation';
+import { NO_GROUP } from '@/lib/utils';
 
 function joinAdjacentEntities(entities: Entity[]) {
   if (entities.length === 0) {
@@ -48,11 +49,12 @@ function joinAdjacentEntities(entities: Entity[]) {
   
 
 export function DatabaseTable({
-  groups,
+  groups: groupsProp,
   tags
 }: DatabaseTableProps) {
   const searchParams = useSearchParams();
   const reportId: string = searchParams.get('jobId') as string;
+  const groups = groupsProp.length > 0 ? [...groupsProp, NO_GROUP] : [];
 
   // Loading states and refs
   const [isLoadingTokenRecords, setIsLoadingTokenRecords] = useState(false);
@@ -339,7 +341,6 @@ export function DatabaseTable({
 
   // Filter handlers
   const handleGroupFilterChange = (filterKey: string) => {
-    console.log('Group filter changed:', filterKey);
     setGroupFilters((prev) => ({
       ...prev,
       [filterKey]: !prev[filterKey]
