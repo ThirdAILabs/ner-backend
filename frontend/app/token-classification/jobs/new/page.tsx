@@ -335,6 +335,11 @@ export default function NewJobPage() {
     setIsCustomTagDialogOpen(false);
   };
 
+  const areFilesIdentical = (file1: File, file2: File): boolean => {
+    return file1.name === file2.name && 
+           file1.size === file2.size;
+  };
+
   const addFiles = (files: File[]) => {
     const newFiles = files.filter((newFile) => {
       const isDuplicate = selectedFiles.some((existingFile) =>
@@ -390,16 +395,15 @@ export default function NewJobPage() {
     setDialogError(null);
     return true;
   };
-  
+
   const handleTagNameChange = (name: string) => {
     const value = name.replace(/\s/g, '_');
     setCustomTagName(value);
     validateCustomTagName(value);
   };
 
-  const areFilesIdentical = (file1: File, file2: File): boolean => {
-    return file1.name === file2.name && 
-           file1.size === file2.size;
+  const removeFile = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   // Submit the new job
@@ -521,9 +525,7 @@ export default function NewJobPage() {
     }, 1000);
   };
 
-  const removeFile = (index: number) => {
-    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
-  };
+  
 
   const renderFileName = (file: File) => (
     <span className="text-sm text-gray-600">
