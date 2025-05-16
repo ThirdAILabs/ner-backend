@@ -19,36 +19,36 @@ const (
 func TestKeygenLicensing(t *testing.T) {
 	t.Run("GoodLicense", func(t *testing.T) {
 		verifier := licensing.NewKeygenLicenseVerifier(goodLicense)
-		licenseType, _, err := verifier.VerifyLicense(context.Background())
+		licenseInfo, err := verifier.VerifyLicense(context.Background())
 		assert.NoError(t, err)
-		assert.Equal(t, licensing.KeygenLicense, licenseType)
+		assert.Equal(t, licensing.KeygenLicense, licenseInfo.LicenseType)
 	})
 
 	t.Run("ExpiredLicense", func(t *testing.T) {
 		verifier := licensing.NewKeygenLicenseVerifier(expiredLicense)
-		licenseType, _, err := verifier.VerifyLicense(context.Background())
+		licenseInfo, err := verifier.VerifyLicense(context.Background())
 		assert.ErrorIs(t, err, licensing.ErrExpiredLicense)
-		assert.Equal(t, licensing.KeygenLicense, licenseType)
+		assert.Equal(t, licensing.KeygenLicense, licenseInfo.LicenseType)
 	})
 
 	t.Run("NonexistentLicense", func(t *testing.T) {
 		verifier := licensing.NewKeygenLicenseVerifier(nonexistentLicense)
-		licenseType, _, err := verifier.VerifyLicense(context.Background())
+		licenseInfo, err := verifier.VerifyLicense(context.Background())
 		assert.ErrorIs(t, err, licensing.ErrLicenseNotFound)
-		assert.Equal(t, licensing.KeygenLicense, licenseType)
+		assert.Equal(t, licensing.KeygenLicense, licenseInfo.LicenseType)
 	})
 
 	t.Run("SuspendedLicense", func(t *testing.T) {
 		verifier := licensing.NewKeygenLicenseVerifier(suspendedLicense)
-		licenseType, _, err := verifier.VerifyLicense(context.Background())
+		licenseInfo, err := verifier.VerifyLicense(context.Background())
 		assert.ErrorIs(t, err, licensing.ErrExpiredLicense)
-		assert.Equal(t, licensing.KeygenLicense, licenseType)
+		assert.Equal(t, licensing.KeygenLicense, licenseInfo.LicenseType)
 	})
 
 	t.Run("MissingEntitlements", func(t *testing.T) {
 		verifier := licensing.NewKeygenLicenseVerifier(missingEntitlementsLicense)
-		licenseType, _, err := verifier.VerifyLicense(context.Background())
+		licenseInfo, err := verifier.VerifyLicense(context.Background())
 		assert.ErrorIs(t, err, licensing.ErrInvalidLicense)
-		assert.Equal(t, licensing.KeygenLicense, licenseType)
+		assert.Equal(t, licensing.KeygenLicense, licenseInfo.LicenseType)
 	})
 }

@@ -3,6 +3,7 @@ package licensing
 import (
 	"context"
 	"errors"
+	"time"
 )
 
 var (
@@ -14,7 +15,17 @@ var (
 )
 
 type LicenseType string
-type LicenseInfo map[string]any
+
+type LicenseUsage struct {
+	MaxBytes  int64
+	UsedBytes int64
+}
+
+type LicenseInfo struct {
+	LicenseType LicenseType
+	Expiry      *time.Time
+	Usage       *LicenseUsage
+}
 
 const (
 	LocalLicense  LicenseType = "local"
@@ -23,5 +34,5 @@ const (
 )
 
 type LicenseVerifier interface {
-	VerifyLicense(ctx context.Context) (LicenseType, LicenseInfo, error)
+	VerifyLicense(ctx context.Context) (LicenseInfo, error)
 }

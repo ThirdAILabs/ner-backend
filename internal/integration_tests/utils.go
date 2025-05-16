@@ -261,6 +261,6 @@ func httpRequest(api http.Handler, method, endpoint string, payload any, dest an
 
 type DummyLicenseVerifier struct{}
 
-func (d *DummyLicenseVerifier) VerifyLicense(context.Context) (licensing.LicenseType, licensing.LicenseInfo, error) {
-	return "", nil, nil
+func (d *DummyLicenseVerifier) VerifyLicense(context.Context) (licensing.LicenseInfo, error) {
+	return licensing.LicenseInfo{}, nil
 }

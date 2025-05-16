@@ -31,15 +31,20 @@ type FileLicenseVerifier struct {
 }
 
 func NewFileLicenseVerifier(publicKeyPem []byte, licenseStr string) *FileLicenseVerifier {
+
+	dummyVerifier := &FileLicenseVerifier{}
+
 	publicKey, err := parseRsaPublicKey(publicKeyPem)
 	if err != nil {
 		slog.Warn("Failed to parse public key for local license verifier", slog.Any("error", err))
+		return dummyVerifier
 	}
 
 	var payload Payload
 	payload, err = DecodeLicense(publicKey, licenseStr)
 	if err != nil {
 		slog.Warn("Failed to decode payload for local license", slog.Any("error", err))
+		return dummyVerifier
 	}
 
 	slog.Info("file license initialized", "license_payload", payload)
@@ -50,20 +55,23 @@ func NewFileLicenseVerifier(publicKeyPem []byte, licenseStr string) *FileLicense
 	}
 }
 
-func (v *FileLicenseVerifier) VerifyLicense(ctx context.Context) (LicenseType, LicenseInfo, error) {
+func (v *FileLicenseVerifier) VerifyLicense(ctx context.Context) (LicenseInfo, error) {
+
+	licenseInfo := LicenseInfo{
+		LicenseType: LocalLicense,
+	}
 
 	if v.licensePayload.Expiration.IsZero() {
-		return LocalLicense, nil, ErrInvalidLicense
+		return licenseInfo, ErrInvalidLicense
 	}
 
 	if v.licensePayload.Expiration.Before(time.Now().UTC()) {
-		return LocalLicense, nil, ErrExpiredLicense
+		return licenseInfo, ErrExpiredLicense
 	}
 
-	licenseInfo := LicenseInfo{
-		"expiration": v.licensePayload.Expiration.Format(time.RFC3339),
-	}
-	return LocalLicense, licenseInfo, nil
+	licenseInfo.Expiry = &v.licensePayload.Expiration
+
+	return licenseInfo, nil
 }
 
 func DecodeLicense(publicKey *rsa.PublicKey, licenseStr string) (Payload, error) {

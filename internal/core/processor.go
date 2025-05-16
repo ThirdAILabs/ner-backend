@@ -174,7 +174,7 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 		slog.Error("error marking task as running", "error", err)
 	}
 
-	if _, _, err := proc.licensing.VerifyLicense(ctx); err != nil {
+	if _, err := proc.licensing.VerifyLicense(ctx); err != nil {
 		slog.Error("license verification failed", "error", err)
 		database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobFailed) //nolint:errcheck
 		database.SaveReportError(ctx, proc.db, reportId, fmt.Sprintf("license verification failed: %s", err.Error()))
@@ -580,7 +580,7 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 
 	database.UpdateShardDataTaskStatus(ctx, proc.db, reportId, database.JobRunning) //nolint:errcheck
 
-	if _, _, err := proc.licensing.VerifyLicense(ctx); err != nil {
+	if _, err := proc.licensing.VerifyLicense(ctx); err != nil {
 		slog.Error("license verification failed", "error", err)
 		database.UpdateShardDataTaskStatus(ctx, proc.db, reportId, database.JobFailed) //nolint:errcheck
 		database.SaveReportError(ctx, proc.db, reportId, fmt.Sprintf("license verification failed: %s", err.Error()))

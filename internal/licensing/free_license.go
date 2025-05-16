@@ -30,7 +30,12 @@ func (verifier *FreeLicenseVerifier) SetTimeNow(timeNow func() time.Time) {
 	verifier.timeNow = timeNow
 }
 
-func (verifier *FreeLicenseVerifier) VerifyLicense(ctx context.Context) (LicenseType, LicenseInfo, error) {
+func (verifier *FreeLicenseVerifier) VerifyLicense(ctx context.Context) (LicenseInfo, error) {
+
+	licenseInfo := LicenseInfo{
+		LicenseType: FreeLicense,
+	}
+
 	var totalBytes sql.NullInt64
 
 	// Get first day of current month, we apply the quota on a monthly basis
@@ -42,17 +47,17 @@ func (verifier *FreeLicenseVerifier) VerifyLicense(ctx context.Context) (License
 		Where("creation_time >= ?", currentMonth).
 		Scan(&totalBytes).Error; err != nil {
 		slog.Error("error getting total usage", "error", err)
-		return FreeLicense, nil, ErrLicenseVerificationFailed
+		return licenseInfo, ErrLicenseVerificationFailed
 	}
 
-	info := LicenseInfo{
-		"maxBytes":  verifier.maxBytes,
-		"usedBytes": totalBytes.Int64,
+	licenseInfo.Usage = &LicenseUsage{
+		MaxBytes:  verifier.maxBytes,
+		UsedBytes: totalBytes.Int64,
 	}
 
 	if totalBytes.Valid && totalBytes.Int64 > verifier.maxBytes {
-		return FreeLicense, info, ErrQuotaExceeded
+		return licenseInfo, ErrQuotaExceeded
 	}
 
-	return FreeLicense, info, nil
+	return licenseInfo, nil
 }

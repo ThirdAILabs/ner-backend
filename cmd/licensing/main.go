@@ -50,12 +50,8 @@ func validateLicense(publicKeyPath, license string) {
 	}
 
 	verifier := licensing.NewFileLicenseVerifier(publicKeyPem, license)
-	_, _, err = verifier.VerifyLicense(context.Background())
-	if err != nil {
-		log.Fatalf("Error verifying license: %v", err)
-	}
 
-	if _, _, err := verifier.VerifyLicense(context.Background()); err != nil {
+	if _, err := verifier.VerifyLicense(context.Background()); err != nil {
 		log.Fatalf("License verification failed: %v", err)
 	}
 }
