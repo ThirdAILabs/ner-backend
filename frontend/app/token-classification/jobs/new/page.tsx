@@ -100,11 +100,6 @@ interface CustomTag {
   pattern: string;
 }
 
-// Add new interface for files with directory path
-interface FileWithPath extends File {
-  directoryPath?: string;
-}
-
 export default function NewJobPage() {
   const router = useRouter();
 
@@ -112,8 +107,7 @@ export default function NewJobPage() {
   const [selectedSource, setSelectedSource] = useState<'s3' | 'files' | 'directory'>('files');
   const [sourceS3Bucket, setSourceS3Bucket] = useState('');
   const [sourceS3Prefix, setSourceS3Prefix] = useState('');
-  // Update state type to include directory path
-  const [selectedFiles, setSelectedFiles] = useState<FileWithPath[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   //Job Name
@@ -157,7 +151,7 @@ export default function NewJobPage() {
 
   // Confirm dialog for file uploads
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
-  const [pendingFiles, setPendingFiles] = useState<FileWithPath[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
 
   const SUPPORTED_TYPES = ['.pdf', '.txt', '.csv', '.html', '.json', '.xml'];
 
@@ -343,7 +337,7 @@ export default function NewJobPage() {
     setIsCustomTagDialogOpen(false);
   };
   // Update addFiles to use FileWithPath type
-  const addFiles = (files: FileWithPath[]) => {
+  const addFiles = (files: File[]) => {
     const newFiles = files.filter((newFile) => {
       const isDuplicate = selectedFiles.some((existingFile) =>
         areFilesIdentical(existingFile, newFile)
@@ -357,16 +351,7 @@ export default function NewJobPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      const fileArray = Array.from(files).map(file => {
-        const fileWithPath = file as FileWithPath;
-        if (selectedSource === 'directory') {
-          // Get relative path by removing the filename from webkitRelativePath
-          const path = (file as any).webkitRelativePath;
-          fileWithPath.directoryPath = path.substring(0, path.lastIndexOf('/'));
-        }
-        return fileWithPath;
-      });
-      
+      const fileArray = Array.from(files);
       const supportedFiles = fileArray.filter(file => isFileSupported(file.name));
       
       if (supportedFiles.length > 0) {
@@ -393,10 +378,9 @@ export default function NewJobPage() {
   };
 
   // Update areFilesIdentical to handle FileWithPath
-  const areFilesIdentical = (file1: FileWithPath, file2: FileWithPath): boolean => {
+  const areFilesIdentical = (file1: File, file2: File): boolean => {
     return file1.name === file2.name && 
-           file1.size === file2.size && 
-           file1.directoryPath === file2.directoryPath;
+           file1.size === file2.size;
   };
 
   // Submit the new job
@@ -523,24 +507,15 @@ export default function NewJobPage() {
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Update file display sections to use new render function
-  const renderFileName = (file: FileWithPath) => {
-    if (file.directoryPath) {
-      return (
-        <span className="text-sm text-gray-600">
-          {file.directoryPath}/{file.name}
-        </span>
-      );
-    }
-    return (
-      <span className="text-sm text-gray-600">
-        {file.name}
-      </span>
-    );
-  };
+  // Simplify renderFileName to just show the file name
+  const renderFileName = (file: File) => (
+    <span className="text-sm text-gray-600">
+      {file.name}
+    </span>
+  );
 
-  // Update file list display sections to use new render function
-  const renderFileList = (files: FileWithPath[]) => (
+  // Update renderFileList to use File type
+  const renderFileList = (files: File[]) => (
     <ul className="space-y-1">
       {files.map((file, i) => (
         <li key={i} className="flex items-center justify-between py-1">
@@ -708,7 +683,8 @@ export default function NewJobPage() {
               <div className="w-full">
                 <input
                   type="file"
-                  webkitdirectory="true"
+                  webkitdirectory=''
+                  directory=''
                   multiple
                   onChange={handleFileChange}
                   className="hidden"
