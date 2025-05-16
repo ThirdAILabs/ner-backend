@@ -64,6 +64,7 @@ func convertReport(r database.Report) api.Report {
 		Groups:             convertGroups(r.Groups),
 		TotalFileCount:     int(r.TotalFileCount),
 		CompletedFileCount: int(r.CompletedFileCount),
+		FailedFileCount:    int(r.TotalFileCount) - int(r.CompletedFileCount),
 	}
 	report.TagCounts = make(map[string]uint64)
 
