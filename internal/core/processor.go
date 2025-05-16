@@ -286,10 +286,11 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 ) (int64, int, error) {
 	var totalTokens int64
 	parser := NewDefaultParser()
+	totalObjects := len(objects)
 
 	model, err := proc.loadModel(ctx, modelId, modelType)
 	if err != nil {
-		return 0, 0, err
+		return 0, totalObjects, err
 	}
 	defer model.Release()
 
@@ -297,7 +298,7 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 	for groupId, query := range groupToQuery {
 		filter, err := ParseQuery(query)
 		if err != nil {
-			return 0, 0, fmt.Errorf("error loading model: %w", err)
+			return 0, totalObjects, fmt.Errorf("error loading model: %w", err)
 		}
 		groupToFilter[groupId] = filter
 	}
@@ -306,7 +307,7 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 	for tag, pat := range customTags {
 		re, err := regexp.Compile(pat)
 		if err != nil {
-			return 0, 0, fmt.Errorf("error compiling regex for tag %s: %w", tag, err)
+			return 0, totalObjects, fmt.Errorf("error compiling regex for tag %s: %w", tag, err)
 		}
 		customTagsRe[tag] = re
 	}
