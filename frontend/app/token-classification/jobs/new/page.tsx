@@ -149,7 +149,6 @@ export default function NewJobPage() {
 
   const [patternType, setPatternType] = useState('string');
 
-  // Confirm dialog for file uploads
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
 
   const SUPPORTED_TYPES = ['.pdf', '.txt', '.csv', '.html', '.json', '.xml'];
@@ -335,7 +334,7 @@ export default function NewJobPage() {
     setDialogError(null);
     setIsCustomTagDialogOpen(false);
   };
-  // Update addFiles to use FileWithPath type
+  
   const addFiles = (files: File[]) => {
     const newFiles = files.filter((newFile) => {
       const isDuplicate = selectedFiles.some((existingFile) =>
@@ -346,7 +345,7 @@ export default function NewJobPage() {
     setSelectedFiles((prev) => [...prev, ...newFiles]);
   };
 
-  // Update file handling to reset input correctly
+  // Update file handling to use file/directory input
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
@@ -364,7 +363,6 @@ export default function NewJobPage() {
     input.value = '';
   };
 
-  // Simplified dialog handling
   const handleCloseDialog = () => {
     setIsConfirmDialogOpen(false);
     // Reset the input value
@@ -376,7 +374,6 @@ export default function NewJobPage() {
     }
   };
 
-  // Update areFilesIdentical to handle FileWithPath
   const areFilesIdentical = (file1: File, file2: File): boolean => {
     return file1.name === file2.name && 
            file1.size === file2.size;
@@ -501,19 +498,16 @@ export default function NewJobPage() {
     }, 1000);
   };
 
-  // Update removeFile function to handle both selected and pending files
   const removeFile = (index: number) => {
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Simplify renderFileName to just show the file name
   const renderFileName = (file: File) => (
     <span className="text-sm text-gray-600">
       {file.name}
     </span>
   );
 
-  // Update renderFileList to use File type
   const renderFileList = (files: File[]) => (
     <ul className="space-y-1">
       {files.map((file, i) => (
@@ -605,7 +599,7 @@ export default function NewJobPage() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
               <SourceOption
                 title="Local Files"
-                description="Upload individual files from your computer"
+                description="Upload files from your computer"
                 isSelected={selectedSource === 'files'}
                 onClick={() => setSelectedSource('files')}
               />
