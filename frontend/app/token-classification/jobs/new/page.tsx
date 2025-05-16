@@ -100,6 +100,11 @@ interface CustomTag {
   pattern: string;
 }
 
+// Add new interface for files with directory path
+interface FileWithPath extends File {
+  directoryPath?: string;
+}
+
 export default function NewJobPage() {
   const router = useRouter();
 
@@ -107,7 +112,8 @@ export default function NewJobPage() {
   const [selectedSource, setSelectedSource] = useState<'s3' | 'files' | 'directory'>('files');
   const [sourceS3Bucket, setSourceS3Bucket] = useState('');
   const [sourceS3Prefix, setSourceS3Prefix] = useState('');
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  // Update state type to include directory path
+  const [selectedFiles, setSelectedFiles] = useState<FileWithPath[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   //Job Name
@@ -151,7 +157,7 @@ export default function NewJobPage() {
 
   // Confirm dialog for file uploads
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
-  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<FileWithPath[]>([]);
 
   const SUPPORTED_TYPES = ['.pdf', '.txt', '.csv', '.html', '.json', '.xml'];
 
@@ -336,33 +342,8 @@ export default function NewJobPage() {
     setDialogError(null);
     setIsCustomTagDialogOpen(false);
   };
-  const areFilesIdentical = (file1: File, file2: File): boolean => {
-    return file1.name === file2.name && file1.size === file2.size;
-  };
-
-  // Handle file selection
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files) {
-      const fileArray = Array.from(files);
-      
-      // Filter supported files
-      const supportedFiles = fileArray.filter(file => isFileSupported(file.name));
-      
-      // For directory upload, show confirmation dialog
-      if (selectedSource === 'directory') {
-        setPendingFiles(supportedFiles);
-        setIsConfirmDialogOpen(true);
-      } else {
-        // For regular file upload, process directly
-        addFiles(supportedFiles);
-      }
-      e.target.value = '';
-    }
-  };
-
-  // Add new function to handle file addition
-  const addFiles = (files: File[]) => {
+  // Update addFiles to use FileWithPath type
+  const addFiles = (files: FileWithPath[]) => {
     const newFiles = files.filter((newFile) => {
       const isDuplicate = selectedFiles.some((existingFile) =>
         areFilesIdentical(existingFile, newFile)
@@ -372,39 +353,39 @@ export default function NewJobPage() {
     setSelectedFiles((prev) => [...prev, ...newFiles]);
   };
 
-  // Add confirmation dialog handling
-  const handleConfirmUpload = () => {
-    addFiles(pendingFiles);
-    setIsConfirmDialogOpen(false);
-    setPendingFiles([]);
-  };
-
-  const handleCancelUpload = () => {
-    setIsConfirmDialogOpen(false);
-    setPendingFiles([]);
-  };
-
-  const validateCustomTagName = (name: string): boolean => {
-    if (!name) {
-      setDialogError('Tag name is required');
-      return false;
+  // Update file handling to reset input correctly
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      const fileArray = Array.from(files).map(file => {
+        const fileWithPath = file as FileWithPath;
+        if (selectedSource === 'directory') {
+          // Get relative path by removing the filename from webkitRelativePath
+          const path = (file as any).webkitRelativePath;
+          fileWithPath.directoryPath = path.substring(0, path.lastIndexOf('/'));
+        }
+        return fileWithPath;
+      });
+      
+      const supportedFiles = fileArray.filter(file => isFileSupported(file.name));
+      
+      if (selectedSource === 'directory') {
+        setPendingFiles(supportedFiles);
+        setIsConfirmDialogOpen(true);
+      } else {
+        addFiles(supportedFiles);
+      }
     }
-
-    if (!/^[A-Za-z0-9_]+$/.test(name)) {
-      setDialogError(
-        'Tag name can only contain letters, numbers, and underscores'
-      );
-      return false;
-    }
-
-    setDialogError(null);
-    return true;
+    // Reset the input value properly
+    const input = e.target as HTMLInputElement;
+    input.value = '';
   };
 
-  const handleTagNameChange = (name: string) => {
-    const value = name.replace(/\s/g, '_');
-    setCustomTagName(value);
-    validateCustomTagName(value);
+  // Update areFilesIdentical to handle FileWithPath
+  const areFilesIdentical = (file1: FileWithPath, file2: FileWithPath): boolean => {
+    return file1.name === file2.name && 
+           file1.size === file2.size && 
+           file1.directoryPath === file2.directoryPath;
   };
 
   // Submit the new job
@@ -532,6 +513,80 @@ export default function NewJobPage() {
       setPendingFiles((prev) => prev.filter((_, i) => i !== index));
     } else {
       setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+    }
+  };
+
+  // Update file display sections to use new render function
+  const renderFileName = (file: FileWithPath) => {
+    if (file.directoryPath) {
+      return (
+        <span className="text-sm text-gray-600">
+          {file.directoryPath}/{file.name}
+        </span>
+      );
+    }
+    return (
+      <span className="text-sm text-gray-600">
+        {file.name}
+      </span>
+    );
+  };
+
+  // Update file list display sections to use new render function
+  const renderFileList = (files: FileWithPath[], isPending: boolean = false) => (
+    <ul className="space-y-1">
+      {files.map((file, i) => (
+        <li key={i} className="flex items-center justify-between py-1">
+          {renderFileName(file)}
+          <button
+            type="button"
+            onClick={() => removeFile(i, isPending)}
+            className="text-red-500 hover:text-red-700 p-1"
+            aria-label="Remove file"
+          >
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+
+  // Add handleCancelUpload function before the return statement
+  const handleCancelUpload = () => {
+    setPendingFiles([]);
+    setIsConfirmDialogOpen(false);
+    // Reset the input value
+    const input = document.getElementById(
+      selectedSource === 'directory' ? 'directory-upload' : 'file-upload'
+    ) as HTMLInputElement;
+    if (input) {
+      input.value = '';
+    }
+  };
+
+  // Update handleConfirmUpload to also reset the input
+  const handleConfirmUpload = () => {
+    addFiles(pendingFiles);
+    setIsConfirmDialogOpen(false);
+    setPendingFiles([]);
+    // Reset the input value
+    const input = document.getElementById(
+      selectedSource === 'directory' ? 'directory-upload' : 'file-upload'
+    ) as HTMLInputElement;
+    if (input) {
+      input.value = '';
     }
   };
 
@@ -687,38 +742,7 @@ export default function NewJobPage() {
                       Selected Files ({selectedFiles.length})
                     </h3>
                     <div className="mt-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2">
-                      <ul className="space-y-1">
-                        {selectedFiles.map((file, i) => (
-                          <li
-                            key={i}
-                            className="flex items-center justify-between py-1"
-                          >
-                            <span className="text-sm text-gray-500">
-                              {file.name} ({(file.size / 1024).toFixed(1)} KB)
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => removeFile(i)}
-                              className="text-red-500 hover:text-red-700 p-1"
-                              aria-label="Remove file"
-                            >
-                              <svg
-                                className="h-4 w-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M6 18L18 6M6 6l12 12"
-                                />
-                              </svg>
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
+                      {renderFileList(selectedFiles)}
                     </div>
                   </div>
                 )}
@@ -767,38 +791,7 @@ export default function NewJobPage() {
                       Selected Files ({selectedFiles.length})
                     </h3>
                     <div className="mt-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2">
-                      <ul className="space-y-1">
-                        {selectedFiles.map((file, i) => (
-                          <li
-                            key={i}
-                            className="flex items-center justify-between py-1"
-                          >
-                            <span className="text-sm text-gray-500">
-                              {file.name} ({(file.size / 1024).toFixed(1)} KB)
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => removeFile(i)}
-                              className="text-red-500 hover:text-red-700 p-1"
-                              aria-label="Remove file"
-                            >
-                              <svg
-                                className="h-4 w-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M6 18L18 6M6 6l12 12"
-                                />
-                              </svg>
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
+                      {renderFileList(selectedFiles)}
                     </div>
                   </div>
                 )}
@@ -1357,35 +1350,7 @@ export default function NewJobPage() {
                   
                   <div className="mt-4 max-h-60 overflow-y-auto">
                     <h4 className="font-medium mb-2">Files to be uploaded:</h4>
-                    <ul className="space-y-1">
-                      {pendingFiles.map((file, index) => (
-                        <li key={index} className="flex items-center justify-between py-1">
-                          <span className="text-sm text-gray-600">
-                            {file.name}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => removeFile(index, true)}
-                            className="text-red-500 hover:text-red-700 p-1"
-                            aria-label="Remove file"
-                          >
-                            <svg
-                              className="h-4 w-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M6 18L18 6M6 6l12 12"
-                              />
-                            </svg>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
+                    {renderFileList(pendingFiles, true)}
                   </div>
                 </>
               ) : (

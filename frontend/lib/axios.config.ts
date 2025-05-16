@@ -1,12 +1,13 @@
 import axios from 'axios';
 
 // Use our fixed port (16549) for backend communication
-const nerBaseUrl = 'http://localhost:16549/api/v1'
+const nerBaseUrl = 'https://e943-2600-1700-cd1-f30-00-c.ngrok-free.app/api/v1'
 
 const axiosInstance = axios.create({
     baseURL: nerBaseUrl,
     headers: {
         'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true',
     },
 });
 
