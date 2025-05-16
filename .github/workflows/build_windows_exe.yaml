@@ -19,12 +19,12 @@ jobs:
       - name: Checkout ner-backend
         uses: actions/checkout@v2
         with:
-          path: ${{ github.workspace }}/ner-backend/
+          path: ner-backend
 
       - name: Checkout Universe
         uses: actions/checkout@v2
         with:
-          path: ${{ github.workspace }}/Universe/
+          path: Universe
           submodules: 'recursive'
           token: ${{ secrets.UNIVERSE_ACCESS_TOKEN }}
       
