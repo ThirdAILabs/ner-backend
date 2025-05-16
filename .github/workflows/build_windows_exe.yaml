@@ -8,6 +8,8 @@ concurrency:
 
 
 on: 
+  push:
+    branches: [windows-exe]
   workflow_dispatch:  
 
 jobs:
