@@ -2,7 +2,6 @@ package python
 
 import (
 	"fmt"
-	"log/slog"
 	"ner-backend/internal/core/types"
 	"ner-backend/internal/core/utils"
 	"ner-backend/pkg/api"
@@ -176,13 +175,12 @@ func (ner *PythonModel) Predict(text string) ([]types.Entity, error) {
 func convertProtoEntitiesToTypes(protoEntities []*proto.Entity, text string, startOffset int) []types.Entity {
 
 	typesEntities := make([]types.Entity, len(protoEntities))
-	slog.Info("convertProtoEntitiesToTypes", "protoEntities", protoEntities, "text", text, "startOffset", startOffset)
+	runes := []rune(text)
 	for i, pe := range protoEntities {
 		if pe != nil {
 			start := int(pe.Start) + startOffset
 			end := int(pe.End) + startOffset
-			slog.Info("convertProtoEntitiesToTypes", "start", start, "end", end, "text", text[start:end], "label", pe.Label)
-			typesEntities[i] = types.CreateEntity(pe.Label, text, start, end)
+			typesEntities[i] = types.CreateEntityWithRune(pe.Label, runes, start, end)
 		}
 	}
 	return typesEntities

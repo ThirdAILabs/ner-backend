@@ -39,14 +39,6 @@ class CnnNerExtractor(Model):
                     end=end,
                 )
             )
-            print(f"Entity: {entities[-1]}", file=sys.stderr, flush=True)
-            print(
-                f"Original text: {original_text[start:end]}",
-                file=sys.stderr,
-                flush=True,
-            )
-            print(f"Tag: {tag}", file=sys.stderr, flush=True)
-            print(f"Start: {start}, End: {end}", file=sys.stderr, flush=True)
         return SentencePredictions(entities=entities)
 
     def predict_batch(self, texts: List[str]) -> BatchPredictions:
@@ -64,7 +56,6 @@ class CnnNerExtractor(Model):
                 results.append(self._process_prediction(orig, spans, tags))
 
         batch_predictions = BatchPredictions(predictions=results)
-        print(f"Results: {batch_predictions}", file=sys.stderr, flush=True)
 
         return batch_predictions
 

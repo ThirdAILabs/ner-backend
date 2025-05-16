@@ -16,9 +16,7 @@ type Entity struct {
 	RContext string
 }
 
-func CreateEntity(label, context string, start, end int) Entity {
-	runes := []rune(context)
-
+func CreateEntityWithRune(label string, runes []rune, start, end int) Entity {
 	if start < 0 {
 		start = 0
 	}
@@ -49,5 +47,17 @@ func CreateEntity(label, context string, start, end int) Entity {
 		RContext: strings.ToValidUTF8(rctx, ""),
 	}
 	slog.Info("CreateEntity", "entity", entity)
+	return entity
+}
+
+func CreateEntity(label string, context string, start int, end int) Entity {
+	entity := Entity{
+		Label:    label,
+		Text:     strings.ToValidUTF8(context[start:end], ""),
+		Start:    start,
+		End:      end,
+		LContext: strings.ToValidUTF8(context[max(0, start-contextLength):start], ""),
+		RContext: strings.ToValidUTF8(context[end:min(len(context), end+contextLength)], ""),
+	}
 	return entity
 }
