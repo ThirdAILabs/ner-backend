@@ -1,11 +1,11 @@
 import axiosInstance, { showApiErrorEvent } from './axios.config';
 import axios from 'axios';
+import qs from 'qs';
 
 // Type definitions for API responses
 interface Model {
   Id: string;
   Name: string;
-  Type: string;
   Status: string;
   BaseModelId?: string;
   Tags?: string[];
@@ -41,7 +41,9 @@ interface Report {
   InferenceTaskStatuses?: { [key: string]: TaskStatusCategory };
   Errors?: string[];
   ReportName: string;
-  TagCounts: { [key: string]: number; }
+  TagCounts: { [key: string]: number };
+  TotalInferenceTimeSeconds: number;
+  ShardDataTimeSeconds: number;
 }
 
 interface Entity {
@@ -108,11 +110,10 @@ const handleApiError = (error: unknown, customMessage?: string): never => {
 };
 
 export const nerService = {
-
   checkHealth: async () => {
     try {
       const response = await axiosInstance.get('/health');
-      return response.data;
+      return response;
     } catch (error) {
       return handleApiError(error, 'Failed to connect to the backend service');
     }
@@ -141,7 +142,7 @@ export const nerService = {
       const model = await nerService.getModel(modelId);
       return model.Tags || [];
     } catch (error) {
-      console.error("Error fetching tags from model:", error);
+      console.error('Error fetching tags from model:', error);
       return [];
     }
   },
@@ -155,7 +156,9 @@ export const nerService = {
     }
   },
 
-  createReport: async (data: CreateReportRequest): Promise<{ ReportId: string }> => {
+  createReport: async (
+    data: CreateReportRequest
+  ): Promise<{ ReportId: string }> => {
     try {
       const response = await axiosInstance.post('/reports', data);
       return response.data;
@@ -182,7 +185,9 @@ export const nerService = {
   },
 
   getReportGroup: async (reportId: string, groupId: string): Promise<Group> => {
-    const response = await axiosInstance.get(`/reports/${reportId}/groups/${groupId}`);
+    const response = await axiosInstance.get(
+      `/reports/${reportId}/groups/${groupId}`
+    );
     return response.data;
   },
 
@@ -191,16 +196,19 @@ export const nerService = {
     params?: {
       offset?: number;
       limit?: number;
-      object?: string;
+      tags?: string[];
     }
   ): Promise<Entity[]> => {
     const response = await axiosInstance.get(`/reports/${reportId}/entities`, {
       params: {
         offset: params?.offset || 0,
         limit: params?.limit || 100,
-        ...(params?.object && { object: params.object }),
+        tags: params?.tags
       },
+      paramsSerializer: (params) =>
+        qs.stringify(params, { arrayFormat: 'repeat' })
     });
+    console.log('Entities response:', response.data);
     return response.data;
   },
 
@@ -209,52 +217,26 @@ export const nerService = {
     params?: {
       offset?: number;
       limit?: number;
+      tags?: string[];
     }
   ): Promise<ObjectPreview[]> => {
-    // Since the /objects endpoint doesn't exist yet, we'll use entities endpoint
-    // and transform the data to the format we need
-    const entities = await nerService.getReportEntities(reportId, {
-      offset: params?.offset || 0,
-      limit: params?.limit || 100,
-    });
-
-    // Group entities by object name
-    const objectMap = new Map<string, { tokens: string[], tags: string[] }>();
-
-    entities.forEach(entity => {
-      if (!objectMap.has(entity.Object)) {
-        objectMap.set(entity.Object, { tokens: [], tags: [] });
+    // Fetch object previews from the backend
+    const response = await axiosInstance.get<ObjectPreview[]>(
+      `/reports/${reportId}/objects`,
+      {
+        params: {
+          offset: params?.offset || 0,
+          limit: params?.limit || 100,
+        },
       }
-
-      // For each entity, we add the text and its label
-      const obj = objectMap.get(entity.Object)!;
-
-      // Add left context as regular text with "O" tag
-      if (entity.LContext) {
-        obj.tokens.push(entity.LContext);
-        obj.tags.push("O");
-      }
-
-      // Add the entity text with its tag
-      obj.tokens.push(entity.Text);
-      obj.tags.push(entity.Label);
-
-      // Add right context as regular text with "O" tag
-      if (entity.RContext) {
-        obj.tokens.push(entity.RContext);
-        obj.tags.push("O");
-      }
-    });
-
-    // Convert map to array of ObjectPreview objects
-    return Array.from(objectMap.entries()).map(([objectName, data]) => ({
-      object: objectName,
-      tokens: data.tokens,
-      tags: data.tags
-    }));
+    );
+    return response.data;
   },
 
-  searchReport: async (reportId: string, query: string): Promise<{ Objects: string[] }> => {
+  searchReport: async (
+    reportId: string,
+    query: string
+  ): Promise<{ Objects: string[] }> => {
     const response = await axiosInstance.get(`/reports/${reportId}/search`, {
       params: { query }
     });
@@ -286,7 +268,9 @@ export const nerService = {
     const params: Record<string, any> = {};
     if (modelId) params.model_id = modelId;
     if (days !== undefined) params.days = days;
-    const { data } = await axiosInstance.get<InferenceMetrics>('/metrics', { params });
+    const { data } = await axiosInstance.get<InferenceMetrics>('/metrics', {
+      params
+    });
     return data;
   },
 
@@ -296,11 +280,16 @@ export const nerService = {
   ): Promise<ThroughputMetrics> => {
     const params: Record<string, any> = { model_id: modelId };
     if (reportId) params.report_id = reportId;
-    const { data } = await axiosInstance.get<ThroughputMetrics>('/metrics/throughput', { params });
+    const { data } = await axiosInstance.get<ThroughputMetrics>(
+      '/metrics/throughput',
+      { params }
+    );
     return data;
   },
 
-  validateGroupDefinition: async (groupQuery: string): Promise<string | null> => {
+  validateGroupDefinition: async (
+    groupQuery: string
+  ): Promise<string | null> => {
     try {
       await axiosInstance.get('/validate-group-definition', {
         params: { group_query: groupQuery }

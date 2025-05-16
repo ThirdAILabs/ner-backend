@@ -23,7 +23,7 @@ import { format } from 'date-fns';
 import { nerService } from '@/lib/backend';
 import { IconButton, Tooltip } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
-
+import { useHealth } from '@/contexts/HealthProvider';
 // Import the TaskStatusCategory from backend.ts
 interface TaskStatusCategory {
   TotalTasks: number;
@@ -36,7 +36,6 @@ interface ReportWithStatus {
   Model: {
     Id: string;
     Name: string;
-    Type: string;
     Status: string;
     BaseModelId?: string;
     Tags?: string[];
@@ -73,6 +72,7 @@ export default function Jobs() {
   const [reports, setReports] = useState<ReportWithStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { healthStatus } = useHealth();
 
   const fetchReportStatus = async (report: ReportWithStatus) => {
     try {
@@ -88,13 +88,13 @@ export default function Jobs() {
         prev.map((r) =>
           r.Id === report.Id
             ? {
-                ...r,
-                detailedStatus: {
-                  ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
-                  InferenceTaskStatuses: detailedReport.InferenceTaskStatuses
-                },
-                isLoadingStatus: false
-              }
+              ...r,
+              detailedStatus: {
+                ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
+                InferenceTaskStatuses: detailedReport.InferenceTaskStatuses
+              },
+              isLoadingStatus: false
+            }
             : r
         )
       );
@@ -107,6 +107,7 @@ export default function Jobs() {
       );
     }
   };
+
 
   useEffect(() => {
     const fetchReports = async () => {
@@ -131,9 +132,9 @@ export default function Jobs() {
         setLoading(false);
       }
     };
-
-    fetchReports();
-  }, []);
+    if (healthStatus)
+      fetchReports();
+  }, [healthStatus]);
 
   if (loading) {
     return (
@@ -292,7 +293,7 @@ export default function Jobs() {
     const completedFileCount = report.CompletedFileCount || 0;
     const totalTasks = completed + running + queued + failed;
 
-    const progress = completedFileCount > 0 ? (fileCount / completedFileCount) * 100 : 0;
+    const progress = completedFileCount > 0 ? (completedFileCount / fileCount) * 100 : 0;
 
     // If there are failed tasks, show failure status
     if (failed > 0) {
@@ -380,7 +381,7 @@ export default function Jobs() {
           </Typography>
         </Box>
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-          {`Files: ${fileCount}/${completedFileCount}`}
+          {`Files: ${completedFileCount}/${fileCount}`}
         </Typography>
       </Box>
     );
@@ -433,6 +434,7 @@ export default function Jobs() {
                 padding: 0,
                 borderRadius: '50%'
               }}
+              disabled={!healthStatus}
             >
               <Plus size={24} />
             </Button>

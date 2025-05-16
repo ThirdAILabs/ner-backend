@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"log/slog"
 	"path/filepath"
@@ -28,9 +29,10 @@ import (
 )
 
 type Config struct {
-	Root    string `env:"ROOT" envDefault:"./pocket-shield"`
-	Port    int    `env:"PORT" envDefault:"3001"`
-	License string `env:"LICENSE_KEY" envDefault:""`
+	Root          string `env:"ROOT" envDefault:"./pocket-shield"`
+	Port          int    `env:"PORT" envDefault:"3001"`
+	License       string `env:"LICENSE_KEY" envDefault:""`
+	BoltModelPath string `env:"MODEL_PATH" envDefault:""`
 }
 
 const (
@@ -118,10 +120,25 @@ func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publish
 }
 
 func main() {
+	const modelBucket = "models"
+
 	var cfg Config
 	if err := env.Parse(&cfg); err != nil {
 		log.Fatalf("error parsing config: %v", err)
 	}
+
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	if err := os.MkdirAll(cfg.Root, os.ModePerm); err != nil {
+		log.Fatalf("error creating directory for log file: %v", err)
+	}
+
+	f, err := os.OpenFile(filepath.Join(cfg.Root, "backend.log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("error opening log file: %v", err)
+	}
+	defer f.Close()
+
+	log.SetOutput(io.MultiWriter(f, os.Stderr))
 
 	slog.Info("starting backend", "root", cfg.Root, "port", cfg.Port)
 
@@ -132,13 +149,19 @@ func main() {
 		log.Fatalf("Worker: Failed to create storage client: %v", err)
 	}
 
-	cmd.InitializePresidioModel(db)
+	if cfg.BoltModelPath != "" {
+		if err := cmd.InitializeBoltModel(db, storage, modelBucket, "basic", cfg.BoltModelPath); err != nil {
+			log.Fatalf("Failed to initialize basic model: %v", err)
+		}
+	} else {
+		cmd.InitializePresidioModel(db)
+	}
 
 	queue := createQueue(db)
 
 	licensing := cmd.CreateLicenseVerifier(db, cfg.License)
 
-	worker := core.NewTaskProcessor(db, storage, queue, queue, licensing, filepath.Join(cfg.Root, "models"), "models")
+	worker := core.NewTaskProcessor(db, storage, queue, queue, licensing, filepath.Join(cfg.Root, "models"), modelBucket, core.NewModelLoaders("python", "plugin/plugin-python/plugin.py"))
 
 	server := createServer(db, storage, queue, cfg.Port)
 

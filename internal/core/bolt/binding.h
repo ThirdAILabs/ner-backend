@@ -31,12 +31,22 @@ unsigned int Results_end(const Results_t *self, unsigned int batch_index,
 
 typedef struct NER_t NER_t;
 
-NER_t *NER_load(const char* path, const char** err_ptr);
+NER_t *NER_load(const char *path, const char **err_ptr);
 
 void NER_free(NER_t *self);
 
 Results_t *NER_predict(const NER_t *self, const StringList_t *sentences,
                        const char **err_ptr);
+
+void NER_train(const NER_t *self, const char *filename, float learning_rate,
+               unsigned int epochs, const char **err_ptr);
+
+
+void NER_source_target_cols(const NER_t *self, char **tokens_col, char **tags_col);
+
+void NER_source_target_cols_free(char *tokens_col, char *tags_col);
+
+void NER_save(const NER_t *self, const char *path, const char **err_ptr);
 
 #ifdef __cplusplus
 }

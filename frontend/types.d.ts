@@ -1,7 +1,6 @@
 interface Model {
     Id: string;
     Name: string;
-    Type: string;
     Status: string;
 }
 
@@ -34,7 +33,9 @@ interface Report {
     InferenceTaskStatuses?: { [key: string]: TaskStatusCategory };
     Errors?: string[];
     ReportName: string;
-    TagCounts: { [key: string]: number; }
+    TotalInferenceTimeSeconds: number;
+    ShardDataTimeSeconds: number;
+    TagCounts: { [key: string]: number; };
 }
 
 interface Entity {
