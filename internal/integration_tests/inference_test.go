@@ -28,7 +28,17 @@ import (
 )
 
 const (
-	dataBucket = "test-data"
+	dataBucket  = "test-data"
+	unicodeData = `Name: Zoë Faulkner 🌟 | Address: 742 Evergreen Terrace, Springfield 🏡 | SSN: 123-45-6789 🆔
+Name: Jürgen Müller 🧑‍🔬 | Email: jurgen.müller@example.de 📧 | City: München, Germany 🇩🇪
+Name: Aiko Tanaka 🎎 | Phone: +81-90-1234-5678 📱 | Prefecture: 東京 (Tokyo) 🗼
+Name: Carlos Andrés Pérez 🎭 | Passport: X12345678 🇨🇴 | Address: Calle 123, Bogotá 🏙️
+Name: Fatima Al-Fulan 🧕 | National ID: 789654321 🪪 | City: دبي (Dubai) 🇦🇪
+Name: Olamide Okoro 🧑‍💻 | Email: olamide.okoro@nigeria.ng 📧 | Address: 12 Unity Rd, Lagos 🇳🇬
+Name: Chloé Dubois 🎨 | SSN: 987-65-4321 🔐 | City: Marseille 🇫🇷
+Name: Иван Иванов 📚 | Phone: +7 495 123-45-67 ☎️ | City: Москва (Moscow) 🇷🇺
+Name: 李小龍 (Bruce Lee) 🐉 | Email: brucelee@kungfu.cn 📩 | Province: 廣東 (Guangdong) 🏯
+Name: Amelia O’Connell 🍀 | Address: 1 Abbey Rd, Dublin 🇮🇪 | PPSN: 1234567TA 🗃️`
 )
 
 func createData(t *testing.T, storage storage.Provider) {
@@ -175,6 +185,11 @@ func createUpload(t *testing.T, router http.Handler) uuid.UUID {
 	f2, err := writer.CreateFormFile("files", "file2.txt")
 	require.NoError(t, err)
 	_, err = f2.Write([]byte("this is a test file with an email address abc@email.com"))
+	require.NoError(t, err)
+
+	f3, err := writer.CreateFormFile("files", "unicode.txt")
+	require.NoError(t, err)
+	_, err = f3.Write([]byte(unicodeData))
 	require.NoError(t, err)
 
 	require.NoError(t, writer.Close())

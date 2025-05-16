@@ -30,8 +30,8 @@ func min(a, b int) int {
 	return b
 }
 
-// SplitTextCustomLength now returns sentences *and* their START OFFSETS
-// in terms of runes, so you can feed them (and those offsets) directly
+// SplitTextCustomLength returns sentences *and* their START OFFSETS
+// in terms of runes, so we can feed them (and those offsets) directly
 // into CreateEntity (which slices by rune).
 func SplitTextCustomLength(text string, length int) (sentences []string, startOffsets []int) {
 	// convert once
