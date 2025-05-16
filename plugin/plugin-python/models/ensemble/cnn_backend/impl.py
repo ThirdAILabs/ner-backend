@@ -232,6 +232,7 @@ class CNNNERModelSentenceTokenized(nn.Module):
                     word_preds[wid] = tag
             results.append((words, word_preds))
 
+        print("Results:", results, flush=True, file=sys.stderr)
         return results
 
     def finetune(

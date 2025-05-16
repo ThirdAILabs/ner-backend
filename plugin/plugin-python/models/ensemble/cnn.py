@@ -1,5 +1,6 @@
 from typing import List
 import os
+import sys
 
 from ..model_interface import BatchPredictions, Entity, Model, SentencePredictions
 from .cnn_backend.backend import CNNModel
@@ -38,6 +39,14 @@ class CnnNerExtractor(Model):
                     end=end,
                 )
             )
+            print(f"Entity: {entities[-1]}", file=sys.stderr, flush=True)
+            print(
+                f"Original text: {original_text[start:end]}",
+                file=sys.stderr,
+                flush=True,
+            )
+            print(f"Tag: {tag}", file=sys.stderr, flush=True)
+            print(f"Start: {start}, End: {end}", file=sys.stderr, flush=True)
         return SentencePredictions(entities=entities)
 
     def predict_batch(self, texts: List[str]) -> BatchPredictions:
@@ -49,10 +58,15 @@ class CnnNerExtractor(Model):
             cleaned_texts, spans_list = zip(*cleaned_and_spans)
 
             batch_tags = self.model.predict_batch(list(cleaned_texts))
+
             for orig, spans, tags in zip(batch, spans_list, batch_tags):
+                print()
                 results.append(self._process_prediction(orig, spans, tags))
 
-        return BatchPredictions(predictions=results)
+        batch_predictions = BatchPredictions(predictions=results)
+        print(f"Results: {batch_predictions}", file=sys.stderr, flush=True)
+
+        return batch_predictions
 
     def predict(self, text: str) -> SentencePredictions:
         return self.predict_batch([text]).predictions[0]
