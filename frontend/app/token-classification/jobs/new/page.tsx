@@ -104,7 +104,7 @@ export default function NewJobPage() {
   const router = useRouter();
 
   // Essential state
-  const [selectedSource, setSelectedSource] = useState<'s3' | 'files'>('files');
+  const [selectedSource, setSelectedSource] = useState<'s3' | 'files' | 'directory'>('files');
   const [sourceS3Bucket, setSourceS3Bucket] = useState('');
   const [sourceS3Prefix, setSourceS3Prefix] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -148,6 +148,16 @@ export default function NewJobPage() {
   const [success, setSuccess] = useState(false);
 
   const [patternType, setPatternType] = useState('string');
+
+  // Confirm dialog for file uploads
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+
+  const SUPPORTED_TYPES = ['.pdf', '.txt', '.csv', '.html', '.json', '.xml'];
+
+  const isFileSupported = (filename: string) => {
+    return SUPPORTED_TYPES.some(ext => filename.toLowerCase().endsWith(ext));
+  };
 
   // Fetch models on page load
   useEffect(() => {
@@ -335,23 +345,43 @@ export default function NewJobPage() {
     const files = e.target.files;
     if (files) {
       const fileArray = Array.from(files);
-
-      // Filter out duplicates
-      const newFiles = fileArray.filter((newFile) => {
-        // Check if this file already exists in selectedFiles
-        const isDuplicate = selectedFiles.some((existingFile) =>
-          areFilesIdentical(existingFile, newFile)
-        );
-        return !isDuplicate;
-      });
-
-      setSelectedFiles((prev) => [...prev, ...newFiles]);
+      
+      // Filter supported files
+      const supportedFiles = fileArray.filter(file => isFileSupported(file.name));
+      
+      // For directory upload, show confirmation dialog
+      if (selectedSource === 'directory') {
+        setPendingFiles(supportedFiles);
+        setIsConfirmDialogOpen(true);
+      } else {
+        // For regular file upload, process directly
+        addFiles(supportedFiles);
+      }
       e.target.value = '';
     }
   };
 
-  const removeFile = (index: number) => {
-    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  // Add new function to handle file addition
+  const addFiles = (files: File[]) => {
+    const newFiles = files.filter((newFile) => {
+      const isDuplicate = selectedFiles.some((existingFile) =>
+        areFilesIdentical(existingFile, newFile)
+      );
+      return !isDuplicate;
+    });
+    setSelectedFiles((prev) => [...prev, ...newFiles]);
+  };
+
+  // Add confirmation dialog handling
+  const handleConfirmUpload = () => {
+    addFiles(pendingFiles);
+    setIsConfirmDialogOpen(false);
+    setPendingFiles([]);
+  };
+
+  const handleCancelUpload = () => {
+    setIsConfirmDialogOpen(false);
+    setPendingFiles([]);
   };
 
   const validateCustomTagName = (name: string): boolean => {
@@ -496,6 +526,15 @@ export default function NewJobPage() {
     }, 1000);
   };
 
+  // Update removeFile function to handle both selected and pending files
+  const removeFile = (index: number, fromPending: boolean = false) => {
+    if (fromPending) {
+      setPendingFiles((prev) => prev.filter((_, i) => i !== index));
+    } else {
+      setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+    }
+  };
+
   return (
     <div className="container px-4 py-8 w-3/4">
       {/* Title and Back Button */}
@@ -556,10 +595,16 @@ export default function NewJobPage() {
             <h2 className="text-2xl font-medium mb-4">Source</h2>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
               <SourceOption
-                title="File Upload"
-                description="Upload files from your computer"
+                title="Local Files"
+                description="Upload individual files from your computer"
                 isSelected={selectedSource === 'files'}
                 onClick={() => setSelectedSource('files')}
+              />
+              <SourceOption
+                title="Local Directory"
+                description="Upload an entire directory"
+                isSelected={selectedSource === 'directory'}
+                onClick={() => setSelectedSource('directory')}
               />
               <SourceOption
                 title="S3 Bucket"
@@ -597,6 +642,87 @@ export default function NewJobPage() {
                   />
                 </div>
               </div>
+            ) : selectedSource === 'directory' ? (
+              <div className="w-full">
+                <input
+                  type="file"
+                  webkitdirectory="true"
+                  multiple
+                  onChange={handleFileChange}
+                  className="hidden"
+                  id="directory-upload"
+                  accept=".pdf, .txt, .csv, .html, .json, .xml"
+                />
+                <label
+                  htmlFor="directory-upload"
+                  className="flex items-center justify-center w-full p-4 border-2 border-dashed border-gray-300 rounded-md cursor-pointer hover:border-gray-400"
+                >
+                  <div className="space-y-1 text-center">
+                    <svg
+                      className="mx-auto h-12 w-12 text-gray-400"
+                      stroke="currentColor"
+                      fill="none"
+                      viewBox="0 0 48 48"
+                    >
+                      <path
+                        d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4h-12m-4-12v8m0 0v8a4 4 0 01-4 4h-8m-4-12h8m-8 0v-8m32 0v-8"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <div className="flex text-sm text-gray-600">
+                      <span className="relative rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
+                        Select directory
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Click to browse
+                    </p>
+                  </div>
+                </label>
+
+                {selectedFiles.length > 0 && (
+                  <div className="mt-4">
+                    <h3 className="text-sm font-medium text-gray-700">
+                      Selected Files ({selectedFiles.length})
+                    </h3>
+                    <div className="mt-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2">
+                      <ul className="space-y-1">
+                        {selectedFiles.map((file, i) => (
+                          <li
+                            key={i}
+                            className="flex items-center justify-between py-1"
+                          >
+                            <span className="text-sm text-gray-500">
+                              {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => removeFile(i)}
+                              className="text-red-500 hover:text-red-700 p-1"
+                              aria-label="Remove file"
+                            >
+                              <svg
+                                className="h-4 w-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M6 18L18 6M6 6l12 12"
+                                />
+                              </svg>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : (
               <div className="w-full">
                 <input
@@ -630,7 +756,7 @@ export default function NewJobPage() {
                       </span>
                     </div>
                     <p className="text-xs text-gray-500">
-                      Drag and drop files or click to browse
+                      click to browse
                     </p>
                   </div>
                 </label>
@@ -1203,6 +1329,113 @@ export default function NewJobPage() {
             </Button>
           </div>
         </form>
+      )}
+
+      {/* Confirmation dialog for file uploads */}
+      {isConfirmDialogOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+          onClick={(e) => {
+            // Only close on outside click if there are no supported files
+            if (pendingFiles.length === 0) {
+              handleCancelUpload();
+            }
+          }}
+        >
+          <div 
+            className="bg-white rounded-lg p-6 w-full max-w-md"
+            onClick={(e) => e.stopPropagation()} // Prevent closing when clicking the dialog
+          >
+            <h3 className="text-lg font-medium mb-4">File Upload</h3>
+            
+            <div className="mb-4">
+              {pendingFiles.length > 0 ? (
+                <>
+                  <p className="text-sm text-gray-600">
+                    {pendingFiles.length} supported files found.
+                  </p>
+                  
+                  <div className="mt-4 max-h-60 overflow-y-auto">
+                    <h4 className="font-medium mb-2">Files to be uploaded:</h4>
+                    <ul className="space-y-1">
+                      {pendingFiles.map((file, index) => (
+                        <li key={index} className="flex items-center justify-between py-1">
+                          <span className="text-sm text-gray-600">
+                            {file.name}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => removeFile(index, true)}
+                            className="text-red-500 hover:text-red-700 p-1"
+                            aria-label="Remove file"
+                          >
+                            <svg
+                              className="h-4 w-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M6 18L18 6M6 6l12 12"
+                              />
+                            </svg>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-amber-600">
+                  No supported files found in the selected directory.
+                  <br />
+                  Only .pdf, .txt, .csv, .html, .json, and .xml files are supported.
+                </p>
+              )}
+            </div>
+
+            <div className="flex justify-end space-x-2">
+              {pendingFiles.length > 0 ? (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleCancelUpload}
+                    style={{ color: '#1976d2' }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="default"
+                    onClick={handleConfirmUpload}
+                    style={{
+                      backgroundColor: '#1976d2',
+                      color: 'white'
+                    }}
+                  >
+                    Upload Files
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  type="button"
+                  variant="default"
+                  onClick={handleCancelUpload}
+                  style={{
+                    backgroundColor: '#1976d2',
+                    color: 'white'
+                  }}
+                >
+                  OK
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

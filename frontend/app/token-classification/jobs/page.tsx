@@ -500,7 +500,7 @@ function JobDetail() {
                 <Box
                   sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 2 }}
                 >
-                  <h3 className="text-lg font-medium mb-1">File Upload</h3>
+                  <h3 className="text-lg font-medium mb-1">Local Files</h3>
                   {/* <p className="text-sm text-gray-600">File Location...</p> */}
                 </Box>
               )}

@@ -37,7 +37,7 @@ const ConfigurationCard: React.FC<ConfigurationCardProps> = ({
   
   const renderSource = () => {
     if (selectedSource === 'local') {
-      return 'File Upload';
+      return 'Local Files';
     } else if (selectedSource === 's3' && sourceS3Config.name) {
       return sourceS3Config.name;
     }
