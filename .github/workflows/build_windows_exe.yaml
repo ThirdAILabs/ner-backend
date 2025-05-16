@@ -1,0 +1,40 @@
+name: Build Windows Exe
+
+# Kills old jobs from the same pr if we push a new commit
+# See https://stackoverflow.com/questions/66335225/how-to-cancel-previous-runs-in-the-pr-when-you-push-new-commitsupdate-the-curre
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+
+on: 
+  workflow_dispatch:  
+
+jobs:
+  build_windows_exe:
+    runs-on: windows-2022
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          path: ner-backend/
+
+      - name: Checkout Universe
+        uses: actions/checkout@v2
+        with:
+          path: Universe/
+          submodules: 'recursive'
+          token: ${{ secrets.UNIVERSE_ACCESS_TOKEN }}
+      
+      - name: Install dependencies with vcpkg
+        working-directory: C:\vcpkg
+        run: |
+          $Env:VCPKG_BUILD_TYPE = 'release'
+          $Env:VCPKG_DEFAULT_TRIPLET = 'x64-windows-static'
+          $Env:VCPKG_ROOT = 'C:\'
+          .\vcpkg install zlib:x64-windows-static openssl:x64-windows-static
+          .\vcpkg upgrade --no-dry-run # In case there are new builds available after cache restoration
+        shell: powershell
+
+      - name: setup tmate
+        uses: mxschmitt/action-tmate@v2
