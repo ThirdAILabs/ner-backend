@@ -336,8 +336,7 @@ export default function NewJobPage() {
   };
 
   const areFilesIdentical = (file1: File, file2: File): boolean => {
-    return file1.name === file2.name && 
-           file1.size === file2.size;
+    return file1.name === file2.name
   };
 
   const addFiles = (files: File[]) => {
@@ -1307,7 +1306,7 @@ export default function NewJobPage() {
             <p className="text-sm text-amber-600 mb-4">
               No supported files found in the selected directory.
               <br />
-              Only .pdf, .txt, .csv, .html, .json, and .xml files are supported.
+              Only {SUPPORTED_TYPES.join(', ')} files are supported.
             </p>
             <div className="flex justify-end">
               <Button
