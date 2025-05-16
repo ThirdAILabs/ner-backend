@@ -29,6 +29,9 @@ interface AnalyticsDashboardProps {
   tokensProcessed: number; // This is actually bytes processed
   tags: Tag[];
   timeTaken: number;
+  completedFileCount: number;
+  failedFileCount: number;
+  totalFileCount: number;
 }
 
 // Format file size in bytes to human-readable format
@@ -57,11 +60,13 @@ export function AnalyticsDashboard({
   progress,
   tokensProcessed,
   tags,
-  timeTaken
+  timeTaken,
+  completedFileCount,
+  failedFileCount,
+  totalFileCount
 }: AnalyticsDashboardProps) {
-  // Convert token counts to chart data format
-
   const tokenChartData = tags;
+
   return (
     <div className="space-y-6 w-full">
       {/* Top Widgets */}
@@ -73,25 +78,42 @@ export function AnalyticsDashboard({
               <svg className="h-full w-full" viewBox="0 0 100 100">
                 {/* Background circle */}
                 <circle
-                  className="stroke-gray-700"
                   cx="50"
                   cy="50"
                   r="40"
                   fill="none"
+                  stroke="#facc15"
                   strokeWidth="10"
                 />
-                {/* Progress circle */}
+
+                {/* Success arc (green) */}
                 <circle
-                  className="stroke-gray-600"
                   cx="50"
                   cy="50"
                   r="40"
                   fill="none"
+                  stroke="#4caf50"
                   strokeWidth="10"
-                  strokeDasharray={`${progress * 2.51327} 251.327`}
+                  strokeDasharray={`${(completedFileCount / totalFileCount) * 251.327} 251.327`}
+                  transform="rotate(-90 50 50)"
+                />
+
+                {/* Failure arc (red), offset by the success arc */}
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="40"
+                  fill="none"
+                  stroke="#ef4444"
+                  strokeWidth="10"
+                  strokeDasharray={`${(failedFileCount / totalFileCount) * 251.327} 251.327`}
+                  strokeDashoffset={
+                    -((completedFileCount / totalFileCount) * 251.327)
+                  }
                   transform="rotate(-90 50 50)"
                 />
               </svg>
+
               <div className="absolute inset-0 flex items-center justify-center">
                 <span className="text-2xl font-bold text-gray-700">
                   {progress}%
@@ -129,7 +151,7 @@ export function AnalyticsDashboard({
                         : 'text-4xl'
                 }`}
               >
-                {timeTaken == null ? '-' : `${timeTaken}s`}
+                {timeTaken == null ? '-' : `${timeTaken.toFixed(4)}s`}
               </span>
             </div>
             <h3 className="text-sm text-muted-foreground">Time Taken</h3>
