@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Box } from '@mui/material';
 import { ArrowLeft, Plus, RefreshCw, Edit } from 'lucide-react';
 import { nerService } from '@/lib/backend';
+import { NO_GROUP } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 
 // Tag chip component - reused from the detail page but with interactive mode
@@ -232,6 +233,11 @@ export default function NewJobPage() {
 
     const formattedGroupName = groupName.trim().toUpperCase();
     const formattedGroupQuery = groupQuery.trim().toUpperCase();
+
+    if (formattedGroupName === NO_GROUP.trim().toUpperCase()) {
+      setGroupDialogError(`Group name cannot be "${NO_GROUP}"`);
+      return;
+    }
 
     const errorMessage =
       await nerService.validateGroupDefinition(formattedGroupQuery);
@@ -470,9 +476,9 @@ export default function NewJobPage() {
       return false;
     }
 
-    if (!/^[A-Za-z0-9_]+$/.test(name)) {
+    if (!/^[A-Za-z0-9_-]+$/.test(name)) {
       setNameError(
-        'Report name can only contain letters, numbers, and underscores'
+        'Report name can only contain letters, numbers, underscores, and hyphens'
       );
       return false;
     }
@@ -543,7 +549,7 @@ export default function NewJobPage() {
                 </p>
               ) : (
                 <p className="text-sm text-gray-500 mt-1">
-                  Use only letters, numbers, and underscores. No spaces allowed.
+                  Use only letters, numbers, underscores, and hyphens. No spaces allowed.
                 </p>
               )}
             </div>

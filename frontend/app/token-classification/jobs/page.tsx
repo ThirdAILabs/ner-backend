@@ -7,12 +7,9 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
-  CheckCircle,
   ArrowLeft,
   RefreshCw,
-  Pause,
   Square,
-  Plus
 } from 'lucide-react';
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
 import { DatabaseTable } from './(database-table)/DatabaseTable';
@@ -27,12 +24,6 @@ import {
 } from '@/components/ui/dialog';
 import {
   Box,
-  Typography,
-  CircularProgress,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem
 } from '@mui/material';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
