@@ -19,11 +19,13 @@ jobs:
       - name: Checkout ner-backend
         uses: actions/checkout@v2
         with:
+          repository: ThirdAILabs/ner-backend
           path: ner-backend
 
       - name: Checkout Universe
         uses: actions/checkout@v2
         with:
+          repository: ThirdAILabs/Universe
           path: Universe
           submodules: 'recursive'
           token: ${{ secrets.UNIVERSE_ACCESS_TOKEN }}
