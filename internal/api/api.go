@@ -425,17 +425,18 @@ func (s *BackendService) GetReport(r *http.Request) (any, error) {
 		slog.Error("error fetching time bounds", "err", err)
 	}
 
+	const parseLayout = time.RFC3339Nano
+
 	if infBounds.MinStart != "" && infBounds.MaxEnd != "" {
-		const layout = "2006-01-02 15:04:05"
-		tMin, err1 := time.Parse(layout, infBounds.MinStart)
-		tMax, err2 := time.Parse(layout, infBounds.MaxEnd)
-		if err1 == nil && err2 == nil {
-			apiReport.TotalInferenceTimeSeconds = tMax.Sub(tMin).Seconds()
-		} else {
+		tMin, err1 := time.Parse(parseLayout, infBounds.MinStart)
+		tMax, err2 := time.Parse(parseLayout, infBounds.MaxEnd)
+		if err1 != nil || err2 != nil {
 			slog.Error("failed to parse bounds",
-				"min_start", infBounds.MinStart, "err1", err1,
-				"max_end", infBounds.MaxEnd, "err2", err2,
+				"min_start", infBounds.MinStart, "err", err1,
+				"max_end", infBounds.MaxEnd, "err", err2,
 			)
+		} else {
+			apiReport.TotalInferenceTimeSeconds = tMax.Sub(tMin).Seconds()
 		}
 	}
 
