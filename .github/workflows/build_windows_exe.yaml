@@ -28,11 +28,17 @@ jobs:
           submodules: 'recursive'
           token: ${{ secrets.UNIVERSE_ACCESS_TOKEN }}
       
-      - name: ls stuff
+      - name: ls stuff 1
         run: |
           ls $GITHUB_WORKSPACE
-          ls $GITHUB_WORKSPACE\ner-backend
-          ls $GITHUB_WORKSPACE\Universe
+        shell: powershell
+      - name: ls stuff 2
+        run: |
+          ls $GITHUB_WORKSPACE/ner-backend
+        shell: powershell
+      - name: ls stuff 3
+        run: |
+          ls $GITHUB_WORKSPACE/Universe
         shell: powershell
 
       - name: Install dependencies with vcpkg
