@@ -7,7 +7,7 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { Loader2 } from 'lucide-react';
-import { TableContentProps } from './types';
+import { ClassifiedTokenDatabaseRecord, ObjectDatabaseRecord, ViewMode, TableContentProps } from './types';
 import { Button } from '@/components/ui/button';
 
 const PASTELS = ['#E5A49C', '#F6C886', '#FBE7AA', '#99E3B5', '#A6E6E7', '#A5A1E1', '#D8A4E2'];
@@ -28,13 +28,13 @@ interface HighlightedTokenProps {
 
 const HighlightedToken = React.memo(({ token, tag, tagColors }: HighlightedTokenProps) => {
   const needsSpaceBefore = !(
-    token.match(/^[.,;:!?)\]}"'%]/) || 
+    token.match(/^[.,;:!?)\]}"'%]/) ||
     token.trim() === ''
   );
-  
+
   const needsSpaceAfter = !(
-    token.match(/^[([{"'$]/) ||       
-    token.match(/[.,;:!?]$/) ||       
+    token.match(/^[([{"'$]/) ||
+    token.match(/[.,;:!?]$/) ||
     token.trim() === ''
   );
 
@@ -114,10 +114,10 @@ interface TokenContextProps {
 const TokenContext = React.memo(({ context, tagColors }: TokenContextProps) => {
   if (!context) return <span className="text-red-400 text-xs">No context available</span>;
 
-  const leftContent = context.left || '';
-  const rightContent = context.right || '';
-  const token = context.token || '';
-  const tag = context.tag || '';
+  const leftContent = context.left || '[empty left context]';
+  const rightContent = context.right || '[empty right context]';
+  const token = context.token || '[empty token]';
+  const tag = context.tag || '[empty tag]';
 
   return (
     <div className="font-mono text-xs border border-gray-200 p-2 rounded bg-gray-50">
@@ -133,7 +133,7 @@ const LoadMoreButton = React.memo(({ hasMore, isLoading, onClick }: { hasMore: b
 
   return (
     <div className="py-4 flex justify-center">
-      <Button 
+      <Button
         variant="outline"
         onClick={onClick}
         disabled={isLoading || !hasMore}
@@ -198,19 +198,35 @@ export function TableContent({
           {filteredRecords.length > 0 ? (
             filteredRecords.map((record, index) => (
               <TableRow key={index}>
-                <TableCell>
+                <TableCell className="w-3/5">
                   {record.context ? (
-                    <TokenContext context={{
-                      left: record.context.left,
-                      right: record.context.right,
-                      token: record.token,
-                      tag: record.tag,
-                    }} tagColors={tagColors} />
+                    <TokenContext
+                      context={{
+                        left: record.context.left,
+                        right: record.context.right,
+                        token: record.token,
+                        tag: record.tag,
+                      }}
+                      tagColors={tagColors}
+                    />
                   ) : (
                     <span className="text-red-400 text-xs">Missing context</span>
                   )}
                 </TableCell>
-                <TableCell>{record.sourceObject}</TableCell>
+                <TableCell className="w-1/5 px-4">
+                  <div className="relative group">
+                    <span
+                      className="block max-w-[200px] truncate"
+                    // title={record.sourceObject.split("/").slice(-1)}
+                    >
+                      {record.sourceObject.split("/").slice(-1)}
+                    </span>
+                    <div className="absolute hidden group-hover:block bg-gray-800 text-white text-sm rounded-md p-2 z-10 -left-2 top-full mt-1 whitespace-normal max-w-xs break-words">
+                      {record.sourceObject.split("/").slice(-1)}
+                      <div className="absolute -top-1 left-3 w-2 h-2 bg-gray-800 transform rotate-45" />
+                    </div>
+                  </div>
+                </TableCell>
               </TableRow>
             ))
           ) : (
@@ -235,7 +251,7 @@ export function TableContent({
           {filteredRecords.length > 0 && (
             <TableRow>
               <TableCell colSpan={2}>
-                <LoadMoreButton hasMore={hasMoreTokens} isLoading={isLoadingTokenRecords} onClick={onLoadMore ?? (() => {})} />
+                <LoadMoreButton hasMore={hasMoreTokens} isLoading={isLoadingTokenRecords} onClick={onLoadMore ?? (() => { })} />
 
               </TableCell>
             </TableRow>
@@ -306,7 +322,7 @@ export function TableContent({
           {filteredRecords.length > 0 && (
             <TableRow>
               <TableCell colSpan={2}>
-                <LoadMoreButton hasMore={hasMoreObjects} isLoading={isLoadingObjectRecords} onClick={onLoadMore ?? (() => {})} />
+                <LoadMoreButton hasMore={hasMoreTokens} isLoading={isLoadingTokenRecords} onClick={onLoadMore ?? (() => { })} />
 
               </TableCell>
             </TableRow>
