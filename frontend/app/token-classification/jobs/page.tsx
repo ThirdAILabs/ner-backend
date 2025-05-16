@@ -7,12 +7,9 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
-  CheckCircle,
   ArrowLeft,
   RefreshCw,
-  Pause,
   Square,
-  Plus
 } from 'lucide-react';
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
 import { DatabaseTable } from './(database-table)/DatabaseTable';
@@ -27,12 +24,6 @@ import {
 } from '@/components/ui/dialog';
 import {
   Box,
-  Typography,
-  CircularProgress,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem
 } from '@mui/material';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -257,7 +248,6 @@ const NewTagDialog: React.FC<{
 function JobDetail() {
   const searchParams = useSearchParams();
   const reportId: string = searchParams.get('jobId') as string;
-  const deploymentId = searchParams.get('deploymentId') as string;
   const [lastUpdated, setLastUpdated] = useState(0);
   const [tabValue, setTabValue] = useState('analytics');
   const [selectedSource, setSelectedSource] = useState<'s3' | 'local'>('s3');
@@ -272,7 +262,6 @@ function JobDetail() {
 
   const [reportData, setReportData] = useState<Report | null>(null);
   const [customTags, setCustomTags] = useState<CustomTag[]>([]);
-  const [isNewTagDialogOpen, setIsNewTagDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchTags = async () => {
@@ -339,89 +328,6 @@ function JobDetail() {
   const handleRefresh = () => {
     setLastUpdated(0);
     fetchTags();
-  };
-
-  // Define real data loading functions for entities
-  const loadRealClassifiedTokenRecords = async (offset = 0, limit = 50) => {
-    try {
-      const entities = await nerService.getReportEntities(reportId, {
-        offset,
-        limit
-      });
-      console.log(
-        'API entities response:',
-        entities.length > 0 ? entities[0] : 'No entities'
-      );
-
-      // Extract unique entity types from the API response
-      const uniqueTypes = new Set(entities.map((entity) => entity.Label));
-      console.log(
-        'Unique entity types in API response:',
-        Array.from(uniqueTypes)
-      );
-      console.log('Tag filters available in UI:', availableTags);
-
-      return entities.map((entity) => {
-        const record = {
-          token: entity.Text,
-          tag: entity.Label,
-          sourceObject: entity.Object,
-          context: {
-            left: entity.LContext || '',
-            right: entity.RContext || ''
-          },
-          start: entity.Start,
-          end: entity.End,
-          groups:
-            reportData?.Groups?.filter((group) =>
-              group.Objects?.includes(entity.Object)
-            ).map((g) => g.Name) || []
-        };
-
-        // Log the first transformed record for debugging
-        if (entity === entities[0]) {
-          console.log('Transformed record:', record);
-        }
-
-        return record;
-      });
-    } catch (error) {
-      console.error('Error loading entities:', error);
-      return [];
-    }
-  };
-
-  // Loads data for the Objects tab view, showing complete sentences with tagged tokens
-  // Uses the GET /reports/{report_id}/entities endpoint and transforms the data
-  // since the /objects endpoint doesn't exist yet in the backend
-  const loadRealObjectRecords = async () => {
-    try {
-      // Get object previews (transformed from entities)
-      const objectPreviews = await nerService.getReportObjects(reportId, {
-        limit: 100
-      });
-
-      return objectPreviews.map((preview) => {
-        // Create tagged tokens array from the parallel tokens and tags arrays
-        const taggedTokens = preview.tokens.map((token, index) => [
-          token,
-          preview.tags[index]
-        ]) as [string, string][];
-
-        return {
-          taggedTokens,
-          sourceObject: preview.object,
-          // Get groups that include this object
-          groups:
-            reportData?.Groups?.filter((group) =>
-              group.Objects?.includes(preview.object)
-            ).map((g) => g.Name) || []
-        };
-      });
-    } catch (error) {
-      console.error('Error loading object records:', error);
-      return [];
-    }
   };
 
   return (
@@ -610,8 +516,6 @@ function JobDetail() {
 
         <TabsContent value="output">
           <DatabaseTable
-            loadMoreObjectRecords={loadRealObjectRecords}
-            loadMoreClassifiedTokenRecords={loadRealClassifiedTokenRecords}
             groups={reportData?.Groups?.map((g) => g.Name) || []}
             tags={availableTagsCount}
           />
