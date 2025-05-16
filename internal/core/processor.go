@@ -184,24 +184,6 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 	s3Objects := strings.Split(task.SourceS3Keys, ";")
 	var errorCount int
 
-	defer func() {
-		delta := len(s3Objects) - errorCount
-		if delta > 0 {
-			if err := proc.db.
-				Model(&database.Report{}).
-				Where("id = ?", reportId).
-				UpdateColumn("completed_file_count",
-					gorm.Expr("completed_file_count + ?", delta)).
-				Error; err != nil {
-				slog.Error("could not increment completed_file_count",
-					"report_id", reportId,
-					"delta", delta,
-					"err", err,
-				)
-			}
-		}
-	}()
-
 	tags := make(map[string]struct{})
 	for _, tag := range task.Report.Tags {
 		tags[tag.Tag] = struct{}{}
@@ -222,8 +204,21 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 		return err
 	}
 
-	totalTokens, errCnt, workerErr := proc.runInferenceOnBucket(ctx, task.ReportId, storage, task.Report.Model.Id, task.Report.Model.Type, tags, customTags, groupToQuery, task.Report.SourceS3Bucket, s3Objects)
-	errorCount = errCnt
+	totalTokens, errorCount, workerErr := proc.runInferenceOnBucket(ctx, task.ReportId, storage, task.Report.Model.Id, task.Report.Model.Type, tags, customTags, groupToQuery, task.Report.SourceS3Bucket, s3Objects)
+	if delta := len(s3Objects) - errorCount; delta > 0 {
+		if err := proc.db.
+			Model(&database.Report{}).
+			Where("id = ?", reportId).
+			UpdateColumn("completed_file_count",
+				gorm.Expr("completed_file_count + ?", delta),
+			).Error; err != nil {
+			slog.Error("could not increment completed_file_count",
+				"report_id", reportId,
+				"delta", delta,
+				"err", err,
+			)
+		}
+	}
 	if workerErr != nil {
 		slog.Error("error running inference task", "report_id", reportId, "task_id", payload.TaskId, "error", workerErr)
 		database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobFailed) // nolint:errcheck
@@ -372,10 +367,10 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 	}
 
 	if objectErrorCnt > 0 {
-		return 0, objectErrorCnt, fmt.Errorf("errors while processing %d/%d objects", objectErrorCnt, len(objects))
+		return totalTokens, objectErrorCnt, fmt.Errorf("errors while processing %d/%d objects", objectErrorCnt, len(objects))
 	}
 
-	return totalTokens, 0, nil
+	return totalTokens, objectErrorCnt, nil
 }
 
 func (proc *TaskProcessor) getModelDir(modelId uuid.UUID) string {
