@@ -182,6 +182,25 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 	}
 
 	s3Objects := strings.Split(task.SourceS3Keys, ";")
+	var errorCount int
+
+	defer func() {
+		delta := len(s3Objects) - errorCount
+		if delta > 0 {
+			if err := proc.db.
+				Model(&database.Report{}).
+				Where("id = ?", reportId).
+				UpdateColumn("completed_file_count",
+					gorm.Expr("completed_file_count + ?", delta)).
+				Error; err != nil {
+				slog.Error("could not increment completed_file_count",
+					"report_id", reportId,
+					"delta", delta,
+					"err", err,
+				)
+			}
+		}
+	}()
 
 	tags := make(map[string]struct{})
 	for _, tag := range task.Report.Tags {
@@ -203,7 +222,8 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 		return err
 	}
 
-	totalTokens, errorCount, workerErr := proc.runInferenceOnBucket(ctx, task.ReportId, storage, task.Report.Model.Id, task.Report.Model.Type, tags, customTags, groupToQuery, task.Report.SourceS3Bucket, s3Objects)
+	totalTokens, errCnt, workerErr := proc.runInferenceOnBucket(ctx, task.ReportId, storage, task.Report.Model.Id, task.Report.Model.Type, tags, customTags, groupToQuery, task.Report.SourceS3Bucket, s3Objects)
+	errorCount = errCnt
 	if workerErr != nil {
 		slog.Error("error running inference task", "report_id", reportId, "task_id", payload.TaskId, "error", workerErr)
 		database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobFailed) // nolint:errcheck
@@ -221,17 +241,6 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 
 	if err := database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobCompleted); err != nil {
 		return fmt.Errorf("error updating inference task status to complete: %w", err)
-	}
-
-	delta := len(s3Objects) - errorCount
-	if delta > 0 {
-		if err := proc.db.
-			Model(&database.Report{}).
-			Where("id = ?", reportId).
-			UpdateColumn("completed_file_count", gorm.Expr("completed_file_count + ?", delta)).
-			Error; err != nil {
-			slog.Error("could not increment completed_file_count", "report_id", reportId, "delta", delta, "err", err)
-		}
 	}
 
 	slog.Info("inference task completed successfully", "report_id", reportId, "task_id", payload.TaskId)
