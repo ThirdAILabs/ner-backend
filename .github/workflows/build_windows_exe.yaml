@@ -31,8 +31,8 @@ jobs:
       - name: ls stuff
         run: |
           ls $GITHUB_WORKSPACE
-          ls $GITHUB_WORKSPACE/ner-backend
-          ls $GITHUB_WORKSPACE/Universe
+          ls $GITHUB_WORKSPACE\ner-backend
+          ls $GITHUB_WORKSPACE\Universe
         shell: powershell
 
       - name: Install dependencies with vcpkg
