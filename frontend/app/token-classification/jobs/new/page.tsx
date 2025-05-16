@@ -334,7 +334,7 @@ export default function NewJobPage() {
     setDialogError(null);
     setIsCustomTagDialogOpen(false);
   };
-  
+
   const addFiles = (files: File[]) => {
     const newFiles = files.filter((newFile) => {
       const isDuplicate = selectedFiles.some((existingFile) =>
@@ -372,6 +372,29 @@ export default function NewJobPage() {
     if (input) {
       input.value = '';
     }
+  };
+
+  const validateCustomTagName = (name: string): boolean => {
+    if (!name) {
+      setDialogError('Tag name is required');
+      return false;
+    }
+
+    if (!/^[A-Za-z0-9_]+$/.test(name)) {
+      setDialogError(
+        'Tag name can only contain letters, numbers, and underscores'
+      );
+      return false;
+    }
+
+    setDialogError(null);
+    return true;
+  };
+  
+  const handleTagNameChange = (name: string) => {
+    const value = name.replace(/\s/g, '_');
+    setCustomTagName(value);
+    validateCustomTagName(value);
   };
 
   const areFilesIdentical = (file1: File, file2: File): boolean => {
