@@ -2,13 +2,19 @@ package database
 
 import (
 	"log"
+	"ner-backend/internal/database/versions"
 
 	"github.com/go-gormigrate/gormigrate/v2"
 	"gorm.io/gorm"
 )
 
 func GetMigrator(db *gorm.DB) *gormigrate.Gormigrate {
-	migrator := gormigrate.New(db, gormigrate.DefaultOptions, []*gormigrate.Migration{})
+	migrator := gormigrate.New(db, gormigrate.DefaultOptions, []*gormigrate.Migration{
+		{
+			ID:      "0",
+			Migrate: versions.Migration0,
+		},
+	})
 
 	migrator.InitSchema(func(txn *gorm.DB) error {
 		// This is run by the migrator if no previous migration is detected. It
