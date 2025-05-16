@@ -49,9 +49,7 @@ class CnnNerExtractor(Model):
             cleaned_texts, spans_list = zip(*cleaned_and_spans)
 
             batch_tags = self.model.predict_batch(list(cleaned_texts))
-
             for orig, spans, tags in zip(batch, spans_list, batch_tags):
-                print()
                 results.append(self._process_prediction(orig, spans, tags))
 
         return BatchPredictions(predictions=results)
