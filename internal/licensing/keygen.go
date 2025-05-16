@@ -35,9 +35,20 @@ type licenseVerifyResponse struct {
 		Constant string `json:"constant"`
 		Detail   string `json:"detail"`
 	} `json:"meta"`
+
+	Data struct {
+		Attributes struct {
+			Expiry time.Time `json:"expiry"`
+		} `json:"attributes"`
+	} `json:"data"`
 }
 
-func (verifier *KeygenVerifier) VerifyLicense(ctx context.Context) (LicenseType, LicenseInfo, error) {
+func (verifier *KeygenVerifier) VerifyLicense(ctx context.Context) (LicenseInfo, error) {
+
+	licenseInfo := LicenseInfo{
+		LicenseType: KeygenLicense,
+	}
+
 	rb := map[string]map[string]any{
 		"meta": {
 			"key": verifier.licenseKey,
@@ -60,12 +71,12 @@ func (verifier *KeygenVerifier) VerifyLicense(ctx context.Context) (LicenseType,
 
 	if err != nil {
 		slog.Error("unable to verify license with keygen", "error", err)
-		return KeygenLicense, nil, ErrLicenseVerificationFailed
+		return licenseInfo, ErrLicenseVerificationFailed
 	}
 
 	if !res.IsSuccess() {
 		slog.Error("keygen returned error", "status_code", res.StatusCode(), "body", res.String())
-		return KeygenLicense, nil, ErrLicenseVerificationFailed
+		return licenseInfo, ErrLicenseVerificationFailed
 	}
 
 	body := res.Body()
@@ -73,27 +84,27 @@ func (verifier *KeygenVerifier) VerifyLicense(ctx context.Context) (LicenseType,
 	var verified licenseVerifyResponse
 	if err := json.Unmarshal(body, &verified); err != nil {
 		slog.Error("error parsing response from keygen", "error", err)
-		return KeygenLicense, nil, ErrLicenseVerificationFailed
+		return licenseInfo, ErrLicenseVerificationFailed
 	}
 
 	if !verified.Meta.Valid {
 		switch verified.Meta.Constant {
 		case "NOT_FOUND":
-			return KeygenLicense, nil, ErrLicenseNotFound
+			return licenseInfo, ErrLicenseNotFound
 		case "EXPIRED", "SUSPENDED":
-			return KeygenLicense, nil, ErrExpiredLicense
+			return licenseInfo, ErrExpiredLicense
 		default:
 			slog.Error("keygen verification error", "code", verified.Meta.Constant, "error", verified.Meta.Detail)
-			return KeygenLicense, nil, ErrInvalidLicense
+			return licenseInfo, ErrInvalidLicense
 		}
 	}
 
 	if err := verifyResponseSignature(res, endpoint); err != nil {
 		slog.Error("unable to verify response signature", "error", err)
-		return KeygenLicense, nil, ErrInvalidLicense
+		return licenseInfo, ErrInvalidLicense
 	}
 
-	return KeygenLicense, nil, nil
+	return licenseInfo, nil
 }
 
 func parseSignature(res *resty.Response) ([]byte, error) {

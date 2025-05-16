@@ -877,9 +877,8 @@ func (s *BackendService) ValidateGroupDefinition(r *http.Request) (any, error) {
 }
 
 func (s *BackendService) GetLicense(r *http.Request) (any, error) {
-	licenseType, licenseInfo, err := s.licensing.VerifyLicense(r.Context())
+	licenseInfo, err := s.licensing.VerifyLicense(r.Context())
 	return api.GetLicenseResponse{
-		LicenseType:  licenseType,
 		LicenseInfo:  licenseInfo,
 		LicenseError: fmt.Sprintf("%v", err),
 	}, nil
