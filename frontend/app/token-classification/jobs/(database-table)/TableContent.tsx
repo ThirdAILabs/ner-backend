@@ -9,6 +9,7 @@ import {
 import { Loader2 } from 'lucide-react';
 import { ClassifiedTokenDatabaseRecord, ObjectDatabaseRecord, ViewMode, TableContentProps } from './types';
 import { Button } from '@/components/ui/button';
+import { NO_GROUP } from '@/lib/utils';
 
 const PASTELS = ['#E5A49C', '#F6C886', '#FBE7AA', '#99E3B5', '#A6E6E7', '#A5A1E1', '#D8A4E2'];
 const DARKERS = ['#D34F3E', '#F09336', '#F7CF5F', '#5CC96E', '#65CFD0', '#597CE2', '#B64DC8'];
@@ -24,9 +25,10 @@ interface HighlightedTokenProps {
   token: string;
   tag: string;
   tagColors: Record<string, HighlightColor>;
+  labeled: boolean;
 }
 
-const HighlightedToken = React.memo(({ token, tag, tagColors }: HighlightedTokenProps) => {
+const HighlightedToken = React.memo(({ token, tag, tagColors, labeled }: HighlightedTokenProps) => {
   const needsSpaceBefore = !(
     token.match(/^[.,;:!?)\]}"'%]/) ||
     token.trim() === ''
@@ -64,19 +66,21 @@ const HighlightedToken = React.memo(({ token, tag, tagColors }: HighlightedToken
         }}
       >
         {token}
-        <span
-          style={{
-            backgroundColor: tagColor.tag,
-            color: 'white',
-            fontSize: '11px',
-            fontWeight: 'bold',
+        {labeled && (
+          <span
+            style={{
+              backgroundColor: tagColor.tag,
+              color: 'white',
+              fontSize: '11px',
+              fontWeight: 'bold',
             borderRadius: '2px',
             marginLeft: '4px',
             padding: '1px 3px',
-          }}
-        >
-          {tag}
-        </span>
+            }}
+          >
+            {tag}
+          </span>
+        )}
       </span>
     </span>
   );
@@ -122,7 +126,7 @@ const TokenContext = React.memo(({ context, tagColors }: TokenContextProps) => {
   return (
     <div className="font-mono text-xs border border-gray-200 p-2 rounded bg-gray-50">
       <span className="text-gray-600">{leftContent}</span>
-      <HighlightedToken token={token} tag={tag} tagColors={tagColors} />
+      <HighlightedToken token={token} tag={tag} tagColors={tagColors} labeled />
       <span className="text-gray-600">{rightContent}</span>
     </div>
   );
@@ -180,12 +184,16 @@ export function TableContent({
     return colors;
   }, [tags]);
 
+  const filterRecords = (recordGroups: string[], recordTags: string[]) => {
+    const matchTags = recordTags.some((tag) => tagFilters[tag] !== false);
+    const matchNoGroup = recordGroups.length === 0 && groupFilters[NO_GROUP];
+    const matchUserDefinedGroup = recordGroups.some((group) => groupFilters[group] !== false);
+    const noGroupConfigured = Object.keys(groupFilters).length === 0;
+    return matchTags && (matchNoGroup || matchUserDefinedGroup || noGroupConfigured);
+  }
+
   if (viewMode === 'classified-token') {
-    const filteredRecords = tokenRecords.filter((record) => {
-      const tagMatches = tagFilters[record.tag] !== false;
-      const groupMatches = record.groups.length === 0 || record.groups.some((group) => groupFilters[group] !== false);
-      return tagMatches && groupMatches;
-    });
+    const filteredRecords = tokenRecords.filter((record) => filterRecords(record.groups, [record.tag]));
 
     return (
       <>
@@ -259,9 +267,7 @@ export function TableContent({
   }
 
   if (viewMode === 'object') {
-    const filteredRecords = objectRecords.filter((record) => {
-      return record.groups.length === 0 || record.groups.some((group) => groupFilters[group]);
-    });
+    const filteredRecords = objectRecords.filter((record) => filterRecords(record.groups, record.taggedTokens.map((token) => token[1])));
 
     return (
       <>
@@ -277,14 +283,21 @@ export function TableContent({
               <TableRow key={index}>
                 <TableCell className="mw-3/5">
                   <div className="text-sm leading-relaxed bg-white p-3 rounded border border-gray-100 shadow-sm">
-                    {record.taggedTokens.map((token, tokenIndex) => (
-                      <HighlightedToken
-                        key={`${index}-${tokenIndex}`}
-                        token={token[0]}
-                        tag={tagFilters[token[1]] ? token[1] : "O"}
-                        tagColors={tagColors}
-                      />
-                    ))}
+                    {record.taggedTokens.map((token, tokenIndex) => {
+                      const isLastToken = tokenIndex === record.taggedTokens.length - 1;
+                      const nextNonWhitespaceTokenIndex = record.taggedTokens.findIndex((t, i) => i > tokenIndex && t[0].trim() !== '');
+                      const nextToken = nextNonWhitespaceTokenIndex !== -1 ? record.taggedTokens[nextNonWhitespaceTokenIndex] : null;
+                      const differentTagThanNext = (nextToken !== null) && (nextToken[1] !== token[1]);
+                      return (
+                        <HighlightedToken
+                          key={`${index}-${tokenIndex}`}
+                          token={token[0]}
+                          tag={tagFilters[token[1]] ? token[1] : "O"}
+                          tagColors={tagColors}
+                          labeled={isLastToken || differentTagThanNext}
+                        />
+                      )
+                    })}
                   </div>
                 </TableCell>
                 <TableCell className="w-1/5 px-4">

@@ -92,7 +92,7 @@ export function FilterSection({
                 <ChevronDown className="h-4 w-4" />
               )}
             </div>
-            {isGroupsExpanded && (
+            {isGroupsExpanded && groups.length > 0 && (
               <>
                 <div className="flex gap-2 mb-2">
                   <button
@@ -123,6 +123,11 @@ export function FilterSection({
                   ))}
                 </div>
               </>
+            )}
+            {groups.length === 0 && (
+              <div className="text-gray-500 text-sm">
+                No groups configured.
+              </div>
             )}
           </div>
 
