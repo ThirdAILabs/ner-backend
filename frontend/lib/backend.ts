@@ -36,6 +36,7 @@ interface Report {
   };
   FileCount: number;
   CompletedFileCount: number;
+  FailedFileCount: number;
   Groups?: Group[];
   ShardDataTaskStatus?: string;
   InferenceTaskStatuses?: { [key: string]: TaskStatusCategory };
