@@ -7,9 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Box } from '@mui/material';
 import { ArrowLeft, Plus, RefreshCw, Edit } from 'lucide-react';
 import { nerService } from '@/lib/backend';
-import { Suspense } from 'react';
+import { NO_GROUP } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
-import { EditNotificationsRounded } from '@mui/icons-material';
 
 // Tag chip component - reused from the detail page but with interactive mode
 interface TagProps {
@@ -29,7 +28,7 @@ const Tag: React.FC<TagProps> = ({
 }) => {
   return (
     <div
-      className={`px-3 py-1 text-sm font-medium rounded-sm ${!custom && 'cursor-pointer'} ${selected ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+      className={`px-3 py-1 text-sm font-medium overflow-x-scroll max-w-[12vw] rounded-sm ${!custom && 'cursor-pointer'} ${selected ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
       style={{ userSelect: 'none' }}
       onClick={onClick}
     >
@@ -235,6 +234,11 @@ export default function NewJobPage() {
 
     const formattedGroupName = groupName.trim().toUpperCase();
     const formattedGroupQuery = groupQuery.trim().toUpperCase();
+
+    if (formattedGroupName === NO_GROUP.trim().toUpperCase()) {
+      setGroupDialogError(`Group name cannot be "${NO_GROUP}"`);
+      return;
+    }
 
     const errorMessage =
       await nerService.validateGroupDefinition(formattedGroupQuery);
@@ -473,9 +477,9 @@ export default function NewJobPage() {
       return false;
     }
 
-    if (!/^[A-Za-z0-9_]+$/.test(name)) {
+    if (!/^[A-Za-z0-9_-]+$/.test(name)) {
       setNameError(
-        'Report name can only contain letters, numbers, and underscores'
+        'Report name can only contain letters, numbers, underscores, and hyphens'
       );
       return false;
     }
@@ -547,7 +551,7 @@ export default function NewJobPage() {
                 </p>
               ) : (
                 <p className="text-sm text-gray-500 mt-1">
-                  Use only letters, numbers, and underscores. No spaces allowed.
+                  Use only letters, numbers, underscores, and hyphens. No spaces allowed.
                 </p>
               )}
             </div>
@@ -818,24 +822,24 @@ export default function NewJobPage() {
                   key={customTag.name}
                   className="border border-gray-200 rounded-md overflow-hidden"
                 >
-                  <div className="py-1 px-4 border-b border-gray-200 flex justify-between items-center">
+                  <div className="py-1 px-2 border-b border-gray-200 flex justify-between items-center">
                     <Tag tag={customTag.name} custom={true} selected />
-                    <div className="flex items-center space-x-1">
+                    <div className="flex items-center space-x-3 px-1">
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => handleEditCustomTag(customTag)}
-                        className="text-blue-500"
+                        className="text-blue-500 px-0"
                       >
-                        <Edit className="h-4 w-4 mr-1" />
+                        <Edit className="h-4 w-4" />
                       </Button>
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => handleRemoveCustomTag(customTag.name)}
-                        className="text-red-500"
+                        className="text-red-500 px-0"
                       >
                         <svg
                           className="h-4 w-4"
