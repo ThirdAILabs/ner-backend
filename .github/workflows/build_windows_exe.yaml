@@ -16,7 +16,7 @@ jobs:
   build_windows_exe:
     runs-on: windows-2022
     steps:
-      - name: Checkout code
+      - name: Checkout ner-backend
         uses: actions/checkout@v2
         with:
           path: ner-backend/
@@ -38,5 +38,14 @@ jobs:
           .\vcpkg upgrade --no-dry-run # In case there are new builds available after cache restoration
         shell: powershell
 
-      - name: setup tmate
-        uses: mxschmitt/action-tmate@v2
+      - name: Build Universe libs
+        working-directory: Universe/
+        run: |
+          cmake -B build -S . -DCMAKE_BUILD_TYPE=Release -DENABLE_COMPRESSION=OFF -DTHIRDAI_GTEST_DISCOVERY_TIMEOUT=30 -DVCPKG_TARGET_TRIPLET=x64-windows-static -DCMAKE_TOOLCHAIN_FILE=C:\vcpkg\scripts\buildsystems\vcpkg.cmake
+          cmake --build build --target thirdai
+          ls build
+          ls build/deps/rocksdb
+          ls build/deps/utf8proc
+          ls build/deps/spdlog
+          ls $GITHUB_WORKSPACE
+        shell: powershell
