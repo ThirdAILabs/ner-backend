@@ -29,7 +29,7 @@ import (
 
 const (
 	dataBucket  = "test-data"
-	unicodeData = `Name: Zoë Faulkner 🌟 | Address: 742 Evergreen Terrace, Springfield 🏡 | SSN: 123-45-6789 🆔
+	unicodeText = `Name: Zoë Faulkner 🌟 | Address: 742 Evergreen Terrace, Springfield 🏡 | SSN: 123-45-6789 🆔
 Name: Jürgen Müller 🧑‍🔬 | Email: jurgen.müller@example.de 📧 | City: München, Germany 🇩🇪
 Name: Aiko Tanaka 🎎 | Phone: +81-90-1234-5678 📱 | Prefecture: 東京 (Tokyo) 🗼
 Name: Carlos Andrés Pérez 🎭 | Passport: X12345678 🇨🇴 | Address: Calle 123, Bogotá 🏙️
@@ -39,7 +39,43 @@ Name: Chloé Dubois 🎨 | SSN: 987-65-4321 🔐 | City: Marseille 🇫🇷
 Name: Иван Иванов 📚 | Phone: +7 495 123-45-67 ☎️ | City: Москва (Moscow) 🇷🇺
 Name: 李小龍 (Bruce Lee) 🐉 | Email: brucelee@kungfu.cn 📩 | Province: 廣東 (Guangdong) 🏯
 Name: Amelia O’Connell 🍀 | Address: 1 Abbey Rd, Dublin 🇮🇪 | PPSN: 1234567TA 🗃️`
+	phoneText = "this is a test file with a phone number 123-456-7890"
+	emailText = "this is a test file with an email address abc@email.com"
 )
+
+var expected = []string{
+	"abc@email.com",
+	"+81-90-1234-5678",
+	"789654321",
+	"Zoë", "Faulkner", "Jürgen", "Müller",
+	"Aiko", "Tanaka",
+	"Carlos", "Andrés", "Pérez",
+	"Fatima", "Al-Fulan",
+	"Olamide", "Okoro",
+	"Chloé", "Dubois",
+	"Иван", "Иванов",
+	"Bruce", "Lee",
+	"Amelia", "O’Connell",
+
+	"742", "Evergreen", "Terrace", "Springfield",
+	"City", "München", "Germany", "Tokyo",
+	"دبي", "Dubai",
+	"12", "Unity", "Rd", "Lagos",
+	"Marseille",
+	"Москва", "Moscow",
+	"1", "Abbey", "Dublin",
+
+	"123-45-6789", "987-65-4321",
+	"jurgen.müller@example.de",
+	"olamide.okoro@nigeria.ng",
+	"brucelee@kungfu.cn",
+
+	"123-456-7890",
+	"email",
+	"+7 495 123-45-67",
+	"廣東", "Guangdong",
+	"123",
+}
 
 func createData(t *testing.T, storage storage.Provider) {
 	require.NoError(t, storage.CreateBucket(context.Background(), dataBucket))
@@ -179,17 +215,17 @@ func createUpload(t *testing.T, router http.Handler) uuid.UUID {
 
 	f1, err := writer.CreateFormFile("files", "file1.txt")
 	require.NoError(t, err)
-	_, err = f1.Write([]byte("this is a test file with a phone number 123-456-7890"))
+	_, err = f1.Write([]byte(phoneText))
 	require.NoError(t, err)
 
 	f2, err := writer.CreateFormFile("files", "file2.txt")
 	require.NoError(t, err)
-	_, err = f2.Write([]byte("this is a test file with an email address abc@email.com"))
+	_, err = f2.Write([]byte(emailText))
 	require.NoError(t, err)
 
 	f3, err := writer.CreateFormFile("files", "unicode.txt")
 	require.NoError(t, err)
-	_, err = f3.Write([]byte(unicodeData))
+	_, err = f3.Write([]byte(unicodeText))
 	require.NoError(t, err)
 
 	require.NoError(t, writer.Close())
@@ -258,6 +294,10 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 }
 
 func TestInferenceWorkflowForModels(t *testing.T) {
+	os.Setenv("PYTHON_EXECUTABLE_PATH", "/opt/conda/envs/pii-presidio-3.10/bin/python3")
+	os.Setenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH", "/home/ubuntu/pratik/ner-backend/plugin/plugin-python/plugin.py")
+	os.Setenv("HOST_MODEL_DIR", "/home/ubuntu/shubh/ner/misc/ner-models")
+
 	if os.Getenv("PYTHON_EXECUTABLE_PATH") == "" || os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH") == "" {
 		t.Fatalf("PYTHON_EXECUTABLE_PATH and PYTHON_MODEL_PLUGIN_SCRIPT_PATH must be set")
 	}
@@ -338,7 +378,26 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 			assert.Equal(t, uploadID.String(), report.SourceS3Prefix)
 
 			entities := getReportEntities(t, router, reportID)
-			assert.Greater(t, len(entities), 0)
+
+			expectedSet := make(map[string]struct{}, len(expected))
+			for _, tok := range expected {
+				expectedSet[tok] = struct{}{}
+			}
+
+			var matched int
+			for _, e := range entities {
+				if _, ok := expectedSet[e.Text]; ok {
+					matched++
+				}
+			}
+
+			pct := float64(matched) / float64(len(expected)) * 100
+			assert.GreaterOrEqualf(
+				t,
+				pct, 90.0,
+				"only %.1f%% of expected texts were found (need ≥80%%)", pct,
+			)
+			assert.Greater(t, len(entities), 40)
 		})
 	}
 }

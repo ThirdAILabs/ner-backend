@@ -1,7 +1,6 @@
 package types
 
 import (
-	"log/slog"
 	"strings"
 )
 
@@ -46,7 +45,6 @@ func CreateEntityWithRune(label string, runes []rune, start, end int) Entity {
 		LContext: strings.ToValidUTF8(lctx, ""),
 		RContext: strings.ToValidUTF8(rctx, ""),
 	}
-	slog.Info("CreateEntity", "entity", entity)
 	return entity
 }
 
