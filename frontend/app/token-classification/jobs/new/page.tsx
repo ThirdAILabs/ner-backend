@@ -151,7 +151,6 @@ export default function NewJobPage() {
 
   // Confirm dialog for file uploads
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
-  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
 
   const SUPPORTED_TYPES = ['.pdf', '.txt', '.csv', '.html', '.json', '.xml'];
 
@@ -544,33 +543,6 @@ export default function NewJobPage() {
       ))}
     </ul>
   );
-
-  // Add handleCancelUpload function before the return statement
-  const handleCancelUpload = () => {
-    setPendingFiles([]);
-    setIsConfirmDialogOpen(false);
-    // Reset the input value
-    const input = document.getElementById(
-      selectedSource === 'directory' ? 'directory-upload' : 'file-upload'
-    ) as HTMLInputElement;
-    if (input) {
-      input.value = '';
-    }
-  };
-
-  // Update handleConfirmUpload to also reset the input
-  const handleConfirmUpload = () => {
-    addFiles(pendingFiles);
-    setIsConfirmDialogOpen(false);
-    setPendingFiles([]);
-    // Reset the input value
-    const input = document.getElementById(
-      selectedSource === 'directory' ? 'directory-upload' : 'file-upload'
-    ) as HTMLInputElement;
-    if (input) {
-      input.value = '';
-    }
-  };
 
   return (
     <div className="container px-4 py-8 w-3/4">
@@ -1307,7 +1279,6 @@ export default function NewJobPage() {
         </form>
       )}
 
-      {/* Simplified dialog - only shows when no supported files are found */}
       {isConfirmDialogOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
