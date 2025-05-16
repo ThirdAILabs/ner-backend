@@ -36,11 +36,11 @@ jobs:
         shell: powershell
       - name: ls stuff 2
         run: |
-          ls '$GITHUB_WORKSPACE/ner-backend'
+          ls ner-backend
         shell: powershell
       - name: ls stuff 3
         run: |
-          ls '$GITHUB_WORKSPACE/Universe'
+          ls Universe
         shell: powershell
 
       - name: Install dependencies with vcpkg
