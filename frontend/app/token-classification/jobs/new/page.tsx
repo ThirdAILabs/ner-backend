@@ -368,6 +368,10 @@ export default function NewJobPage() {
     input.value = '';
   };
 
+  const removeFile = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleCloseDialog = () => {
     setIsConfirmDialogOpen(false);
     // Reset the input value
@@ -402,9 +406,7 @@ export default function NewJobPage() {
     validateCustomTagName(value);
   };
 
-  const removeFile = (index: number) => {
-    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
-  };
+  
 
   // Submit the new job
   const handleSubmit = async (e: React.FormEvent) => {
