@@ -481,6 +481,7 @@ export function DatabaseTable({
                   hasMoreTokens={hasMoreTokens}
                   hasMoreObjects={hasMoreObjects}
                   onLoadMore={handleLoadMore}
+                  showFilterContent={showFilterSection}
                 />
               </div>
             </div>

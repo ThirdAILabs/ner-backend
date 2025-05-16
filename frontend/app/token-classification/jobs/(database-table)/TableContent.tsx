@@ -164,6 +164,7 @@ export function TableContent({
   hasMoreTokens = false,
   hasMoreObjects = false,
   onLoadMore,
+  showFilterContent
 }: TableContentProps) {
 
   const tagColors = useMemo(() => {
@@ -217,14 +218,10 @@ export function TableContent({
                   <div className="relative group">
                     <span
                       className="block max-w-[200px] truncate"
-                    // title={record.sourceObject.split("/").slice(-1)}
+                      title={record.sourceObject.split("/").slice(-1).join("")}
                     >
                       {record.sourceObject.split("/").slice(-1)}
                     </span>
-                    <div className="absolute hidden group-hover:block bg-gray-800 text-white text-sm rounded-md p-2 z-10 -left-2 top-full mt-1 whitespace-normal max-w-xs break-words">
-                      {record.sourceObject.split("/").slice(-1)}
-                      <div className="absolute -top-1 left-3 w-2 h-2 bg-gray-800 transform rotate-45" />
-                    </div>
                   </div>
                 </TableCell>
               </TableRow>
@@ -278,15 +275,7 @@ export function TableContent({
           {filteredRecords.length > 0 ? (
             filteredRecords.map((record, index) => (
               <TableRow key={index}>
-                <TableCell
-                  style={{
-                    maxWidth: '60%',
-                    whiteSpace: 'normal',
-                    wordBreak: 'break-word',
-                    overflowWrap: 'break-word',
-                    padding: '16px',
-                  }}
-                >
+                <TableCell className="mw-3/5">
                   <div className="text-sm leading-relaxed bg-white p-3 rounded border border-gray-100 shadow-sm">
                     {record.taggedTokens.map((token, tokenIndex) => (
                       <HighlightedToken
@@ -298,7 +287,16 @@ export function TableContent({
                     ))}
                   </div>
                 </TableCell>
-                <TableCell>{record.sourceObject}</TableCell>
+                <TableCell className="w-1/5 px-4">
+                  <div className="relative group">
+                    <span
+                      className={`block max-w-[${showFilterContent ? '100' : '200'}px] truncate`}
+                      title={record.sourceObject.split("/").slice(-1).join("")}
+                    >
+                      {record.sourceObject.split("/").slice(-1)}
+                    </span>
+                  </div>
+                </TableCell>
               </TableRow>
             ))
           ) : (
