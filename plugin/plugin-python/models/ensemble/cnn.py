@@ -71,7 +71,7 @@ class CnnNerExtractor(Model):
 
         self.model.finetune(
             raw_samples,
-            epochs=5,
+            epochs=1,
             lr=3e-4,
             batch_size=16,
         )
