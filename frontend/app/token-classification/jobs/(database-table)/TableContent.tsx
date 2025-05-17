@@ -7,7 +7,7 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { Loader2 } from 'lucide-react';
-import { ClassifiedTokenDatabaseRecord, ObjectDatabaseRecord, ViewMode, TableContentProps } from './types';
+import { TableContentProps } from './types';
 import { Button } from '@/components/ui/button';
 import { NO_GROUP } from '@/lib/utils';
 
