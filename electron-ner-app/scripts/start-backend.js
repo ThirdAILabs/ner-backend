@@ -1,9 +1,14 @@
-const { spawn } = require('child_process');
-const path = require('path');
-const fs = require('fs');
-const portfinder = require('portfinder');
-const electron = require('electron');
-const { FIXED_PORT, ensurePortIsFree } = require('./check-port');
+import { spawn } from 'node:child_process';
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import portfinder from 'portfinder';
+import electron from 'electron';
+import { FIXED_PORT, ensurePortIsFree } from './check-port.js';
+
+// Get __dirname equivalent in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Determine if we're in Electron or standalone
 const isElectron = process.versions.hasOwnProperty('electron');
@@ -162,7 +167,7 @@ function getDefaultModelPath() {
   return path.join(binPath, 'udt_complete.model');
 }
 
-async function startBackend() {
+export async function startBackend() {
   // Ensure our fixed port is available
   const portAvailable = await ensurePortIsFree();
   if (!portAvailable) {
@@ -244,8 +249,6 @@ async function startBackend() {
 }
 
 // Start the backend if this script is called directly
-if (require.main === module) {
+if (import.meta.url === import.meta.main) {
   startBackend();
-}
-
-module.exports = { startBackend }; 
+} 

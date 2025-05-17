@@ -1,15 +1,21 @@
-const { exec } = require('child_process');
-const net = require('net');
+import { exec } from 'node:child_process';
+import net from 'node:net';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+
+// Get __dirname equivalent in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Choose a rare 5-digit port for our application
-const FIXED_PORT = 16549;
+export const FIXED_PORT = 16549;
 
 /**
  * Checks if the specified port is in use
  * @param {number} port Port to check
  * @returns {Promise<boolean>} True if port is in use, false otherwise
  */
-function isPortInUse(port) {
+export function isPortInUse(port) {
   return new Promise((resolve) => {
     const server = net.createServer();
     
@@ -36,7 +42,7 @@ function isPortInUse(port) {
  * @param {number} port Port to free up
  * @returns {Promise<boolean>} True if successfully killed a process, false otherwise
  */
-function killProcessOnPort(port) {
+export function killProcessOnPort(port) {
   return new Promise((resolve, reject) => {
     let command;
     if (process.platform === 'win32') {
@@ -63,7 +69,7 @@ function killProcessOnPort(port) {
  * Ensures the designated port is free for use
  * @returns {Promise<boolean>} True if port is available (either was free or was successfully freed)
  */
-async function ensurePortIsFree() {
+export async function ensurePortIsFree() {
   console.log(`Checking if port ${FIXED_PORT} is in use...`);
   
   const inUse = await isPortInUse(FIXED_PORT);
@@ -90,15 +96,8 @@ async function ensurePortIsFree() {
   return true;
 }
 
-module.exports = {
-  FIXED_PORT,
-  isPortInUse,
-  killProcessOnPort,
-  ensurePortIsFree
-};
-
 // If this script is run directly
-if (require.main === module) {
+if (import.meta.url === import.meta.main) {
   ensurePortIsFree().then(success => {
     if (success) {
       console.log('Port is now available for use.');
