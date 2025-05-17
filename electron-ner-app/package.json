@@ -1,6 +1,6 @@
 {
   "name": "electron-ner-app",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Electron app for Named Entity Recognition",
   "main": "main.js",
   "scripts": {
@@ -34,7 +34,7 @@
     "@types/node": "^20.14.10",
     "@vitejs/plugin-react": "^4.2.1",
     "concurrently": "^8.2.2",
-    "electron": "^28.3.3",
+    "electron": "^35.4.0",
     "electron-builder": "^24.6.4",
     "typescript": "^5.5.3",
     "vite": "^5.1.4"
@@ -44,7 +44,9 @@
     "axios": "^1.7.2",
     "commander": "^12.0.0",
     "electron-is-dev": "^2.0.0",
+    "electron-log": "^5.4.0",
     "electron-serve": "^2.1.1",
+    "electron-updater": "^6.6.2",
     "get-port": "^7.1.0",
     "http-proxy": "^1.18.1",
     "portfinder": "^1.0.37",
@@ -88,19 +90,25 @@
     "mac": {
       "category": "public.app-category.developer-tools",
       "target": [
-        "dmg"
+        "dmg",
+        "zip"
       ],
       "hardenedRuntime": true,
-      "gatekeeperAssess": false,
-      "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.plist"
+      "gatekeeperAssess": false
     },
     "win": {
       "target": "nsis"
     },
     "linux": {
       "target": "AppImage"
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "ThirdAILabs",
+        "repo": "pocket-shield-release"
+      }
+    ]
   },
   "type": "module"
 }

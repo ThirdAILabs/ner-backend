@@ -4,6 +4,10 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import serve from 'electron-serve';
 import { startBackend } from './scripts/start-backend.js';
+import log from 'electron-log';
+import electronUpdater from 'electron-updater';
+
+const { autoUpdater } = electronUpdater;
 
 // Get __dirname equivalent in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -139,12 +143,58 @@ Please try running the install script from the terminal.`);
   return backendProcess;
 }
 
+// Ensure logger is set up for auto-updater
+autoUpdater.logger = log;
+autoUpdater.logger.transports.file.level = 'info';
+autoUpdater.autoDownload = true;
+
+// Set up auto-updater event listeners
+autoUpdater.on('checking-for-update', () => {
+  log.info('Checking for update...');
+});
+autoUpdater.on('update-available', (info) => {
+  log.info('Update available:', info);
+  dialog.showMessageBox({ type: 'info', title: 'Update available', message: `A new version (${info.version}) is available. Downloading now...` });
+});
+autoUpdater.on('update-not-available', (info) => {
+  log.info('Update not available:', info);
+});
+autoUpdater.on('error', (err) => {
+  log.error('Error in auto-updater:', err);
+});
+autoUpdater.on('download-progress', (progressObj) => {
+  let log_message = "Download speed: " + progressObj.bytesPerSecond;
+  log_message = log_message + ' - Downloaded ' + Math.round(progressObj.percent) + '%';
+  log.info(log_message);
+});
+autoUpdater.on('update-downloaded', () => {
+  dialog.showMessageBox({ title: 'Install updates', message: 'Updates downloaded, application will be quit for update...' })
+    .then(() => {
+      autoUpdater.quitAndInstall();
+    });
+});
+
+// Allow update checks in dev for testing when DEBUG_UPDATER is true
+if (process.env.DEBUG_UPDATER === 'true') {
+  console.log('DEBUG_UPDATER is set; enabling update checks in dev mode');
+  // Monkey-patch app.isPackaged so autoUpdater will run even in dev
+  Object.defineProperty(app, 'isPackaged', { get: () => true });
+  console.log('Monkey-patched app.isPackaged to true for DEBUG_UPDATER');
+}
+
 // This method will be called when Electron has finished initialization
 app.whenReady().then(() => {
   // Always start the backend first, regardless of dev/prod mode
-  ensureBackendStarted();
   createWindow();
-
+  ensureBackendStarted();
+  
+  // Check for updates on launch (in production or when DEBUG_UPDATER is set)
+  if (!isDev || process.env.DEBUG_UPDATER === 'true') {
+    log.info(`Checking for updates (isDev=${isDev}), current version: ${app.getVersion()}`);
+    autoUpdater.checkForUpdatesAndNotify()
+      .then((result) => log.info('checkForUpdatesAndNotify result:', result))
+      .catch((error) => log.error('checkForUpdatesAndNotify error:', error));
+  }
 
   app.on('activate', () => {
     // On macOS it's common to re-create a window when the dock icon is clicked

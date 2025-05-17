@@ -1,6 +1,5 @@
-import { act, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Table } from '@/components/ui/table';
 import {
   DatabaseTableProps,
   ViewMode,
@@ -12,15 +11,50 @@ import { HeaderContent } from './HeaderContent';
 import { TableContent } from './TableContent';
 import { nerService } from '@/lib/backend';
 import { useSearchParams } from 'next/navigation';
+import { NO_GROUP } from '@/lib/utils';
+
+function joinAdjacentEntities(entities: Entity[]) {
+  if (entities.length === 0) {
+    return [];
+  }
+
+  const joinedEntities: Entity[] = [entities[0]];
+  // We need to keep track of the previous *unjoined* entity.
+  let prevEntity = entities[0];
+  
+  for (let i = 1; i < entities.length; i++) {
+    console.log(entities[i]);
+    const numSpacesAfterPrevEntity = (prevEntity.RContext || '').match(/^\s*/)?.[0].length || 0
+    if (
+      prevEntity.Object === entities[i].Object &&
+      (entities[i].Start - prevEntity.End) === numSpacesAfterPrevEntity &&
+      prevEntity.Label === entities[i].Label
+    ) {
+      const lastJoinedEntity = joinedEntities[joinedEntities.length - 1];
+      const whitespace = prevEntity.RContext?.substring(0, numSpacesAfterPrevEntity) || '';
+      joinedEntities[joinedEntities.length - 1] = {
+        ...lastJoinedEntity,
+        Text: lastJoinedEntity.Text + whitespace + entities[i].Text,
+        End: entities[i].End,
+        RContext: entities[i].RContext,
+      }
+    } else {
+      joinedEntities.push(entities[i]);
+    }
+    prevEntity = entities[i];
+  }
+
+  return joinedEntities;
+}
+  
 
 export function DatabaseTable({
-  loadMoreObjectRecords,
-  loadMoreClassifiedTokenRecords,
-  groups,
+  groups: groupsProp,
   tags
 }: DatabaseTableProps) {
   const searchParams = useSearchParams();
   const reportId: string = searchParams.get('jobId') as string;
+  const groups = groupsProp.length > 0 ? [...groupsProp, NO_GROUP] : [];
 
   // Loading states and refs
   const [isLoadingTokenRecords, setIsLoadingTokenRecords] = useState(false);
@@ -89,7 +123,7 @@ export function DatabaseTable({
           `Loaded ${entities.length} token records from offset ${newOffset}`
         );
 
-        const mappedRecords = entities.map((entity) => ({
+        const mappedRecords = joinAdjacentEntities(entities).map((entity) => ({
           token: entity.Text,
           tag: entity.Label,
           sourceObject: entity.Object,
@@ -307,7 +341,6 @@ export function DatabaseTable({
 
   // Filter handlers
   const handleGroupFilterChange = (filterKey: string) => {
-    console.log('Group filter changed:', filterKey);
     setGroupFilters((prev) => ({
       ...prev,
       [filterKey]: !prev[filterKey]

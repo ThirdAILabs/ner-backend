@@ -28,12 +28,15 @@ interface Report {
     };
     FileCount: number;
     CompletedFileCount: number;
+    FailedFileCount: number;
     Groups?: Group[];
     ShardDataTaskStatus?: string;
     InferenceTaskStatuses?: { [key: string]: TaskStatusCategory };
     Errors?: string[];
     ReportName: string;
-    TagCounts: { [key: string]: number; }
+    TotalInferenceTimeSeconds: number;
+    ShardDataTimeSeconds: number;
+    TagCounts: { [key: string]: number; };
 }
 
 interface Entity {
