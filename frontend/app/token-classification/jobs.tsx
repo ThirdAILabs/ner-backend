@@ -45,6 +45,7 @@ interface ReportWithStatus {
   CreationTime: string;
   FileCount: number;
   CompletedFileCount: number;
+  FailedFileCount: number;
   Tags?: string[];
   CustomTags?: { [key: string]: string };
   Groups?: {
@@ -126,7 +127,6 @@ export default function Jobs() {
       clearInterval(pollInterval);
     };
   };
-
 
   useEffect(() => {
     const fetchReports = async () => {
@@ -314,12 +314,14 @@ export default function Jobs() {
 
     const fileCount = report.FileCount || 0;
     const completedFileCount = report.CompletedFileCount || 0;
+    const failedFileCount = report.FailedFileCount || 0;
     const totalTasks = completed + running + queued + failed;
 
-    const progress = completedFileCount > 0 ? (completedFileCount / fileCount) * 100 : 0;
+    const progress =
+      completedFileCount > 0 ? (completedFileCount / fileCount) * 100 : 0;
 
     // If there are failed tasks, show failure status
-    if (failed > 0) {
+    if (failedFileCount > 0) {
       return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -329,31 +331,40 @@ export default function Jobs() {
                 height: '8px',
                 bgcolor: '#f1f5f9',
                 borderRadius: '9999px',
-                overflow: 'hidden'
+                overflow: 'hidden',
+                display: 'flex'
               }}
             >
+              {/* Green (successful files) */}
               <Box
                 sx={{
                   height: '100%',
-                  width: '100%',
-                  bgcolor: '#ef4444',
-                  borderRadius: '9999px'
+                  width: `${(completedFileCount / fileCount) * 100}%`,
+                  bgcolor: '#4caf50'
+                }}
+              />
+              {/* Red (failed files) */}
+              <Box
+                sx={{
+                  height: '100%',
+                  width: `${(failedFileCount / fileCount) * 100}%`,
+                  bgcolor: '#ef4444'
                 }}
               />
             </Box>
             <Typography
               variant="body2"
               sx={{
-                color: '#ef4444',
+                color: 'text.secondary',
                 whiteSpace: 'nowrap',
                 fontWeight: 'medium'
               }}
             >
-              Failed
+              {`${((completedFileCount / fileCount) * 100).toFixed(0)} %`}
             </Typography>
           </Box>
-          <Typography variant="caption" sx={{ color: '#ef4444' }}>
-            {`${failed} task${failed > 1 ? 's' : ''} failed out of ${totalTasks} total`}
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            {`Files: ${completedFileCount}/${fileCount} Completed, ${failedFileCount}/${fileCount} Failed`}
           </Typography>
         </Box>
       );
@@ -431,7 +442,7 @@ export default function Jobs() {
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            mb: 3,
+            mb: 3
           }}
         >
           <Typography
@@ -470,7 +481,7 @@ export default function Jobs() {
             boxShadow: 'none',
             border: '1px solid rgba(0, 0, 0, 0.12)',
             borderRadius: '0.375rem',
-            overflow: 'hidden',
+            overflow: 'hidden'
             // width: '80%',
             // margin: '0 auto',
           }}

@@ -39,8 +39,9 @@ type Report struct {
 
 	Stopped            bool
 	CreationTime       time.Time
-	TotalFileCount     int `json:"FileCount,omitempty"`
-	CompletedFileCount int `json:"CompletedFileCount,omitempty"`
+	TotalFileCount     int `json:"FileCount"`
+	CompletedFileCount int `json:"CompletedFileCount"`
+	FailedFileCount    int `json:"FailedFileCount"`
 
 	Tags       []string          `json:"Tags,omitempty"`
 	CustomTags map[string]string `json:"CustomTags,omitempty"`

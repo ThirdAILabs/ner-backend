@@ -31,51 +31,21 @@ import { Suspense } from 'react';
 
 // Calculate progress based on InferenceTaskStatuses
 const calculateProgress = (report: Report | null): number => {
-  if (!report || !report.InferenceTaskStatuses) return 0;
+  if (!report || !report.CompletedFileCount || !report.FileCount) return 0;
 
-  const statuses = report.InferenceTaskStatuses;
-
-  // Sum up all task sizes
-  let totalSize = 0;
-  let completedSize = 0;
-
-  // Add completed tasks
-  if (statuses.COMPLETED) {
-    totalSize += statuses.COMPLETED.TotalSize;
-    completedSize += statuses.COMPLETED.TotalSize;
-  }
-
-  // Add running tasks
-  if (statuses.RUNNING) {
-    totalSize += statuses.RUNNING.TotalSize;
-  }
-
-  // Add queued tasks
-  if (statuses.QUEUED) {
-    totalSize += statuses.QUEUED.TotalSize;
-  }
-
-  // Add failed tasks
-  if (statuses.FAILED) {
-    totalSize += statuses.FAILED.TotalSize;
-  }
-
-  // Calculate percentage
-  if (totalSize === 0) return 0;
-  return Math.round((completedSize / totalSize) * 100);
+  return (report.CompletedFileCount / report.FileCount) * 100;
 };
 
 // Get the total number of processed tokens
 const getProcessedTokens = (report: Report | null): number => {
   if (
     !report ||
-    !report.InferenceTaskStatuses ||
-    !report.InferenceTaskStatuses.COMPLETED
+    !report.InferenceTaskStatuses
   ) {
     return 0;
   }
 
-  return report.InferenceTaskStatuses.COMPLETED.TotalSize;
+  return (report.InferenceTaskStatuses.COMPLETED?.TotalSize || 0) + (report.InferenceTaskStatuses.FAILED?.TotalSize || 0) + (report.InferenceTaskStatuses.RUNNING?.TotalSize || 0);
 };
 
 // Source option card component
@@ -497,6 +467,9 @@ function JobDetail() {
             tokensProcessed={getProcessedTokens(reportData)}
             tags={availableTagsCount}
             timeTaken={timeTaken}
+            completedFileCount={reportData?.CompletedFileCount || 0}
+            failedFileCount={reportData?.FailedFileCount || 0}
+            totalFileCount={reportData?.FileCount || 0}
           />
         </TabsContent>
 

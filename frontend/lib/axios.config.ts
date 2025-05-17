@@ -20,14 +20,25 @@ axiosInstance.interceptors.request.use(config => {
     return Promise.reject(error);
   });
 
+// Create a custom event for API errors
+export const showApiErrorEvent = (message: string, status?: number) => {
+    const event = new CustomEvent('api-error', { 
+        detail: { message, status } 
+    });
+    window.dispatchEvent(event);
+};
+
 axiosInstance.interceptors.response.use(
     (response) => response,
     (error) => {
         const errorMessage =
             error.response?.data?.message || error.message || 'An unexpected error occurred';
         const errorStatus = error.response?.status || 500;
-        //     window.location.href = `/error?message=${encodeURIComponent(errorMessage)}
-        //   &status=${encodeURIComponent(errorStatus)}`;
+        
+        // Dispatch custom error event
+        if (typeof window !== 'undefined') {
+            showApiErrorEvent(errorMessage, errorStatus);
+        }
 
         return Promise.reject(error);
     }
