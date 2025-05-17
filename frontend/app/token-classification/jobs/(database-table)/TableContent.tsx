@@ -118,10 +118,10 @@ interface TokenContextProps {
 const TokenContext = React.memo(({ context, tagColors }: TokenContextProps) => {
   if (!context) return <span className="text-red-400 text-xs">No context available</span>;
 
-  const leftContent = context.left || '[empty left context]';
-  const rightContent = context.right || '[empty right context]';
-  const token = context.token || '[empty token]';
-  const tag = context.tag || '[empty tag]';
+  const leftContent = context.left || '';
+  const rightContent = context.right || '';
+  const token = context.token || '';
+  const tag = context.tag || '';
 
   return (
     <div className="font-mono text-xs border border-gray-200 p-2 rounded bg-gray-50">
