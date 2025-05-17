@@ -1,14 +1,20 @@
-const { spawn } = require('child_process');
-const path = require('path');
-const fs = require('fs');
-const portfinder = require('portfinder');
-const electron = require('electron');
+import { spawn } from 'node:child_process';
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import portfinder from 'portfinder';
+import electron from 'electron';
+import { FIXED_PORT, ensurePortIsFree } from './check-port.js';
+
+// Get __dirname equivalent in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Determine if we're in Electron or standalone
 const isElectron = process.versions.hasOwnProperty('electron');
 
-// This function determines the correct path to the backend executable
-function getBackendPath() {
+// This function determines the correct path to the bin directory
+function getBinPath() {
   // Process environment and execution context
   const isPkg = 'electron' in process.versions;
   const isProduction = process.env.NODE_ENV === 'production';
@@ -30,30 +36,29 @@ function getBackendPath() {
   // In development mode
   if (!isProduction && !process.execPath.includes('Applications')) {
     // We'll use the executable from the bin directory in the project
-    const devPath = path.join(__dirname, '..', 'bin', 'main');
+    const devPath = path.join(__dirname, '..', 'bin');
     if (fs.existsSync(devPath)) {
-      console.log('Found backend in bin directory:', devPath);
+      console.log('Found bin directory:', devPath);
       return devPath;
     }
     
     // Fall back to looking in the parent directory (where the Go project is)
-    const parentPath = path.join(__dirname, '..', '..', 'main');
+    const parentPath = path.join(__dirname, '..', '..');
     if (fs.existsSync(parentPath)) {
-      console.log('Found backend in parent directory:', parentPath);
+      console.log('Found parent directory:', parentPath);
       return parentPath;
     }
     
-    console.error('Backend executable not found in development mode');
+    console.error('Bin directory not found in development mode');
     return null;
   }
   
   // In production or installed app - determine the correct path
 
-  // First check the current working directory for bin/main
-  // This is after we've fixed the working directory in main.js
-  const cwdBinPath = path.join(process.cwd(), 'bin', 'main');
+  // First check the current working directory for bin
+  const cwdBinPath = path.join(process.cwd(), 'bin');
   if (fs.existsSync(cwdBinPath)) {
-    console.log('✅ Found backend in current working directory:', cwdBinPath);
+    console.log('✅ Found bin in current working directory:', cwdBinPath);
     return cwdBinPath;
   }
   
@@ -80,32 +85,32 @@ function getBackendPath() {
   
   // Primary location for packaged apps with absolute path for GUI launches
   const primaryLocations = [
-    path.join(resourcesDir, 'bin', 'main'),
-    '/Applications/PocketShield.app/Contents/Resources/bin/main'
+    path.join(resourcesDir, 'bin'),
+    '/Applications/PocketShield.app/Contents/Resources/bin'
   ];
   
   for (const primaryLocation of primaryLocations) {
     console.log('Checking primary location:', primaryLocation);
     if (fs.existsSync(primaryLocation)) {
-      console.log('✅ Found backend at primary location');
+      console.log('✅ Found bin at primary location');
       return primaryLocation;
     }
   }
   
   // List of fallback locations
   const fallbackPaths = [
-    path.join(resourcesDir, 'Resources', 'bin', 'main'),
-    path.join(resourcesDir, 'app.asar.unpacked', 'bin', 'main'),
-    path.join(resourcesDir, '..', 'bin', 'main'),
+    path.join(resourcesDir, 'Resources', 'bin'),
+    path.join(resourcesDir, 'app.asar.unpacked', 'bin'),
+    path.join(resourcesDir, '..', 'bin'),
     // Path with current execPath directory (absolute)
-    path.join(path.dirname(process.execPath || ''), '..', 'Resources', 'bin', 'main')
+    path.join(path.dirname(process.execPath || ''), '..', 'Resources', 'bin')
   ];
   
   // Check each possible path
   for (const possiblePath of fallbackPaths) {
     console.log('Checking fallback path:', possiblePath);
     if (fs.existsSync(possiblePath)) {
-      console.log('✅ Found backend at fallback path:', possiblePath);
+      console.log('✅ Found bin at fallback path:', possiblePath);
       return possiblePath;
     }
   }
@@ -113,15 +118,15 @@ function getBackendPath() {
   // Last resort - search common paths
   console.log('Searching standard macOS application paths...');
   const standardMacPaths = [
-    '/Applications/PocketShield.app/Contents/Resources/bin/main',
-    '/Applications/PocketShield.app/Contents/MacOS/bin/main',
-    path.join(process.env.HOME || '', 'Applications/PocketShield.app/Contents/Resources/bin/main')
+    '/Applications/PocketShield.app/Contents/Resources/bin',
+    '/Applications/PocketShield.app/Contents/MacOS/bin',
+    path.join(process.env.HOME || '', 'Applications/PocketShield.app/Contents/Resources/bin')
   ];
   
   for (const stdPath of standardMacPaths) {
     console.log('Checking standard path:', stdPath);
     if (fs.existsSync(stdPath)) {
-      console.log('✅ Found backend at standard path:', stdPath);
+      console.log('✅ Found bin at standard path:', stdPath);
       return stdPath;
     }
   }
@@ -144,14 +149,33 @@ function getBackendPath() {
     console.error('Error listing directory contents:', error.message);
   }
   
-  console.error('❌ Could not find backend executable in any location');
+  console.error('❌ Could not find bin directory in any location');
   return null;
 }
 
-async function startBackend() {
-  const availablePort = await portfinder.getPortPromise();
+// Get the path to the backend executable
+function getBackendPath() {
+  const binPath = getBinPath();
+  if (!binPath) return null;
+  return path.join(binPath, 'main');
+}
 
-  console.log(`Found port available: ${availablePort}`)
+// Get the path to the default model file
+function getDefaultModelPath() {
+  const binPath = getBinPath();
+  if (!binPath) return null;
+  return path.join(binPath, 'udt_complete.model');
+}
+
+export async function startBackend() {
+  // Ensure our fixed port is available
+  const portAvailable = await ensurePortIsFree();
+  if (!portAvailable) {
+    console.error(`🔴 Could not secure port ${FIXED_PORT} for backend use`);
+    return null;
+  }
+
+  console.log(`Using fixed port: ${FIXED_PORT}`)
 
   const backendPath = getBackendPath();
   
@@ -178,8 +202,9 @@ async function startBackend() {
     cwd: backendDir, // Set working directory to where the binary is
     env: {
       ...process.env,
-      PORT: availablePort.toString(),
+      PORT: FIXED_PORT.toString(),
       DEBUG: process.env.DEBUG || '*',
+      MODEL_PATH: getDefaultModelPath(),
       // Add any environment variables needed by the backend
     }
   });
@@ -200,20 +225,30 @@ async function startBackend() {
   // Handle termination signals
   process.on('SIGINT', () => {
     console.log('Stopping backend process...');
-    backend.kill('SIGINT');
+    if (backend && backend.kill) {
+      backend.kill('SIGINT');
+    }
   });
   
   process.on('SIGTERM', () => {
     console.log('Stopping backend process...');
-    backend.kill('SIGTERM');
+    if (backend && backend.kill) {
+      backend.kill('SIGTERM');
+    }
   });
   
-  return backend;
+  // Return a process object with a kill method
+  return {
+    process: backend,
+    kill: (signal) => {
+      if (backend && backend.kill) {
+        backend.kill(signal);
+      }
+    }
+  };
 }
 
 // Start the backend if this script is called directly
-if (require.main === module) {
+if (import.meta.url === import.meta.main) {
   startBackend();
-}
-
-module.exports = { startBackend }; 
+} 

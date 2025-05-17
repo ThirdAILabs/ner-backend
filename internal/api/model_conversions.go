@@ -9,7 +9,6 @@ func convertModel(m database.Model) api.Model {
 	model := api.Model{
 		Id:     m.Id,
 		Name:   m.Name,
-		Type:   m.Type,
 		Status: m.Status,
 	}
 	if m.BaseModelId.Valid {
@@ -65,6 +64,7 @@ func convertReport(r database.Report) api.Report {
 		Groups:             convertGroups(r.Groups),
 		TotalFileCount:     int(r.TotalFileCount),
 		CompletedFileCount: int(r.CompletedFileCount),
+		FailedFileCount:    int(r.TotalFileCount) - int(r.CompletedFileCount),
 	}
 	report.TagCounts = make(map[string]uint64)
 

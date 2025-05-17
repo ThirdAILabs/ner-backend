@@ -265,6 +265,310 @@ func (x *Entity) GetEnd() int32 {
 	return 0
 }
 
+type TagInfo struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Description   string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+	Examples      []string               `protobuf:"bytes,3,rep,name=examples,proto3" json:"examples,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TagInfo) Reset() {
+	*x = TagInfo{}
+	mi := &file_proto_model_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TagInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TagInfo) ProtoMessage() {}
+
+func (x *TagInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_model_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TagInfo.ProtoReflect.Descriptor instead.
+func (*TagInfo) Descriptor() ([]byte, []int) {
+	return file_proto_model_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *TagInfo) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *TagInfo) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *TagInfo) GetExamples() []string {
+	if x != nil {
+		return x.Examples
+	}
+	return nil
+}
+
+type Sample struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Tokens        []string               `protobuf:"bytes,1,rep,name=tokens,proto3" json:"tokens,omitempty"`
+	Labels        []string               `protobuf:"bytes,2,rep,name=labels,proto3" json:"labels,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Sample) Reset() {
+	*x = Sample{}
+	mi := &file_proto_model_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Sample) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Sample) ProtoMessage() {}
+
+func (x *Sample) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_model_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Sample.ProtoReflect.Descriptor instead.
+func (*Sample) Descriptor() ([]byte, []int) {
+	return file_proto_model_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *Sample) GetTokens() []string {
+	if x != nil {
+		return x.Tokens
+	}
+	return nil
+}
+
+func (x *Sample) GetLabels() []string {
+	if x != nil {
+		return x.Labels
+	}
+	return nil
+}
+
+type FinetuneRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Prompt        string                 `protobuf:"bytes,1,opt,name=prompt,proto3" json:"prompt,omitempty"`
+	Tags          []*TagInfo             `protobuf:"bytes,2,rep,name=tags,proto3" json:"tags,omitempty"`
+	Samples       []*Sample              `protobuf:"bytes,3,rep,name=samples,proto3" json:"samples,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FinetuneRequest) Reset() {
+	*x = FinetuneRequest{}
+	mi := &file_proto_model_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FinetuneRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FinetuneRequest) ProtoMessage() {}
+
+func (x *FinetuneRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_model_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FinetuneRequest.ProtoReflect.Descriptor instead.
+func (*FinetuneRequest) Descriptor() ([]byte, []int) {
+	return file_proto_model_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *FinetuneRequest) GetPrompt() string {
+	if x != nil {
+		return x.Prompt
+	}
+	return ""
+}
+
+func (x *FinetuneRequest) GetTags() []*TagInfo {
+	if x != nil {
+		return x.Tags
+	}
+	return nil
+}
+
+func (x *FinetuneRequest) GetSamples() []*Sample {
+	if x != nil {
+		return x.Samples
+	}
+	return nil
+}
+
+type FinetuneResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FinetuneResponse) Reset() {
+	*x = FinetuneResponse{}
+	mi := &file_proto_model_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FinetuneResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FinetuneResponse) ProtoMessage() {}
+
+func (x *FinetuneResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_model_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FinetuneResponse.ProtoReflect.Descriptor instead.
+func (*FinetuneResponse) Descriptor() ([]byte, []int) {
+	return file_proto_model_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *FinetuneResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+type SaveRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Dir           string                 `protobuf:"bytes,1,opt,name=dir,proto3" json:"dir,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SaveRequest) Reset() {
+	*x = SaveRequest{}
+	mi := &file_proto_model_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SaveRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveRequest) ProtoMessage() {}
+
+func (x *SaveRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_model_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveRequest.ProtoReflect.Descriptor instead.
+func (*SaveRequest) Descriptor() ([]byte, []int) {
+	return file_proto_model_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *SaveRequest) GetDir() string {
+	if x != nil {
+		return x.Dir
+	}
+	return ""
+}
+
+type SaveResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SaveResponse) Reset() {
+	*x = SaveResponse{}
+	mi := &file_proto_model_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SaveResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SaveResponse) ProtoMessage() {}
+
+func (x *SaveResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_model_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SaveResponse.ProtoReflect.Descriptor instead.
+func (*SaveResponse) Descriptor() ([]byte, []int) {
+	return file_proto_model_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *SaveResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
 var File_proto_model_proto protoreflect.FileDescriptor
 
 const file_proto_model_proto_rawDesc = "" +
@@ -282,10 +586,29 @@ const file_proto_model_proto_rawDesc = "" +
 	"\x05label\x18\x01 \x01(\tR\x05label\x12\x12\n" +
 	"\x04text\x18\x02 \x01(\tR\x04text\x12\x14\n" +
 	"\x05start\x18\x03 \x01(\x05R\x05start\x12\x10\n" +
-	"\x03end\x18\x04 \x01(\x05R\x03end2\x8a\x01\n" +
+	"\x03end\x18\x04 \x01(\x05R\x03end\"[\n" +
+	"\aTagInfo\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
+	"\vdescription\x18\x02 \x01(\tR\vdescription\x12\x1a\n" +
+	"\bexamples\x18\x03 \x03(\tR\bexamples\"8\n" +
+	"\x06Sample\x12\x16\n" +
+	"\x06tokens\x18\x01 \x03(\tR\x06tokens\x12\x16\n" +
+	"\x06labels\x18\x02 \x03(\tR\x06labels\"v\n" +
+	"\x0fFinetuneRequest\x12\x16\n" +
+	"\x06prompt\x18\x01 \x01(\tR\x06prompt\x12\"\n" +
+	"\x04tags\x18\x02 \x03(\v2\x0e.proto.TagInfoR\x04tags\x12'\n" +
+	"\asamples\x18\x03 \x03(\v2\r.proto.SampleR\asamples\",\n" +
+	"\x10FinetuneResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"\x1f\n" +
+	"\vSaveRequest\x12\x10\n" +
+	"\x03dir\x18\x01 \x01(\tR\x03dir\"(\n" +
+	"\fSaveResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess2\xf8\x01\n" +
 	"\x05Model\x128\n" +
 	"\aPredict\x12\x15.proto.PredictRequest\x1a\x16.proto.PredictResponse\x12G\n" +
-	"\fPredictBatch\x12\x1a.proto.PredictBatchRequest\x1a\x1b.proto.PredictBatchResponseB\tZ\a./protob\x06proto3"
+	"\fPredictBatch\x12\x1a.proto.PredictBatchRequest\x1a\x1b.proto.PredictBatchResponse\x12;\n" +
+	"\bFinetune\x12\x16.proto.FinetuneRequest\x1a\x17.proto.FinetuneResponse\x12/\n" +
+	"\x04Save\x12\x12.proto.SaveRequest\x1a\x13.proto.SaveResponseB\tZ\a./protob\x06proto3"
 
 var (
 	file_proto_model_proto_rawDescOnce sync.Once
@@ -299,26 +622,38 @@ func file_proto_model_proto_rawDescGZIP() []byte {
 	return file_proto_model_proto_rawDescData
 }
 
-var file_proto_model_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_proto_model_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_proto_model_proto_goTypes = []any{
 	(*PredictRequest)(nil),       // 0: proto.PredictRequest
 	(*PredictResponse)(nil),      // 1: proto.PredictResponse
 	(*PredictBatchRequest)(nil),  // 2: proto.PredictBatchRequest
 	(*PredictBatchResponse)(nil), // 3: proto.PredictBatchResponse
 	(*Entity)(nil),               // 4: proto.Entity
+	(*TagInfo)(nil),              // 5: proto.TagInfo
+	(*Sample)(nil),               // 6: proto.Sample
+	(*FinetuneRequest)(nil),      // 7: proto.FinetuneRequest
+	(*FinetuneResponse)(nil),     // 8: proto.FinetuneResponse
+	(*SaveRequest)(nil),          // 9: proto.SaveRequest
+	(*SaveResponse)(nil),         // 10: proto.SaveResponse
 }
 var file_proto_model_proto_depIdxs = []int32{
-	4, // 0: proto.PredictResponse.entities:type_name -> proto.Entity
-	1, // 1: proto.PredictBatchResponse.predictions:type_name -> proto.PredictResponse
-	0, // 2: proto.Model.Predict:input_type -> proto.PredictRequest
-	2, // 3: proto.Model.PredictBatch:input_type -> proto.PredictBatchRequest
-	1, // 4: proto.Model.Predict:output_type -> proto.PredictResponse
-	3, // 5: proto.Model.PredictBatch:output_type -> proto.PredictBatchResponse
-	4, // [4:6] is the sub-list for method output_type
-	2, // [2:4] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	4,  // 0: proto.PredictResponse.entities:type_name -> proto.Entity
+	1,  // 1: proto.PredictBatchResponse.predictions:type_name -> proto.PredictResponse
+	5,  // 2: proto.FinetuneRequest.tags:type_name -> proto.TagInfo
+	6,  // 3: proto.FinetuneRequest.samples:type_name -> proto.Sample
+	0,  // 4: proto.Model.Predict:input_type -> proto.PredictRequest
+	2,  // 5: proto.Model.PredictBatch:input_type -> proto.PredictBatchRequest
+	7,  // 6: proto.Model.Finetune:input_type -> proto.FinetuneRequest
+	9,  // 7: proto.Model.Save:input_type -> proto.SaveRequest
+	1,  // 8: proto.Model.Predict:output_type -> proto.PredictResponse
+	3,  // 9: proto.Model.PredictBatch:output_type -> proto.PredictBatchResponse
+	8,  // 10: proto.Model.Finetune:output_type -> proto.FinetuneResponse
+	10, // 11: proto.Model.Save:output_type -> proto.SaveResponse
+	8,  // [8:12] is the sub-list for method output_type
+	4,  // [4:8] is the sub-list for method input_type
+	4,  // [4:4] is the sub-list for extension type_name
+	4,  // [4:4] is the sub-list for extension extendee
+	0,  // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_proto_model_proto_init() }
@@ -332,7 +667,7 @@ func file_proto_model_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_model_proto_rawDesc), len(file_proto_model_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

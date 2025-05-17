@@ -21,18 +21,49 @@ jobs:
   unit-tests:
     runs-on: ubuntu-22.04
 
-    steps:
-      - uses: actions/checkout@v2
+    env:
+      AWS_ACCESS_KEY_ID:     ${{ secrets.AWS_SECRET_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      MODEL_DIR:             ${{ github.workspace }}/models
+      HOST_MODEL_DIR:        ${{ github.workspace }}/models
+      PYTHON_MODEL_PLUGIN_SCRIPT_PATH:    ${{ github.workspace }}/plugin/plugin-python/plugin.py
 
-      - name: set up go >=1.23.3
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Capture Python executable path
+        run: echo "PYTHON_EXECUTABLE_PATH=$(which python)" >> $GITHUB_ENV
+
+      - name: Set up Go ≥1.23.3
         uses: actions/setup-go@v5
         with:
           go-version: '>=1.23.3'
 
-      - name: install dependencies
-        run: |
-          go mod download
+      - name: Install Go modules
+        run: go mod download
 
-      - name: run unit tests
+      - name: Download NER models from S3
         run: |
-          go test -v ./...
+          mkdir -p "$MODEL_DIR"
+          aws s3 cp s3://ner-models/cnn_model/         "$MODEL_DIR/cnn_model/"      --recursive
+          aws s3 cp s3://ner-models/transformer_model/ "$MODEL_DIR/transformer_model/" --recursive
+
+          aws s3 cp s3://ner-models/python_ensemble_ner_model/udt_complete_with_datetime.model "$MODEL_DIR/model.bin"
+
+      - name: Install Python requirements
+        run: |
+          $PYTHON_EXECUTABLE_PATH -m pip install --upgrade pip
+          $PYTHON_EXECUTABLE_PATH -m pip install -r $(dirname "$PYTHON_MODEL_PLUGIN_SCRIPT_PATH")/requirements.txt
+
+      - name: Download spaCy English model
+        run: |
+          $PYTHON_EXECUTABLE_PATH -m spacy download en_core_web_lg
+
+      - name: Run unit tests
+        run: go test -v ./...

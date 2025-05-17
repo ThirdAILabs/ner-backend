@@ -1,9 +1,12 @@
-from typing import List
+from typing import List, Tuple, Optional
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchcrf import CRF
+from torch.utils.data import Dataset, DataLoader
+
+import sys
 
 
 def manual_word_ids(text: str, offsets: list[tuple[int, int]]) -> list[int | None]:
@@ -35,6 +38,31 @@ def aggregate_predictions(pred_tags, subword_lens):
         aggregated_pred.append(best_tag)
         pointer += length
     return aggregated_pred
+
+
+class _FinetuneDataset(Dataset):
+    def __init__(self, samples: List[Tuple[List[int], List[int]]], pad_token_id: int):
+        self.samples = samples
+        self.pad_id = pad_token_id
+
+    def __len__(self):
+        return len(self.samples)
+
+    def __getitem__(self, idx):
+        return self.samples[idx]
+
+    def collate(self, batch):
+        tokens_batch, labels_batch = zip(*batch)
+        max_len = max(len(t) for t in tokens_batch)
+        toks = torch.full((len(batch), max_len), self.pad_id, dtype=torch.long)
+        labs = torch.zeros((len(batch), max_len), dtype=torch.long)
+        mask = torch.zeros((len(batch), max_len), dtype=torch.bool)
+        for i, (toks_i, labs_i) in enumerate(zip(tokens_batch, labels_batch)):
+            L = len(toks_i)
+            toks[i, :L] = torch.tensor(toks_i, dtype=torch.long)
+            labs[i, :L] = torch.tensor(labs_i, dtype=torch.long)
+            mask[i, :L] = 1
+        return toks, labs, mask
 
 
 class CNNNERModelSentenceTokenized(nn.Module):
@@ -154,6 +182,11 @@ class CNNNERModelSentenceTokenized(nn.Module):
         emissions = self.hidden2tag(out)
         return emissions
 
+    def compute_loss(self, tokens, labels):
+        mask = tokens != self.tokenizer.pad_token_id
+        ll = self.crf(self(tokens), labels, mask=mask, reduction="sum")
+        return -ll / tokens.size(0)
+
     def predict_batch(self, texts: List[str]):
         """
         Tokenize & score `texts` in mini‐batches of size `batch_size`.
@@ -200,3 +233,44 @@ class CNNNERModelSentenceTokenized(nn.Module):
             results.append((words, word_preds))
 
         return results
+
+    def finetune(
+        self,
+        raw_samples: List[Tuple[List[str], List[str]]],
+        epochs: int = 5,
+        lr: float = 3e-4,
+        batch_size: int = 16,
+    ) -> None:
+        processed = []
+        for tokens, tags in raw_samples:
+            text = " ".join(tokens)
+            enc = self.tokenizer(
+                text, return_offsets_mapping=True, add_special_tokens=False
+            )
+            ids = enc["input_ids"]
+            offsets = enc["offset_mapping"]
+            wids = manual_word_ids(text, offsets)
+            lab_ids = [
+                self.tag2idx.get(tags[w], 0) if w is not None else 0 for w in wids
+            ]
+            processed.append((ids, lab_ids))
+
+        ds = _FinetuneDataset(processed, self.tokenizer.pad_token_id)
+        loader = DataLoader(
+            ds, batch_size=batch_size, shuffle=True, collate_fn=ds.collate
+        )
+        opt = torch.optim.Adam(self.parameters(), lr=lr)
+        self.train()
+        for ep in range(1, epochs + 1):
+            total = 0.0
+            for toks, labs, mask in loader:
+                opt.zero_grad()
+                loss = self.compute_loss(toks, labs)
+                loss.backward()
+                opt.step()
+                total += loss.item()
+            print(
+                f"Ep {ep}/{epochs}, loss={total/len(loader):.4f}",
+                flush=True,
+                file=sys.stderr,
+            )

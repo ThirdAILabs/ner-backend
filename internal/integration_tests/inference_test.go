@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"mime/multipart"
+	"ner-backend/cmd"
 	backend "ner-backend/internal/api"
 	"ner-backend/internal/core"
 	"ner-backend/internal/database"
@@ -17,6 +18,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"gorm.io/gorm"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -62,10 +65,10 @@ func reportIsComplete(report api.Report) bool {
 		report.InferenceTaskStatuses[database.JobRunning].TotalTasks == 0
 }
 
-func waitForReport(t *testing.T, router http.Handler, jobId uuid.UUID) api.Report {
-	for i := 0; i < 20; i++ {
+func waitForReport(t *testing.T, router http.Handler, jobId uuid.UUID, timeoutSeconds int) api.Report {
+	for i := 0; i < timeoutSeconds; i++ {
 		var report api.Report
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(1 * time.Second)
 		err := httpRequest(router, "GET", fmt.Sprintf("/reports/%s", jobId), nil, &report)
 		require.NoError(t, err)
 
@@ -116,12 +119,14 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
-	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket)
+	modelName, modelLoader, modelId := createModel(t, s3, db, modelBucket)
+
+	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket, map[string]core.ModelLoader{
+		modelName: modelLoader,
+	})
 
 	go worker.Start()
 	defer worker.Stop()
-
-	modelId := createModel(t, s3, db, modelBucket)
 
 	createData(t, s3)
 
@@ -131,14 +136,14 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 		S3Endpoint:     minioUrl,
 		SourceS3Bucket: dataBucket,
 		Tags:           []string{"phone", "email"},
-		CustomTags:     map[string]string{"custom-token": `(\w\d){3}`},
+		CustomTags:     map[string]string{"custom_token": `(\w\d){3}`},
 		Groups: map[string]string{
 			"phone": `COUNT(phone) > 0`,
 			"email": `COUNT(email) > 0`,
 		},
 	})
 
-	report := waitForReport(t, router, reportId)
+	report := waitForReport(t, router, reportId, 10)
 
 	assert.Equal(t, modelId, report.Model.Id)
 	assert.Equal(t, dataBucket, report.SourceS3Bucket)
@@ -209,12 +214,14 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
-	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket)
+	modelName, modelLoader, modelId := createModel(t, s3, db, modelBucket)
+
+	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket, map[string]core.ModelLoader{
+		modelName: modelLoader,
+	})
 
 	go worker.Start()
 	defer worker.Stop()
-
-	modelId := createModel(t, s3, db, modelBucket)
 
 	uploadId := createUpload(t, router)
 
@@ -225,7 +232,7 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 		Tags:       []string{"phone", "email"},
 	})
 
-	report := waitForReport(t, router, reportId)
+	report := waitForReport(t, router, reportId, 10)
 
 	assert.Equal(t, modelId, report.Model.Id)
 	assert.Equal(t, "uploads", report.SourceS3Bucket)
@@ -233,4 +240,90 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 
 	entities := getReportEntities(t, router, reportId)
 	assert.Equal(t, 2, len(entities))
+}
+
+func TestInferenceWorkflowForModels(t *testing.T) {
+	if os.Getenv("PYTHON_EXECUTABLE_PATH") == "" || os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH") == "" {
+		t.Fatalf("PYTHON_EXECUTABLE_PATH and PYTHON_MODEL_PLUGIN_SCRIPT_PATH must be set")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	minioURL := setupMinioContainer(t, ctx)
+
+	s3, err := storage.NewS3Provider(storage.S3ProviderConfig{
+		S3EndpointURL:     minioURL,
+		S3AccessKeyID:     minioUsername,
+		S3SecretAccessKey: minioPassword,
+	})
+	require.NoError(t, err)
+	require.NoError(t, s3.CreateBucket(ctx, modelBucket))
+
+	db := createDB(t)
+
+	publisher, receiver := setupRabbitMQContainer(t, ctx)
+
+	backendSvc := backend.NewBackendService(db, s3, publisher, 120)
+	router := chi.NewRouter()
+	backendSvc.AddRoutes(router)
+
+	tempDir := t.TempDir()
+	worker := core.NewTaskProcessor(db, s3, publisher, receiver, &DummyLicenseVerifier{}, tempDir, modelBucket, core.NewModelLoaders(os.Getenv("PYTHON_EXECUTABLE_PATH"), os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH")))
+	go worker.Start()
+	t.Cleanup(worker.Stop)
+
+	models := []struct {
+		label      string
+		tag        string
+		initFn     func(context.Context, *gorm.DB, *storage.S3Provider, string) error
+		expectedDB string
+	}{
+		{
+			label: "CNN Model",
+			tag:   "cnn",
+			initFn: func(c context.Context, db *gorm.DB, s3 *storage.S3Provider, bucket string) error {
+				return cmd.InitializeCnnNerExtractor(c, db, s3, bucket, os.Getenv("HOST_MODEL_DIR"))
+			},
+			expectedDB: "advanced",
+		},
+		{
+			label: "Transformer Model",
+			tag:   "transformer",
+			initFn: func(c context.Context, db *gorm.DB, s3 *storage.S3Provider, bucket string) error {
+				return cmd.InitializeTransformerModel(c, db, s3, bucket, os.Getenv("HOST_MODEL_DIR"))
+			},
+			expectedDB: "ultra",
+		},
+	}
+
+	for _, m := range models {
+		m := m // capture range variable
+		t.Run(m.label, func(t *testing.T) {
+			require.NoError(t, m.initFn(ctx, db, s3, modelBucket))
+
+			var model database.Model
+			require.NoError(t, db.Where("name = ?", m.expectedDB).First(&model).Error)
+
+			uploadID := createUpload(t, router)
+			reportID := createReport(t, router, api.CreateReportRequest{
+				ReportName: fmt.Sprintf("test-report-%s", m.tag),
+				ModelId:    model.Id,
+				UploadId:   uploadID,
+				Tags: []string{"ADDRESS", "CARD_NUMBER", "COMPANY", "CREDIT_SCORE", "DATE",
+					"EMAIL", "ETHNICITY", "GENDER", "ID_NUMBER", "LICENSE_PLATE",
+					"LOCATION", "NAME", "PHONENUMBER", "SERVICE_CODE", "SEXUAL_ORIENTATION",
+					"SSN", "URL", "VIN", "O"},
+			})
+
+			report := waitForReport(t, router, reportID, 180)
+
+			assert.Equal(t, model.Id, report.Model.Id)
+			assert.Equal(t, "uploads", report.SourceS3Bucket)
+			assert.Equal(t, uploadID.String(), report.SourceS3Prefix)
+
+			entities := getReportEntities(t, router, reportID)
+			assert.Greater(t, len(entities), 0)
+		})
+	}
 }

@@ -24,6 +24,16 @@ class ModelStub(object):
                 request_serializer=proto_dot_model__pb2.PredictBatchRequest.SerializeToString,
                 response_deserializer=proto_dot_model__pb2.PredictBatchResponse.FromString,
                 )
+        self.Finetune = channel.unary_unary(
+                '/proto.Model/Finetune',
+                request_serializer=proto_dot_model__pb2.FinetuneRequest.SerializeToString,
+                response_deserializer=proto_dot_model__pb2.FinetuneResponse.FromString,
+                )
+        self.Save = channel.unary_unary(
+                '/proto.Model/Save',
+                request_serializer=proto_dot_model__pb2.SaveRequest.SerializeToString,
+                response_deserializer=proto_dot_model__pb2.SaveResponse.FromString,
+                )
 
 
 class ModelServicer(object):
@@ -41,6 +51,18 @@ class ModelServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def Finetune(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def Save(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_ModelServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -53,6 +75,16 @@ def add_ModelServicer_to_server(servicer, server):
                     servicer.PredictBatch,
                     request_deserializer=proto_dot_model__pb2.PredictBatchRequest.FromString,
                     response_serializer=proto_dot_model__pb2.PredictBatchResponse.SerializeToString,
+            ),
+            'Finetune': grpc.unary_unary_rpc_method_handler(
+                    servicer.Finetune,
+                    request_deserializer=proto_dot_model__pb2.FinetuneRequest.FromString,
+                    response_serializer=proto_dot_model__pb2.FinetuneResponse.SerializeToString,
+            ),
+            'Save': grpc.unary_unary_rpc_method_handler(
+                    servicer.Save,
+                    request_deserializer=proto_dot_model__pb2.SaveRequest.FromString,
+                    response_serializer=proto_dot_model__pb2.SaveResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -95,5 +127,39 @@ class Model(object):
         return grpc.experimental.unary_unary(request, target, '/proto.Model/PredictBatch',
             proto_dot_model__pb2.PredictBatchRequest.SerializeToString,
             proto_dot_model__pb2.PredictBatchResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def Finetune(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/proto.Model/Finetune',
+            proto_dot_model__pb2.FinetuneRequest.SerializeToString,
+            proto_dot_model__pb2.FinetuneResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def Save(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/proto.Model/Save',
+            proto_dot_model__pb2.SaveRequest.SerializeToString,
+            proto_dot_model__pb2.SaveResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

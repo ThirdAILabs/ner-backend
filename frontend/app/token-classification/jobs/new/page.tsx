@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Box } from '@mui/material';
 import { ArrowLeft, Plus, RefreshCw, Edit } from 'lucide-react';
 import { nerService } from '@/lib/backend';
-import { Suspense } from 'react';
+import { NO_GROUP } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
 
 // Tag chip component - reused from the detail page but with interactive mode
 interface TagProps {
@@ -27,7 +28,7 @@ const Tag: React.FC<TagProps> = ({
 }) => {
   return (
     <div
-      className={`px-3 py-1 text-sm font-medium rounded-sm ${!custom && 'cursor-pointer'} ${selected ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+      className={`px-3 py-1 text-sm font-medium overflow-x-scroll max-w-[12vw] rounded-sm ${!custom && 'cursor-pointer'} ${selected ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
       style={{ userSelect: 'none' }}
       onClick={onClick}
     >
@@ -39,7 +40,7 @@ const Tag: React.FC<TagProps> = ({
 // Source option card component - reused from the detail page
 interface SourceOptionProps {
   title: string;
-  description: string;
+  description: React.ReactNode;
   isSelected?: boolean;
   disabled?: boolean;
   onClick: () => void;
@@ -55,15 +56,16 @@ const SourceOption: React.FC<SourceOptionProps> = ({
   <div
     className={`relative p-6 border rounded-md transition-all
       ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200 border-2'}
-      ${disabled
-        ? 'opacity-50 cursor-not-allowed bg-gray-50'
-        : 'cursor-pointer hover:border-blue-300'
+      ${
+        disabled
+          ? 'opacity-85 cursor-not-allowed bg-gray-50'
+          : 'cursor-pointer hover:border-blue-300'
       }
     `}
     onClick={() => !disabled && onClick()}
   >
     <h3 className="text-base font-medium">{title}</h3>
-    <p className="text-sm text-gray-500 mt-1">{description}</p>
+    <div className="text-sm text-gray-500 mt-1">{description}</div>
   </div>
 );
 
@@ -103,7 +105,7 @@ export default function NewJobPage() {
   const router = useRouter();
 
   // Essential state
-  const [selectedSource, setSelectedSource] = useState<'s3' | 'files'>('s3');
+  const [selectedSource, setSelectedSource] = useState<'s3' | 'files'>('files');
   const [sourceS3Bucket, setSourceS3Bucket] = useState('');
   const [sourceS3Prefix, setSourceS3Prefix] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -157,7 +159,7 @@ export default function NewJobPage() {
         const trainedModels = modelData.filter(
           (model) => model.Status === 'TRAINED'
         );
-        setModels(trainedModels);
+        setModels(trainedModels.reverse());
         setSelectedModelId(trainedModels[0].Id);
       } catch (err) {
         console.error('Error fetching models:', err);
@@ -209,22 +211,6 @@ export default function NewJobPage() {
     setSelectedTags([...availableTags]);
   };
 
-  const handleAddGroup = () => {
-    if (!groupName.trim() || !groupQuery.trim()) {
-      setError('Group name and query are required');
-      return;
-    }
-
-    setGroups({
-      ...groups,
-      [groupName]: groupQuery
-    });
-
-    setGroupName('');
-    setGroupQuery('');
-    setError(null);
-  };
-
   const handleGroupCancel = () => {
     setGroupName('');
     setGroupQuery('');
@@ -233,29 +219,48 @@ export default function NewJobPage() {
     setIsGroupDialogOpen(false);
   };
 
-  const handleAddGroupFromDialog = async () => {
+  const handleAddGroup = async () => {
     setGroupDialogError(null);
 
     if (!groupName.trim() || !groupQuery.trim()) {
-      setGroupDialogError('Group name and query are required');
+      setGroupDialogError('Group name and query are required.');
       return;
     }
 
     if (!editingGroup && groups[groupName]) {
-      setGroupDialogError('Group name must be unique');
+      setGroupDialogError('Group name must be unique.');
       return;
     }
 
-    const errorMessage = await nerService.validateGroupDefinition(groupQuery);
+    const formattedGroupName = groupName.trim().toUpperCase();
+    const formattedGroupQuery = groupQuery.trim().toUpperCase();
+
+    if (formattedGroupName === NO_GROUP.trim().toUpperCase()) {
+      setGroupDialogError(`Group name cannot be "${NO_GROUP}"`);
+      return;
+    }
+
+    const errorMessage =
+      await nerService.validateGroupDefinition(formattedGroupQuery);
+    console.log('Error message:', errorMessage);
 
     if (errorMessage) {
       setGroupDialogError(errorMessage);
       return;
     }
 
+    setGroups((prev) => {
+      const updatedGroups = { ...prev };
+      if (editingGroup && editingGroup.name !== formattedGroupName) {
+        delete updatedGroups[editingGroup.name];
+      }
+      updatedGroups[formattedGroupName] = formattedGroupQuery;
+      return updatedGroups;
+    });
+
     setGroups((prev) => ({
       ...prev,
-      [groupName]: groupQuery
+      [groupName.trim().toUpperCase()]: groupQuery.trim().toUpperCase()
     }));
 
     handleGroupCancel();
@@ -286,12 +291,12 @@ export default function NewJobPage() {
     const newCustomTag = {
       name: customTagName.trim().toUpperCase(),
       pattern: customTagPattern
-    }
+    };
 
     if (editingTag) {
-      setCustomTags(prev => prev.map(tag =>
-        tag.name === editingTag.name ? newCustomTag : tag
-      ));
+      setCustomTags((prev) =>
+        prev.map((tag) => (tag.name === editingTag.name ? newCustomTag : tag))
+      );
     } else {
       for (let index = 0; index < customTags.length; index++) {
         const thisTag = customTags[index];
@@ -300,7 +305,7 @@ export default function NewJobPage() {
           return;
         }
       }
-      setCustomTags(prev => [...prev, newCustomTag]);
+      setCustomTags((prev) => [...prev, newCustomTag]);
     }
 
     setCustomTagName('');
@@ -354,6 +359,30 @@ export default function NewJobPage() {
   const removeFile = (index: number) => {
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   };
+
+  const validateCustomTagName = (name: string): boolean => {
+    if (!name) {
+      setDialogError('Tag name is required');
+      return false;
+    }
+
+    if (!/^[A-Za-z0-9_]+$/.test(name)) {
+      setDialogError(
+        'Tag name can only contain letters, numbers, and underscores'
+      );
+      return false;
+    }
+
+    setDialogError(null);
+    return true;
+  };
+
+  const handleTagNameChange = (name: string) => {
+    const value = name.replace(/\s/g, '_');
+    setCustomTagName(value);
+    validateCustomTagName(value);
+  };
+
   // Submit the new job
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -404,12 +433,12 @@ export default function NewJobPage() {
         CustomTags: customTagsObj,
         ...(selectedSource === 's3'
           ? {
-            SourceS3Bucket: sourceS3Bucket,
-            SourceS3Prefix: sourceS3Prefix || undefined
-          }
+              SourceS3Bucket: sourceS3Bucket,
+              SourceS3Prefix: sourceS3Prefix || undefined
+            }
           : {
-            UploadId: uploadId
-          }),
+              UploadId: uploadId
+            }),
         Groups: groups,
         report_name: jobName
       });
@@ -420,12 +449,57 @@ export default function NewJobPage() {
       setTimeout(() => {
         router.push(`/token-classification/jobs?jobId=${response.ReportId}`);
       }, 2000);
-    } catch (err) {
-      setError('Failed to create report. Please try again.');
+    } catch (err: unknown) {
+      let errorMessage = 'An unexpected error occurred';
+
+      if (
+        typeof err === 'object' &&
+        err !== null &&
+        'response' in err &&
+        typeof (err as any).response?.data === 'string'
+      ) {
+        const data = (err as any).response.data;
+        errorMessage = (data.charAt(0).toUpperCase() + data.slice(1)).trim();
+      }
+
+      setError(`Failed to create report. ${errorMessage}. Please try again.`);
       console.error(err);
     } finally {
       setIsSubmitting(false);
     }
+  };
+  const [isPressedSubmit, setIsPressedSubmit] = useState<boolean>(false);
+  const [nameError, setNameError] = useState<string | null>(null);
+
+  const validateJobName = (name: string): boolean => {
+    if (!name) {
+      setNameError('Report name is required');
+      return false;
+    }
+
+    if (!/^[A-Za-z0-9_-]+$/.test(name)) {
+      setNameError(
+        'Report name can only contain letters, numbers, underscores, and hyphens'
+      );
+      return false;
+    }
+
+    if (name.length > 50) {
+      setNameError('Report name must be less than 50 characters');
+      return false;
+    }
+
+    setNameError(null);
+    return true;
+  };
+
+  const [showTooltip, setShowTooltip] = useState(false);
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setShowTooltip(true);
+    setTimeout(() => {
+      setShowTooltip(false);
+    }, 1000);
   };
 
   return (
@@ -439,7 +513,7 @@ export default function NewJobPage() {
         </Button>
       </div>
 
-      {error && (
+      {error && !isPressedSubmit && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
           {error}
         </div>
@@ -454,22 +528,32 @@ export default function NewJobPage() {
           {/* Job Name Field */}
           <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
             <h2 className="text-2xl font-medium mb-4">Report Name</h2>
-            <div className="w-full ">
+            <div className="w-full">
               <input
                 type="text"
                 value={jobName}
                 onChange={(e) => {
                   const value = e.target.value.replace(/\s/g, '_');
                   setJobName(value);
+                  validateJobName(value);
                 }}
-                className="w-full p-2 border border-gray-300 rounded"
+                onBlur={() => validateJobName(jobName)}
+                className={`w-full p-2 border ${
+                  nameError ? 'border-red-500' : 'border-gray-300'
+                } rounded`}
                 placeholder="Enter_Report_Name"
                 required
-                pattern="^[^\s]+$"
               />
-              <p className="text-sm text-gray-500 mt-1">
-                Use only letters, numbers, and underscores. No spaces allowed.
-              </p>
+              {nameError ? (
+                <p className="text-red-700 text-sm mt-1">
+                  <sup className="text-red-700">*</sup>
+                  {nameError}
+                </p>
+              ) : (
+                <p className="text-sm text-gray-500 mt-1">
+                  Use only letters, numbers, underscores, and hyphens. No spaces allowed.
+                </p>
+              )}
             </div>
           </Box>
 
@@ -478,16 +562,16 @@ export default function NewJobPage() {
             <h2 className="text-2xl font-medium mb-4">Source</h2>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
               <SourceOption
-                title="S3 Bucket"
-                description="Use files from an S3 bucket"
-                isSelected={selectedSource === 's3'}
-                onClick={() => setSelectedSource('s3')}
-              />
-              <SourceOption
                 title="File Upload"
                 description="Upload files from your computer"
                 isSelected={selectedSource === 'files'}
                 onClick={() => setSelectedSource('files')}
+              />
+              <SourceOption
+                title="S3 Bucket"
+                description="Use files from an S3 bucket"
+                isSelected={selectedSource === 's3'}
+                onClick={() => setSelectedSource('s3')}
               />
             </div>
 
@@ -611,11 +695,44 @@ export default function NewJobPage() {
                   <SourceOption
                     key={model.Id}
                     title={model.Name[0].toUpperCase() + model.Name.slice(1)}
-                    description={model.Name === 'basic' ? `Description: Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.` : `Description: Our most advanced AI model, requires an enterprise subscription, allows users to perpetually customize fields with user feedback (RLHF based fine-tuning), comes with an advanced dashboard for usage and performance metrics. Reach out to contact@thirdai.com for an enterprise subscription.`}
+                    description={
+                      'Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.'
+                    }
                     isSelected={selectedModelId === model.Id}
                     onClick={() => setSelectedModelId(model.Id)}
+                    disabled={model.Name === 'presidio'}
                   />
                 ))}
+                <SourceOption
+                  key={'Advanced-Model'}
+                  title={'Advanced'}
+                  description={
+                    <>
+                      Our most advanced AI model, available on enterprise
+                      platform. Allows users to perpetually customize fields
+                      with user feedback, includes advanced monitoring features.
+                      Reach out to{' '}
+                      <div className="relative inline-block">
+                        <span
+                          className="text-blue-500 underline cursor-pointer hover:text-blue-700"
+                          onClick={() => copyToClipboard('contact@thirdai.com')}
+                          title="Click to copy email"
+                        >
+                          contact@thirdai.com
+                        </span>
+                        {showTooltip && (
+                          <div className="absolute left-1/2 -translate-x-1/2 mt-1 w-max px-2 py-1 text-xs bg-gray-800 text-white rounded shadow-md z-10">
+                            Email Copied
+                          </div>
+                        )}
+                      </div>{' '}
+                      for an enterprise subscription.
+                    </>
+                  }
+                  isSelected={false}
+                  onClick={() => {}}
+                  disabled={true}
+                />
               </div>
             </div>
 
@@ -705,24 +822,24 @@ export default function NewJobPage() {
                   key={customTag.name}
                   className="border border-gray-200 rounded-md overflow-hidden"
                 >
-                  <div className="py-1 px-4 border-b border-gray-200 flex justify-between items-center">
+                  <div className="py-1 px-2 border-b border-gray-200 flex justify-between items-center">
                     <Tag tag={customTag.name} custom={true} selected />
-                    <div className="flex items-center space-x-1">
+                    <div className="flex items-center space-x-3 px-1">
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => handleEditCustomTag(customTag)}
-                        className="text-blue-500"
+                        className="text-blue-500 px-0"
                       >
-                        <Edit className="h-4 w-4 mr-1" />
+                        <Edit className="h-4 w-4" />
                       </Button>
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => handleRemoveCustomTag(customTag.name)}
-                        className="text-red-500"
+                        className="text-red-500 px-0"
                       >
                         <svg
                           className="h-4 w-4"
@@ -762,7 +879,7 @@ export default function NewJobPage() {
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-lg p-6 w-full max-w-md">
                   <h3 className="text-lg font-medium mb-4">
-                    {`${editingTag ? "Edit" : "Create"} Custom Tag`}
+                    {`${editingTag ? 'Edit' : 'Create'} Custom Tag`}
                   </h3>
                   {dialogError && (
                     <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded">
@@ -774,14 +891,17 @@ export default function NewJobPage() {
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Tag Name
                       </label>
-                      <input
-                        type="text"
+
+                      <Input
+                        id="tagName"
                         value={customTagName}
-                        onChange={(e) =>
-                          setCustomTagName(e.target.value.toUpperCase())
-                        }
-                        className="w-full p-2 border border-gray-300 rounded"
+                        onChange={(e) => handleTagNameChange(e.target.value)}
+                        onBlur={(e) => handleTagNameChange(e.target.value)}
+                        className={`w-full p-2 border ${
+                          nameError ? 'border-red-500' : 'border-gray-300'
+                        } rounded`}
                         placeholder="CUSTOM_TAG_NAME"
+                        required
                       />
                     </div>
 
@@ -855,7 +975,7 @@ export default function NewJobPage() {
                         variant="outline"
                         onClick={handleCancel}
                         style={{
-                          color: '#1976d2',
+                          color: '#1976d2'
                         }}
                       >
                         Cancel
@@ -867,15 +987,18 @@ export default function NewJobPage() {
                         style={{
                           backgroundColor: '#1976d2',
                           textTransform: 'none',
-                          fontWeight: 500,
+                          fontWeight: 500
                         }}
-                        onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#1565c0')}
-                        onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#1976d2')}
+                        onMouseOver={(e) =>
+                          (e.currentTarget.style.backgroundColor = '#1565c0')
+                        }
+                        onMouseOut={(e) =>
+                          (e.currentTarget.style.backgroundColor = '#1976d2')
+                        }
                         onClick={handleAddCustomTag}
-                      >Add Tag</Button>
-                      {/* <Button onClick={handleAddCustomTag} type="button">
+                      >
                         Add Tag
-                      </Button> */}
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -971,12 +1094,16 @@ export default function NewJobPage() {
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Group Name
                       </label>
-                      <input
+                      <Input
                         type="text"
                         value={groupName}
-                        onChange={(e) => setGroupName(e.target.value)}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\s/g, '_');
+                          setGroupName(value);
+                        }}
                         className="w-full p-2 border border-gray-300 rounded"
                         placeholder="sensitive_docs"
+                        required
                       />
                     </div>
 
@@ -984,7 +1111,7 @@ export default function NewJobPage() {
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Group Query
                       </label>
-                      <input
+                      <Input
                         type="text"
                         value={groupQuery}
                         onChange={(e) => setGroupQuery(e.target.value)}
@@ -1014,10 +1141,29 @@ export default function NewJobPage() {
                         type="button"
                         variant="outline"
                         onClick={handleGroupCancel}
+                        style={{
+                          color: '#1976d2'
+                        }}
                       >
                         Cancel
                       </Button>
-                      <Button onClick={handleAddGroupFromDialog} type="button">
+                      <Button
+                        type="button"
+                        variant="default"
+                        color="primary"
+                        style={{
+                          backgroundColor: '#1976d2',
+                          textTransform: 'none',
+                          fontWeight: 500
+                        }}
+                        onMouseOver={(e) =>
+                          (e.currentTarget.style.backgroundColor = '#1565c0')
+                        }
+                        onMouseOut={(e) =>
+                          (e.currentTarget.style.backgroundColor = '#1976d2')
+                        }
+                        onClick={handleAddGroup}
+                      >
                         {editingGroup ? 'Save Changes' : 'Add Group'}
                       </Button>
                     </div>
@@ -1028,17 +1174,29 @@ export default function NewJobPage() {
           </Box>
 
           {/* Submit Button */}
-          <div className="flex justify-center pt-4">
+          <div className="flex flex-col items-center space-y-4 pt-4">
+            {error && isPressedSubmit && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded w-full max-w-md text-center">
+                {error}
+              </div>
+            )}
             <Button
               variant="default"
               color="primary"
               style={{
                 backgroundColor: '#1976d2',
                 textTransform: 'none',
-                fontWeight: 500,
+                fontWeight: 500
               }}
-              onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#1565c0')}
-              onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#1976d2')}
+              onMouseOver={(e) =>
+                (e.currentTarget.style.backgroundColor = '#1565c0')
+              }
+              onMouseOut={(e) =>
+                (e.currentTarget.style.backgroundColor = '#1976d2')
+              }
+              onClick={() => {
+                setIsPressedSubmit(true);
+              }}
             >
               {isSubmitting ? (
                 <>

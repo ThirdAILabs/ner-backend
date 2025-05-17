@@ -1,8 +1,7 @@
 import axios from 'axios';
 
-
-// Use the Next.js API proxy instead of direct server URL
-const nerBaseUrl = 'http://localhost:8000/api/v1'
+// Use our fixed port (16549) for backend communication
+const nerBaseUrl = 'http://localhost:16549/api/v1'
 
 const axiosInstance = axios.create({
     baseURL: nerBaseUrl,
@@ -21,14 +20,25 @@ axiosInstance.interceptors.request.use(config => {
     return Promise.reject(error);
   });
 
+// Create a custom event for API errors
+export const showApiErrorEvent = (message: string, status?: number) => {
+    const event = new CustomEvent('api-error', { 
+        detail: { message, status } 
+    });
+    window.dispatchEvent(event);
+};
+
 axiosInstance.interceptors.response.use(
     (response) => response,
     (error) => {
         const errorMessage =
             error.response?.data?.message || error.message || 'An unexpected error occurred';
         const errorStatus = error.response?.status || 500;
-        //     window.location.href = `/error?message=${encodeURIComponent(errorMessage)}
-        //   &status=${encodeURIComponent(errorStatus)}`;
+        
+        // Dispatch custom error event
+        if (typeof window !== 'undefined') {
+            showApiErrorEvent(errorMessage, errorStatus);
+        }
 
         return Promise.reject(error);
     }

@@ -10,7 +10,6 @@ type Model struct {
 	Id          uuid.UUID
 	BaseModelId *uuid.UUID
 	Name        string
-	Type        string
 	Status      string
 
 	Tags []string `json:"Tags,omitempty"`
@@ -40,8 +39,9 @@ type Report struct {
 
 	Stopped            bool
 	CreationTime       time.Time
-	TotalFileCount     int `json:"FileCount,omitempty"`
-	CompletedFileCount int `json:"CompletedFileCount,omitempty"`
+	TotalFileCount     int `json:"FileCount"`
+	CompletedFileCount int `json:"CompletedFileCount"`
+	FailedFileCount    int `json:"FailedFileCount"`
 
 	Tags       []string          `json:"Tags,omitempty"`
 	CustomTags map[string]string `json:"CustomTags,omitempty"`
@@ -49,8 +49,10 @@ type Report struct {
 
 	Groups []Group
 
-	ShardDataTaskStatus   string                        `json:"ShardDataTaskStatus,omitempty"`
-	InferenceTaskStatuses map[string]TaskStatusCategory `json:"InferenceTaskStatuses,omitempty"`
+	ShardDataTaskStatus       string                        `json:"ShardDataTaskStatus,omitempty"`
+	InferenceTaskStatuses     map[string]TaskStatusCategory `json:"InferenceTaskStatuses,omitempty"`
+	TotalInferenceTimeSeconds float64                       `json:"TotalInferenceTimeSeconds,omitempty"`
+	ShardDataTimeSeconds      float64                       `json:"ShardDataTimeSeconds,omitempty"`
 
 	Errors []string `json:"Errors,omitempty"`
 }
