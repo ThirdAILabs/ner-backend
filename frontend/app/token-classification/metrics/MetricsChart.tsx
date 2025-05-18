@@ -25,17 +25,17 @@ export interface MetricsChartProps {
   color?: string;
 }
 
-export const MetricsChart: React.FC<MetricsChartProps> = ({ 
-  metrics, 
+export const MetricsChart: React.FC<MetricsChartProps> = ({
+  metrics,
   metricType,
-  title = `${metricType.charAt(0).toUpperCase() + metricType.slice(1)} Metrics`, 
-  color = '#1976d2' 
+  title = `${metricType.charAt(0).toUpperCase() + metricType.slice(1)} Metrics`,
+  color = '#1976d2',
 }) => {
   // Transform the metrics data to the format expected by the component
-  const data: MetricsData[] = Object.keys(metrics.before).map(entity => ({
+  const data: MetricsData[] = Object.keys(metrics.before).map((entity) => ({
     entityType: entity,
     before: metrics.before[entity],
-    after: metrics.after[entity]
+    after: metrics.after[entity],
   }));
 
   return (
@@ -54,19 +54,17 @@ export const MetricsChart: React.FC<MetricsChartProps> = ({
               <Typography variant="body2" fontWeight={500}>
                 {item.entityType}
               </Typography>
-              
+
               {showImprovement && (
                 <Tooltip title={`${improvement.toFixed(1)}% improvement`}>
                   <Box sx={{ display: 'flex', alignItems: 'center', color: 'success.main' }}>
                     <ArrowUpwardIcon fontSize="small" sx={{ fontSize: 14, mr: 0.5 }} />
-                    <Typography variant="caption">
-                      {improvement.toFixed(1)}%
-                    </Typography>
+                    <Typography variant="caption">{improvement.toFixed(1)}%</Typography>
                   </Box>
                 </Tooltip>
               )}
             </Box>
-            
+
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
               <Typography variant="caption" sx={{ width: 60, color: 'text.secondary' }}>
                 Before:
@@ -78,22 +76,22 @@ export const MetricsChart: React.FC<MetricsChartProps> = ({
                     width: `${item.before * 100}%`,
                     bgcolor: color,
                     opacity: 0.3,
-                    borderRadius: 1
+                    borderRadius: 1,
                   }}
                 />
-                <Typography 
-                  variant="caption" 
-                  sx={{ 
-                    position: 'absolute', 
-                    right: -40, 
-                    top: -2 
+                <Typography
+                  variant="caption"
+                  sx={{
+                    position: 'absolute',
+                    right: -40,
+                    top: -2,
                   }}
                 >
                   {(item.before * 100).toFixed(1)}%
                 </Typography>
               </Box>
             </Box>
-            
+
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               <Typography variant="caption" sx={{ width: 60, color: 'text.secondary' }}>
                 After:
@@ -104,15 +102,15 @@ export const MetricsChart: React.FC<MetricsChartProps> = ({
                     height: 8,
                     width: `${item.after * 100}%`,
                     bgcolor: color,
-                    borderRadius: 1
+                    borderRadius: 1,
                   }}
                 />
-                <Typography 
-                  variant="caption" 
-                  sx={{ 
-                    position: 'absolute', 
-                    right: -40, 
-                    top: -2 
+                <Typography
+                  variant="caption"
+                  sx={{
+                    position: 'absolute',
+                    right: -40,
+                    top: -2,
                   }}
                 >
                   {(item.after * 100).toFixed(1)}%
@@ -124,4 +122,4 @@ export const MetricsChart: React.FC<MetricsChartProps> = ({
       })}
     </Box>
   );
-}; 
+};

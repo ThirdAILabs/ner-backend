@@ -48,9 +48,7 @@ export function HeaderContent({
         <Tabs value={viewMode} onValueChange={handleViewModeChange}>
           <TabsList>
             <TabsTrigger value="object">File</TabsTrigger>
-            <TabsTrigger value="classified-token">
-              Token
-            </TabsTrigger>
+            <TabsTrigger value="classified-token">Token</TabsTrigger>
           </TabsList>
         </Tabs>
         {/* <div className="font-medium pl-2">Query</div>
@@ -91,4 +89,4 @@ export function HeaderContent({
       </div>
     </div>
   );
-} 
+}

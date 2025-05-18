@@ -1,17 +1,8 @@
 'use client';
 
-import {
-  Box,
-  CircularProgress,
-  Typography,
-} from '@mui/material';
+import { Box, CircularProgress, Typography } from '@mui/material';
 import { Button } from '@mui/material';
-import React, {
-  useEffect,
-  useRef,
-  useState,
-  ChangeEvent,
-} from 'react';
+import React, { useEffect, useRef, useState, ChangeEvent } from 'react';
 import { Card, CardContent } from '@mui/material';
 import * as _ from 'lodash';
 
@@ -20,27 +11,27 @@ const useTokenClassificationEndpoints = () => {
   return {
     classifyText: async (text: string) => {
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       // Generate dummy tokens
       const words = text.split(/\s+/);
       return {
         data: {
-          tokens: words.map(word => ({
+          tokens: words.map((word) => ({
             text: word,
-            tag: Math.random() > 0.8 ? 'PII' : 'O'
-          }))
-        }
+            tag: Math.random() > 0.8 ? 'PII' : 'O',
+          })),
+        },
       };
     },
     getLabels: async () => {
       return {
-        data: ['O', 'PII', 'NAME', 'ADDRESS', 'PHONE', 'EMAIL', 'SSN']
+        data: ['O', 'PII', 'NAME', 'ADDRESS', 'PHONE', 'EMAIL', 'SSN'],
       };
     },
     addLabel: async (label: string) => {
       return { success: true };
-    }
+    },
   };
 };
 
@@ -97,7 +88,7 @@ function Highlight({
   allLabels,
   onSelectTag,
   onNewLabel,
-  anchorEl
+  anchorEl,
 }: HighlightProps) {
   const [hover, setHover] = useState<boolean>(false);
 
@@ -161,7 +152,14 @@ function Highlight({
   );
 }
 
-function TagSelector({ open, choices, onSelect, onNewLabel, currentTag, anchorEl }: TagSelectorProps) {
+function TagSelector({
+  open,
+  choices,
+  onSelect,
+  onNewLabel,
+  currentTag,
+  anchorEl,
+}: TagSelectorProps) {
   const [query, setQuery] = useState('');
   const [searchableChoices, setSearchableChoices] = useState<string[]>([]);
   const [newLabel, setNewLabel] = useState('');
@@ -175,8 +173,7 @@ function TagSelector({ open, choices, onSelect, onNewLabel, currentTag, anchorEl
   }, [choices, currentTag]);
 
   const filteredChoices = query
-    ? searchableChoices.filter(choice => 
-        choice.toLowerCase().includes(query.toLowerCase()))
+    ? searchableChoices.filter((choice) => choice.toLowerCase().includes(query.toLowerCase()))
     : searchableChoices;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -214,9 +211,9 @@ function TagSelector({ open, choices, onSelect, onNewLabel, currentTag, anchorEl
           sx={{ mb: 1 }}
         />
       </Box>
-      
+
       {filteredChoices.map((choice, index) => (
-        <MenuItem 
+        <MenuItem
           key={index}
           onClick={() => {
             const selectedTag = choice === 'Delete TAG' ? 'O' : choice;
@@ -226,9 +223,9 @@ function TagSelector({ open, choices, onSelect, onNewLabel, currentTag, anchorEl
           {choice}
         </MenuItem>
       ))}
-      
+
       {query && !filteredChoices.includes(query) && (
-        <MenuItem 
+        <MenuItem
           onClick={() => {
             onNewLabel(query).then(() => {
               onSelect(query);
@@ -236,9 +233,7 @@ function TagSelector({ open, choices, onSelect, onNewLabel, currentTag, anchorEl
             });
           }}
         >
-          <Typography sx={{ fontStyle: 'italic' }}>
-            Add "{query}" as new label
-          </Typography>
+          <Typography sx={{ fontStyle: 'italic' }}>Add "{query}" as new label</Typography>
         </MenuItem>
       )}
     </Menu>
@@ -257,7 +252,7 @@ export default function Interact() {
   const [dropdownPosition, setDropdownPosition] = useState<number | null>(null);
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
-  
+
   const API = useTokenClassificationEndpoints();
 
   // Load available labels on component mount
@@ -271,7 +266,7 @@ export default function Interact() {
         console.error('Failed to fetch labels', error);
       }
     }
-    
+
     fetchLabels();
   }, []);
 
@@ -304,7 +299,7 @@ export default function Interact() {
 
   const handleRun = async () => {
     if (!input.trim()) return;
-    
+
     try {
       setIsLoading(true);
       const response = await API.classifyText(input);
@@ -325,7 +320,7 @@ export default function Interact() {
     try {
       await API.addLabel(newLabel);
       setAllLabels([...allLabels, newLabel]);
-      
+
       // Update colors for the new label
       const newTagColors = { ...tagColors };
       const colorIndex = allLabels.length % 7;
@@ -338,7 +333,7 @@ export default function Interact() {
         { tag: '#FFB74D', text: '#FFF3E0' }, // orange
         { tag: '#BA68C8', text: '#F3E5F5' }, // purple
       ];
-      
+
       newTagColors[newLabel] = tagColorPairs[colorIndex];
       setTagColors(newTagColors);
     } catch (error) {
@@ -363,7 +358,7 @@ export default function Interact() {
       // Sort selection range
       const start = Math.min(selectionStart, selectionEnd);
       const end = Math.max(selectionStart, selectionEnd);
-      
+
       // Show dropdown menu for tag selection
       setShowDropdown(true);
       setDropdownPosition(end);
@@ -422,8 +417,8 @@ export default function Interact() {
             selecting={
               selectionStart !== null &&
               selectionEnd !== null &&
-              ((index >= Math.min(selectionStart, selectionEnd) &&
-                index <= Math.max(selectionStart, selectionEnd)))
+              index >= Math.min(selectionStart, selectionEnd) &&
+              index <= Math.max(selectionStart, selectionEnd)
             }
             selected={false}
             showDropdown={showDropdown && dropdownPosition === index}
@@ -443,35 +438,39 @@ export default function Interact() {
 
   // Update layout to exactly match the original
   return (
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-      gap: '1.5rem'
-    }}>
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+        gap: '1.5rem',
+      }}
+    >
       {/* Left Column: Input area */}
       <div>
-        <Card sx={{ 
-          backgroundColor: '#fff',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-        }}>
+        <Card
+          sx={{
+            backgroundColor: '#fff',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          }}
+        >
           <CardContent sx={{ p: 3 }}>
             <textarea
               placeholder="Enter text here..."
               value={input}
               onChange={handleInputChange}
-              style={{ 
+              style={{
                 width: '100%',
                 minHeight: '120px',
-                resize: 'none', 
+                resize: 'none',
                 backgroundColor: '#fff',
                 borderRadius: '4px',
                 border: '1px solid #ddd',
-                padding: '12px'
+                padding: '12px',
               }}
             />
-            
-            <Box 
-              sx={{ 
+
+            <Box
+              sx={{
                 position: 'relative',
                 my: 3,
                 '&::before': {
@@ -479,61 +478,59 @@ export default function Interact() {
                   position: 'absolute',
                   top: '50%',
                   width: '100%',
-                  borderTop: '1px solid #ddd'
-                }
+                  borderTop: '1px solid #ddd',
+                },
               }}
             >
-              <Typography 
-                variant="body2" 
+              <Typography
+                variant="body2"
                 color="text.secondary"
                 align="center"
-                sx={{ 
+                sx={{
                   position: 'relative',
                   backgroundColor: '#fff',
                   display: 'inline-block',
                   px: 2,
                   left: '50%',
-                  transform: 'translateX(-50%)'
+                  transform: 'translateX(-50%)',
                 }}
               >
                 OR
               </Typography>
             </Box>
-            
-            <Box 
-              sx={{ 
-                border: '1px dashed #ccc', 
-                borderRadius: '4px', 
-                p: 3, 
+
+            <Box
+              sx={{
+                border: '1px dashed #ccc',
+                borderRadius: '4px',
+                p: 3,
                 textAlign: 'center',
                 cursor: 'pointer',
                 mb: 3,
                 '&:hover': {
-                  borderColor: '#aaa'
-                }
+                  borderColor: '#aaa',
+                },
               }}
               onClick={handleFileUpload}
             >
-              <Typography color="text.secondary">
-                Upload Document here
-              </Typography>
+              <Typography color="text.secondary">Upload Document here</Typography>
             </Box>
-            
+
             <Box sx={{ display: 'flex', justifyContent: 'center' }}>
               <Button
                 variant="contained"
                 onClick={handleRun}
                 disabled={isLoading || !input.trim()}
-                sx={{ 
+                sx={{
                   backgroundColor: '#9E9E9E',
                   color: 'white',
                   '&:hover': {
-                    backgroundColor: '#757575'
+                    backgroundColor: '#757575',
                   },
                   minWidth: '100px',
                   borderRadius: '4px',
                   boxShadow: 'none',
-                  textTransform: 'none'
+                  textTransform: 'none',
                 }}
               >
                 {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Run'}
@@ -543,11 +540,13 @@ export default function Interact() {
         </Card>
 
         {tokens.length > 0 && (
-          <Card sx={{ 
-            backgroundColor: '#fff',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            mt: 3
-          }}>
+          <Card
+            sx={{
+              backgroundColor: '#fff',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              mt: 3,
+            }}
+          >
             <CardContent sx={{ p: 3 }}>
               <Box ref={cardRef} onMouseUp={handleCardMouseUp}>
                 {renderHighlightedContent()}
@@ -556,29 +555,31 @@ export default function Interact() {
           </Card>
         )}
       </div>
-      
+
       {/* Right Column: Feedback Dashboard */}
       <div>
-        <Card sx={{ 
-          backgroundColor: '#fff',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-        }}>
+        <Card
+          sx={{
+            backgroundColor: '#fff',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          }}
+        >
           <CardContent sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom sx={{ fontWeight: 500 }}>
               Feedback from this session
             </Typography>
-            
+
             <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-start' }}>
-              <Button 
-                variant="contained" 
-                sx={{ 
-                  backgroundColor: '#EEEEEE', 
+              <Button
+                variant="contained"
+                sx={{
+                  backgroundColor: '#EEEEEE',
                   color: '#666',
                   '&:hover': {
-                    backgroundColor: '#E0E0E0'
+                    backgroundColor: '#E0E0E0',
                   },
                   textTransform: 'none',
-                  boxShadow: 'none'
+                  boxShadow: 'none',
                 }}
                 onClick={handleSubmitFeedback}
               >
@@ -590,4 +591,4 @@ export default function Interact() {
       </div>
     </div>
   );
-} 
+}

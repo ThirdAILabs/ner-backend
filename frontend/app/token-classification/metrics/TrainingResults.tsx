@@ -29,19 +29,19 @@ interface TrainReportData {
 // Sample mock data
 const mockReportData: TrainReportData = {
   before_train_metrics: {
-    'O': { precision: 0.90, recall: 0.88, fmeasure: 0.89 },
-    'NAME': { precision: 0.83, recall: 0.79, fmeasure: 0.81 },
-    'PHONE': { precision: 0.86, recall: 0.82, fmeasure: 0.84 },
-    'EMAIL': { precision: 0.90, recall: 0.86, fmeasure: 0.88 },
-    'ADDRESS': { precision: 0.81, recall: 0.77, fmeasure: 0.79 }
+    O: { precision: 0.9, recall: 0.88, fmeasure: 0.89 },
+    NAME: { precision: 0.83, recall: 0.79, fmeasure: 0.81 },
+    PHONE: { precision: 0.86, recall: 0.82, fmeasure: 0.84 },
+    EMAIL: { precision: 0.9, recall: 0.86, fmeasure: 0.88 },
+    ADDRESS: { precision: 0.81, recall: 0.77, fmeasure: 0.79 },
   },
   after_train_metrics: {
-    'O': { precision: 0.95, recall: 0.92, fmeasure: 0.93 },
-    'NAME': { precision: 0.88, recall: 0.84, fmeasure: 0.86 },
-    'PHONE': { precision: 0.92, recall: 0.88, fmeasure: 0.90 },
-    'EMAIL': { precision: 0.96, recall: 0.92, fmeasure: 0.94 },
-    'ADDRESS': { precision: 0.89, recall: 0.85, fmeasure: 0.87 }
-  }
+    O: { precision: 0.95, recall: 0.92, fmeasure: 0.93 },
+    NAME: { precision: 0.88, recall: 0.84, fmeasure: 0.86 },
+    PHONE: { precision: 0.92, recall: 0.88, fmeasure: 0.9 },
+    EMAIL: { precision: 0.96, recall: 0.92, fmeasure: 0.94 },
+    ADDRESS: { precision: 0.89, recall: 0.85, fmeasure: 0.87 },
+  },
 };
 
 interface MetricsChartProps {
@@ -129,7 +129,7 @@ const MetricsChart: React.FC<MetricsChartProps> = ({ beforeMetrics, afterMetrics
           <CardTitle className="text-lg">Metrics for &quot;{selectedLabel}&quot;</CardTitle>
           <CardDescription>Comparing performance before and after training</CardDescription>
         </CardHeader>
-      <CardContent>
+        <CardContent>
           {/* Chart */}
           <ResponsiveContainer width="100%" height={300}>
             <BarChart
@@ -219,37 +219,35 @@ interface PerformanceSummaryProps {
 const PerformanceSummary: React.FC<PerformanceSummaryProps> = ({ beforeMetrics, afterMetrics }) => {
   // Calculate overall averages
   const calculateAverage = (metrics: LabelMetrics, key: 'precision' | 'recall' | 'fmeasure') => {
-    const values = Object.values(metrics).map(m => m[key]);
+    const values = Object.values(metrics).map((m) => m[key]);
     return values.reduce((sum, val) => sum + val, 0) / values.length;
   };
 
-  const labels = Array.from(
-    new Set([...Object.keys(beforeMetrics), ...Object.keys(afterMetrics)])
-  );
+  const labels = Array.from(new Set([...Object.keys(beforeMetrics), ...Object.keys(afterMetrics)]));
 
-  const tableData = labels.map(label => ({
+  const tableData = labels.map((label) => ({
     label,
     beforeF1: beforeMetrics[label]?.fmeasure || 0,
     afterF1: afterMetrics[label]?.fmeasure || 0,
-    change: (afterMetrics[label]?.fmeasure || 0) - (beforeMetrics[label]?.fmeasure || 0)
+    change: (afterMetrics[label]?.fmeasure || 0) - (beforeMetrics[label]?.fmeasure || 0),
   }));
 
   // Add overall average row
   const beforeAvgF1 = calculateAverage(beforeMetrics, 'fmeasure');
   const afterAvgF1 = calculateAverage(afterMetrics, 'fmeasure');
-  
+
   tableData.push({
     label: 'Overall Average',
     beforeF1: beforeAvgF1,
     afterF1: afterAvgF1,
-    change: afterAvgF1 - beforeAvgF1
+    change: afterAvgF1 - beforeAvgF1,
   });
 
   return (
     <div className="mb-8">
       <h3 className="text-lg font-semibold mb-2">Performance Summary</h3>
       <p className="text-sm text-gray-500 mb-4">Overview of F1 score changes across all labels</p>
-      
+
       <div className="overflow-hidden border rounded-md">
         <div className="bg-gray-50 grid grid-cols-4 p-3 border-b text-sm font-medium">
           <div>TAG</div>
@@ -257,10 +255,10 @@ const PerformanceSummary: React.FC<PerformanceSummaryProps> = ({ beforeMetrics, 
           <div>F1 after fine-tuning</div>
           <div>Change</div>
         </div>
-        
+
         <div className="divide-y">
           {tableData.map((row, idx) => (
-            <div 
+            <div
               key={row.label}
               className={`grid grid-cols-4 p-3 text-sm ${
                 row.label === 'Overall Average' ? 'bg-gray-50 font-medium' : ''
@@ -269,9 +267,7 @@ const PerformanceSummary: React.FC<PerformanceSummaryProps> = ({ beforeMetrics, 
               <div>{row.label}</div>
               <div>{(row.beforeF1 * 100).toFixed(1)}%</div>
               <div>{(row.afterF1 * 100).toFixed(1)}%</div>
-              <div className="text-green-600">
-                ↑ +{(row.change * 100).toFixed(1)}%
-              </div>
+              <div className="text-green-600">↑ +{(row.change * 100).toFixed(1)}%</div>
             </div>
           ))}
         </div>
@@ -305,4 +301,4 @@ const TrainingResults: React.FC<TrainingResultsProps> = ({ report = mockReportDa
   );
 };
 
-export default TrainingResults; 
+export default TrainingResults;

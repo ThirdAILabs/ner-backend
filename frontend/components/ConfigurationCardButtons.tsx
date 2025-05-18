@@ -12,13 +12,13 @@ interface ButtonTitleProps {
 }
 
 const ButtonTitle: React.FC<ButtonTitleProps> = ({ children }) => (
-  <Typography 
-    variant="h6" 
+  <Typography
+    variant="h6"
     className="text-gray-900"
     sx={{
       fontSize: '1.125rem',
       fontWeight: 500,
-      lineHeight: 1.2
+      lineHeight: 1.2,
     }}
   >
     {children}
@@ -116,7 +116,9 @@ export const StorageOptionButton: React.FC<StorageOptionButtonProps> = ({
         <div className="text-left">
           <ButtonTitle>{title}</ButtonTitle>
           {description && (
-            <p className="text-sm text-gray-500 mt-2 w-full whitespace-normal break-words">{description}</p>
+            <p className="text-sm text-gray-500 mt-2 w-full whitespace-normal break-words">
+              {description}
+            </p>
           )}
         </div>
       </div>
@@ -148,11 +150,7 @@ export const GroupButton: React.FC<GroupButtonProps> = ({ group, onEdit, onDelet
   };
 
   return (
-    <BaseCardButton
-      onClick={handleEdit}
-      showDeleteButton
-      onDelete={onDelete}
-    >
+    <BaseCardButton onClick={handleEdit} showDeleteButton onDelete={onDelete}>
       <div className="h-full w-full">
         <div className="text-left">
           <ButtonTitle>{group.name}</ButtonTitle>
@@ -175,4 +173,4 @@ export const AddGroupButton: React.FC<{ onClick: () => void }> = ({ onClick }) =
       </div>
     </BaseCardButton>
   );
-}; 
+};

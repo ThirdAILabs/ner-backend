@@ -8,7 +8,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer
+  ResponsiveContainer,
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import _ from 'lodash';
@@ -63,7 +63,7 @@ export function AnalyticsDashboard({
   timeTaken,
   completedFileCount,
   failedFileCount,
-  totalFileCount
+  totalFileCount,
 }: AnalyticsDashboardProps) {
   const tokenChartData = tags;
 
@@ -77,14 +77,7 @@ export function AnalyticsDashboard({
             <div className="relative h-32 w-32">
               <svg className="h-full w-full" viewBox="0 0 100 100">
                 {/* Background circle */}
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="40"
-                  fill="none"
-                  stroke="#facc15"
-                  strokeWidth="10"
-                />
+                <circle cx="50" cy="50" r="40" fill="none" stroke="#facc15" strokeWidth="10" />
 
                 {/* Success arc (green) */}
                 <circle
@@ -107,17 +100,13 @@ export function AnalyticsDashboard({
                   stroke="#ef4444"
                   strokeWidth="10"
                   strokeDasharray={`${(failedFileCount / totalFileCount) * 251.327} 251.327`}
-                  strokeDashoffset={
-                    -((completedFileCount / totalFileCount) * 251.327)
-                  }
+                  strokeDashoffset={-((completedFileCount / totalFileCount) * 251.327)}
                   transform="rotate(-90 50 50)"
                 />
               </svg>
 
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-2xl font-bold text-gray-700">
-                  {progress}%
-                </span>
+                <span className="text-2xl font-bold text-gray-700">{progress}%</span>
               </div>
             </div>
             <h3 className="mt-auto text-sm text-muted-foreground">Progress</h3>
@@ -163,14 +152,10 @@ export function AnalyticsDashboard({
       <Card>
         <CardHeader>
           {/* <CardTitle>Identified Tokens</CardTitle> */}
-          <div className="text-2xl font-semibold text-gray-700">
-            Identified Tokens
-          </div>
+          <div className="text-2xl font-semibold text-gray-700">Identified Tokens</div>
         </CardHeader>
         <CardContent>
-          <div
-            style={{ height: `${Math.max(300, tokenChartData.length * 50)}px` }}
-          >
+          <div style={{ height: `${Math.max(300, tokenChartData.length * 50)}px` }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={tokenChartData}
@@ -184,7 +169,7 @@ export function AnalyticsDashboard({
                   label={{
                     value: 'Number of tokens',
                     position: 'bottom',
-                    offset: 15
+                    offset: 15,
                   }}
                   tickFormatter={formatNumber}
                 />
