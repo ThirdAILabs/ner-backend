@@ -29,7 +29,6 @@ const Tag: React.FC<TagProps> = ({
   return (
     <div
       className={`px-3 py-1 text-sm font-medium overflow-x-scroll max-w-[16vw] rounded-sm ${!custom && 'cursor-pointer'} ${selected ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-      className={`px-3 py-1 text-sm font-medium overflow-x-scroll max-w-[16vw] rounded-sm ${!custom && 'cursor-pointer'} ${selected ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
       style={{ userSelect: 'none' }}
       onClick={onClick}
     >
