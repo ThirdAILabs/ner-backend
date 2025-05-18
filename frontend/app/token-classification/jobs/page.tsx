@@ -248,7 +248,6 @@ const NewTagDialog: React.FC<{
 function JobDetail() {
   const searchParams = useSearchParams();
   const reportId: string = searchParams.get('jobId') as string;
-  const deploymentId = searchParams.get('deploymentId') as string;
   const [tabValue, setTabValue] = useState('analytics');
   const [selectedSource, setSelectedSource] = useState<'s3' | 'local'>('s3');
 
