@@ -6,20 +6,24 @@
   <!-- we’re not using the sandbox, so off: -->
   <key>com.apple.security.app-sandbox</key>
   <false/>
-  <!-- network entitlements, from before: -->
+  <!-- network entitlements -->
   <key>com.apple.security.network.client</key>
   <true/>
   <key>com.apple.security.network.server</key>
   <true/>
 
-  <!-- new: let V8 use JIT pages -->
+  <!-- library validation disabled -->
+  <key>com.apple.security.cs.disable-library-validation</key>
+  <true/>
+
+  <!-- let V8 use JIT pages -->
   <key>com.apple.security.cs.allow-jit</key>
   <true/>
-  <!-- new: let V8 map RW+X pages -->
+  <!-- let V8 map RW+X pages -->
   <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
   <true/>
 
-  <!-- if you ever need to tweak DYLD env‐vars (e.g. for debugging) -->
+  <!-- if you ever need to tweak DYLD env-vars (e.g. for debugging) -->
   <key>com.apple.security.cs.allow-dyld-environment-variables</key>
   <true/>
 </dict>
