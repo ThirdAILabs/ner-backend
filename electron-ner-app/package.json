@@ -1,6 +1,6 @@
 {
   "name": "electron-ner-app",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Electron app for Named Entity Recognition",
   "main": "main.js",
   "scripts": {
@@ -67,6 +67,7 @@
       "preload.js",
       "frontend-dist/**/*",
       "scripts/**/*",
+      "bin/**/*",
       "!**/node_modules/**/{CHANGELOG.md,README.md,README,readme.md,readme}",
       "!**/node_modules/**/{test,__tests__,tests,powered-test,example,examples}",
       "!**/node_modules/**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}",
@@ -83,18 +84,25 @@
       }
     ],
     "asarUnpack": [
-      "scripts/**/*"
+      "scripts/**/*",
+      "bin/**/*"
     ],
     "afterPack": "./scripts/after-pack.js",
     "asar": true,
     "mac": {
+      "identity": "ThirdAI Corp (KJ35JRW2T6)",
       "category": "public.app-category.developer-tools",
       "target": [
         "dmg",
         "zip"
       ],
       "hardenedRuntime": true,
-      "gatekeeperAssess": false
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "gatekeeperAssess": false,
+      "extendInfo": {
+        "NSLocalNetworkUsageDescription": "This app needs to communicate with a local backend server for NLP processing."
+      }
     },
     "win": {
       "target": "nsis"

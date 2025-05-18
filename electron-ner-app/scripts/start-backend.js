@@ -178,75 +178,22 @@ export async function startBackend() {
   console.log(`Using fixed port: ${FIXED_PORT}`)
 
   const backendPath = getBackendPath();
-  
-  if (!backendPath) {
-    console.error('🔴 Could not find backend executable');
-    return null;
-  }
-  
-  console.log(`Starting backend from: ${backendPath}`);
-  
-  // Make sure the file is executable (mainly for development)
-  try {
-    fs.chmodSync(backendPath, '755');
-  } catch (error) {
-    console.warn('Could not set executable permissions:', error);
-  }
-  
-  // Get the directory of the backend executable to set as cwd
-  const backendDir = path.dirname(backendPath);
-  
-  // Start the Go backend process
-  const backend = spawn(backendPath, [], {
-    stdio: 'inherit', // This will pipe stdout/stderr to the parent process
-    cwd: backendDir, // Set working directory to where the binary is
-    env: {
-      ...process.env,
-      PORT: FIXED_PORT.toString(),
-      DEBUG: process.env.DEBUG || '*',
-      MODEL_PATH: getDefaultModelPath(),
-      // Add any environment variables needed by the backend
-    }
+  const backendDir  = path.dirname(backendPath);
+
+  console.log('Spawning backend with cwd:', backendDir);
+  const proc = spawn(backendPath, [], {
+    cwd:    backendDir,
+    stdio:  'inherit',
+    env:    { ...process.env, PORT: FIXED_PORT.toString() }
   });
-  
-  // Handle backend process events
-  backend.on('error', (err) => {
-    console.error('Failed to start backend:', err);
-  });
-  
-  backend.on('close', (code) => {
-    console.log(`Backend process exited with code ${code}`);
-    // Only exit this process if backend crashes unexpectedly
-    if (code !== 0 && code !== null) {
-      process.exit(code);
-    }
-  });
-  
-  // Handle termination signals
-  process.on('SIGINT', () => {
-    console.log('Stopping backend process...');
-    if (backend && backend.kill) {
-      backend.kill('SIGINT');
-    }
-  });
-  
-  process.on('SIGTERM', () => {
-    console.log('Stopping backend process...');
-    if (backend && backend.kill) {
-      backend.kill('SIGTERM');
-    }
-  });
-  
-  // Return a process object with a kill method
-  return {
-    process: backend,
-    kill: (signal) => {
-      if (backend && backend.kill) {
-        backend.kill(signal);
-      }
-    }
-  };
+
+  proc.on('error', err => console.error('Backend spawn error:', err));
+  proc.on('close', code => console.log('Backend exited:', code));
+
+  await new Promise(r => setTimeout(r, 500));
+  return { process: proc, kill: sig => proc.kill(sig) };
 }
+
 
 // Start the backend if this script is called directly
 if (import.meta.url === import.meta.main) {

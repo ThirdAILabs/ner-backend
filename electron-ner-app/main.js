@@ -183,10 +183,15 @@ if (process.env.DEBUG_UPDATER === 'true') {
 }
 
 // This method will be called when Electron has finished initialization
-app.whenReady().then(() => {
-  // Always start the backend first, regardless of dev/prod mode
+app.whenReady().then(async () => {
+  try {
+    await ensureBackendStarted();
+  } catch (err) {
+    console.error('Backend failed to start, quitting.', err);
+    return app.quit();
+  }
+
   createWindow();
-  ensureBackendStarted();
   
   // Check for updates on launch (in production or when DEBUG_UPDATER is set)
   if (!isDev || process.env.DEBUG_UPDATER === 'true') {
@@ -200,6 +205,7 @@ app.whenReady().then(() => {
     // On macOS it's common to re-create a window when the dock icon is clicked
     if (mainWindow === null) createWindow();
   });
+
 });
 
 // Quit when all windows are closed, except on macOS
