@@ -47,8 +47,10 @@ export function HeaderContent({
         <div className="font-medium">View By</div>
         <Tabs value={viewMode} onValueChange={handleViewModeChange}>
           <TabsList>
-            <TabsTrigger value="object">Object</TabsTrigger>
-            <TabsTrigger value="classified-token">Classified Token</TabsTrigger>
+            <TabsTrigger value="object">File</TabsTrigger>
+            <TabsTrigger value="classified-token">
+              Token
+            </TabsTrigger>
           </TabsList>
         </Tabs>
         {/* <div className="font-medium pl-2">Query</div>

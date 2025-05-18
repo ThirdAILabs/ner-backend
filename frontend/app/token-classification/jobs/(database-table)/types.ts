@@ -37,6 +37,7 @@ export interface TableContentProps {
   hasMoreTokens?: boolean;
   hasMoreObjects?: boolean;
   onLoadMore?: () => void;
+  showFilterContent: boolean;
 }
 
 export type ViewMode = 'object' | 'classified-token';

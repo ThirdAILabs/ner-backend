@@ -47,7 +47,11 @@ function joinAdjacentEntities(entities: Entity[]) {
   return joinedEntities;
 }
 
-export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) {
+
+export function DatabaseTable({
+  groups: groupsProp,
+  tags
+}: DatabaseTableProps) {
   const searchParams = useSearchParams();
   const reportId: string = searchParams.get('jobId') as string;
   const groups = groupsProp.length > 0 ? [...groupsProp, NO_GROUP] : [];
@@ -372,7 +376,15 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
       objectOffset,
       hasMoreObjects,
     });
-  }, [tokenRecords, objectRecords, tokenOffset, objectOffset, hasMoreTokens, hasMoreObjects]);
+  }, [
+    tokenRecords,
+    objectRecords,
+    tokenOffset,
+    objectOffset,
+    hasMoreTokens,
+    hasMoreObjects
+  ]);
+  const [showFilterSection, setShowFilterSection] = useState<boolean>(true);
 
   return (
     <Card className="h-[70vh]">
@@ -383,12 +395,14 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
             tags={tags}
             groupFilters={groupFilters}
             tagFilters={tagFilters}
+            showFilterSection={showFilterSection}
             onGroupFilterChange={handleGroupFilterChange}
             onTagFilterChange={handleTagFilterChange}
             onSelectAllGroups={handleSelectAllGroups}
             onDeselectAllGroups={handleDeselectAllGroups}
             onSelectAllTags={handleSelectAllTags}
             onDeselectAllTags={handleDeselectAllTags}
+            onToggleFilterSection={() => { setShowFilterSection(prev => !prev) }}
           />
 
           <div className="flex-1 flex flex-col h-full">
@@ -423,6 +437,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
                   hasMoreTokens={hasMoreTokens}
                   hasMoreObjects={hasMoreObjects}
                   onLoadMore={handleLoadMore}
+                  showFilterContent={showFilterSection}
                 />
               </div>
             </div>

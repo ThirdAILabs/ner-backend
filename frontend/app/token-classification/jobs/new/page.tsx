@@ -29,6 +29,7 @@ const Tag: React.FC<TagProps> = ({
   return (
     <div
       className={`px-3 py-1 text-sm font-medium overflow-x-scroll max-w-[16vw] rounded-sm ${!custom && 'cursor-pointer'} ${selected ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+      className={`px-3 py-1 text-sm font-medium overflow-x-scroll max-w-[16vw] rounded-sm ${!custom && 'cursor-pointer'} ${selected ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
       style={{ userSelect: 'none' }}
       onClick={onClick}
     >
@@ -56,10 +57,9 @@ const SourceOption: React.FC<SourceOptionProps> = ({
   <div
     className={`relative p-6 border rounded-md transition-all
       ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200 border-2'}
-      ${
-        disabled
-          ? 'opacity-85 cursor-not-allowed bg-gray-50'
-          : 'cursor-pointer hover:border-blue-300'
+      ${disabled
+        ? 'opacity-85 cursor-not-allowed bg-gray-50'
+        : 'cursor-pointer hover:border-blue-300'
       }
     `}
     onClick={() => !disabled && onClick()}
@@ -423,12 +423,12 @@ export default function NewJobPage() {
         CustomTags: customTagsObj,
         ...(selectedSource === 's3'
           ? {
-              SourceS3Bucket: sourceS3Bucket,
-              SourceS3Prefix: sourceS3Prefix || undefined,
-            }
+            SourceS3Bucket: sourceS3Bucket,
+            SourceS3Prefix: sourceS3Prefix || undefined,
+          }
           : {
-              UploadId: uploadId,
-            }),
+            UploadId: uploadId,
+          }),
         Groups: groups,
         report_name: jobName,
       });
@@ -526,9 +526,8 @@ export default function NewJobPage() {
                   validateJobName(value);
                 }}
                 onBlur={() => validateJobName(jobName)}
-                className={`w-full p-2 border ${
-                  nameError ? 'border-red-500' : 'border-gray-300'
-                } rounded`}
+                className={`w-full p-2 border ${nameError ? 'border-red-500' : 'border-gray-300'
+                  } rounded`}
                 placeholder="Enter_Report_Name"
                 required
               />
@@ -712,7 +711,7 @@ export default function NewJobPage() {
                     </>
                   }
                   isSelected={false}
-                  onClick={() => {}}
+                  onClick={() => { }}
                   disabled={true}
                 />
               </div>
@@ -871,9 +870,8 @@ export default function NewJobPage() {
                         value={customTagName}
                         onChange={(e) => handleTagNameChange(e.target.value)}
                         onBlur={(e) => handleTagNameChange(e.target.value)}
-                        className={`w-full p-2 border ${
-                          nameError ? 'border-red-500' : 'border-gray-300'
-                        } rounded`}
+                        className={`w-full p-2 border ${nameError ? 'border-red-500' : 'border-gray-300'
+                          } rounded`}
                         placeholder="CUSTOM_TAG_NAME"
                         required
                       />
