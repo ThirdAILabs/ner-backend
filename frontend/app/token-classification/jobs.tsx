@@ -88,14 +88,14 @@ export default function Jobs() {
           prev.map((r) =>
             r.Id === report.Id
               ? {
-                  ...r,
-                  CompletedFileCount: detailedReport.CompletedFileCount,
-                  detailedStatus: {
-                    ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
-                    InferenceTaskStatuses: detailedReport.InferenceTaskStatuses,
-                  },
-                  isLoadingStatus: false,
-                }
+                ...r,
+                CompletedFileCount: detailedReport.CompletedFileCount,
+                detailedStatus: {
+                  ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
+                  InferenceTaskStatuses: detailedReport.InferenceTaskStatuses,
+                },
+                isLoadingStatus: false,
+              }
               : r
           )
         );
@@ -147,7 +147,7 @@ export default function Jobs() {
       }
     };
     if (healthStatus) fetchReports();
-    return () => {};
+    return () => { };
   }, [healthStatus]);
 
   if (loading) {
@@ -246,9 +246,8 @@ export default function Jobs() {
       return (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
           <CircularProgress size={16} />
-          <CircularProgress size={16} />
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            Loading status... Loading status...
+            Loading status...
           </Typography>
         </Box>
       );
