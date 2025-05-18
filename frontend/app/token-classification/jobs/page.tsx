@@ -218,7 +218,6 @@ const NewTagDialog: React.FC<{
 function JobDetail() {
   const searchParams = useSearchParams();
   const reportId: string = searchParams.get('jobId') as string;
-  const [lastUpdated, setLastUpdated] = useState(0);
   const [tabValue, setTabValue] = useState('analytics');
   const [selectedSource, setSelectedSource] = useState<'s3' | 'local'>('s3');
 
@@ -284,21 +283,20 @@ function JobDetail() {
   };
 
   useEffect(() => {
-    fetchTags();
+    const pollInterval = setInterval(async () => {
+      await fetchTags();
 
-    // Set up refresh timer
-    const timer = setInterval(() => {
-      setLastUpdated((prev) => prev + 1);
+      const currentProgress = calculateProgress(reportData);
+
+      if (currentProgress === 100) {
+        clearInterval(pollInterval);
+      }
     }, 1000);
 
-    return () => clearInterval(timer);
-  }, [reportId]);
-
-  // Optional: Add a refresh function that gets called when the refresh button is clicked
-  const handleRefresh = () => {
-    setLastUpdated(0);
-    fetchTags();
-  };
+    return () => {
+      clearInterval(pollInterval);
+    };
+  }, [reportId, reportData?.CompletedFileCount]);
 
   return (
     <div className="container px-4 py-8 w-3/4 mx-auto">
@@ -339,18 +337,6 @@ function JobDetail() {
               Info
             </TabsTrigger>
           </TabsList>
-
-          <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-500">
-              Last updated: {lastUpdated} seconds ago
-            </span>
-            <Button variant="ghost" size="icon" onClick={handleRefresh}>
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon">
-              <Square className="h-4 w-4" />
-            </Button>
-          </div>
         </div>
 
         <TabsContent value="configuration" className="mt-0">

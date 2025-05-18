@@ -30,13 +30,13 @@ interface HighlightedTokenProps {
 
 const HighlightedToken = React.memo(({ token, tag, tagColors, labeled }: HighlightedTokenProps) => {
   const needsSpaceBefore = !(
-    token.match(/^[.,;:!?)\]}"'%]/) || 
+    token.match(/^[.,;:!?)\]}"'%]/) ||
     token.trim() === ''
   );
-  
+
   const needsSpaceAfter = !(
-    token.match(/^[([{"'$]/) ||       
-    token.match(/[.,;:!?]$/) ||       
+    token.match(/^[([{"'$]/) ||
+    token.match(/[.,;:!?]$/) ||
     token.trim() === ''
   );
 
@@ -137,7 +137,7 @@ const LoadMoreButton = React.memo(({ hasMore, isLoading, onClick }: { hasMore: b
 
   return (
     <div className="py-4 flex justify-center">
-      <Button 
+      <Button
         variant="outline"
         onClick={onClick}
         disabled={isLoading || !hasMore}
@@ -168,6 +168,7 @@ export function TableContent({
   hasMoreTokens = false,
   hasMoreObjects = false,
   onLoadMore,
+  showFilterContent
 }: TableContentProps) {
 
   const tagColors = useMemo(() => {
@@ -206,19 +207,31 @@ export function TableContent({
           {filteredRecords.length > 0 ? (
             filteredRecords.map((record, index) => (
               <TableRow key={index}>
-                <TableCell>
+                <TableCell className="w-3/5">
                   {record.context ? (
-                    <TokenContext context={{
-                      left: record.context.left,
-                      right: record.context.right,
-                      token: record.token,
-                      tag: record.tag,
-                    }} tagColors={tagColors} />
+                    <TokenContext
+                      context={{
+                        left: record.context.left,
+                        right: record.context.right,
+                        token: record.token,
+                        tag: record.tag,
+                      }}
+                      tagColors={tagColors}
+                    />
                   ) : (
                     <span className="text-red-400 text-xs">Missing context</span>
                   )}
                 </TableCell>
-                <TableCell>{record.sourceObject}</TableCell>
+                <TableCell className="w-1/5 px-4">
+                  <div className="relative group">
+                    <span
+                      className="block max-w-[200px] truncate"
+                      title={record.sourceObject.split("/").slice(-1).join("")}
+                    >
+                      {record.sourceObject.split("/").slice(-1)}
+                    </span>
+                  </div>
+                </TableCell>
               </TableRow>
             ))
           ) : (
@@ -243,7 +256,7 @@ export function TableContent({
           {filteredRecords.length > 0 && (
             <TableRow>
               <TableCell colSpan={2}>
-                <LoadMoreButton hasMore={hasMoreTokens} isLoading={isLoadingTokenRecords} onClick={onLoadMore ?? (() => {})} />
+                <LoadMoreButton hasMore={hasMoreTokens} isLoading={isLoadingTokenRecords} onClick={onLoadMore ?? (() => { })} />
 
               </TableCell>
             </TableRow>
@@ -268,15 +281,7 @@ export function TableContent({
           {filteredRecords.length > 0 ? (
             filteredRecords.map((record, index) => (
               <TableRow key={index}>
-                <TableCell
-                  style={{
-                    maxWidth: '60%',
-                    whiteSpace: 'normal',
-                    wordBreak: 'break-word',
-                    overflowWrap: 'break-word',
-                    padding: '16px',
-                  }}
-                >
+                <TableCell className="mw-3/5">
                   <div className="text-sm leading-relaxed bg-white p-3 rounded border border-gray-100 shadow-sm">
                     {record.taggedTokens.map((token, tokenIndex) => {
                       const isLastToken = tokenIndex === record.taggedTokens.length - 1;
@@ -295,7 +300,16 @@ export function TableContent({
                     })}
                   </div>
                 </TableCell>
-                <TableCell>{record.sourceObject}</TableCell>
+                <TableCell className="w-1/5 px-4">
+                  <div className="relative group">
+                    <span
+                      className={`block max-w-[${showFilterContent ? '100' : '200'}px] truncate`}
+                      title={record.sourceObject.split("/").slice(-1).join("")}
+                    >
+                      {record.sourceObject.split("/").slice(-1)}
+                    </span>
+                  </div>
+                </TableCell>
               </TableRow>
             ))
           ) : (
@@ -319,7 +333,7 @@ export function TableContent({
           {filteredRecords.length > 0 && (
             <TableRow>
               <TableCell colSpan={2}>
-                <LoadMoreButton hasMore={hasMoreObjects} isLoading={isLoadingObjectRecords} onClick={onLoadMore ?? (() => {})} />
+                <LoadMoreButton hasMore={hasMoreTokens} isLoading={isLoadingTokenRecords} onClick={onLoadMore ?? (() => { })} />
 
               </TableCell>
             </TableRow>

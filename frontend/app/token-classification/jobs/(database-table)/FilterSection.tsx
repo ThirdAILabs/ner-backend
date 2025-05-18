@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, ListFilter } from 'lucide-react';
+import { ChevronDown, ChevronUp, ListFilter, ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { Tag } from '@/components/AnalyticsDashboard';
 
@@ -8,12 +8,14 @@ interface FilterSectionProps {
   tags: Tag[];
   groupFilters: Record<string, boolean>;
   tagFilters: Record<string, boolean>;
+  showFilterSection: boolean;
   onGroupFilterChange: (filterKey: string) => void;
   onTagFilterChange: (filterKey: string) => void;
   onSelectAllGroups: () => void;
   onDeselectAllGroups: () => void;
   onSelectAllTags: () => void;
   onDeselectAllTags: () => void;
+  onToggleFilterSection: () => void;
 }
 
 export function FilterSection({
@@ -21,12 +23,14 @@ export function FilterSection({
   tags,
   groupFilters,
   tagFilters,
+  showFilterSection,
   onGroupFilterChange,
   onTagFilterChange,
   onSelectAllGroups,
   onDeselectAllGroups,
   onSelectAllTags,
-  onDeselectAllTags
+  onDeselectAllTags,
+  onToggleFilterSection
 }: FilterSectionProps) {
   const [isGroupsExpanded, setIsGroupsExpanded] = useState(true);
   const [isTagsExpanded, setIsTagsExpanded] = useState(true);
@@ -43,17 +47,28 @@ export function FilterSection({
   const toggleTags = () => setIsTagsExpanded(!isTagsExpanded);
 
   return (
-    <div className="w-64 flex flex-col border-r relative">
+    <div className={`${showFilterSection ? 'w-64' : 'w-0'} flex flex-col ${showFilterSection && 'border-r'} relative`}>
+      <button
+        onClick={onToggleFilterSection}
+        className="absolute -right-3 top-9 transform -translate-y-1/2 rounded-full border border-gray-200 bg-white p-1 hover:bg-gray-50 transition-colors z-20"
+        aria-label={showFilterSection ? "Collapse filters" : "Expand filters"}
+      >
+        {showFilterSection ? (
+          <ChevronLeft className="h-4 w-4 text-gray-600" />
+        ) : (
+          <ChevronRight className="h-4 w-4 text-gray-600" />
+        )}
+      </button>
       {/* Fixed Filter Header */}
-      <div className="sticky top-0 p-6 pb-2 pt-4 z-10">
+      {showFilterSection && <div className="sticky top-0 p-6 pb-2 pt-4 z-10">
         <div className="flex items-center gap-2">
           <ListFilter className="h-5 w-5" />
           <span className="flex font-medium h-[40px] items-center">Filter</span>
         </div>
-      </div>
+      </div>}
 
       {/* Scrollable Filter Content with Shadow */}
-      <div
+      {showFilterSection && <div
         ref={filterScrollRef}
         className="flex-1 overflow-y-auto"
         onScroll={handleFilterScroll}
@@ -166,7 +181,7 @@ export function FilterSection({
             )}
           </div>
         </div>
-      </div>
+      </div>}
     </div>
   );
 }

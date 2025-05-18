@@ -21,7 +21,7 @@ function joinAdjacentEntities(entities: Entity[]) {
   const joinedEntities: Entity[] = [entities[0]];
   // We need to keep track of the previous *unjoined* entity.
   let prevEntity = entities[0];
-  
+
   for (let i = 1; i < entities.length; i++) {
     console.log(entities[i]);
     const numSpacesAfterPrevEntity = (prevEntity.RContext || '').match(/^\s*/)?.[0].length || 0
@@ -46,7 +46,7 @@ function joinAdjacentEntities(entities: Entity[]) {
 
   return joinedEntities;
 }
-  
+
 
 export function DatabaseTable({
   groups: groupsProp,
@@ -427,6 +427,7 @@ export function DatabaseTable({
     hasMoreTokens,
     hasMoreObjects
   ]);
+  const [showFilterSection, setShowFilterSection] = useState<boolean>(true);
 
   return (
     <Card className="h-[70vh]">
@@ -437,12 +438,14 @@ export function DatabaseTable({
             tags={tags}
             groupFilters={groupFilters}
             tagFilters={tagFilters}
+            showFilterSection={showFilterSection}
             onGroupFilterChange={handleGroupFilterChange}
             onTagFilterChange={handleTagFilterChange}
             onSelectAllGroups={handleSelectAllGroups}
             onDeselectAllGroups={handleDeselectAllGroups}
             onSelectAllTags={handleSelectAllTags}
             onDeselectAllTags={handleDeselectAllTags}
+            onToggleFilterSection={() => { setShowFilterSection(prev => !prev) }}
           />
 
           <div className="flex-1 flex flex-col h-full">
@@ -479,6 +482,7 @@ export function DatabaseTable({
                   hasMoreTokens={hasMoreTokens}
                   hasMoreObjects={hasMoreObjects}
                   onLoadMore={handleLoadMore}
+                  showFilterContent={showFilterSection}
                 />
               </div>
             </div>

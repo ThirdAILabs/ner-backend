@@ -33,10 +33,11 @@ export interface TableContentProps {
   tagFilters: Record<string, boolean>;
   isLoadingObjectRecords: boolean;
   isLoadingTokenRecords: boolean;
-  tags: Tag[]; 
+  tags: Tag[];
   hasMoreTokens?: boolean;
   hasMoreObjects?: boolean;
   onLoadMore?: () => void;
+  showFilterContent: boolean;
 }
 
 export type ViewMode = 'object' | 'classified-token'; 
