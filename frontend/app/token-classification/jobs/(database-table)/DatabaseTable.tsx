@@ -445,7 +445,7 @@ export function DatabaseTable({
             onDeselectAllGroups={handleDeselectAllGroups}
             onSelectAllTags={handleSelectAllTags}
             onDeselectAllTags={handleDeselectAllTags}
-            onToggleFilterSection={() => { setShowFilterSection(!showFilterSection) }}
+            onToggleFilterSection={() => { setShowFilterSection(prev => !prev) }}
           />
 
           <div className="flex-1 flex flex-col h-full">
