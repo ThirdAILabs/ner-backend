@@ -6,11 +6,7 @@ interface TableProps {
 }
 
 export function Table({ className, children }: TableProps) {
-  return (
-    <table className={`w-full caption-bottom text-sm ${className || ''}`}>
-      {children}
-    </table>
-  );
+  return <table className={`w-full caption-bottom text-sm ${className || ''}`}>{children}</table>;
 }
 
 interface TableHeaderProps {
@@ -19,11 +15,7 @@ interface TableHeaderProps {
 }
 
 export function TableHeader({ className, children }: TableHeaderProps) {
-  return (
-    <thead className={`${className || ''}`}>
-      {children}
-    </thead>
-  );
+  return <thead className={`${className || ''}`}>{children}</thead>;
 }
 
 interface TableRowProps {
@@ -46,7 +38,9 @@ interface TableHeadProps {
 
 export function TableHead({ className, children }: TableHeadProps) {
   return (
-    <th className={`h-12 px-4 text-left align-middle font-medium text-muted-foreground ${className || ''}`}>
+    <th
+      className={`h-12 px-4 text-left align-middle font-medium text-muted-foreground ${className || ''}`}
+    >
       {children}
     </th>
   );
@@ -58,11 +52,7 @@ interface TableBodyProps {
 }
 
 export function TableBody({ className, children }: TableBodyProps) {
-  return (
-    <tbody className={`${className || ''}`}>
-      {children}
-    </tbody>
-  );
+  return <tbody className={`${className || ''}`}>{children}</tbody>;
 }
 
 interface TableCellProps {
@@ -78,4 +68,4 @@ export function TableCell({ className, children, colSpan, style }: TableCellProp
       {children}
     </td>
   );
-} 
+}

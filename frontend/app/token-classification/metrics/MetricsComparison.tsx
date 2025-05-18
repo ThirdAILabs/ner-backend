@@ -10,15 +10,15 @@ const mockMetricsData = {
       Organization: 0.75,
       Location: 0.78,
       Date: 0.85,
-      Product: 0.70
+      Product: 0.7,
     },
     after: {
       Person: 0.88,
-      Organization: 0.80,
+      Organization: 0.8,
       Location: 0.83,
       Date: 0.87,
-      Product: 0.76
-    }
+      Product: 0.76,
+    },
   },
   recall: {
     before: {
@@ -26,32 +26,32 @@ const mockMetricsData = {
       Organization: 0.72,
       Location: 0.75,
       Date: 0.81,
-      Product: 0.68
+      Product: 0.68,
     },
     after: {
       Person: 0.85,
       Organization: 0.78,
       Location: 0.81,
       Date: 0.84,
-      Product: 0.73
-    }
+      Product: 0.73,
+    },
   },
   f1: {
     before: {
-      Person: 0.80,
+      Person: 0.8,
       Organization: 0.73,
       Location: 0.76,
       Date: 0.83,
-      Product: 0.69
+      Product: 0.69,
     },
     after: {
       Person: 0.86,
       Organization: 0.79,
       Location: 0.82,
       Date: 0.85,
-      Product: 0.74
-    }
-  }
+      Product: 0.74,
+    },
+  },
 };
 
 const MetricsComparison: React.FC = () => {
@@ -63,9 +63,9 @@ const MetricsComparison: React.FC = () => {
   };
 
   return (
-    <Card 
-      sx={{ 
-        mb: 3, 
+    <Card
+      sx={{
+        mb: 3,
         boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.05)',
         backgroundColor: '#FFFFFF',
         borderRadius: 1,
@@ -78,9 +78,9 @@ const MetricsComparison: React.FC = () => {
         <Typography variant="body2" color="text.secondary" mb={3}>
           Compare model performance metrics before and after fine-tuning
         </Typography>
-        
-        <Tabs 
-          value={currentMetric} 
+
+        <Tabs
+          value={currentMetric}
           onChange={handleMetricChange}
           sx={{
             minHeight: '40px',
@@ -96,17 +96,17 @@ const MetricsComparison: React.FC = () => {
               '&.Mui-selected': {
                 color: theme.palette.primary.main,
                 fontWeight: 600,
-              }
-            }
+              },
+            },
           }}
         >
           <Tab value="precision" label="Precision" />
           <Tab value="recall" label="Recall" />
           <Tab value="f1" label="F1 Score" />
         </Tabs>
-        
+
         <Divider sx={{ mb: 3 }} />
-        
+
         <Box sx={{ height: 350 }}>
           <MetricsChart metrics={mockMetricsData[currentMetric]} metricType={currentMetric} />
         </Box>
@@ -115,4 +115,4 @@ const MetricsComparison: React.FC = () => {
   );
 };
 
-export default MetricsComparison; 
+export default MetricsComparison;

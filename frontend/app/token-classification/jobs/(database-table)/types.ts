@@ -1,4 +1,4 @@
-import { Tag } from "@/components/AnalyticsDashboard"
+import { Tag } from '@/components/AnalyticsDashboard';
 
 export interface ObjectDatabaseRecord {
   taggedTokens: [string, string][];
@@ -40,4 +40,4 @@ export interface TableContentProps {
   showFilterContent: boolean;
 }
 
-export type ViewMode = 'object' | 'classified-token'; 
+export type ViewMode = 'object' | 'classified-token';
