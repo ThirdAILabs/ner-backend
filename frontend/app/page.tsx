@@ -42,15 +42,19 @@ type TrainReportData = {
 };
 
 const emptyMetrics: LabelMetrics = {
-  'O': { precision: 0, recall: 0, fmeasure: 0 }
+  O: { precision: 0, recall: 0, fmeasure: 0 },
 };
 
 const emptyExamples: ExampleCategories = {
-  true_positives: {}, false_positives: {}, false_negatives: {}
+  true_positives: {},
+  false_positives: {},
+  false_negatives: {},
 };
 
 const emptyReport: TrainReportData = {
-  before_train_metrics: emptyMetrics, after_train_metrics: emptyMetrics, after_train_examples: emptyExamples
+  before_train_metrics: emptyMetrics,
+  after_train_metrics: emptyMetrics,
+  after_train_examples: emptyExamples,
 };
 
 const getTrainReport = async (workflowName: string) => {
@@ -60,7 +64,7 @@ const getTrainReport = async (workflowName: string) => {
 // --- Renamed original Page component to PageContents ---
 function PageContents() {
   const params = useParams();
-  const workflowName = params.deploymentId as string || 'PII';
+  const workflowName = (params.deploymentId as string) || 'PII';
   const searchParams = useSearchParams();
   const defaultTab = searchParams.get('tab') || 'jobs';
   const [tabValue, setTabValue] = useState(defaultTab);
@@ -102,13 +106,22 @@ function PageContents() {
     deploymentUrl: 'https://mock-deployment-url.com',
     workflowNames: ['token-classifier', 'token-classifier-v2'],
     deployStatus: 'complete',
-    modelId: 'mock-model-id-123'
+    modelId: 'mock-model-id-123',
   };
 
   return (
-    <div style={{ width:'75%', minHeight: '100vh', margin: '0 auto' }}>
+    <div style={{ width: '75%', minHeight: '100vh', margin: '0 auto' }}>
       <header style={{ width: '100%', padding: '16px', borderBottom: '1px solid #e0e0e0' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', marginBottom: '8px', display: 'flex', flexDirection: 'row', gap: '20px' }}>
+        <div
+          style={{
+            maxWidth: '1200px',
+            margin: '0 auto',
+            marginBottom: '8px',
+            display: 'flex',
+            flexDirection: 'row',
+            gap: '20px',
+          }}
+        >
           <Image
             src="/thirdai-logo.png"
             alt="ThirdAI Logo"
@@ -117,17 +130,17 @@ function PageContents() {
             style={{ objectFit: 'contain' }}
             priority
           />
-          <Typography 
-            variant="h5" 
-            title={"PocketShield"} 
-            sx={{ 
+          <Typography
+            variant="h5"
+            title={'PocketShield'}
+            sx={{
               mt: 0.5,
               fontFamily: '"Plus Jakarta Sans", sans-serif',
               fontWeight: 600,
-              color: 'rgb(85,152,229)'
+              color: 'rgb(85,152,229)',
             }}
           >
-            {"PocketShield"}
+            {'PocketShield'}
           </Typography>
         </div>
       </header>
@@ -139,8 +152,16 @@ function PageContents() {
             onChange={handleTabChange}
             aria-label="token classification tabs"
             sx={{
-              '& .MuiTab-root': { textTransform: 'none', fontWeight: 500, fontSize: '1rem', color: '#5F6368', minWidth: 100, padding: '12px 16px', '&.Mui-selected': { color: '#1a73e8', fontWeight: 500 }},
-              '& .MuiTabs-indicator': { backgroundColor: '#1a73e8' }
+              '& .MuiTab-root': {
+                textTransform: 'none',
+                fontWeight: 500,
+                fontSize: '1rem',
+                color: '#5F6368',
+                minWidth: 100,
+                padding: '12px 16px',
+                '&.Mui-selected': { color: '#1a73e8', fontWeight: 500 },
+              },
+              '& .MuiTabs-indicator': { backgroundColor: '#1a73e8' },
             }}
           >
             <Tab label="Reports Dashboard" value="jobs" />
@@ -153,14 +174,13 @@ function PageContents() {
         {tabValue === 'monitoring' && (
           <Dashboard /> // Assuming Dashboard might also use data like trainReport
         )}
-        {tabValue === 'jobs' && (
-          <Jobs />
-        )}
+        {tabValue === 'jobs' && <Jobs />}
 
         {/* Example of how you might show loading/error for the report if it's tied to a tab */}
         {tabValue === 'monitoring' && isLoadingReport && <CircularProgress />}
-        {tabValue === 'monitoring' && reportError && <Typography color="error">{reportError}</Typography>}
-
+        {tabValue === 'monitoring' && reportError && (
+          <Typography color="error">{reportError}</Typography>
+        )}
       </main>
     </div>
   );
@@ -171,12 +191,16 @@ export default function Page() {
   // This component now just sets up the Suspense boundary.
   // The fallback can be a simple loading message or a more sophisticated skeleton UI.
   return (
-    <Suspense fallback={
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
-        <CircularProgress />
-        <Typography variant="h6" component="p" sx={{ml: 2}}>Loading page...</Typography>
-      </Box>
-    }>
+    <Suspense
+      fallback={
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+          <CircularProgress />
+          <Typography variant="h6" component="p" sx={{ ml: 2 }}>
+            Loading page...
+          </Typography>
+        </Box>
+      }
+    >
       <PageContents />
     </Suspense>
   );

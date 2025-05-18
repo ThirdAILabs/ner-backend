@@ -90,23 +90,23 @@ export interface ThroughputMetrics {
 // Add a utility function to handle API errors with custom messages
 const handleApiError = (error: unknown, customMessage?: string): never => {
   console.error('API Error:', error);
-  
+
   // Extract the error message
   let errorMessage = 'An unexpected error occurred';
   let status: number | undefined = undefined;
-  
+
   if (axios.isAxiosError(error) && error.response) {
     errorMessage = error.response.data?.message || error.message;
     status = error.response.status;
   } else if (error instanceof Error) {
     errorMessage = error.message;
   }
-  
+
   // Show the error message (use custom message if provided)
   if (typeof window !== 'undefined') {
     showApiErrorEvent(customMessage || errorMessage, status);
   }
-  
+
   throw error;
 };
 
@@ -157,9 +157,7 @@ export const nerService = {
     }
   },
 
-  createReport: async (
-    data: CreateReportRequest
-  ): Promise<{ ReportId: string }> => {
+  createReport: async (data: CreateReportRequest): Promise<{ ReportId: string }> => {
     try {
       const response = await axiosInstance.post('/reports', data);
       return response.data;
@@ -186,9 +184,7 @@ export const nerService = {
   },
 
   getReportGroup: async (reportId: string, groupId: string): Promise<Group> => {
-    const response = await axiosInstance.get(
-      `/reports/${reportId}/groups/${groupId}`
-    );
+    const response = await axiosInstance.get(`/reports/${reportId}/groups/${groupId}`);
     return response.data;
   },
 
@@ -204,10 +200,9 @@ export const nerService = {
       params: {
         offset: params?.offset || 0,
         limit: params?.limit || 100,
-        tags: params?.tags
+        tags: params?.tags,
       },
-      paramsSerializer: (params) =>
-        qs.stringify(params, { arrayFormat: 'repeat' })
+      paramsSerializer: (params) => qs.stringify(params, { arrayFormat: 'repeat' }),
     });
     console.log('Entities response:', response.data);
     return response.data;
@@ -222,24 +217,18 @@ export const nerService = {
     }
   ): Promise<ObjectPreview[]> => {
     // Fetch object previews from the backend
-    const response = await axiosInstance.get<ObjectPreview[]>(
-      `/reports/${reportId}/objects`,
-      {
-        params: {
-          offset: params?.offset || 0,
-          limit: params?.limit || 100,
-        },
-      }
-    );
+    const response = await axiosInstance.get<ObjectPreview[]>(`/reports/${reportId}/objects`, {
+      params: {
+        offset: params?.offset || 0,
+        limit: params?.limit || 100,
+      },
+    });
     return response.data;
   },
 
-  searchReport: async (
-    reportId: string,
-    query: string
-  ): Promise<{ Objects: string[] }> => {
+  searchReport: async (reportId: string, query: string): Promise<{ Objects: string[] }> => {
     const response = await axiosInstance.get(`/reports/${reportId}/search`, {
-      params: { query }
+      params: { query },
     });
     return response.data;
   },
@@ -247,14 +236,14 @@ export const nerService = {
   uploadFiles: async (files: File[]): Promise<{ Id: string }> => {
     try {
       const formData = new FormData();
-      files.forEach(file => {
+      files.forEach((file) => {
         formData.append('files', file);
       });
 
       const response = await axiosInstance.post(`/uploads`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
-        }
+        },
       });
       return response.data;
     } catch (error) {
@@ -262,38 +251,27 @@ export const nerService = {
     }
   },
 
-  getInferenceMetrics: async (
-    modelId?: string,
-    days?: number
-  ): Promise<InferenceMetrics> => {
+  getInferenceMetrics: async (modelId?: string, days?: number): Promise<InferenceMetrics> => {
     const params: Record<string, any> = {};
     if (modelId) params.model_id = modelId;
     if (days !== undefined) params.days = days;
     const { data } = await axiosInstance.get<InferenceMetrics>('/metrics', {
-      params
+      params,
     });
     return data;
   },
 
-  getThroughputMetrics: async (
-    modelId: string,
-    reportId?: string
-  ): Promise<ThroughputMetrics> => {
+  getThroughputMetrics: async (modelId: string, reportId?: string): Promise<ThroughputMetrics> => {
     const params: Record<string, any> = { model_id: modelId };
     if (reportId) params.report_id = reportId;
-    const { data } = await axiosInstance.get<ThroughputMetrics>(
-      '/metrics/throughput',
-      { params }
-    );
+    const { data } = await axiosInstance.get<ThroughputMetrics>('/metrics/throughput', { params });
     return data;
   },
 
-  validateGroupDefinition: async (
-    groupQuery: string
-  ): Promise<string | null> => {
+  validateGroupDefinition: async (groupQuery: string): Promise<string | null> => {
     try {
       await axiosInstance.get('/validate-group-definition', {
-        params: { group_query: groupQuery }
+        params: { group_query: groupQuery },
       });
       return null;
     } catch (error) {
@@ -302,5 +280,5 @@ export const nerService = {
       }
       return 'An unexpected error occurred';
     }
-  }
+  },
 };

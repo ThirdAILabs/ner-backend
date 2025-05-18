@@ -17,7 +17,7 @@ export function ErrorPopup({ autoCloseTime = 5000 }: ErrorPopupProps) {
   const [error, setError] = useState<ErrorState>({
     show: false,
     message: '',
-    status: undefined
+    status: undefined,
   });
 
   useEffect(() => {
@@ -27,9 +27,9 @@ export function ErrorPopup({ autoCloseTime = 5000 }: ErrorPopupProps) {
       setError({
         show: true,
         message: customEvent.detail.message,
-        status: customEvent.detail.status
+        status: customEvent.detail.status,
       });
-      
+
       // Auto-close the popup after specified time (if > 0)
       if (autoCloseTime > 0) {
         setTimeout(() => {
@@ -40,7 +40,7 @@ export function ErrorPopup({ autoCloseTime = 5000 }: ErrorPopupProps) {
 
     // Add event listener for our custom event
     window.addEventListener('api-error', handleApiError);
-    
+
     // Cleanup function
     return () => {
       window.removeEventListener('api-error', handleApiError);
@@ -61,7 +61,7 @@ export function ErrorPopup({ autoCloseTime = 5000 }: ErrorPopupProps) {
             </div>
           </div>
         </div>
-        <button 
+        <button
           onClick={() => setError((prev) => ({ ...prev, show: false }))}
           className="text-gray-400 hover:text-gray-500"
         >
@@ -70,4 +70,4 @@ export function ErrorPopup({ autoCloseTime = 5000 }: ErrorPopupProps) {
       </div>
     </div>
   );
-} 
+}
