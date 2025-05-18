@@ -23,10 +23,7 @@ interface HighlightedTokenProps {
 }
 
 const HighlightedToken = React.memo(({ token, tag, tagColors, labeled }: HighlightedTokenProps) => {
-  const needsSpaceBefore = !(
-    token.match(/^[.,;:!?)\]}"'%]/) ||
-    token.trim() === ''
-  );
+  const needsSpaceBefore = !(token.match(/^[.,;:!?)\]}"'%]/) || token.trim() === '');
 
   const needsSpaceAfter = !(
     token.match(/^[([{"'$]/) ||
@@ -159,7 +156,8 @@ const LoadMoreButton = React.memo(
         </Button>
       </div>
     );
-  });
+  }
+);
 
 export function TableContent({
   viewMode,
@@ -173,7 +171,7 @@ export function TableContent({
   hasMoreTokens = false,
   hasMoreObjects = false,
   onLoadMore,
-  showFilterContent
+  showFilterContent,
 }: TableContentProps) {
   const tagColors = useMemo(() => {
     const colors: Record<string, HighlightColor> = {};
@@ -232,9 +230,9 @@ export function TableContent({
                   <div className="relative group">
                     <span
                       className="block max-w-[200px] truncate"
-                      title={record.sourceObject.split("/").slice(-1).join("")}
+                      title={record.sourceObject.split('/').slice(-1).join('')}
                     >
-                      {record.sourceObject.split("/").slice(-1)}
+                      {record.sourceObject.split('/').slice(-1)}
                     </span>
                   </div>
                 </TableCell>
@@ -262,8 +260,11 @@ export function TableContent({
           {filteredRecords.length > 0 && (
             <TableRow>
               <TableCell colSpan={2}>
-                <LoadMoreButton hasMore={hasMoreTokens} isLoading={isLoadingTokenRecords} onClick={onLoadMore ?? (() => { })} />
-
+                <LoadMoreButton
+                  hasMore={hasMoreTokens}
+                  isLoading={isLoadingTokenRecords}
+                  onClick={onLoadMore ?? (() => {})}
+                />
               </TableCell>
             </TableRow>
           )}
@@ -320,9 +321,9 @@ export function TableContent({
                   <div className="relative group">
                     <span
                       className={`block max-w-[${showFilterContent ? '100' : '200'}px] truncate`}
-                      title={record.sourceObject.split("/").slice(-1).join("")}
+                      title={record.sourceObject.split('/').slice(-1).join('')}
                     >
-                      {record.sourceObject.split("/").slice(-1)}
+                      {record.sourceObject.split('/').slice(-1)}
                     </span>
                   </div>
                 </TableCell>
@@ -349,8 +350,11 @@ export function TableContent({
           {filteredRecords.length > 0 && (
             <TableRow>
               <TableCell colSpan={2}>
-                <LoadMoreButton hasMore={hasMoreTokens} isLoading={isLoadingTokenRecords} onClick={onLoadMore ?? (() => { })} />
-
+                <LoadMoreButton
+                  hasMore={hasMoreTokens}
+                  isLoading={isLoadingTokenRecords}
+                  onClick={onLoadMore ?? (() => {})}
+                />
               </TableCell>
             </TableRow>
           )}
