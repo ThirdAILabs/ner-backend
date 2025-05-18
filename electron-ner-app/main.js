@@ -17,6 +17,17 @@ const appServe = app.isPackaged ? serve({
   directory: path.join(__dirname, "frontend-dist")
 }) : null;
 
+const logPath = path.join(app.getPath('userData'), 'logs');
+fs.mkdirSync(logPath, { recursive: true });
+
+log.transports.file.resolvePath = () => {
+  return path.join(logPath, 'main.log');
+};
+
+log.transports.file.level = 'debug';
+log.info('———— Starting PocketShield main process ————');
+log.debug('App env:', process.env.NODE_ENV, 'isPackaged:', app.isPackaged);
+
 // Safely check if we're in development mode with fallback if module is missing
 let isDev = false;
 try {
@@ -30,7 +41,7 @@ try {
 // Force NODE_ENV to 'production' when not in development mode
 if (!isDev) {
   process.env.NODE_ENV = 'production';
-  console.log('Setting NODE_ENV to production');
+  log.info('Setting NODE_ENV to production');
 }
 
 // Keep a global reference of the window object to prevent it from being garbage collected
@@ -44,22 +55,22 @@ function fixWorkingDirectory() {
   const appPath = app.getAppPath();
   const resourcesPath = process.resourcesPath || path.join(appPath, '..', '..');
   
-  console.log('Current working directory:', process.cwd());
-  console.log('App path:', appPath);
-  console.log('Resources path:', resourcesPath);
+  log.info('Current working directory:', process.cwd());
+  log.info('App path:', appPath);
+  log.info('Resources path:', resourcesPath);
   
   // If we're running in production and the binary doesn't exist, try to fix paths
   if (!isDev) {
     // Try to see if bin directory exists in resources
     const binPath = path.join(resourcesPath, 'bin');
     if (fs.existsSync(binPath)) {
-      console.log('Binary directory found in resources:', binPath);
+      log.info('Binary directory found in resources:', binPath);
       // Change working directory to resources path for backend
       try {
         process.chdir(resourcesPath);
-        console.log('Changed working directory to:', process.cwd());
+        log.info('Changed working directory to:', process.cwd());
       } catch (error) {
-        console.error('Failed to change working directory:', error);
+        log.error('Failed to change working directory:', error);
       }
     } else {
       console.warn('Binary directory not found in resources:', binPath);
@@ -84,15 +95,15 @@ function createWindow() {
 
   if (isDev) {
     // In development mode, add a delay to ensure Next.js has time to start
-    console.log("Development mode: Waiting for Next.js server to start...");
+    log.info("Development mode: Waiting for Next.js server to start...");
     setTimeout(() => {
-      console.log("Attempting to load from Next.js server...");
+      log.info("Attempting to load from Next.js server...");
       mainWindow.loadURL('http://localhost:3007/');
     }, 3000); // 3 second delay
   } else {
-    console.log("Production mode: Loading built app");
+    log.info("Production mode: Loading built app");
     appServe(mainWindow).then(() => {
-      console.log("Loaded app from serve");
+      log.info("Loaded app from serve");
       mainWindow.loadURL("app://-");
     });
   }
@@ -107,15 +118,15 @@ function createWindow() {
 // Start backend and return the process
 async function ensureBackendStarted() {
   if (!backendStarted) {
-    console.log('Starting backend...');
+    log.info('Starting backend...');
     try {
       backendProcess = await startBackend();
       if (backendProcess) {
-        console.log('Backend started successfully');
+        log.info('Backend started successfully');
         backendStarted = true;
       } else {
         const errorMsg = 'Failed to start backend process. Backend executable not found.';
-        console.error(errorMsg);
+        log.error(errorMsg);
         
         // Show error dialog in GUI mode
         if (mainWindow) {
@@ -129,7 +140,7 @@ sudo chmod 755 "/Applications/PocketShield.app/Contents/Resources/bin/main"`);
         }
       }
     } catch (error) {
-      console.error('Error starting backend:', error);
+      log.error('Error starting backend:', error);
       
       // Show error dialog in GUI mode
       if (mainWindow) {
@@ -160,7 +171,7 @@ autoUpdater.on('update-not-available', (info) => {
   log.info('Update not available:', info);
 });
 autoUpdater.on('error', (err) => {
-  log.error('Error in auto-updater:', err);
+  log.err('Error in auto-updater:', err);
 });
 autoUpdater.on('download-progress', (progressObj) => {
   let log_message = "Download speed: " + progressObj.bytesPerSecond;
@@ -176,10 +187,10 @@ autoUpdater.on('update-downloaded', () => {
 
 // Allow update checks in dev for testing when DEBUG_UPDATER is true
 if (process.env.DEBUG_UPDATER === 'true') {
-  console.log('DEBUG_UPDATER is set; enabling update checks in dev mode');
+  log.info('DEBUG_UPDATER is set; enabling update checks in dev mode');
   // Monkey-patch app.isPackaged so autoUpdater will run even in dev
   Object.defineProperty(app, 'isPackaged', { get: () => true });
-  console.log('Monkey-patched app.isPackaged to true for DEBUG_UPDATER');
+  log.info('Monkey-patched app.isPackaged to true for DEBUG_UPDATER');
 }
 
 // This method will be called when Electron has finished initialization
@@ -187,7 +198,7 @@ app.whenReady().then(async () => {
   try {
     await ensureBackendStarted();
   } catch (err) {
-    console.error('Backend failed to start, quitting.', err);
+    log.error('Backend failed to start, quitting.', err);
     return app.quit();
   }
 
@@ -198,7 +209,7 @@ app.whenReady().then(async () => {
     log.info(`Checking for updates (isDev=${isDev}), current version: ${app.getVersion()}`);
     autoUpdater.checkForUpdatesAndNotify()
       .then((result) => log.info('checkForUpdatesAndNotify result:', result))
-      .catch((error) => log.error('checkForUpdatesAndNotify error:', error));
+      .catch((error) => log.err('checkForUpdatesAndNotify error:', error));
   }
 
   app.on('activate', () => {
@@ -215,18 +226,18 @@ app.on('window-all-closed', () => {
 
 // Clean up backend on app quit
 app.on('will-quit', () => {
-  console.log('App is quitting, cleaning up backend...');
+  log.info('App is quitting, cleaning up backend...');
   if (backendProcess && backendProcess.kill) {
-    console.log('Sending SIGINT to backend process...');
+    log.info('Sending SIGINT to backend process...');
     backendProcess.kill('SIGINT');
   }
 });
 
 // Handle app quit
 app.on('quit', () => {
-  console.log('App is quitting, ensuring backend is cleaned up...');
+  log.info('App is quitting, ensuring backend is cleaned up...');
   if (backendProcess && backendProcess.kill) {
-    console.log('Sending SIGTERM to backend process...');
+    log.info('Sending SIGTERM to backend process...');
     backendProcess.kill('SIGTERM');
   }
 }); 
