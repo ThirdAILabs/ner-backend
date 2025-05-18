@@ -7,7 +7,8 @@
     "start": "electron .",
     "copy-model": "node scripts/copy-model.js",
     "copy-backend": "node scripts/copy-backend.js",
-    "prepare-files": "rm -rf bin && npm run copy-backend && npm run copy-model",
+    "copy-libomp": "otool -L bin/main | grep libomp | awk '{print $1}' | xargs -I {} cp {} resources/",
+    "prepare-files": "rm -rf bin && npm run copy-backend && npm run copy-model && rm -rf resources && mkdir resources && npm run copy-libomp",
     "dev": "npm run prepare-files && concurrently --kill-others \"cd ../frontend && npm run dev && cd ../electron-ner-app\" \"wait-on http://localhost:3007 && electron .\"",
     "start-backend": "node scripts/start-backend.js",
     "build": "cd ../frontend && npm run build && rm -rf ../electron-ner-app/frontend-dist && mv out ../electron-ner-app/frontend-dist && cd ../electron-ner-app && npm run prepare-files && electron-builder",
@@ -80,6 +81,10 @@
       {
         "from": "node_modules/electron-is-dev",
         "to": "node_modules/electron-is-dev"
+      },
+      {
+        "from": "resources/libomp.dylib",
+        "to": "../Frameworks/libomp.dylib"
       }
     ],
     "asarUnpack": [
