@@ -1,11 +1,20 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { exec } from 'node:child_process';
+import { promisify } from 'node:util';
+
+const execAsync = promisify(exec);
+
+// Get __dirname equivalent in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * This hook runs after Electron Builder packs the app but before it creates the installer
  * This ensures the backend binary is properly copied to the final location in the app bundle
  */
-module.exports = async function(context) {
+export async function afterPack(context) {
   const { appOutDir, packager, electronPlatformName } = context;
   const appDir = packager.info._appDir;
   const sourceBackend = path.join(appDir, '..', 'main');
@@ -92,7 +101,7 @@ module.exports = async function(context) {
   }
   
   console.log('After-pack hook completed successfully!');
-};
+}
 
 /**
  * Helper function to recursively copy a directory

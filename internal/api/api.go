@@ -413,21 +413,30 @@ func (s *BackendService) GetReport(r *http.Request) (any, error) {
 	now := time.Now().UTC()
 
 	var infBounds struct {
-		MinStart sql.NullTime `gorm:"column:min_start"`
-		MaxEnd   sql.NullTime `gorm:"column:max_end"`
+		MinStart string `gorm:"column:min_start"`
+		MaxEnd   string `gorm:"column:max_end"`
 	}
-	_ = s.db.WithContext(ctx).
+
+	if err := s.db.WithContext(ctx).
 		Model(&database.InferenceTask{}).
 		Select("MIN(start_time) AS min_start, MAX(completion_time) AS max_end").
-		Where("report_id = ? AND status = ?", reportId, database.JobCompleted).
-		Scan(&infBounds).Error
-
-	var totalInfSecs float64
-	if infBounds.MinStart.Valid && infBounds.MaxEnd.Valid {
-		totalInfSecs = infBounds.MaxEnd.Time.Sub(infBounds.MinStart.Time).Seconds()
+		Where("report_id = ? AND start_time IS NOT NULL AND completion_time IS NOT NULL", reportId).
+		Scan(&infBounds).Error; err != nil {
+		slog.Error("error fetching time bounds", "err", err)
 	}
 
-	apiReport.TotalInferenceTimeSeconds = totalInfSecs
+	const layout = "2006-01-02 15:04:05.999999-07:00"
+
+	tMin, err1 := time.Parse(layout, infBounds.MinStart)
+	tMax, err2 := time.Parse(layout, infBounds.MaxEnd)
+	if err1 != nil || err2 != nil {
+		slog.Error("failed to parse bounds",
+			"min_start", infBounds.MinStart, "err1", err1,
+			"max_end", infBounds.MaxEnd, "err2", err2,
+		)
+	} else {
+		apiReport.TotalInferenceTimeSeconds = tMax.Sub(tMin).Seconds()
+	}
 
 	var shardSecs float64
 	if t := report.ShardDataTask; t != nil {
