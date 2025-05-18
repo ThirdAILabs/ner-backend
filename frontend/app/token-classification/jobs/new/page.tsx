@@ -24,7 +24,7 @@ const Tag: React.FC<TagProps> = ({
   selected = false,
   onClick,
   custom = false,
-  addNew = false
+  addNew = false,
 }) => {
   return (
     <div
@@ -51,14 +51,15 @@ const SourceOption: React.FC<SourceOptionProps> = ({
   description,
   isSelected = false,
   disabled = false,
-  onClick
+  onClick,
 }) => (
   <div
     className={`relative p-6 border rounded-md transition-all
       ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200 border-2'}
-      ${disabled
-        ? 'opacity-85 cursor-not-allowed bg-gray-50'
-        : 'cursor-pointer hover:border-blue-300'
+      ${
+        disabled
+          ? 'opacity-85 cursor-not-allowed bg-gray-50'
+          : 'cursor-pointer hover:border-blue-300'
       }
     `}
     onClick={() => !disabled && onClick()}
@@ -79,12 +80,7 @@ const GroupCard: React.FC<GroupProps> = ({ name, definition, onRemove }) => (
   <div className="border border-gray-200 rounded-md overflow-hidden">
     <div className="p-4 border-b border-gray-200 flex justify-between items-center">
       <h3 className="text-base font-medium">{name}</h3>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={onRemove}
-        className="text-red-500"
-      >
+      <Button variant="ghost" size="sm" onClick={onRemove} className="text-red-500">
         Remove
       </Button>
     </div>
@@ -155,9 +151,7 @@ export default function NewJobPage() {
       try {
         const modelData = await nerService.listModels();
         // Only show trained models that can be used for inference
-        const trainedModels = modelData.filter(
-          (model) => model.Status === 'TRAINED'
-        );
+        const trainedModels = modelData.filter((model) => model.Status === 'TRAINED');
         setModels(trainedModels.reverse());
         setSelectedModelId(trainedModels[0].Id);
       } catch (err) {
@@ -182,7 +176,7 @@ export default function NewJobPage() {
         // Get tags from the model
         const modelTags = model.Tags || [];
         console.log('Tags from model:', modelTags);
-        const filteredModelTags = modelTags.filter((tag) => tag !== "O");
+        const filteredModelTags = modelTags.filter((tag) => tag !== 'O');
         setAvailableTags(filteredModelTags);
         setSelectedTags(filteredModelTags); // By default, select all tags
       } catch (error) {
@@ -239,8 +233,7 @@ export default function NewJobPage() {
       return;
     }
 
-    const errorMessage =
-      await nerService.validateGroupDefinition(formattedGroupQuery);
+    const errorMessage = await nerService.validateGroupDefinition(formattedGroupQuery);
     console.log('Error message:', errorMessage);
 
     if (errorMessage) {
@@ -259,7 +252,7 @@ export default function NewJobPage() {
 
     setGroups((prev) => ({
       ...prev,
-      [groupName.trim().toUpperCase()]: groupQuery.trim().toUpperCase()
+      [groupName.trim().toUpperCase()]: groupQuery.trim().toUpperCase(),
     }));
 
     handleGroupCancel();
@@ -289,7 +282,7 @@ export default function NewJobPage() {
 
     const newCustomTag = {
       name: customTagName.trim().toUpperCase(),
-      pattern: customTagPattern
+      pattern: customTagPattern,
     };
 
     if (editingTag) {
@@ -366,9 +359,7 @@ export default function NewJobPage() {
     }
 
     if (!/^[A-Za-z0-9_]+$/.test(name)) {
-      setDialogError(
-        'Tag name can only contain letters, numbers, and underscores'
-      );
+      setDialogError('Tag name can only contain letters, numbers, and underscores');
       return false;
     }
 
@@ -432,14 +423,14 @@ export default function NewJobPage() {
         CustomTags: customTagsObj,
         ...(selectedSource === 's3'
           ? {
-            SourceS3Bucket: sourceS3Bucket,
-            SourceS3Prefix: sourceS3Prefix || undefined
-          }
+              SourceS3Bucket: sourceS3Bucket,
+              SourceS3Prefix: sourceS3Prefix || undefined,
+            }
           : {
-            UploadId: uploadId
-          }),
+              UploadId: uploadId,
+            }),
         Groups: groups,
-        report_name: jobName
+        report_name: jobName,
       });
 
       setSuccess(true);
@@ -477,9 +468,7 @@ export default function NewJobPage() {
     }
 
     if (!/^[A-Za-z0-9_-]+$/.test(name)) {
-      setNameError(
-        'Report name can only contain letters, numbers, underscores, and hyphens'
-      );
+      setNameError('Report name can only contain letters, numbers, underscores, and hyphens');
       return false;
     }
 
@@ -537,8 +526,9 @@ export default function NewJobPage() {
                   validateJobName(value);
                 }}
                 onBlur={() => validateJobName(jobName)}
-                className={`w-full p-2 border ${nameError ? 'border-red-500' : 'border-gray-300'
-                  } rounded`}
+                className={`w-full p-2 border ${
+                  nameError ? 'border-red-500' : 'border-gray-300'
+                } rounded`}
                 placeholder="Enter_Report_Name"
                 required
               />
@@ -633,9 +623,7 @@ export default function NewJobPage() {
                         Select files
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500">
-                      Drag and drop files or click to browse
-                    </p>
+                    <p className="text-xs text-gray-500">Drag and drop files or click to browse</p>
                   </div>
                 </label>
 
@@ -647,10 +635,7 @@ export default function NewJobPage() {
                     <div className="mt-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2">
                       <ul className="space-y-1">
                         {selectedFiles.map((file, i) => (
-                          <li
-                            key={i}
-                            className="flex items-center justify-between py-1"
-                          >
+                          <li key={i} className="flex items-center justify-between py-1">
                             <span className="text-sm text-gray-500">
                               {file.name} ({(file.size / 1024).toFixed(1)} KB)
                             </span>
@@ -706,10 +691,9 @@ export default function NewJobPage() {
                   title={'Advanced'}
                   description={
                     <>
-                      Our most advanced AI model, available on enterprise
-                      platform. Allows users to perpetually customize fields
-                      with user feedback, includes advanced monitoring features.
-                      Reach out to{' '}
+                      Our most advanced AI model, available on enterprise platform. Allows users to
+                      perpetually customize fields with user feedback, includes advanced monitoring
+                      features. Reach out to{' '}
                       <div className="relative inline-block">
                         <span
                           className="text-blue-500 underline cursor-pointer hover:text-blue-700"
@@ -728,7 +712,7 @@ export default function NewJobPage() {
                     </>
                   }
                   isSelected={false}
-                  onClick={() => { }}
+                  onClick={() => {}}
                   disabled={true}
                 />
               </div>
@@ -745,10 +729,7 @@ export default function NewJobPage() {
                       size="sm"
                       onClick={selectAllTags}
                       className="text-sm flex items-center"
-                      disabled={
-                        isTagsLoading ||
-                        selectedTags.length === availableTags.length
-                      }
+                      disabled={isTagsLoading || selectedTags.length === availableTags.length}
                     >
                       <span className="mr-1">Select All</span>
                       <input
@@ -778,8 +759,7 @@ export default function NewJobPage() {
 
                 {/* Added descriptive note */}
                 <p className="text-sm text-gray-500 mb-4">
-                  Click on any tag to select/unselect it. By default, all tags
-                  are selected.
+                  Click on any tag to select/unselect it. By default, all tags are selected.
                 </p>
 
                 {isTagsLoading ? (
@@ -787,9 +767,7 @@ export default function NewJobPage() {
                     <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
                   </div>
                 ) : availableTags.length === 0 ? (
-                  <div className="text-gray-500 py-2">
-                    No tags available for this model
-                  </div>
+                  <div className="text-gray-500 py-2">No tags available for this model</div>
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {availableTags.map((tag) => (
@@ -810,9 +788,7 @@ export default function NewJobPage() {
           <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
             <h2 className="text-2xl font-medium mb-4">
               Custom Tags
-              <span className="text-sm font-normal text-gray-500 ml-2">
-                (Optional)
-              </span>
+              <span className="text-sm font-normal text-gray-500 ml-2">(Optional)</span>
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {customTags.map((customTag) => (
@@ -895,8 +871,9 @@ export default function NewJobPage() {
                         value={customTagName}
                         onChange={(e) => handleTagNameChange(e.target.value)}
                         onBlur={(e) => handleTagNameChange(e.target.value)}
-                        className={`w-full p-2 border ${nameError ? 'border-red-500' : 'border-gray-300'
-                          } rounded`}
+                        className={`w-full p-2 border ${
+                          nameError ? 'border-red-500' : 'border-gray-300'
+                        } rounded`}
                         placeholder="CUSTOM_TAG_NAME"
                         required
                       />
@@ -912,9 +889,7 @@ export default function NewJobPage() {
                             onChange={() => setPatternType('string')}
                             className="mr-1"
                           />
-                          <span className="block text-sm font-medium text-gray-700">
-                            String
-                          </span>
+                          <span className="block text-sm font-medium text-gray-700">String</span>
                         </label>
                         <label className="flex items-center text-sm text-gray-700">
                           <input
@@ -924,9 +899,7 @@ export default function NewJobPage() {
                             onChange={() => setPatternType('regex')}
                             className="mr-1"
                           />
-                          <span className="block text-sm font-medium text-gray-700">
-                            Regex
-                          </span>
+                          <span className="block text-sm font-medium text-gray-700">Regex</span>
                         </label>
                       </div>
 
@@ -935,11 +908,7 @@ export default function NewJobPage() {
                         value={customTagPattern}
                         onChange={(e) => setCustomTagPattern(e.target.value)}
                         className="w-full p-2 border border-gray-300 rounded"
-                        placeholder={
-                          patternType === 'regex'
-                            ? '\\b[A-Z]{2}\\d{6}\\b'
-                            : 'John Doe'
-                        }
+                        placeholder={patternType === 'regex' ? '\\b[A-Z]{2}\\d{6}\\b' : 'John Doe'}
                       />
 
                       {patternType === 'string' && (
@@ -972,7 +941,7 @@ export default function NewJobPage() {
                         variant="outline"
                         onClick={handleCancel}
                         style={{
-                          color: '#1976d2'
+                          color: '#1976d2',
                         }}
                       >
                         Cancel
@@ -984,14 +953,10 @@ export default function NewJobPage() {
                         style={{
                           backgroundColor: '#1976d2',
                           textTransform: 'none',
-                          fontWeight: 500
+                          fontWeight: 500,
                         }}
-                        onMouseOver={(e) =>
-                          (e.currentTarget.style.backgroundColor = '#1565c0')
-                        }
-                        onMouseOut={(e) =>
-                          (e.currentTarget.style.backgroundColor = '#1976d2')
-                        }
+                        onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#1565c0')}
+                        onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#1976d2')}
                         onClick={handleAddCustomTag}
                       >
                         Add Tag
@@ -1007,18 +972,13 @@ export default function NewJobPage() {
           <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
             <h2 className="text-2xl font-medium mb-4">
               Groups
-              <span className="text-sm font-normal text-gray-500 ml-2">
-                (Optional)
-              </span>
+              <span className="text-sm font-normal text-gray-500 ml-2">(Optional)</span>
             </h2>
 
             {/* Display defined groups */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {Object.entries(groups).map(([name, query]) => (
-                <div
-                  key={name}
-                  className="border border-gray-200 rounded-md overflow-hidden"
-                >
+                <div key={name} className="border border-gray-200 rounded-md overflow-hidden">
                   <div className="py-1 px-4 border-b border-gray-200 flex justify-between items-center">
                     <span className="font-medium">{name}</span>
                     <div className="flex items-center space-x-1">
@@ -1121,14 +1081,11 @@ export default function NewJobPage() {
                       <p>Example queries:</p>
                       <ul className="list-disc pl-5 mt-1 space-y-1">
                         <li>
-                          <code>COUNT(SSN) &gt; 0</code> - Documents containing
-                          SSNs
+                          <code>COUNT(SSN) &gt; 0</code> - Documents containing SSNs
                         </li>
                         <li>
-                          <code>
-                            COUNT(NAME) &gt; 2 AND COUNT(PHONE) &gt; 0
-                          </code>{' '}
-                          - Documents with multiple names and a phone number
+                          <code>COUNT(NAME) &gt; 2 AND COUNT(PHONE) &gt; 0</code> - Documents with
+                          multiple names and a phone number
                         </li>
                       </ul>
                     </div>
@@ -1139,7 +1096,7 @@ export default function NewJobPage() {
                         variant="outline"
                         onClick={handleGroupCancel}
                         style={{
-                          color: '#1976d2'
+                          color: '#1976d2',
                         }}
                       >
                         Cancel
@@ -1151,14 +1108,10 @@ export default function NewJobPage() {
                         style={{
                           backgroundColor: '#1976d2',
                           textTransform: 'none',
-                          fontWeight: 500
+                          fontWeight: 500,
                         }}
-                        onMouseOver={(e) =>
-                          (e.currentTarget.style.backgroundColor = '#1565c0')
-                        }
-                        onMouseOut={(e) =>
-                          (e.currentTarget.style.backgroundColor = '#1976d2')
-                        }
+                        onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#1565c0')}
+                        onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#1976d2')}
                         onClick={handleAddGroup}
                       >
                         {editingGroup ? 'Save Changes' : 'Add Group'}
@@ -1183,14 +1136,10 @@ export default function NewJobPage() {
               style={{
                 backgroundColor: '#1976d2',
                 textTransform: 'none',
-                fontWeight: 500
+                fontWeight: 500,
               }}
-              onMouseOver={(e) =>
-                (e.currentTarget.style.backgroundColor = '#1565c0')
-              }
-              onMouseOut={(e) =>
-                (e.currentTarget.style.backgroundColor = '#1976d2')
-              }
+              onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#1565c0')}
+              onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#1976d2')}
               onClick={() => {
                 setIsPressedSubmit(true);
               }}

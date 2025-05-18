@@ -26,7 +26,7 @@ export function FilterSection({
   onSelectAllGroups,
   onDeselectAllGroups,
   onSelectAllTags,
-  onDeselectAllTags
+  onDeselectAllTags,
 }: FilterSectionProps) {
   const [isGroupsExpanded, setIsGroupsExpanded] = useState(true);
   const [isTagsExpanded, setIsTagsExpanded] = useState(true);
@@ -58,9 +58,7 @@ export function FilterSection({
         className="flex-1 overflow-y-auto"
         onScroll={handleFilterScroll}
         style={{
-          boxShadow: showShadow
-            ? 'inset 0 4px 6px -4px rgba(0, 0, 0, 0.1)'
-            : 'none'
+          boxShadow: showShadow ? 'inset 0 4px 6px -4px rgba(0, 0, 0, 0.1)' : 'none',
         }}
       >
         <div className="p-6 pt-4 space-y-6">
@@ -110,9 +108,7 @@ export function FilterSection({
               </>
             )}
             {groups.length === 0 && (
-              <div className="text-gray-500 text-sm">
-                No groups configured.
-              </div>
+              <div className="text-gray-500 text-sm">No groups configured.</div>
             )}
           </div>
 

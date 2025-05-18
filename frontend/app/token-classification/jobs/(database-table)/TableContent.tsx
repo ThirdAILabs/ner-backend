@@ -1,11 +1,5 @@
 import React, { useMemo } from 'react';
-import {
-  TableHead,
-  TableRow,
-  TableHeader,
-  TableBody,
-  TableCell,
-} from '@/components/ui/table';
+import { TableHead, TableRow, TableHeader, TableBody, TableCell } from '@/components/ui/table';
 import { Loader2 } from 'lucide-react';
 import { TableContentProps } from './types';
 import { Button } from '@/components/ui/button';
@@ -29,14 +23,11 @@ interface HighlightedTokenProps {
 }
 
 const HighlightedToken = React.memo(({ token, tag, tagColors, labeled }: HighlightedTokenProps) => {
-  const needsSpaceBefore = !(
-    token.match(/^[.,;:!?)\]}"'%]/) || 
-    token.trim() === ''
-  );
-  
+  const needsSpaceBefore = !(token.match(/^[.,;:!?)\]}"'%]/) || token.trim() === '');
+
   const needsSpaceAfter = !(
-    token.match(/^[([{"'$]/) ||       
-    token.match(/[.,;:!?]$/) ||       
+    token.match(/^[([{"'$]/) ||
+    token.match(/[.,;:!?]$/) ||
     token.trim() === ''
   );
 
@@ -73,9 +64,9 @@ const HighlightedToken = React.memo(({ token, tag, tagColors, labeled }: Highlig
               color: 'white',
               fontSize: '11px',
               fontWeight: 'bold',
-            borderRadius: '2px',
-            marginLeft: '4px',
-            padding: '1px 3px',
+              borderRadius: '2px',
+              marginLeft: '4px',
+              padding: '1px 3px',
             }}
           >
             {tag}
@@ -86,29 +77,31 @@ const HighlightedToken = React.memo(({ token, tag, tagColors, labeled }: Highlig
   );
 });
 
-const HighlightedTag = React.memo(({ tag, tagColors }: { tag: string; tagColors: Record<string, HighlightColor> }) => {
-  if (tag === 'O') {
-    return <span>{tag}</span>;
+const HighlightedTag = React.memo(
+  ({ tag, tagColors }: { tag: string; tagColors: Record<string, HighlightColor> }) => {
+    if (tag === 'O') {
+      return <span>{tag}</span>;
+    }
+
+    const tagColor = tagColors[tag] || DEFAULT_COLOR;
+
+    return (
+      <span
+        style={{
+          backgroundColor: tagColor.tag,
+          color: 'white',
+          fontSize: '11px',
+          fontWeight: 'bold',
+          borderRadius: '2px',
+          padding: '1px 3px',
+          display: 'inline-block',
+        }}
+      >
+        {tag}
+      </span>
+    );
   }
-
-  const tagColor = tagColors[tag] || DEFAULT_COLOR;
-
-  return (
-    <span
-      style={{
-        backgroundColor: tagColor.tag,
-        color: 'white',
-        fontSize: '11px',
-        fontWeight: 'bold',
-        borderRadius: '2px',
-        padding: '1px 3px',
-        display: 'inline-block',
-      }}
-    >
-      {tag}
-    </span>
-  );
-});
+);
 
 interface TokenContextProps {
   context?: { left: string; right: string; token: string; tag: string };
@@ -132,29 +125,39 @@ const TokenContext = React.memo(({ context, tagColors }: TokenContextProps) => {
   );
 });
 
-const LoadMoreButton = React.memo(({ hasMore, isLoading, onClick }: { hasMore: boolean, isLoading: boolean, onClick: () => void }) => {
-  if (!hasMore) return null;
+const LoadMoreButton = React.memo(
+  ({
+    hasMore,
+    isLoading,
+    onClick,
+  }: {
+    hasMore: boolean;
+    isLoading: boolean;
+    onClick: () => void;
+  }) => {
+    if (!hasMore) return null;
 
-  return (
-    <div className="py-4 flex justify-center">
-      <Button 
-        variant="outline"
-        onClick={onClick}
-        disabled={isLoading || !hasMore}
-        className="w-full max-w-sm"
-      >
-        {isLoading ? (
-          <div className="flex items-center justify-center">
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Loading more...
-          </div>
-        ) : (
-          'Load More'
-        )}
-      </Button>
-    </div>
-  );
-});
+    return (
+      <div className="py-4 flex justify-center">
+        <Button
+          variant="outline"
+          onClick={onClick}
+          disabled={isLoading || !hasMore}
+          className="w-full max-w-sm"
+        >
+          {isLoading ? (
+            <div className="flex items-center justify-center">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Loading more...
+            </div>
+          ) : (
+            'Load More'
+          )}
+        </Button>
+      </div>
+    );
+  }
+);
 
 export function TableContent({
   viewMode,
@@ -169,11 +172,10 @@ export function TableContent({
   hasMoreObjects = false,
   onLoadMore,
 }: TableContentProps) {
-
   const tagColors = useMemo(() => {
     const colors: Record<string, HighlightColor> = {};
     tags
-      .filter(tag => tag.type !== 'O')
+      .filter((tag) => tag.type !== 'O')
       .forEach((tag, index) => {
         colors[tag.type] = {
           text: PASTELS[index % PASTELS.length],
@@ -189,10 +191,12 @@ export function TableContent({
     const matchUserDefinedGroup = recordGroups.some((group) => groupFilters[group] !== false);
     const noGroupConfigured = Object.keys(groupFilters).length === 0;
     return matchTags && (matchNoGroup || matchUserDefinedGroup || noGroupConfigured);
-  }
+  };
 
   if (viewMode === 'classified-token') {
-    const filteredRecords = tokenRecords.filter((record) => filterRecords(record.groups, [record.tag]));
+    const filteredRecords = tokenRecords.filter((record) =>
+      filterRecords(record.groups, [record.tag])
+    );
 
     return (
       <>
@@ -208,12 +212,15 @@ export function TableContent({
               <TableRow key={index}>
                 <TableCell>
                   {record.context ? (
-                    <TokenContext context={{
-                      left: record.context.left,
-                      right: record.context.right,
-                      token: record.token,
-                      tag: record.tag,
-                    }} tagColors={tagColors} />
+                    <TokenContext
+                      context={{
+                        left: record.context.left,
+                        right: record.context.right,
+                        token: record.token,
+                        tag: record.tag,
+                      }}
+                      tagColors={tagColors}
+                    />
                   ) : (
                     <span className="text-red-400 text-xs">Missing context</span>
                   )}
@@ -243,8 +250,11 @@ export function TableContent({
           {filteredRecords.length > 0 && (
             <TableRow>
               <TableCell colSpan={2}>
-                <LoadMoreButton hasMore={hasMoreTokens} isLoading={isLoadingTokenRecords} onClick={onLoadMore ?? (() => {})} />
-
+                <LoadMoreButton
+                  hasMore={hasMoreTokens}
+                  isLoading={isLoadingTokenRecords}
+                  onClick={onLoadMore ?? (() => {})}
+                />
               </TableCell>
             </TableRow>
           )}
@@ -254,7 +264,12 @@ export function TableContent({
   }
 
   if (viewMode === 'object') {
-    const filteredRecords = objectRecords.filter((record) => filterRecords(record.groups, record.taggedTokens.map((token) => token[1])));
+    const filteredRecords = objectRecords.filter((record) =>
+      filterRecords(
+        record.groups,
+        record.taggedTokens.map((token) => token[1])
+      )
+    );
 
     return (
       <>
@@ -280,18 +295,23 @@ export function TableContent({
                   <div className="text-sm leading-relaxed bg-white p-3 rounded border border-gray-100 shadow-sm">
                     {record.taggedTokens.map((token, tokenIndex) => {
                       const isLastToken = tokenIndex === record.taggedTokens.length - 1;
-                      const nextNonWhitespaceTokenIndex = record.taggedTokens.findIndex((t, i) => i > tokenIndex && t[0].trim() !== '');
-                      const nextToken = nextNonWhitespaceTokenIndex !== -1 ? record.taggedTokens[nextNonWhitespaceTokenIndex] : null;
-                      const differentTagThanNext = (nextToken !== null) && (nextToken[1] !== token[1]);
+                      const nextNonWhitespaceTokenIndex = record.taggedTokens.findIndex(
+                        (t, i) => i > tokenIndex && t[0].trim() !== ''
+                      );
+                      const nextToken =
+                        nextNonWhitespaceTokenIndex !== -1
+                          ? record.taggedTokens[nextNonWhitespaceTokenIndex]
+                          : null;
+                      const differentTagThanNext = nextToken !== null && nextToken[1] !== token[1];
                       return (
                         <HighlightedToken
                           key={`${index}-${tokenIndex}`}
                           token={token[0]}
-                          tag={tagFilters[token[1]] ? token[1] : "O"}
+                          tag={tagFilters[token[1]] ? token[1] : 'O'}
                           tagColors={tagColors}
                           labeled={isLastToken || differentTagThanNext}
                         />
-                      )
+                      );
                     })}
                   </div>
                 </TableCell>
@@ -319,8 +339,11 @@ export function TableContent({
           {filteredRecords.length > 0 && (
             <TableRow>
               <TableCell colSpan={2}>
-                <LoadMoreButton hasMore={hasMoreObjects} isLoading={isLoadingObjectRecords} onClick={onLoadMore ?? (() => {})} />
-
+                <LoadMoreButton
+                  hasMore={hasMoreObjects}
+                  isLoading={isLoadingObjectRecords}
+                  onClick={onLoadMore ?? (() => {})}
+                />
               </TableCell>
             </TableRow>
           )}
@@ -344,7 +367,8 @@ export function TableContent({
         {tokenRecords
           .filter((record) => {
             const tagMatches = tagFilters[record.tag];
-            const groupMatches = record.groups.length === 0 || record.groups.some((group) => groupFilters[group]);
+            const groupMatches =
+              record.groups.length === 0 || record.groups.some((group) => groupFilters[group]);
             return groupMatches && tagMatches;
           })
           .map((record, index) => (
@@ -355,12 +379,15 @@ export function TableContent({
               </TableCell>
               <TableCell className="max-w-sm">
                 {record.context ? (
-                  <TokenContext context={{
-                    left: record.context.left,
-                    right: record.context.right,
-                    token: record.token,
-                    tag: record.tag
-                  }} tagColors={tagColors} />
+                  <TokenContext
+                    context={{
+                      left: record.context.left,
+                      right: record.context.right,
+                      token: record.token,
+                      tag: record.tag,
+                    }}
+                    tagColors={tagColors}
+                  />
                 ) : (
                   <span className="text-red-400 text-xs">Missing context</span>
                 )}
