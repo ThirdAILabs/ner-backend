@@ -292,12 +292,12 @@ export const nerService = {
   ): Promise<string | null> => {
     try {
       await axiosInstance.get('/attempt-s3-connection', {
-        params: { endpoint, region, bucket, prefix }
+        params: { endpoint, region, bucket, prefix },
       });
-  
+
       return null;
     } catch (error) {
-      return "Failed to connect to S3 bucket. Please make sure that it is a valid public bucket."
+      return 'Failed to connect to S3 bucket. Please make sure that it is a valid public bucket.';
     }
-  }
+  },
 };

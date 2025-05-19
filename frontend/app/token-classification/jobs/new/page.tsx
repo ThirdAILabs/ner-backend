@@ -353,10 +353,15 @@ export default function NewJobPage() {
 
   const validateS3Bucket = async () => {
     if (!sourceS3Bucket || !sourceS3Region) {
-      return;  
+      return;
     }
     setS3Error('');
-    const s3Error = await nerService.attemptS3Connection(sourceS3Endpoint, sourceS3Region,sourceS3Bucket, sourceS3Prefix);
+    const s3Error = await nerService.attemptS3Connection(
+      sourceS3Endpoint,
+      sourceS3Region,
+      sourceS3Bucket,
+      sourceS3Prefix
+    );
     if (s3Error) {
       setS3Error(s3Error);
     } else {
@@ -590,7 +595,8 @@ export default function NewJobPage() {
               <div className="space-y-4">
                 <div>
                   <div className="text-sm text-gray-500 mt-1 mb-3">
-                    Your S3 bucket must be public. Private bucket support is available on the enterprise platform. Reach out to {' '}
+                    Your S3 bucket must be public. Private bucket support is available on the
+                    enterprise platform. Reach out to{' '}
                     <div className="relative inline-block">
                       <span
                         className="text-blue-500 underline cursor-pointer hover:text-blue-700"
@@ -604,8 +610,8 @@ export default function NewJobPage() {
                           Email Copied
                         </div>
                       )}
-                    </div>
-                    {' '} for an enterprise subscription.
+                    </div>{' '}
+                    for an enterprise subscription.
                   </div>
                   {s3Error && (
                     <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded">
@@ -627,9 +633,7 @@ export default function NewJobPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    S3 Region
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">S3 Region</label>
                   <input
                     type="text"
                     value={sourceS3Region}
