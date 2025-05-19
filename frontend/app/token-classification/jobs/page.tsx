@@ -26,7 +26,7 @@ import { floor } from 'lodash';
 
 // Calculate progress based on InferenceTaskStatuses
 const calculateProgress = (report: Report | null): number => {
-  if (!report || !report.CompletedFileCount || !report.FileCount) return 0;
+  if (!report || !report.CompletedFileCount || !report.FailedFileCount || !report.FileCount) return 0;
 
   return floor(((report.CompletedFileCount + report.FailedFileCount) / report.FileCount) * 100);
 };
