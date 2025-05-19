@@ -633,132 +633,146 @@ export default function NewJobPage() {
               />
             </div>
 
-            {selectedSource === 's3' ? (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    S3 Bucket Name
-                  </label>
-                  <input
-                    type="text"
-                    value={sourceS3Bucket}
-                    onChange={(e) => setSourceS3Bucket(e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded"
-                    placeholder="my-bucket"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    S3 Prefix (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={sourceS3Prefix}
-                    onChange={(e) => setSourceS3Prefix(e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded"
-                    placeholder="folder/path/"
-                  />
-                </div>
-              </div>
-            ) : selectedSource === 'directory' ? (
-              <div className="w-full">
-                <input
-                    type="file"
-                    {...{ webkitdirectory: '', directory: '' } as { webkitdirectory: string, directory: string }}
-                    multiple
-                    onChange={handleFileChange}
-                    className="hidden"
-                    id="directory-upload"
-                    accept=".pdf, .txt, .csv, .html, .json, .xml"
-                  />
-                <label
-                  htmlFor="directory-upload"
-                  className="flex items-center justify-center w-full p-4 border-2 border-dashed border-gray-300 rounded-md cursor-pointer hover:border-gray-400"
-                >
-                  <div className="space-y-1 text-center">
-                    <svg
-                      className="mx-auto h-12 w-12 text-gray-400"
-                      stroke="currentColor"
-                      fill="none"
-                      viewBox="0 0 48 48"
-                    >
-                      <path
-                        d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4h-12m-4-12v8m0 0v8a4 4 0 01-4 4h-8m-4-12h8m-8 0v-8m32 0v-8"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    <div className="flex text-sm text-gray-600">
-                      <span className="relative rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
-                        Select directory
-                      </span>
+            {(() => {
+              switch (selectedSource) {
+                case 's3':
+                  return (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          S3 Bucket Name
+                        </label>
+                        <input
+                          type="text"
+                          value={sourceS3Bucket}
+                          onChange={(e) => setSourceS3Bucket(e.target.value)}
+                          className="w-full p-2 border border-gray-300 rounded"
+                          placeholder="my-bucket"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          S3 Prefix (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          value={sourceS3Prefix}
+                          onChange={(e) => setSourceS3Prefix(e.target.value)}
+                          className="w-full p-2 border border-gray-300 rounded"
+                          placeholder="folder/path/"
+                        />
+                      </div>
                     </div>
-                    <p className="text-xs text-gray-500">
-                      Click to browse
-                    </p>
-                  </div>
-                </label>
+                  );
 
-                {selectedFiles.length > 0 && (
-                  <div className="mt-4">
-                    <h3 className="text-sm font-medium text-gray-700">
-                      Selected Files ({selectedFiles.length})
-                    </h3>
-                    <div className="mt-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2">
-                      {renderFileList(selectedFiles)}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="w-full">
-                <input
-                  type="file"
-                  multiple
-                  onChange={handleFileChange}
-                  className="hidden"
-                  id="file-upload"
-                  accept=".pdf, .txt, .csv, .html, .json, .xml"
-                />
-                <label
-                  htmlFor="file-upload"
-                  className="flex items-center justify-center w-full p-4 border-2 border-dashed border-gray-300 rounded-md cursor-pointer hover:border-gray-400"
-                >
-                  <div className="space-y-1 text-center">
-                    <svg
-                      className="mx-auto h-12 w-12 text-gray-400"
-                      stroke="currentColor"
-                      fill="none"
-                      viewBox="0 0 48 48"
-                    >
-                      <path
-                        d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4h-12m-4-12v8m0 0v8a4 4 0 01-4 4h-8m-4-12h8m-8 0v-8m32 0v-8"
-                        strokeWidth="2"
-                        strokeLinecap="round"
+                case 'directory':
+                  return (
+                    <div className="w-full">
+                      <input
+                        type="file"
+                        {...{ webkitdirectory: '', directory: '' } as { webkitdirectory: string, directory: string }}
+                        multiple
+                        onChange={handleFileChange}
+                        className="hidden"
+                        id="directory-upload"
+                        accept=".pdf, .txt, .csv, .html, .json, .xml"
                       />
-                    </svg>
-                    <div className="flex text-sm text-gray-600">
-                      <span className="relative rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
-                        Select files
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-500">click to browse</p>
-                  </div>
-                </label>
+                      <label
+                        htmlFor="directory-upload"
+                        className="flex items-center justify-center w-full p-4 border-2 border-dashed border-gray-300 rounded-md cursor-pointer hover:border-gray-400"
+                      >
+                        <div className="space-y-1 text-center">
+                          <svg
+                            className="mx-auto h-12 w-12 text-gray-400"
+                            stroke="currentColor"
+                            fill="none"
+                            viewBox="0 0 48 48"
+                          >
+                            <path
+                              d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4h-12m-4-12v8m0 0v8a4 4 0 01-4 4h-8m-4-12h8m-8 0v-8m32 0v-8"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                          <div className="flex text-sm text-gray-600">
+                            <span className="relative rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
+                              Select directory
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-500">
+                            Click to browse
+                          </p>
+                        </div>
+                      </label>
 
-                {selectedFiles.length > 0 && (
-                  <div className="mt-4">
-                    <h3 className="text-sm font-medium text-gray-700">
-                      Selected Files ({selectedFiles.length})
-                    </h3>
-                    <div className="mt-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2">
-                      {renderFileList(selectedFiles)}
+                      {selectedFiles.length > 0 && (
+                        <div className="mt-4">
+                          <h3 className="text-sm font-medium text-gray-700">
+                            Selected Files ({selectedFiles.length})
+                          </h3>
+                          <div className="mt-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2">
+                            {renderFileList(selectedFiles)}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
-              </div>
-            )}
+                  );
+
+                case 'files':
+                  return (
+                    <div className="w-full">
+                      <input
+                        type="file"
+                        multiple
+                        onChange={handleFileChange}
+                        className="hidden"
+                        id="file-upload"
+                        accept=".pdf, .txt, .csv, .html, .json, .xml"
+                      />
+                      <label
+                        htmlFor="file-upload"
+                        className="flex items-center justify-center w-full p-4 border-2 border-dashed border-gray-300 rounded-md cursor-pointer hover:border-gray-400"
+                      >
+                        <div className="space-y-1 text-center">
+                          <svg
+                            className="mx-auto h-12 w-12 text-gray-400"
+                            stroke="currentColor"
+                            fill="none"
+                            viewBox="0 0 48 48"
+                          >
+                            <path
+                              d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4h-12m-4-12v8m0 0v8a4 4 0 01-4 4h-8m-4-12h8m-8 0v-8m32 0v-8"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                          <div className="flex text-sm text-gray-600">
+                            <span className="relative rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
+                              Select files
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-500">click to browse</p>
+                        </div>
+                      </label>
+
+                      {selectedFiles.length > 0 && (
+                        <div className="mt-4">
+                          <h3 className="text-sm font-medium text-gray-700">
+                            Selected Files ({selectedFiles.length})
+                          </h3>
+                          <div className="mt-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2">
+                            {renderFileList(selectedFiles)}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+
+                default:
+                  return null;
+              }
+            })()}
           </Box>
 
           {/* Model Selection */}
