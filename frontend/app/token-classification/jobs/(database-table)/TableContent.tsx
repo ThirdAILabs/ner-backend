@@ -5,7 +5,6 @@ import { TableContentProps } from './types';
 import { Button } from '@/components/ui/button';
 import { NO_GROUP } from '@/lib/utils';
 
-
 const PASTELS = ['#E5A49C', '#F6C886', '#FBE7AA', '#99E3B5', '#A6E6E7', '#A5A1E1', '#D8A4E2'];
 const DARKERS = ['#D34F3E', '#F09336', '#F7CF5F', '#5CC96E', '#65CFD0', '#597CE2', '#B64DC8'];
 
@@ -264,7 +263,7 @@ export function TableContent({
                 <LoadMoreButton
                   hasMore={hasMoreTokens}
                   isLoading={isLoadingTokenRecords}
-                  onClick={onLoadMore ?? (() => { })}
+                  onClick={onLoadMore ?? (() => {})}
                 />
               </TableCell>
             </TableRow>
@@ -282,8 +281,7 @@ export function TableContent({
   );
 
   return (
-
-    <div className='mt-4'>
+    <div className="mt-4">
       {filteredRecords.map((record, index) => {
         return (
           <details className="group text-sm leading-relaxed bg-white rounded border border-gray-100 shadow-sm mb-4">
@@ -302,7 +300,7 @@ export function TableContent({
                     d="M9 5l7 7-7 7"
                   />
                 </svg>
-                <span className='font-semibold'>{record.sourceObject.split("/").slice(-1)}</span>
+                <span className="font-semibold">{record.sourceObject.split('/').slice(-1)}</span>
               </div>
             </summary>
             <div className="p-4">
@@ -328,7 +326,7 @@ export function TableContent({
               })}
             </div>
           </details>
-        )
+        );
       })}
     </div>
   );
