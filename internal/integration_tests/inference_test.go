@@ -149,6 +149,8 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 	assert.Equal(t, dataBucket, report.SourceS3Bucket)
 	assert.Equal(t, 11, report.InferenceTaskStatuses[database.JobCompleted].TotalTasks)
 	assert.Equal(t, 2, len(report.Groups))
+	assert.Greater(t, report.TotalInferenceTimeSeconds, 0.0)
+	assert.Greater(t, report.ShardDataTimeSeconds, 0.0)
 
 	entities := getReportEntities(t, router, reportId)
 	assert.Equal(t, 21, len(entities))
