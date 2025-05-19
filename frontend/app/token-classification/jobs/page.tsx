@@ -22,12 +22,13 @@ import { Box } from '@mui/material';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Suspense } from 'react';
+import { floor } from 'lodash';
 
 // Calculate progress based on InferenceTaskStatuses
 const calculateProgress = (report: Report | null): number => {
   if (!report || !report.CompletedFileCount || !report.FileCount) return 0;
 
-  return (report.CompletedFileCount / report.FileCount) * 100;
+  return floor((report.CompletedFileCount / report.FileCount) * 100);
 };
 
 // Get the total number of processed tokens
@@ -62,10 +63,9 @@ const SourceOption: React.FC<SourceOptionProps> = ({
   <div
     className={`relative p-6 border rounded-md transition-all
       ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200'}
-      ${
-        disabled
-          ? 'opacity-50 cursor-not-allowed bg-gray-50'
-          : 'cursor-pointer hover:border-blue-300'
+      ${disabled
+        ? 'opacity-50 cursor-not-allowed bg-gray-50'
+        : 'cursor-pointer hover:border-blue-300'
       }
     `}
     onClick={() => !disabled && onClick()}
