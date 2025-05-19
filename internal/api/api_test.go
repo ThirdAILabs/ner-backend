@@ -164,8 +164,9 @@ func TestCreateReport(t *testing.T) {
 	payload := api.CreateReportRequest{
 		ReportName:     "test-report",
 		ModelId:        modelId,
-		SourceS3Bucket: "test-bucket",
-		SourceS3Prefix: "test-prefix",
+		S3Region:       "us-east-2",
+		SourceS3Bucket: "thirdai-corp-public",
+		SourceS3Prefix: "sample-pdfs/MACH.pdf",
 		Tags:           []string{"name", "phone"},
 		CustomTags:     map[string]string{"tag1": "pattern1", "tag2": "pattern2"},
 		Groups: map[string]string{
@@ -204,12 +205,51 @@ func TestCreateReport(t *testing.T) {
 		Name:   "Model1",
 		Status: database.ModelTrained,
 	}, report.Model)
-	assert.Equal(t, "test-bucket", report.SourceS3Bucket)
-	assert.Equal(t, "test-prefix", report.SourceS3Prefix)
+	assert.Equal(t, "thirdai-corp-public", report.SourceS3Bucket)
+	assert.Equal(t, "sample-pdfs/MACH.pdf", report.SourceS3Prefix)
 	assert.ElementsMatch(t, []string{"name", "phone"}, report.Tags)
 	assert.Equal(t, map[string]string{"tag1": "pattern1", "tag2": "pattern2"}, report.CustomTags)
 	assert.Equal(t, 2, len(report.Groups))
 	assert.Equal(t, database.JobQueued, report.ShardDataTaskStatus)
+}
+
+func TestCreateReport_InvalidS3(t *testing.T) {
+	modelId := uuid.New()
+	db := createDB(t,
+		&database.Model{Id: modelId, Name: "Model1", Type: "regex", Status: database.ModelTrained},
+		&database.ModelTag{ModelId: modelId, Tag: "name"},
+		&database.ModelTag{ModelId: modelId, Tag: "email"},
+		&database.ModelTag{ModelId: modelId, Tag: "phone"},
+	)
+
+	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	router := chi.NewRouter()
+	service.AddRoutes(router)
+
+	payload := api.CreateReportRequest{
+		ReportName:     "test-report",
+		ModelId:        modelId,
+		SourceS3Bucket: "test-bucket",
+		SourceS3Prefix: "test-prefix",
+		Tags:           []string{"name", "phone"},
+		CustomTags:     map[string]string{"tag1": "pattern1", "tag2": "pattern2"},
+		Groups: map[string]string{
+			"group1": `label1 CONTAINS "xyz"`,
+			"group2": `COUNT(label2) > 8`,
+		},
+	}
+	
+	body, err := json.Marshal(payload)
+	assert.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodPost, "/reports", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	assert.Contains(t, rec.Body.String(), "Failed to connect to S3 bucket")
 }
 
 func TestGetReport(t *testing.T) {
@@ -622,4 +662,33 @@ func TestGetInferenceMetrics_WithTasks(t *testing.T) {
 		assert.Equal(t, reportID, resp.ReportID)
 		assert.InEpsilon(t, 1.0, resp.ThroughputMBPerHour, 1e-6)
 	})
+}
+
+func TestAttemptS3Connection_PublicBucket(t *testing.T) {
+	service := backend.NewBackendService(nil, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	router := chi.NewRouter()
+	service.AddRoutes(router)
+
+	url := "/attempt-s3-connection?endpoint=&region=us-east-2&bucket=thirdai-corp-public&prefix="
+	req := httptest.NewRequest(http.MethodGet, url, nil)
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+}
+
+func TestAttemptS3Connection_PrivateBucket(t *testing.T) {
+	service := backend.NewBackendService(nil, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	router := chi.NewRouter()
+	service.AddRoutes(router)
+
+	url := "/attempt-s3-connection?endpoint=&region=us-east-1&bucket=thirdai-prism-data&prefix="
+	req := httptest.NewRequest(http.MethodGet, url, nil)
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	assert.Contains(t, rec.Body.String(), "Failed to connect to S3 bucket")
 }
