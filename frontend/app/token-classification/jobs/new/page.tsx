@@ -333,18 +333,24 @@ export default function NewJobPage() {
     setIsCustomTagDialogOpen(false);
   };
 
-  const areFilesIdentical = (file1: File, file2: File): boolean => {
-    return file1.name === file2.name
-  };
-
   const addFiles = (files: File[]) => {
-    const newFiles = files.filter((newFile) => {
-      const isDuplicate = selectedFiles.some((existingFile) =>
-        areFilesIdentical(existingFile, newFile)
+    const newSelectedFiles = [...selectedFiles];
+    
+    files.forEach(newFile => {
+      const existingIndex = newSelectedFiles.findIndex(existingFile => 
+        existingFile.name === newFile.name
       );
-      return !isDuplicate;
+      
+      if (existingIndex !== -1) {
+        // Duplicate file so, replace the existing file with the new one
+        newSelectedFiles[existingIndex] = newFile;
+      } else {
+        // Add the new file
+        newSelectedFiles.push(newFile);
+      }
     });
-    setSelectedFiles((prev) => [...prev, ...newFiles]);
+    
+    setSelectedFiles(newSelectedFiles);
   };
 
   // Update file handling to use file/directory input
