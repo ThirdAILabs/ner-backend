@@ -68,6 +68,18 @@ func (ner *PythonModel) Finetune(prompt string, tags []api.TagInfo, samples []ap
 			Examples:    t.Examples,
 		}
 	}
+	for epoch := 0; epoch < 5; epoch++ {
+		slog.Info("finetuning epoch", "epoch", epoch)
+		
+		// shuffle samples after each epoch
+		rand.Shuffle(len(samples), func(i, j int) {
+			samples[i], samples[j] = samples[j], samples[i]
+		})
+		type chunk struct {
+			samples []*proto.Sample
+			size    int
+		}
+		var curr chunk
 
 	type chunk struct {
 		samples []*proto.Sample
