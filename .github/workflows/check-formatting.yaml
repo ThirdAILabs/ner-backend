@@ -18,14 +18,32 @@ on:
 
 jobs:
   js-format:
-    runs-on: ubuntu-latest
+    name: Prettier
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        node-version: [20]
+    defaults:
+      run:
+        working-directory: ./frontend
     steps:
-      - uses: actions/checkout@v2
-      - name: Check Prettier version
-        run: npx prettier --version
-      - name: Check prettier formatting for frontend
-        uses: creyD/prettier_action@v4.3
+      - uses: actions/checkout@v3
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v2
         with:
-          # when we set dry command files wont get changed and the action fails if there are unprettified files.
-          dry: True
-          prettier_options: --check --ignore-path  ./frontend/.prettierignore ./frontend/src --config ./frontend/.prettierrc
+          version: 8
+          working-directory: ./frontend
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "pnpm"
+          cache-dependency-path: ./frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Check code formatting with Prettier
+        run: pnpm exec prettier --config .prettierrc --ignore-path .prettierignore . --check
