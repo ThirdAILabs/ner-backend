@@ -219,6 +219,20 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 			)
 		}
 	}
+	if errorCount > 0 {
+		if err := proc.db.
+		   Model(&database.Report{}).
+		   Where("id = ?", reportId).
+		   UpdateColumn("failed_file_count",
+			   gorm.Expr("failed_file_count + ?", errorCount),
+		   ).Error; err != nil {
+			slog.Error("could not increment failed_file_count",
+				"report_id", reportId,
+				"errocount", errorCount,
+				"err", err,
+			)
+		}
+	}
 	if workerErr != nil {
 		slog.Error("error running inference task", "report_id", reportId, "task_id", payload.TaskId, "error", workerErr)
 		database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobFailed) // nolint:errcheck
