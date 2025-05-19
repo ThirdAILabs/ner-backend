@@ -236,6 +236,12 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		return nil, CodedErrorf(http.StatusUnprocessableEntity, "the following fields are required: SourceS3Bucket or UploadId")
 	}
 
+	if req.UploadId == uuid.Nil {
+		if err := attemptS3Connection(s3Endpoint, s3Region, sourceS3Bucket, s3Prefix); err != nil {
+			return nil, err
+		}
+	}
+
 	if err := validateReportName(req.ReportName); err != nil {
 		return nil, err
 	}
@@ -255,10 +261,6 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		if _, err := regexp.Compile(pattern); err != nil {
 			return nil, CodedErrorf(http.StatusUnprocessableEntity, "invalid regex pattern '%s' for custom tag '%s': %v", pattern, tag, err)
 		}
-	}
-
-	if err := attemptS3Connection(s3Endpoint, s3Region, sourceS3Bucket, s3Prefix); err != nil {
-		return nil, err
 	}
 
 	report := database.Report{
