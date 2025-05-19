@@ -47,12 +47,12 @@ export function FilterSection({
   const toggleTags = () => setIsTagsExpanded(!isTagsExpanded);
 
   return (
-    <div
-      className={`${showFilterSection ? 'w-64' : 'w-0'} flex flex-col ${showFilterSection && 'border-r'} relative`}
-    >
+    <div className={`flex flex-col ${showFilterSection && 'border-r'} relative`}>
       <button
         onClick={onToggleFilterSection}
-        className="absolute -right-3 top-9 transform -translate-y-1/2 rounded-full border border-gray-200 bg-white p-1 hover:bg-gray-50 transition-colors z-20"
+        className={`absolute ${
+          showFilterSection ? '-right-[12px]' : '-right-[-8px]'
+        } top-9 transform -translate-y-1/2 rounded-full border border-gray-200 bg-white p-1 hover:bg-gray-50 transition-colors z-20`}
         aria-label={showFilterSection ? 'Collapse filters' : 'Expand filters'}
       >
         {showFilterSection ? (

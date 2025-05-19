@@ -246,9 +246,8 @@ export default function Jobs() {
       return (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
           <CircularProgress size={16} />
-          <CircularProgress size={16} />
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            Loading status... Loading status...
+            Loading status...
           </Typography>
         </Box>
       );
