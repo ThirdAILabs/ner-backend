@@ -2,9 +2,6 @@ import { spawn } from 'node:child_process';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import portfinder from 'portfinder';
-import electron from 'electron';
-import { app } from 'electron';
 import { FIXED_PORT, ensurePortIsFree } from './check-port.js';
 import log from 'electron-log';
 
