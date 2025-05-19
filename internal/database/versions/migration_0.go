@@ -117,6 +117,7 @@ type Report struct {
 	CreationTime       time.Time
 	CompletedFileCount int `gorm:"default:0"`
 	TotalFileCount     int `gorm:"default:0"`
+	FailedFileCount    int `gorm:"default:0"`
 
 	Tags       []ReportTag `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
 	CustomTags []CustomTag `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
