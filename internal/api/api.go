@@ -257,6 +257,10 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		}
 	}
 
+	if err := attemptS3Connection(s3Endpoint, s3Region, sourceS3Bucket, s3Prefix); err != nil {
+		return nil, err
+	}
+
 	report := database.Report{
 		Id:             uuid.New(),
 		ReportName:     req.ReportName,
@@ -884,18 +888,33 @@ func (s *BackendService) ValidateGroupDefinition(r *http.Request) (any, error) {
 	return nil, nil
 }
 
-func (s *BackendService) AttemptS3Connection(r *http.Request) (any, error) {
-	endpoint := r.URL.Query().Get("endpoint")
-	region := r.URL.Query().Get("region")
-
+func attemptS3Connection(endpoint string, region string, bucket string, prefix string) error {
 	s3Client, err := storage.NewS3Provider(storage.S3ProviderConfig{
 		S3EndpointURL: endpoint,
 		S3Region:      region,
 	})
+	
 	if err != nil {
-		slog.Error("error connecting to S3", "s3_endpoint", report.S3Endpoint.String, "region", report.S3Region.String, "error", err)
-		return nil, fmt.Errorf("error connecting to S3: %w", err)
+		slog.Error("error connecting to S3", "s3_endpoint", endpoint, "region", region, "error", err)
+		return CodedErrorf(http.StatusInternalServerError, err.Error())
 	}
 
-	return nil, nil
+	ctx := context.Background()
+	for _, err := range s3Client.IterObjects(ctx, bucket, prefix) {
+		if err != nil {
+			slog.Error("error iterating over S3 objects", "error", err)
+			return CodedErrorf(http.StatusInternalServerError, err.Error())
+		}
+		break
+	}
+
+	return nil
+}
+
+func (s *BackendService) AttemptS3Connection(r *http.Request) (any, error) {
+	endpoint := r.URL.Query().Get("endpoint")
+	region := r.URL.Query().Get("region")
+	bucket := r.URL.Query().Get("bucket")
+	prefix := r.URL.Query().Get("prefix")
+	return nil, attemptS3Connection(endpoint, region, bucket, prefix)
 }

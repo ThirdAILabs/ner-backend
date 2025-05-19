@@ -66,6 +66,8 @@ interface ObjectPreview {
 interface CreateReportRequest {
   ModelId: string;
   UploadId?: string;
+  S3Endpoint?: string;
+  S3Region?: string;
   SourceS3Bucket?: string;
   SourceS3Prefix?: string;
   Tags: string[];
@@ -304,18 +306,20 @@ export const nerService = {
     }
   },
 
-  attemptS3Connection: async (endpoint: string, region: string): Promise<string | null> => {
+  attemptS3Connection: async (
+    endpoint: string,
+    region: string,
+    bucket: string,
+    prefix: string
+  ): Promise<string | null> => {
     try {
       await axiosInstance.get('/attempt-s3-connection', {
-        params: { endpoint, region }
+        params: { endpoint, region, bucket, prefix }
       });
   
       return null;
     } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.data) {
-        return error.response.data;
-      }
-      return 'An unexpected error occurred';
+      return "Failed to connect to S3 bucket. Please make sure that it is a valid public bucket."
     }
   }
 };
