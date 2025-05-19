@@ -26,7 +26,7 @@ func TestFileLicensing(t *testing.T) {
 		verifier := licensing.NewFileLicenseVerifier([]byte(publicKey), goodLicense)
 		licenseInfo, err := verifier.VerifyLicense(context.Background())
 		assert.NoError(t, err)
-		assert.Equal(t, expiry, licenseInfo.Expiry)
+		assert.True(t, expiry.Equal(*licenseInfo.Expiry), "Expiry times should be equal")
 		assert.Equal(t, licensing.LocalLicense, licenseInfo.LicenseType)
 	})
 
