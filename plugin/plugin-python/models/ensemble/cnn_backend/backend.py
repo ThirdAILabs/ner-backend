@@ -37,7 +37,7 @@ class CNNModel:
     def finetune(
         self,
         raw_samples,
-        epochs: int = 5,
+        epochs: int = 1,
         lr: float = 3e-4,
         batch_size: int = 16,
     ):
