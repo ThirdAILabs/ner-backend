@@ -344,11 +344,11 @@ export default function Jobs() {
                 fontWeight: 'medium',
               }}
             >
-              {`${((completedFileCount / fileCount) * 100).toFixed(0)} %`}
+              {`${(((completedFileCount + failedFileCount) / fileCount) * 100).toFixed(0)} %`}
             </Typography>
           </Box>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            {`Files: ${completedFileCount}/${fileCount} Completed, ${failedFileCount}/${fileCount} Failed`}
+            {`Files: ${completedFileCount}/${fileCount} Succeeded, ${failedFileCount}/${fileCount} Failed`}
           </Typography>
         </Box>
       );

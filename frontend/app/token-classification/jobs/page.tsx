@@ -28,7 +28,7 @@ import { floor } from 'lodash';
 const calculateProgress = (report: Report | null): number => {
   if (!report || !report.CompletedFileCount || !report.FileCount) return 0;
 
-  return floor((report.CompletedFileCount / report.FileCount) * 100);
+  return floor(((report.CompletedFileCount + report.FailedFileCount) / report.FileCount) * 100);
 };
 
 // Get the total number of processed tokens
