@@ -28,7 +28,7 @@ import { floor } from 'lodash';
 const calculateProgress = (report: Report | null): number => {
   if (!report || !report.CompletedFileCount || !report.FileCount) return 0;
 
-  return floor((report.CompletedFileCount / report.FileCount) * 100);
+  return floor(((report.CompletedFileCount) / report.FileCount) * 100);
 };
 
 // Get the total number of processed tokens
@@ -277,11 +277,10 @@ function JobDetail() {
     const pollInterval = setInterval(async () => {
       await fetchTags();
 
-      const currentProgress = calculateProgress(reportData);
-
-      if (currentProgress === 100) {
+      if (reportData && (reportData.CompletedFileCount + reportData.FailedFileCount === reportData.FileCount)) {
         clearInterval(pollInterval);
       }
+
     }, 1000);
 
     return () => {
