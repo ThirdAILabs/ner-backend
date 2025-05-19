@@ -401,8 +401,6 @@ export default function NewJobPage() {
     validateCustomTagName(value);
   };
 
-  
-
   // Submit the new job
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -417,7 +415,7 @@ export default function NewJobPage() {
       return;
     }
 
-    if (selectedSource !== 's3' && selectedFiles.length === 0) {
+    if ((selectedSource === 'files' || selectedSource === 'directory') && selectedFiles.length === 0) {
       setError('Please select at least one file');
       return;
     }
@@ -433,8 +431,8 @@ export default function NewJobPage() {
     try {
       let uploadId;
 
-      // Handle file uploads if needed
-      if (selectedSource !== 's3') {
+      // Handle file/directory uploads if needed
+      if ((selectedSource === 'files' || selectedSource === 'directory')) {
         const uploadResponse = await nerService.uploadFiles(selectedFiles);
         uploadId = uploadResponse.Id;
       }
@@ -519,8 +517,6 @@ export default function NewJobPage() {
       setShowTooltip(false);
     }, 1000);
   };
-
-  
 
   const renderFileName = (file: File) => (
     <span className="text-sm text-gray-600">
@@ -668,15 +664,14 @@ export default function NewJobPage() {
             ) : selectedSource === 'directory' ? (
               <div className="w-full">
                 <input
-                  type="file"
-                  webkitdirectory=''
-                  directory=''
-                  multiple
-                  onChange={handleFileChange}
-                  className="hidden"
-                  id="directory-upload"
-                  accept=".pdf, .txt, .csv, .html, .json, .xml"
-                />
+                    type="file"
+                    {...{ webkitdirectory: '', directory: '' } as { webkitdirectory: string, directory: string }}
+                    multiple
+                    onChange={handleFileChange}
+                    className="hidden"
+                    id="directory-upload"
+                    accept=".pdf, .txt, .csv, .html, .json, .xml"
+                  />
                 <label
                   htmlFor="directory-upload"
                   className="flex items-center justify-center w-full p-4 border-2 border-dashed border-gray-300 rounded-md cursor-pointer hover:border-gray-400"
