@@ -26,9 +26,10 @@ import { floor } from 'lodash';
 
 // Calculate progress based on InferenceTaskStatuses
 const calculateProgress = (report: Report | null): number => {
-  if (!report || !report.CompletedFileCount || !report.FileCount) return 0;
+  if (!report || !report.CompletedFileCount || !report.FailedFileCount || !report.FileCount)
+    return 0;
 
-  return floor((report.CompletedFileCount / report.FileCount) * 100);
+  return floor(((report.CompletedFileCount + report.FailedFileCount) / report.FileCount) * 100);
 };
 
 // Get the total number of processed tokens
@@ -337,7 +338,14 @@ function JobDetail() {
             <h2 className="text-2xl font-medium mb-4">Source</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {selectedSource === 's3' && reportData?.SourceS3Bucket && (
-                <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 2, boxShadow: 1 }}>
+                <Box
+                  sx={{
+                    p: 2,
+                    bgcolor: 'grey.50',
+                    borderRadius: 2,
+                    boxShadow: 1,
+                  }}
+                >
                   <h3 className="text-lg font-medium mb-1">S3 Bucket</h3>
                   <p className="text-sm text-gray-600">
                     {reportData.SourceS3Bucket === 'uploads'
