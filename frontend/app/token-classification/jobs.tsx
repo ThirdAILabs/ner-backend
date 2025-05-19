@@ -101,7 +101,7 @@ export default function Jobs() {
         );
 
         // If files are complete, return true to stop polling
-        return detailedReport.SucceededFileCount === detailedReport.FileCount;
+        return detailedReport.SucceededFileCount + detailedReport.FailedFileCount === detailedReport.FileCount;
       } catch (err) {
         console.error(`Error fetching status for report ${report.Id}:`, err);
         setReports((prev) =>
