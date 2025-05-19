@@ -1,5 +1,4 @@
 import { useCallback } from 'react';
-import { supabase } from '@/lib/supabaseClient';
 
 export type TelemetryEvent = {
   UserAction: string;
@@ -32,9 +31,19 @@ export default function useTelemetry() {
       event: eventType,
     };
 
-    const { error } = await supabase.from('telemetry_events')
-      .insert([telemetryPackage]);
-    if (error) console.error('Telemetry insert error:', error);
+    try {
+      const res = await fetch('/api/telemetry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(telemetryPackage),
+      });
+      if (!res.ok) {
+        console.error('Telemetry insert error:', await res.text());
+      }
+    } catch (err) {
+      console.error('Telemetry insert error:', err);
+    }
+
   }, []);
 
   return recordEvent;
