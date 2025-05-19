@@ -63,8 +63,8 @@ const Dashboard = () => {
   useEffect(() => {
     nerService
       .listModels()
-      .then(ms => setModels(ms))
-      .catch(err => {
+      .then((ms) => setModels(ms))
+      .catch((err) => {
         console.error('Failed to load models:', err);
       });
   }, [healthStatus]);
@@ -143,7 +143,7 @@ const Dashboard = () => {
                 <MenuItem value="">
                   <em>All Models</em>
                 </MenuItem>
-                {models.map(m => (
+                {models.map((m) => (
                   <MenuItem key={m.Id} value={m.Id}>
                     {m.Name}
                   </MenuItem>

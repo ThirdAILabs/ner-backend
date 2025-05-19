@@ -1,6 +1,14 @@
-const { execSync } = require('child_process');
-const path = require('path');
-const fs = require('fs');
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { exec } from 'node:child_process';
+import { promisify } from 'node:util';
+
+const execAsync = promisify(exec);
+
+// Get __dirname equivalent in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Project paths
 const rootDir = path.join(__dirname, '..');
@@ -53,7 +61,7 @@ try {
 // Step 3: Build the frontend with Vite
 console.log('\n=== Building frontend with Vite ===');
 try {
-  execSync('npm run vite-build', {
+  execAsync('npm run vite-build', {
     cwd: rootDir,
     stdio: 'inherit'
   });
@@ -68,7 +76,7 @@ try {
 console.log('\n=== Packaging with electron-builder ===');
 try {
   // Make sure we use NODE_ENV=production for packaging
-  execSync('NODE_ENV=production npm run electron-build -- --mac --x64', {
+  execAsync('NODE_ENV=production npm run electron-build -- --mac --x64', {
     cwd: rootDir,
     stdio: 'inherit'
   });

@@ -8,7 +8,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer
+  ResponsiveContainer,
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import _ from 'lodash';
@@ -29,6 +29,9 @@ interface AnalyticsDashboardProps {
   tokensProcessed: number; // This is actually bytes processed
   tags: Tag[];
   timeTaken: number;
+  completedFileCount: number;
+  failedFileCount: number;
+  totalFileCount: number;
 }
 
 // Format file size in bytes to human-readable format
@@ -57,11 +60,13 @@ export function AnalyticsDashboard({
   progress,
   tokensProcessed,
   tags,
-  timeTaken
+  timeTaken,
+  completedFileCount,
+  failedFileCount,
+  totalFileCount,
 }: AnalyticsDashboardProps) {
-  // Convert token counts to chart data format
-
   const tokenChartData = tags;
+
   return (
     <div className="space-y-6 w-full">
       {/* Top Widgets */}
@@ -72,30 +77,36 @@ export function AnalyticsDashboard({
             <div className="relative h-32 w-32">
               <svg className="h-full w-full" viewBox="0 0 100 100">
                 {/* Background circle */}
+                <circle cx="50" cy="50" r="40" fill="none" stroke="#facc15" strokeWidth="10" />
+
+                {/* Success arc (green) */}
                 <circle
-                  className="stroke-gray-700"
                   cx="50"
                   cy="50"
                   r="40"
                   fill="none"
+                  stroke="#4caf50"
                   strokeWidth="10"
+                  strokeDasharray={`${(completedFileCount / totalFileCount) * 251.327} 251.327`}
+                  transform="rotate(-90 50 50)"
                 />
-                {/* Progress circle */}
+
+                {/* Failure arc (red), offset by the success arc */}
                 <circle
-                  className="stroke-gray-600"
                   cx="50"
                   cy="50"
                   r="40"
                   fill="none"
+                  stroke="#ef4444"
                   strokeWidth="10"
-                  strokeDasharray={`${progress * 2.51327} 251.327`}
+                  strokeDasharray={`${(failedFileCount / totalFileCount) * 251.327} 251.327`}
+                  strokeDashoffset={-((completedFileCount / totalFileCount) * 251.327)}
                   transform="rotate(-90 50 50)"
                 />
               </svg>
+
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-2xl font-bold text-gray-700">
-                  {progress}%
-                </span>
+                <span className="text-2xl font-bold text-gray-700">{progress}%</span>
               </div>
             </div>
             <h3 className="mt-auto text-sm text-muted-foreground">Progress</h3>
@@ -129,7 +140,7 @@ export function AnalyticsDashboard({
                         : 'text-4xl'
                 }`}
               >
-                {timeTaken == null ? '-' : `${timeTaken}s`}
+                {timeTaken == null ? '-' : `${timeTaken.toFixed(4)}s`}
               </span>
             </div>
             <h3 className="text-sm text-muted-foreground">Time Taken</h3>
@@ -141,14 +152,10 @@ export function AnalyticsDashboard({
       <Card>
         <CardHeader>
           {/* <CardTitle>Identified Tokens</CardTitle> */}
-          <div className="text-2xl font-semibold text-gray-700">
-            Identified Tokens
-          </div>
+          <div className="text-2xl font-semibold text-gray-700">Identified Tokens</div>
         </CardHeader>
         <CardContent>
-          <div
-            style={{ height: `${Math.max(300, tokenChartData.length * 50)}px` }}
-          >
+          <div style={{ height: `${Math.max(300, tokenChartData.length * 50)}px` }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={tokenChartData}
@@ -162,7 +169,7 @@ export function AnalyticsDashboard({
                   label={{
                     value: 'Number of tokens',
                     position: 'bottom',
-                    offset: 15
+                    offset: 15,
                   }}
                   tickFormatter={formatNumber}
                 />
