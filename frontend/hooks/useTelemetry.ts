@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 
 export type TelemetryEvent = {
   UserAction: string;
@@ -16,9 +17,20 @@ export type TelemetryEventPackage = {
 
 export default function useTelemetry() {
   const recordEvent = useCallback(async (eventType: TelemetryEvent) => {
-    const username = typeof window !== 'undefined'
-      ? localStorage.getItem('user_id') || 'anonymous'
-      : 'anonymous';
+    // Pseudonymous user ID persisted across sessions
+    let username: string;
+    if (typeof window !== 'undefined') {
+      const storageKey = 'telemetry_user_id';
+      const storedId = localStorage.getItem(storageKey);
+      if (storedId) {
+        username = storedId;
+      } else {
+        username = uuidv4();
+        localStorage.setItem(storageKey, username);
+      }
+    } else {
+      username = 'server';
+    }
     const timestamp = new Date().toISOString();
     const userMachine = typeof navigator !== 'undefined'
       ? navigator.userAgent
