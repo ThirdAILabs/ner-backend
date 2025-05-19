@@ -1,23 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import {
-  Box,
-  Grid,
-  Card,
-  CardContent,
-  Typography,
-  CircularProgress
-} from '@mui/material';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  LabelList
-} from 'recharts';
+import { Box, Grid, Card, CardContent, Typography, CircularProgress } from '@mui/material';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
 import { nerService, InferenceMetrics, ThroughputMetrics } from '@/lib/backend';
 
 interface MetricsDataViewerProps {
@@ -25,15 +10,10 @@ interface MetricsDataViewerProps {
   days: number;
 }
 
-const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
-  modelId,
-  days
-}) => {
+const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) => {
   const [infMetrics, setInfMetrics] = useState<InferenceMetrics | null>(null);
   const [tpMetrics, setTpMetrics] = useState<ThroughputMetrics | null>(null);
-  const [infSeries, setInfSeries] = useState<
-    { day: number; dataMB: number; tokens: number }[]
-  >([]);
+  const [infSeries, setInfSeries] = useState<{ day: number; dataMB: number; tokens: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -113,14 +93,10 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
             <CardContent className="flex flex-col items-center justify-center flex-1 pt-6">
               <div className="relative h-32 w-32">
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-2xl font-bold text-gray-700">
-                    {infMetrics.InProgress}
-                  </span>
+                  <span className="text-2xl font-bold text-gray-700">{infMetrics.InProgress}</span>
                 </div>
               </div>
-              <h3 className="mt-auto text-sm text-muted-foreground">
-                In-Progress Files
-              </h3>
+              <h3 className="mt-auto text-sm text-muted-foreground">In-Progress Files</h3>
             </CardContent>
           </Card>
 
@@ -129,14 +105,10 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
             <CardContent className="flex flex-col items-center justify-center flex-1 pt-6">
               <div className="relative h-32 w-32">
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-2xl font-bold text-gray-700">
-                    {infMetrics.Completed}
-                  </span>
+                  <span className="text-2xl font-bold text-gray-700">{infMetrics.Completed}</span>
                 </div>
               </div>
-              <h3 className="mt-auto text-sm text-muted-foreground">
-                Completed Files
-              </h3>
+              <h3 className="mt-auto text-sm text-muted-foreground">Completed Files</h3>
             </CardContent>
           </Card>
 
@@ -161,9 +133,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
                   </span>
                 </div>
               </div>
-              <h3 className="mt-auto text-sm text-muted-foreground">
-                Throughput
-              </h3>
+              <h3 className="mt-auto text-sm text-muted-foreground">Throughput</h3>
             </CardContent>
           </Card>
 
@@ -177,9 +147,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
                   </span>
                 </div>
               </div>
-              <h3 className="mt-auto text-sm text-muted-foreground">
-                Data Processed
-              </h3>
+              <h3 className="mt-auto text-sm text-muted-foreground">Data Processed</h3>
             </CardContent>
           </Card>
 
@@ -193,9 +161,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
                   </span>
                 </div>
               </div>
-              <h3 className="mt-auto text-sm text-muted-foreground">
-                Tokens Processed
-              </h3>
+              <h3 className="mt-auto text-sm text-muted-foreground">Tokens Processed</h3>
             </CardContent>
           </Card>
         </div>

@@ -19,11 +19,7 @@ interface CardContentProps {
 }
 
 export function CardContent({ className, children }: CardContentProps) {
-  return (
-    <div className={`p-6 pt-0 ${className || ''}`}>
-      {children}
-    </div>
-  );
+  return <div className={`p-6 pt-0 ${className || ''}`}>{children}</div>;
 }
 
 interface CardHeaderProps {
@@ -32,11 +28,7 @@ interface CardHeaderProps {
 }
 
 export function CardHeader({ className, children }: CardHeaderProps) {
-  return (
-    <div className={`flex flex-col space-y-1.5 p-6 ${className || ''}`}>
-      {children}
-    </div>
-  );
+  return <div className={`flex flex-col space-y-1.5 p-6 ${className || ''}`}>{children}</div>;
 }
 
 interface CardTitleProps {
@@ -50,4 +42,4 @@ export function CardTitle({ className, children }: CardTitleProps) {
       {children}
     </h3>
   );
-} 
+}

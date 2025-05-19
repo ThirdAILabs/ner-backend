@@ -8,7 +8,7 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
 } from '@mui/material';
 import { useSearchParams } from 'next/navigation';
 import { nerService } from '@/lib/backend';
@@ -33,8 +33,8 @@ const Dashboard = () => {
   useEffect(() => {
     nerService
       .listModels()
-      .then(ms => setModels(ms))
-      .catch(err => {
+      .then((ms) => setModels(ms))
+      .catch((err) => {
         console.error('Failed to load models:', err);
       });
   }, [healthStatus]);
@@ -82,11 +82,7 @@ const Dashboard = () => {
               Days
             </Typography>
             <FormControl size="small" sx={{ minWidth: 120 }}>
-              <Select
-                value={days}
-                onChange={e => setDays(Number(e.target.value))}
-                displayEmpty
-              >
+              <Select value={days} onChange={(e) => setDays(Number(e.target.value))} displayEmpty>
                 <MenuItem value={1}>1 day</MenuItem>
                 <MenuItem value={7}>7 days</MenuItem>
                 <MenuItem value={30}>30 days</MenuItem>
@@ -103,17 +99,15 @@ const Dashboard = () => {
               <Select
                 value={selectedModel}
                 displayEmpty
-                onChange={e => setSelectedModel(e.target.value)}
-                renderValue={val =>
-                  val === ''
-                    ? 'All Models'
-                    : models.find(m => m.Id === val)?.Name || val
+                onChange={(e) => setSelectedModel(e.target.value)}
+                renderValue={(val) =>
+                  val === '' ? 'All Models' : models.find((m) => m.Id === val)?.Name || val
                 }
               >
                 <MenuItem value="">
                   <em>All Models</em>
                 </MenuItem>
-                {models.map(m => (
+                {models.map((m) => (
                   <MenuItem key={m.Id} value={m.Id}>
                     {m.Name}
                   </MenuItem>

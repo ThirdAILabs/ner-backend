@@ -13,6 +13,7 @@ frontend-dist/
 
 # Go backend executable and data
 bin/
+resources/
 main
 pocket-shield/
 

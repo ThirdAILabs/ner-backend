@@ -6,11 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import {
-  ArrowLeft,
-  RefreshCw,
-  Square,
-} from 'lucide-react';
+import { ArrowLeft, RefreshCw, Square } from 'lucide-react';
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
 import { DatabaseTable } from './(database-table)/DatabaseTable';
 import { nerService } from '@/lib/backend';
@@ -20,32 +16,33 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Box,
-} from '@mui/material';
+import { Box } from '@mui/material';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Suspense } from 'react';
+import { floor } from 'lodash';
 
 // Calculate progress based on InferenceTaskStatuses
 const calculateProgress = (report: Report | null): number => {
-  if (!report || !report.CompletedFileCount || !report.FileCount) return 0;
+  if (!report || !report.CompletedFileCount || !report.FailedFileCount || !report.FileCount)
+    return 0;
 
-  return (report.CompletedFileCount / report.FileCount) * 100;
+  return floor(((report.CompletedFileCount + report.FailedFileCount) / report.FileCount) * 100);
 };
 
 // Get the total number of processed tokens
 const getProcessedTokens = (report: Report | null): number => {
-  if (
-    !report ||
-    !report.InferenceTaskStatuses
-  ) {
+  if (!report || !report.InferenceTaskStatuses) {
     return 0;
   }
 
-  return (report.InferenceTaskStatuses.COMPLETED?.TotalSize || 0) + (report.InferenceTaskStatuses.FAILED?.TotalSize || 0) + (report.InferenceTaskStatuses.RUNNING?.TotalSize || 0);
+  return (
+    (report.InferenceTaskStatuses.COMPLETED?.TotalSize || 0) +
+    (report.InferenceTaskStatuses.FAILED?.TotalSize || 0) +
+    (report.InferenceTaskStatuses.RUNNING?.TotalSize || 0)
+  );
 };
 
 // Source option card component
@@ -62,14 +59,15 @@ const SourceOption: React.FC<SourceOptionProps> = ({
   description,
   isSelected = false,
   disabled = false,
-  onClick
+  onClick,
 }) => (
   <div
     className={`relative p-6 border rounded-md transition-all
       ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200'}
-      ${disabled
-        ? 'opacity-50 cursor-not-allowed bg-gray-50'
-        : 'cursor-pointer hover:border-blue-300'
+      ${
+        disabled
+          ? 'opacity-50 cursor-not-allowed bg-gray-50'
+          : 'cursor-pointer hover:border-blue-300'
       }
     `}
     onClick={() => !disabled && onClick()}
@@ -95,7 +93,7 @@ const Tag: React.FC<TagProps> = ({
   onClick,
   custom = false,
   addNew = false,
-  displayOnly = false
+  displayOnly = false,
 }) => {
   return (
     <div
@@ -164,9 +162,7 @@ const NewTagDialog: React.FC<{
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Create Custom Tag</DialogTitle>
-          <DialogDescription>
-            Define a new custom tag with a regex pattern.
-          </DialogDescription>
+          <DialogDescription>Define a new custom tag with a regex pattern.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
@@ -201,11 +197,7 @@ const NewTagDialog: React.FC<{
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button
-              type="submit"
-              variant="default"
-              className="bg-blue-400 hover:bg-blue-500"
-            >
+            <Button type="submit" variant="default" className="bg-blue-400 hover:bg-blue-500">
               Create Tag
             </Button>
           </DialogFooter>
@@ -218,15 +210,14 @@ const NewTagDialog: React.FC<{
 function JobDetail() {
   const searchParams = useSearchParams();
   const reportId: string = searchParams.get('jobId') as string;
-  const [lastUpdated, setLastUpdated] = useState(0);
   const [tabValue, setTabValue] = useState('analytics');
   const [selectedSource, setSelectedSource] = useState<'s3' | 'local'>('s3');
 
   // Remove selectedTags state, just keep availableTags
   const [availableTags, setAvailableTags] = useState<string[]>([]);
-  const [availableTagsCount, setAvailableTagsCount] = useState<
-    { type: string; count: number }[]
-  >([]);
+  const [availableTagsCount, setAvailableTagsCount] = useState<{ type: string; count: number }[]>(
+    []
+  );
 
   const [timeTaken, setTimeTaken] = useState(0);
 
@@ -259,7 +250,7 @@ function JobDetail() {
         const customTagName: string[] = Object.keys(customTagsObj);
         const allCustomTags: CustomTag[] = customTagName.map((tag) => ({
           name: tag,
-          pattern: customTagsObj[tag]
+          pattern: customTagsObj[tag],
         }));
 
         setCustomTags(allCustomTags);
@@ -271,7 +262,7 @@ function JobDetail() {
         const allTagsCounts = tags.map((tag) => {
           return {
             type: tag,
-            count: tagObject[tag]
+            count: tagObject[tag],
           };
         });
         setAvailableTagsCount(allTagsCounts);
@@ -284,21 +275,20 @@ function JobDetail() {
   };
 
   useEffect(() => {
-    fetchTags();
+    const pollInterval = setInterval(async () => {
+      await fetchTags();
 
-    // Set up refresh timer
-    const timer = setInterval(() => {
-      setLastUpdated((prev) => prev + 1);
+      const currentProgress = calculateProgress(reportData);
+
+      if (currentProgress === 100) {
+        clearInterval(pollInterval);
+      }
     }, 1000);
 
-    return () => clearInterval(timer);
-  }, [reportId]);
-
-  // Optional: Add a refresh function that gets called when the refresh button is clicked
-  const handleRefresh = () => {
-    setLastUpdated(0);
-    fetchTags();
-  };
+    return () => {
+      clearInterval(pollInterval);
+    };
+  }, [reportId, reportData?.CompletedFileCount]);
 
   return (
     <div className="container px-4 py-8 w-3/4 mx-auto">
@@ -339,18 +329,6 @@ function JobDetail() {
               Info
             </TabsTrigger>
           </TabsList>
-
-          <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-500">
-              Last updated: {lastUpdated} seconds ago
-            </span>
-            <Button variant="ghost" size="icon" onClick={handleRefresh}>
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon">
-              <Square className="h-4 w-4" />
-            </Button>
-          </div>
         </div>
 
         <TabsContent value="configuration" className="mt-0">
@@ -361,7 +339,12 @@ function JobDetail() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {selectedSource === 's3' && reportData?.SourceS3Bucket && (
                 <Box
-                  sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 2, boxShadow: 1 }}
+                  sx={{
+                    p: 2,
+                    bgcolor: 'grey.50',
+                    borderRadius: 2,
+                    boxShadow: 1,
+                  }}
                 >
                   <h3 className="text-lg font-medium mb-1">S3 Bucket</h3>
                   <p className="text-sm text-gray-600">
@@ -373,9 +356,7 @@ function JobDetail() {
               )}
 
               {selectedSource === 'local' && (
-                <Box
-                  sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 2 }}
-                >
+                <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 2 }}>
                   <h3 className="text-lg font-medium mb-1">File Upload</h3>
                   {/* <p className="text-sm text-gray-600">File Location...</p> */}
                 </Box>
@@ -384,9 +365,7 @@ function JobDetail() {
           </Box>
 
           {/* Tags */}
-          <Box
-            sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3, marginTop: 3 }}
-          >
+          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3, marginTop: 3 }}>
             <h2 className="text-2xl font-medium mb-4">Tags</h2>
             <div className="flex justify-between items-center mb-4">
               {isLoading ? (
@@ -406,9 +385,7 @@ function JobDetail() {
           </Box>
 
           {/* Custom Tags */}
-          <Box
-            sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3, marginTop: 3 }}
-          >
+          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3, marginTop: 3 }}>
             <h2 className="text-2xl font-medium mb-4">Tags</h2>
             <div className="flex justify-between items-center mb-4">
               {isLoading ? (
@@ -433,18 +410,14 @@ function JobDetail() {
                 </div>
               ) : (
                 <div className="text-center py-10 bg-gray-50 border border-dashed border-gray-200 rounded-lg w-[400px]">
-                  <p className="text-gray-500">
-                    No custom tags defined for this report
-                  </p>
+                  <p className="text-gray-500">No custom tags defined for this report</p>
                 </div>
               )}
             </div>
           </Box>
 
           {/* Groups */}
-          <Box
-            sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3, marginTop: 3 }}
-          >
+          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3, marginTop: 3 }}>
             <h2 className="text-2xl font-medium mb-4">Groups</h2>
             <div className="flex justify-between items-center mb-4">
               {isLoading ? (
@@ -454,25 +427,18 @@ function JobDetail() {
               ) : (reportData?.Groups ?? []).length > 0 ? (
                 <div className="grid grid-cols-3 md:grid-cols-3 gap-4">
                   {reportData?.Groups?.map((group) => (
-                    <GroupCard
-                      key={group.Id}
-                      name={group.Name}
-                      definition={group.Query}
-                    />
+                    <GroupCard key={group.Id} name={group.Name} definition={group.Query} />
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-10 bg-gray-50 border border-dashed border-gray-200 rounded-lg w-[400px]">
-                  <p className="text-gray-500">
-                    No groups defined for this report
-                  </p>
+                  <p className="text-gray-500">No groups defined for this report</p>
                 </div>
               )}
             </div>
           </Box>
 
           {/* ENDS */}
-
         </TabsContent>
 
         <TabsContent value="analytics">
@@ -499,7 +465,9 @@ function JobDetail() {
 }
 
 export default function Page() {
-  return <Suspense>
-    <JobDetail />
-  </Suspense>
+  return (
+    <Suspense>
+      <JobDetail />
+    </Suspense>
+  );
 }

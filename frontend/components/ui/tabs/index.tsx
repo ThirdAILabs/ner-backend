@@ -21,7 +21,9 @@ interface TabsListProps {
 
 export function TabsList({ children, className }: TabsListProps) {
   return (
-    <div className={`inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground ${className || ''}`}>
+    <div
+      className={`inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground ${className || ''}`}
+    >
       {children}
     </div>
   );
@@ -35,7 +37,9 @@ interface TabsTriggerProps {
 
 export function TabsTrigger({ value, children, className }: TabsTriggerProps) {
   // Find parent Tabs component to get current value and onChange
-  const context = React.useContext(React.createContext<{ value: string; onValueChange: (value: string) => void } | null>(null));
+  const context = React.useContext(
+    React.createContext<{ value: string; onValueChange: (value: string) => void } | null>(null)
+  );
 
   const isSelected = context?.value === value;
 
@@ -51,4 +55,4 @@ export function TabsTrigger({ value, children, className }: TabsTriggerProps) {
       {children}
     </button>
   );
-} 
+}
