@@ -257,7 +257,7 @@ export function TableContent({
             </TableRow>
           )}
 
-          {filteredRecords.length > 0 && (
+          {/* {filteredRecords.length > 0 && (
             <TableRow>
               <TableCell colSpan={2}>
                 <LoadMoreButton
@@ -267,7 +267,7 @@ export function TableContent({
                 />
               </TableCell>
             </TableRow>
-          )}
+          )} */}
         </TableBody>
       </>
     );
