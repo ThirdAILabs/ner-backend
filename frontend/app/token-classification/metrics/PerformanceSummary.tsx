@@ -1,14 +1,7 @@
 'use client';
 
 import React from 'react';
-import { 
-  Box, 
-  Typography, 
-  Paper, 
-  Grid,
-  LinearProgress,
-  Divider
-} from '@mui/material';
+import { Box, Typography, Paper, Grid, LinearProgress, Divider } from '@mui/material';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import RemoveIcon from '@mui/icons-material/Remove';
@@ -28,13 +21,13 @@ interface PerformanceSummaryProps {
 
 export const PerformanceSummary: React.FC<PerformanceSummaryProps> = ({
   beforeMetrics,
-  afterMetrics
+  afterMetrics,
 }) => {
   // Calculate changes
   const calculateChange = (before: number, after: number) => {
     return {
       value: after - before,
-      percentage: before === 0 ? 100 : Math.round((after - before) / before * 100)
+      percentage: before === 0 ? 100 : Math.round(((after - before) / before) * 100),
     };
   };
 
@@ -54,7 +47,8 @@ export const PerformanceSummary: React.FC<PerformanceSummaryProps> = ({
         <Box sx={{ display: 'flex', alignItems: 'center', color: 'success.main' }}>
           <ArrowUpwardIcon fontSize="small" sx={{ mr: 0.5 }} />
           <Typography variant="body2" sx={{ fontWeight: 500 }}>
-            {change.value.toFixed(3)} ({change.percentage > 0 ? '+' : ''}{change.percentage}%)
+            {change.value.toFixed(3)} ({change.percentage > 0 ? '+' : ''}
+            {change.percentage}%)
           </Typography>
         </Box>
       );
@@ -93,7 +87,7 @@ export const PerformanceSummary: React.FC<PerformanceSummaryProps> = ({
           <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 500 }}>
             {label}
           </Typography>
-          
+
           <Box sx={{ mb: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
               <Typography variant="body2" color="text.secondary">
@@ -103,21 +97,21 @@ export const PerformanceSummary: React.FC<PerformanceSummaryProps> = ({
                 {formatPercentage(before)}
               </Typography>
             </Box>
-            <LinearProgress 
-              variant="determinate" 
-              value={before * 100} 
-              sx={{ 
-                height: 8, 
+            <LinearProgress
+              variant="determinate"
+              value={before * 100}
+              sx={{
+                height: 8,
                 borderRadius: 4,
                 backgroundColor: 'rgba(0, 0, 0, 0.08)',
                 '& .MuiLinearProgress-bar': {
                   backgroundColor: color,
-                  opacity: 0.6
-                }
-              }} 
+                  opacity: 0.6,
+                },
+              }}
             />
           </Box>
-          
+
           <Box sx={{ mb: 1 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
               <Typography variant="body2" color="text.secondary">
@@ -127,20 +121,20 @@ export const PerformanceSummary: React.FC<PerformanceSummaryProps> = ({
                 {formatPercentage(after)}
               </Typography>
             </Box>
-            <LinearProgress 
-              variant="determinate" 
-              value={after * 100} 
-              sx={{ 
-                height: 8, 
+            <LinearProgress
+              variant="determinate"
+              value={after * 100}
+              sx={{
+                height: 8,
                 borderRadius: 4,
                 backgroundColor: 'rgba(0, 0, 0, 0.08)',
                 '& .MuiLinearProgress-bar': {
-                  backgroundColor: color
-                }
-              }} 
+                  backgroundColor: color,
+                },
+              }}
             />
           </Box>
-          
+
           <Box sx={{ pt: 1 }}>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
               Improvement
@@ -162,7 +156,7 @@ export const PerformanceSummary: React.FC<PerformanceSummaryProps> = ({
           Comparison of model performance metrics before and after fine-tuning
         </Typography>
       </Box>
-      
+
       <Paper sx={{ border: '1px solid rgba(0, 0, 0, 0.12)', boxShadow: 'none' }}>
         <Grid container>
           {renderMetricComparison(
@@ -172,11 +166,11 @@ export const PerformanceSummary: React.FC<PerformanceSummaryProps> = ({
             precisionChange,
             '#4caf50'
           )}
-          
+
           <Grid item xs={12} md={4}>
             <Divider orientation="vertical" sx={{ height: '100%' }} />
           </Grid>
-          
+
           {renderMetricComparison(
             'Recall',
             beforeMetrics.recall,
@@ -184,11 +178,11 @@ export const PerformanceSummary: React.FC<PerformanceSummaryProps> = ({
             recallChange,
             '#2196f3'
           )}
-          
+
           <Grid item xs={12} md={4}>
             <Divider orientation="vertical" sx={{ height: '100%' }} />
           </Grid>
-          
+
           {renderMetricComparison(
             'F1 Score',
             beforeMetrics.f1,
@@ -197,20 +191,21 @@ export const PerformanceSummary: React.FC<PerformanceSummaryProps> = ({
             '#ff9800'
           )}
         </Grid>
-        
+
         <Divider />
-        
+
         <Box sx={{ p: 2, backgroundColor: 'rgba(0, 0, 0, 0.02)' }}>
           <Typography variant="body2" color="text.secondary">
             Overall Performance Change:
           </Typography>
           <Typography variant="body1" sx={{ fontWeight: 500, mt: 0.5 }}>
-            The model's F1 score {f1Change.value > 0 ? 'improved by' : 'decreased by'} {Math.abs(f1Change.percentage)}% 
-            after fine-tuning, with {precisionChange.value >= 0 ? 'better' : 'reduced'} precision and
+            The model's F1 score {f1Change.value > 0 ? 'improved by' : 'decreased by'}{' '}
+            {Math.abs(f1Change.percentage)}% after fine-tuning, with{' '}
+            {precisionChange.value >= 0 ? 'better' : 'reduced'} precision and
             {recallChange.value >= 0 ? ' better' : ' reduced'} recall.
           </Typography>
         </Box>
       </Paper>
     </Box>
   );
-}; 
+};

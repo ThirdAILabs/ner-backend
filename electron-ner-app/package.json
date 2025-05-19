@@ -1,13 +1,14 @@
 {
   "name": "electron-ner-app",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Electron app for Named Entity Recognition",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "copy-model": "node scripts/copy-model.js",
     "copy-backend": "node scripts/copy-backend.js",
-    "prepare-files": "rm -rf bin && npm run copy-backend && npm run copy-model",
+    "copy-libomp": "otool -L bin/main | grep libomp | awk '{print $1}' | xargs -I {} cp {} resources/",
+    "prepare-files": "rm -rf bin && npm run copy-backend && npm run copy-model && rm -rf resources && mkdir resources && npm run copy-libomp",
     "dev": "npm run prepare-files && concurrently --kill-others \"cd ../frontend && npm run dev && cd ../electron-ner-app\" \"wait-on http://localhost:3007 && electron .\"",
     "start-backend": "node scripts/start-backend.js",
     "build": "cd ../frontend && npm run build && rm -rf ../electron-ner-app/frontend-dist && mv out ../electron-ner-app/frontend-dist && cd ../electron-ner-app && npm run prepare-files && electron-builder",
@@ -34,7 +35,7 @@
     "@types/node": "^20.14.10",
     "@vitejs/plugin-react": "^4.2.1",
     "concurrently": "^8.2.2",
-    "electron": "^28.0.0",
+    "electron": "^35.4.0",
     "electron-builder": "^24.6.4",
     "typescript": "^5.5.3",
     "vite": "^5.1.4"
@@ -45,7 +46,7 @@
     "commander": "^12.0.0",
     "electron-is-dev": "^2.0.0",
     "electron-log": "^5.4.0",
-    "electron-serve": "^1.3.0",
+    "electron-serve": "^2.1.1",
     "electron-updater": "^6.6.2",
     "get-port": "^7.1.0",
     "http-proxy": "^1.18.1",
@@ -80,6 +81,10 @@
       {
         "from": "node_modules/electron-is-dev",
         "to": "node_modules/electron-is-dev"
+      },
+      {
+        "from": "resources/libomp.dylib",
+        "to": "../Frameworks/libomp.dylib"
       }
     ],
     "asarUnpack": [
@@ -88,13 +93,19 @@
     "afterPack": "./scripts/after-pack.js",
     "asar": true,
     "mac": {
+      "identity": "ThirdAI Corp (KJ35JRW2T6)",
       "category": "public.app-category.developer-tools",
       "target": [
         "dmg",
         "zip"
       ],
       "hardenedRuntime": true,
-      "gatekeeperAssess": false
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "gatekeeperAssess": false,
+      "extendInfo": {
+        "NSLocalNetworkUsageDescription": "This app needs to communicate with a local backend server for NLP processing."
+      }
     },
     "win": {
       "target": "nsis"
@@ -109,5 +120,6 @@
         "repo": "pocket-shield-release"
       }
     ]
-  }
+  },
+  "type": "module"
 }

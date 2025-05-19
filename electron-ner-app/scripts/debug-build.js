@@ -1,6 +1,14 @@
-const { execSync, spawn } = require('child_process');
-const path = require('path');
-const fs = require('fs');
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { exec } from 'node:child_process';
+import { promisify } from 'node:util';
+
+const execAsync = promisify(exec);
+
+// Get __dirname equivalent in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Project paths
 const rootDir = path.join(__dirname, '..');
@@ -54,7 +62,7 @@ switch (command) {
   case 'build-frontend-only':
     // Only build the frontend with Vite
     console.log('Building frontend only...');
-    execSync('npm run vite-build', {
+    execAsync('npm run vite-build', {
       cwd: rootDir,
       stdio: 'inherit'
     });
@@ -64,7 +72,7 @@ switch (command) {
   case 'quick-package':
     // Quickly build a development package for testing (no signing, no DMG)
     console.log('Building quick test package...');
-    execSync('npm run vite-build', {
+    execAsync('npm run vite-build', {
       cwd: rootDir,
       stdio: 'inherit'
     });
@@ -73,7 +81,7 @@ switch (command) {
     copyBackend();
     
     console.log('Creating quick test package...');
-    execSync('electron-builder --dir --x64', {
+    execAsync('electron-builder --dir --x64', {
       cwd: rootDir,
       stdio: 'inherit'
     });
@@ -102,7 +110,7 @@ switch (command) {
     fs.chmodSync(packagedBackend, '755');
     
     // Run the backend executable directly
-    const backend = spawn(packagedBackend, [], {
+    const backend = exec(packagedBackend, {
       stdio: 'inherit',
     });
     
@@ -136,7 +144,7 @@ switch (command) {
     console.log('Running packaged app with logging...');
     
     // Run the app with DEBUG environment variables
-    const app = spawn(appPath, [], {
+    const app = exec(appPath, {
       stdio: 'inherit',
       env: {
         ...process.env,
