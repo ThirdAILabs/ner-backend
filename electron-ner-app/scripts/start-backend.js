@@ -203,26 +203,9 @@ export async function startBackend() {
 
   log.debug(`Using fixed port: ${FIXED_PORT}`)
 
-  const resourcesDir = process.resourcesPath;
-  const binDir       = path.join(resourcesDir, 'bin');
-
-  try {
-    const files = fs.readdirSync(binDir);
-    log.debug(`Contents of ${binDir}:`, files);
-  } catch (err) {
-    log.error(`Could not list ${binDir}:`, err);
-  }
 
   const backendPath = getBackendPath();
   const backendDir  = path.dirname(backendPath);
-
-  log.debug(`Checking backendPath: ${backendPath}`);
-  log.debug('  exists:', fs.existsSync(backendPath));
-  if (fs.existsSync(backendPath)) {
-    const st = fs.statSync(backendPath);
-    log.debug('  mode:', (st.mode & 0o777).toString(8));
-    log.debug('  size:', st.size);
-  }
 
   log.debug('Spawning backend with cwd:', backendDir);
 
