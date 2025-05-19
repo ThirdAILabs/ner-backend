@@ -4,7 +4,7 @@ import { Loader2 } from 'lucide-react';
 import { TableContentProps } from './types';
 import { Button } from '@/components/ui/button';
 import { NO_GROUP } from '@/lib/utils';
-import { ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 
 const PASTELS = ['#E5A49C', '#F6C886', '#FBE7AA', '#99E3B5', '#A6E6E7', '#A5A1E1', '#D8A4E2'];
 const DARKERS = ['#D34F3E', '#F09336', '#F7CF5F', '#5CC96E', '#65CFD0', '#597CE2', '#B64DC8'];
