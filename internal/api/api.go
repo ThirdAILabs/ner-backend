@@ -896,14 +896,14 @@ func attemptS3Connection(endpoint string, region string, bucket string, prefix s
 	
 	if err != nil {
 		slog.Error("error connecting to S3", "s3_endpoint", endpoint, "region", region, "error", err)
-		return CodedErrorf(http.StatusInternalServerError, err.Error())
+		return CodedErrorf(http.StatusInternalServerError, "Failed to connect to S3 endpoint. %v", err)
 	}
 
 	ctx := context.Background()
 	for _, err := range s3Client.IterObjects(ctx, bucket, prefix) {
 		if err != nil {
 			slog.Error("error iterating over S3 objects", "error", err)
-			return CodedErrorf(http.StatusInternalServerError, err.Error())
+			return CodedErrorf(http.StatusInternalServerError, "Failed to connect to S3 bucket. %v", err)
 		}
 		break
 	}
