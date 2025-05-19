@@ -19,7 +19,7 @@ log.transports.file.resolvePath = () => {
   );
 };
 
-log.info('→ start-backend.js initializing…');
+log.debug('→ start-backend.js initializing…');
 
 
 // Get __dirname equivalent in ESM
@@ -35,17 +35,17 @@ function getBinPath() {
   const isPkg = 'electron' in process.versions;
   const isProduction = process.env.NODE_ENV === 'production';
   
-  log.info('Debug path info:');
-  log.info('- isPkg:', isPkg);
-  log.info('- isProduction:', isProduction);
-  log.info('- __dirname:', __dirname);
-  log.info('- process.resourcesPath:', process.resourcesPath);
-  log.info('- process.execPath:', process.execPath);
-  log.info('- Current working directory:', process.cwd());
+  log.debug('Debug path info:');
+  log.debug('- isPkg:', isPkg);
+  log.debug('- isProduction:', isProduction);
+  log.debug('- __dirname:', __dirname);
+  log.debug('- process.resourcesPath:', process.resourcesPath);
+  log.debug('- process.execPath:', process.execPath);
+  log.debug('- Current working directory:', process.cwd());
   
   // Forced NODE_ENV override - ensure we're checking properly
   if (process.execPath && process.execPath.includes('Applications')) {
-    log.info('App appears to be installed in Applications - forcing production mode');
+    log.debug('App appears to be installed in Applications - forcing production mode');
     process.env.NODE_ENV = 'production';
   }
   
@@ -54,14 +54,14 @@ function getBinPath() {
     // We'll use the executable from the bin directory in the project
     const devPath = path.join(__dirname, '..', 'bin');
     if (fs.existsSync(devPath)) {
-      log.info('Found bin directory:', devPath);
+      log.debug('Found bin directory:', devPath);
       return devPath;
     }
     
     // Fall back to looking in the parent directory (where the Go project is)
     const parentPath = path.join(__dirname, '..', '..');
     if (fs.existsSync(parentPath)) {
-      log.info('Found parent directory:', parentPath);
+      log.debug('Found parent directory:', parentPath);
       return parentPath;
     }
     
@@ -82,10 +82,10 @@ function getBinPath() {
     return null;
   }
 
-  log.info('Looking for bin under Resources at:', resourcesDir);
+  log.debug('Looking for bin under Resources at:', resourcesDir);
   const binDir = path.join(resourcesDir, 'bin');
   if (fs.existsSync(binDir)) {
-    log.info('Found bin directory at:', binDir);
+    log.debug('Found bin directory at:', binDir);
     return binDir;
   }
 
@@ -95,18 +95,18 @@ function getBinPath() {
   if (process.resourcesPath) {
     // Electron provides this directly in packaged apps
     resourcesDir = process.resourcesPath;
-    log.info('Using process.resourcesPath:', resourcesDir);
+    log.debug('Using process.resourcesPath:', resourcesDir);
   } else if (process.execPath && process.platform === 'darwin') {
     // On macOS, resources are in a standard location relative to the executable
     resourcesDir = path.join(path.dirname(process.execPath), '..', 'Resources');
-    log.info('Using macOS standard path:', resourcesDir);
+    log.debug('Using macOS standard path:', resourcesDir);
   } else {
     // Try to infer from __dirname
     resourcesDir = path.join(__dirname, '..', '..', '..');
     if (path.basename(resourcesDir) !== 'Resources') {
       resourcesDir = path.join(resourcesDir, 'Resources');
     }
-    log.info('Inferred Resources path:', resourcesDir);
+    log.debug('Inferred Resources path:', resourcesDir);
   }
   
   // Primary location for packaged apps with absolute path for GUI launches
@@ -116,9 +116,9 @@ function getBinPath() {
   ];
   
   for (const primaryLocation of primaryLocations) {
-    log.info('Checking primary location:', primaryLocation);
+    log.debug('Checking primary location:', primaryLocation);
     if (fs.existsSync(primaryLocation)) {
-      log.info('✅ Found bin at primary location');
+      log.debug('✅ Found bin at primary location');
       return primaryLocation;
     }
   }
@@ -134,15 +134,15 @@ function getBinPath() {
   
   // Check each possible path
   for (const possiblePath of fallbackPaths) {
-    log.info('Checking fallback path:', possiblePath);
+    log.debug('Checking fallback path:', possiblePath);
     if (fs.existsSync(possiblePath)) {
-      log.info('✅ Found bin at fallback path:', possiblePath);
+      log.debug('✅ Found bin at fallback path:', possiblePath);
       return possiblePath;
     }
   }
   
   // Last resort - search common paths
-  log.info('Searching standard macOS application paths...');
+  log.debug('Searching standard macOS application paths...');
   const standardMacPaths = [
     '/Applications/PocketShield.app/Contents/Resources/bin',
     '/Applications/PocketShield.app/Contents/MacOS/bin',
@@ -150,25 +150,25 @@ function getBinPath() {
   ];
   
   for (const stdPath of standardMacPaths) {
-    log.info('Checking standard path:', stdPath);
+    log.debug('Checking standard path:', stdPath);
     if (fs.existsSync(stdPath)) {
-      log.info('✅ Found bin at standard path:', stdPath);
+      log.debug('✅ Found bin at standard path:', stdPath);
       return stdPath;
     }
   }
   
   // Last resort - try to find and list the resources directory contents
   try {
-    log.info('Contents of resources directory:');
+    log.debug('Contents of resources directory:');
     if (fs.existsSync(resourcesDir)) {
       const contents = fs.readdirSync(resourcesDir);
-      log.info(contents);
+      log.debug(contents);
       
       // Check if bin directory exists
       const binDir = path.join(resourcesDir, 'bin');
       if (fs.existsSync(binDir)) {
-        log.info('Contents of bin directory:');
-        log.info(fs.readdirSync(binDir));
+        log.debug('Contents of bin directory:');
+        log.debug(fs.readdirSync(binDir));
       }
     }
   } catch (error) {
@@ -201,15 +201,14 @@ export async function startBackend() {
     return null;
   }
 
-  log.info(`Using fixed port: ${FIXED_PORT}`)
+  log.debug(`Using fixed port: ${FIXED_PORT}`)
 
   const resourcesDir = process.resourcesPath;
   const binDir       = path.join(resourcesDir, 'bin');
 
-  // DUMP BIN DIR CONTENTS
   try {
     const files = fs.readdirSync(binDir);
-    log.info(`Contents of ${binDir}:`, files);
+    log.debug(`Contents of ${binDir}:`, files);
   } catch (err) {
     log.error(`Could not list ${binDir}:`, err);
   }
@@ -217,15 +216,15 @@ export async function startBackend() {
   const backendPath = getBackendPath();
   const backendDir  = path.dirname(backendPath);
 
-  log.info(`Checking backendPath: ${backendPath}`);
-  log.info('  exists:', fs.existsSync(backendPath));
+  log.debug(`Checking backendPath: ${backendPath}`);
+  log.debug('  exists:', fs.existsSync(backendPath));
   if (fs.existsSync(backendPath)) {
     const st = fs.statSync(backendPath);
-    log.info('  mode:', (st.mode & 0o777).toString(8));
-    log.info('  size:', st.size);
+    log.debug('  mode:', (st.mode & 0o777).toString(8));
+    log.debug('  size:', st.size);
   }
 
-  log.info('Spawning backend with cwd:', backendDir);
+  log.debug('Spawning backend with cwd:', backendDir);
 
   let backendLogPath = path.join(
     process.resourcesPath || __dirname,
@@ -236,7 +235,7 @@ export async function startBackend() {
   const outFd = fs.openSync(backendLogPath, 'a')
   const errFd = fs.openSync(backendLogPath, 'a')
 
-  log.info(`All backend output → ${backendLogPath}`)
+  log.debug(`All backend output → ${backendLogPath}`)
 
   const proc = spawn(
     backendPath,
@@ -247,7 +246,7 @@ export async function startBackend() {
         PORT:       FIXED_PORT.toString(),
         MODEL_PATH: getDefaultModelPath(),
       },
-      stdio:  ['ignore', outFd, errFd]  // <— attach child stdout → outFd, stderr → errFd
+      stdio:  ['ignore', outFd, errFd]
     }
   )
 
@@ -255,13 +254,30 @@ export async function startBackend() {
     log.error('Backend spawn error:', err)
   })
   proc.on('exit', (code, signal) => {
-    log.info(`Backend exit — code: ${code}, signal: ${signal}`)
-    // close our fds
+    log.debug(`Backend exit — code: ${code}, signal: ${signal}`)
     fs.closeSync(outFd)
     fs.closeSync(errFd)
   })
 
-  // optional: give it a moment to bind
+  proc.on('close', code => {
+    log.debug(`Backend stdio closed, code ${code}`)
+    if (code !== 0 && code !== null) {
+      log.error(`Backend crashed (code ${code}), exiting host process`)
+      process.exit(code)
+    }
+    fs.closeSync(outFd)
+    fs.closeSync(errFd)
+  })
+
+  process.on('SIGINT', () => {
+    log.debug('Received SIGINT, stopping backend…')
+    proc.kill('SIGINT')
+  })
+  process.on('SIGTERM', () => {
+    log.debug('Received SIGTERM, stopping backend…')
+    proc.kill('SIGTERM')
+  })
+
   await new Promise(r => setTimeout(r, 500))
 
   return { process: proc, kill: sig => proc.kill(sig) }
