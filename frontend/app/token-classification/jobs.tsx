@@ -44,7 +44,7 @@ interface ReportWithStatus {
   SourceS3Prefix?: string;
   CreationTime: string;
   FileCount: number;
-  CompletedFileCount: number;
+  SucceededFileCount: number;
   FailedFileCount: number;
   Tags?: string[];
   CustomTags?: { [key: string]: string };
@@ -89,7 +89,7 @@ export default function Jobs() {
             r.Id === report.Id
               ? {
                   ...r,
-                  CompletedFileCount: detailedReport.CompletedFileCount,
+                  SucceededFileCount: detailedReport.SucceededFileCount,
                   detailedStatus: {
                     ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
                     InferenceTaskStatuses: detailedReport.InferenceTaskStatuses,
@@ -101,7 +101,10 @@ export default function Jobs() {
         );
 
         // If files are complete, return true to stop polling
-        return detailedReport.CompletedFileCount === detailedReport.FileCount;
+        return (
+          detailedReport.SucceededFileCount + detailedReport.FailedFileCount ===
+          detailedReport.FileCount
+        );
       } catch (err) {
         console.error(`Error fetching status for report ${report.Id}:`, err);
         setReports((prev) =>
@@ -298,11 +301,11 @@ export default function Jobs() {
     const failed = InferenceTaskStatuses?.FAILED?.TotalTasks || 0;
 
     const fileCount = report.FileCount || 0;
-    const completedFileCount = report.CompletedFileCount || 0;
+    const succeededFileCount = report.SucceededFileCount || 0;
     const failedFileCount = report.FailedFileCount || 0;
     const totalTasks = completed + running + queued + failed;
 
-    const progress = completedFileCount > 0 ? (completedFileCount / fileCount) * 100 : 0;
+    const progress = succeededFileCount > 0 ? (succeededFileCount / fileCount) * 100 : 0;
 
     // If there are failed tasks, show failure status
     if (failedFileCount > 0) {
@@ -323,7 +326,7 @@ export default function Jobs() {
               <Box
                 sx={{
                   height: '100%',
-                  width: `${(completedFileCount / fileCount) * 100}%`,
+                  width: `${(succeededFileCount / fileCount) * 100}%`,
                   bgcolor: '#4caf50',
                 }}
               />
@@ -344,11 +347,11 @@ export default function Jobs() {
                 fontWeight: 'medium',
               }}
             >
-              {`${(((completedFileCount + failedFileCount) / fileCount) * 100).toFixed(0)} %`}
+              {`${(((succeededFileCount + failedFileCount) / fileCount) * 100).toFixed(0)} %`}
             </Typography>
           </Box>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            {`Files: ${completedFileCount}/${fileCount} Succeeded, ${failedFileCount}/${fileCount} Failed`}
+            {`Files: ${succeededFileCount}/${fileCount} Succeeded, ${failedFileCount}/${fileCount} Failed`}
           </Typography>
         </Box>
       );
@@ -394,7 +397,7 @@ export default function Jobs() {
           </Typography>
         </Box>
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-          {`Files: ${completedFileCount}/${fileCount}`}
+          {`Files: ${succeededFileCount}/${fileCount}`}
         </Typography>
       </Box>
     );
