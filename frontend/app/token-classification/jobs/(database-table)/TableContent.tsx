@@ -5,6 +5,7 @@ import { TableContentProps } from './types';
 import { Button } from '@/components/ui/button';
 import { NO_GROUP } from '@/lib/utils';
 
+
 const PASTELS = ['#E5A49C', '#F6C886', '#FBE7AA', '#99E3B5', '#A6E6E7', '#A5A1E1', '#D8A4E2'];
 const DARKERS = ['#D34F3E', '#F09336', '#F7CF5F', '#5CC96E', '#65CFD0', '#597CE2', '#B64DC8'];
 
@@ -263,7 +264,7 @@ export function TableContent({
                 <LoadMoreButton
                   hasMore={hasMoreTokens}
                   isLoading={isLoadingTokenRecords}
-                  onClick={onLoadMore ?? (() => {})}
+                  onClick={onLoadMore ?? (() => { })}
                 />
               </TableCell>
             </TableRow>
@@ -273,151 +274,62 @@ export function TableContent({
     );
   }
 
-  if (viewMode === 'object') {
-    const filteredRecords = objectRecords.filter((record) =>
-      filterRecords(
-        record.groups,
-        record.taggedTokens.map((token) => token[1])
-      )
-    );
-
-    return (
-      <>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Full Text with Tagged Tokens</TableHead>
-            <TableHead>Source Object</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {filteredRecords.length > 0 ? (
-            filteredRecords.map((record, index) => (
-              <TableRow key={index}>
-                <TableCell className="mw-3/5">
-                  <div className="text-sm leading-relaxed bg-white p-3 rounded border border-gray-100 shadow-sm">
-                    {record.taggedTokens.map((token, tokenIndex) => {
-                      const isLastToken = tokenIndex === record.taggedTokens.length - 1;
-                      const nextNonWhitespaceTokenIndex = record.taggedTokens.findIndex(
-                        (t, i) => i > tokenIndex && t[0].trim() !== ''
-                      );
-                      const nextToken =
-                        nextNonWhitespaceTokenIndex !== -1
-                          ? record.taggedTokens[nextNonWhitespaceTokenIndex]
-                          : null;
-                      const differentTagThanNext = nextToken !== null && nextToken[1] !== token[1];
-                      return (
-                        <HighlightedToken
-                          key={`${index}-${tokenIndex}`}
-                          token={token[0]}
-                          tag={tagFilters[token[1]] ? token[1] : 'O'}
-                          tagColors={tagColors}
-                          labeled={isLastToken || differentTagThanNext}
-                        />
-                      );
-                    })}
-                  </div>
-                </TableCell>
-                <TableCell className="w-1/5 px-4">
-                  <div className="relative group">
-                    <span
-                      className={`block max-w-[${showFilterContent ? '100' : '200'}px] truncate`}
-                      title={record.sourceObject.split('/').slice(-1).join('')}
-                    >
-                      {record.sourceObject.split('/').slice(-1)}
-                    </span>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell colSpan={2} className="text-center py-8 text-gray-500">
-                {objectRecords.length === 0 ? (
-                  isLoadingObjectRecords ? (
-                    <div className="flex items-center justify-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Loading records...
-                    </div>
-                  ) : (
-                    <div>No objects found. Please check the data source.</div>
-                  )
-                ) : (
-                  <div>No objects match the current filters.</div>
-                )}
-              </TableCell>
-            </TableRow>
-          )}
-          {filteredRecords.length > 0 && (
-            <TableRow>
-              <TableCell colSpan={2}>
-                <LoadMoreButton
-                  hasMore={hasMoreTokens}
-                  isLoading={isLoadingTokenRecords}
-                  onClick={onLoadMore ?? (() => {})}
-                />
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </>
-    );
-  }
+  const filteredRecords = objectRecords.filter((record) =>
+    filterRecords(
+      record.groups,
+      record.taggedTokens.map((token) => token[1])
+    )
+  );
 
   return (
-    <>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Token</TableHead>
-          <TableHead>Tag</TableHead>
-          <TableHead>Context</TableHead>
-          <TableHead>Source Object</TableHead>
-          <TableHead>Groups</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {tokenRecords
-          .filter((record) => {
-            const tagMatches = tagFilters[record.tag];
-            const groupMatches =
-              record.groups.length === 0 || record.groups.some((group) => groupFilters[group]);
-            return groupMatches && tagMatches;
-          })
-          .map((record, index) => (
-            <TableRow key={index}>
-              <TableCell>{record.token}</TableCell>
-              <TableCell>
-                <HighlightedTag tag={record.tag} tagColors={tagColors} />
-              </TableCell>
-              <TableCell className="max-w-sm">
-                {record.context ? (
-                  <TokenContext
-                    context={{
-                      left: record.context.left,
-                      right: record.context.right,
-                      token: record.token,
-                      tag: record.tag,
-                    }}
-                    tagColors={tagColors}
+
+    <div className='mt-4'>
+      {filteredRecords.map((record, index) => {
+        return (
+          <details className="group text-sm leading-relaxed bg-white rounded border border-gray-100 shadow-sm mb-4">
+            <summary className="p-3 cursor-pointer bg-gray-100 flex items-center">
+              <div className="flex items-center gap-2">
+                <svg
+                  className="w-4 h-4 transition-transform group-open:rotate-90"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
                   />
-                ) : (
-                  <span className="text-red-400 text-xs">Missing context</span>
-                )}
-              </TableCell>
-              <TableCell>{record.sourceObject}</TableCell>
-              <TableCell>{record.groups.join(', ')}</TableCell>
-            </TableRow>
-          ))}
-        {isLoadingTokenRecords && (
-          <TableRow>
-            <TableCell colSpan={5} className="text-center py-4 text-gray-500">
-              <div className="flex items-center justify-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Loading more records...
+                </svg>
+                <span className='font-semibold'>{record.sourceObject.split("/").slice(-1)}</span>
               </div>
-            </TableCell>
-          </TableRow>
-        )}
-      </TableBody>
-    </>
+            </summary>
+            <div className="p-4">
+              {record.taggedTokens.map((token, tokenIndex) => {
+                const isLastToken = tokenIndex === record.taggedTokens.length - 1;
+                const nextNonWhitespaceTokenIndex = record.taggedTokens.findIndex(
+                  (t, i) => i > tokenIndex && t[0].trim() !== ''
+                );
+                const nextToken =
+                  nextNonWhitespaceTokenIndex !== -1
+                    ? record.taggedTokens[nextNonWhitespaceTokenIndex]
+                    : null;
+                const differentTagThanNext = nextToken !== null && nextToken[1] !== token[1];
+                return (
+                  <HighlightedToken
+                    key={`${index}-${tokenIndex}`}
+                    token={token[0]}
+                    tag={tagFilters[token[1]] ? token[1] : 'O'}
+                    tagColors={tagColors}
+                    labeled={isLastToken || differentTagThanNext}
+                  />
+                );
+              })}
+            </div>
+          </details>
+        )
+      })}
+    </div>
   );
 }
