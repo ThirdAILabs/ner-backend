@@ -4,6 +4,7 @@ import { Loader2 } from 'lucide-react';
 import { TableContentProps } from './types';
 import { Button } from '@/components/ui/button';
 import { NO_GROUP } from '@/lib/utils';
+import { ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const PASTELS = ['#E5A49C', '#F6C886', '#FBE7AA', '#99E3B5', '#A6E6E7', '#A5A1E1', '#D8A4E2'];
 const DARKERS = ['#D34F3E', '#F09336', '#F7CF5F', '#5CC96E', '#65CFD0', '#597CE2', '#B64DC8'];
@@ -287,20 +288,10 @@ export function TableContent({
           <details className="group text-sm leading-relaxed bg-white rounded border border-gray-100 shadow-sm mb-4">
             <summary className="p-3 cursor-pointer bg-gray-100 flex items-center">
               <div className="flex items-center gap-2">
-                <svg
+                <ChevronRight
                   className="w-4 h-4 transition-transform group-open:rotate-90"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
-                </svg>
-                <span className="font-semibold">{record.sourceObject.split('/').slice(-1)}</span>
+                />
+                <span className="font-semibold" style={{ userSelect: 'none' }}>{record.sourceObject.split('/').slice(-1)}</span>
               </div>
             </summary>
             <div className="p-4">
