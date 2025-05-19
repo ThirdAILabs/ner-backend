@@ -150,7 +150,7 @@ export default function NewJobPage() {
   const SUPPORTED_TYPES = ['.pdf', '.txt', '.csv', '.html', '.json', '.xml'];
 
   const isFileSupported = (filename: string) => {
-    return SUPPORTED_TYPES.some(ext => filename.toLowerCase().endsWith(ext));
+    return SUPPORTED_TYPES.some((ext) => filename.toLowerCase().endsWith(ext));
   };
 
   // Fetch models on page load
@@ -335,12 +335,12 @@ export default function NewJobPage() {
 
   const addFiles = (files: File[]) => {
     const newSelectedFiles = [...selectedFiles];
-    
-    files.forEach(newFile => {
-      const existingIndex = newSelectedFiles.findIndex(existingFile => 
-        existingFile.name === newFile.name
+
+    files.forEach((newFile) => {
+      const existingIndex = newSelectedFiles.findIndex(
+        (existingFile) => existingFile.name === newFile.name
       );
-      
+
       if (existingIndex !== -1) {
         // Duplicate file so, replace the existing file with the new one
         newSelectedFiles[existingIndex] = newFile;
@@ -349,7 +349,7 @@ export default function NewJobPage() {
         newSelectedFiles.push(newFile);
       }
     });
-    
+
     setSelectedFiles(newSelectedFiles);
   };
 
@@ -358,8 +358,8 @@ export default function NewJobPage() {
     const files = e.target.files;
     if (files) {
       const fileArray = Array.from(files);
-      const supportedFiles = fileArray.filter(file => isFileSupported(file.name));
-      
+      const supportedFiles = fileArray.filter((file) => isFileSupported(file.name));
+
       if (supportedFiles.length > 0) {
         addFiles(supportedFiles);
       } else {
@@ -421,7 +421,10 @@ export default function NewJobPage() {
       return;
     }
 
-    if ((selectedSource === 'files' || selectedSource === 'directory') && selectedFiles.length === 0) {
+    if (
+      (selectedSource === 'files' || selectedSource === 'directory') &&
+      selectedFiles.length === 0
+    ) {
       setError('Please select at least one file');
       return;
     }
@@ -438,7 +441,7 @@ export default function NewJobPage() {
       let uploadId;
 
       // Handle file/directory uploads if needed
-      if ((selectedSource === 'files' || selectedSource === 'directory')) {
+      if (selectedSource === 'files' || selectedSource === 'directory') {
         const uploadResponse = await nerService.uploadFiles(selectedFiles);
         uploadId = uploadResponse.Id;
       }
@@ -541,12 +544,7 @@ export default function NewJobPage() {
             className="text-red-500 hover:text-red-700 p-1"
             aria-label="Remove file"
           >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -677,7 +675,10 @@ export default function NewJobPage() {
                     <div className="w-full">
                       <input
                         type="file"
-                        {...{ webkitdirectory: '', directory: '' } as { webkitdirectory: string, directory: string }}
+                        {...({ webkitdirectory: '', directory: '' } as {
+                          webkitdirectory: string;
+                          directory: string;
+                        })}
                         multiple
                         onChange={handleFileChange}
                         className="hidden"
@@ -706,9 +707,7 @@ export default function NewJobPage() {
                               Select directory
                             </span>
                           </div>
-                          <p className="text-xs text-gray-500">
-                            Click to browse
-                          </p>
+                          <p className="text-xs text-gray-500">Click to browse</p>
                         </div>
                       </label>
 
@@ -1285,7 +1284,7 @@ export default function NewJobPage() {
                 onClick={handleCloseDialog}
                 style={{
                   backgroundColor: '#1976d2',
-                  color: 'white'
+                  color: 'white',
                 }}
               >
                 OK
