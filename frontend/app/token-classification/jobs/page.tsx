@@ -26,10 +26,10 @@ import { floor } from 'lodash';
 
 // Calculate progress based on InferenceTaskStatuses
 const calculateProgress = (report: Report | null): number => {
-  if (!report || !report.CompletedFileCount || !report.FailedFileCount || !report.FileCount)
+  if (!report || !report.SucceededFileCount || !report.FailedFileCount || !report.FileCount)
     return 0;
 
-  return floor(((report.CompletedFileCount + report.FailedFileCount) / report.FileCount) * 100);
+  return floor(((report.SucceededFileCount + report.FailedFileCount) / report.FileCount) * 100);
 };
 
 // Get the total number of processed tokens
@@ -288,7 +288,7 @@ function JobDetail() {
     return () => {
       clearInterval(pollInterval);
     };
-  }, [reportId, reportData?.CompletedFileCount]);
+  }, [reportId, reportData?.SucceededFileCount]);
 
   return (
     <div className="container px-4 py-8 w-3/4 mx-auto">
@@ -447,7 +447,7 @@ function JobDetail() {
             tokensProcessed={getProcessedTokens(reportData)}
             tags={availableTagsCount}
             timeTaken={timeTaken}
-            completedFileCount={reportData?.CompletedFileCount || 0}
+            succeededFileCount={reportData?.SucceededFileCount || 0}
             failedFileCount={reportData?.FailedFileCount || 0}
             totalFileCount={reportData?.FileCount || 0}
           />
