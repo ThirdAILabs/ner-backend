@@ -15,7 +15,7 @@ log.transports.file.resolvePath = () => {
     process.resourcesPath || __dirname,
     '..', // up to Resources
     'logs',
-    'backend.log'
+    'backend-launcher.log'
   );
 };
 
@@ -230,7 +230,7 @@ export async function startBackend() {
     process.resourcesPath || __dirname,
     '..', // up to Resources
     'logs',
-    'backend_go.log'
+    'ner-backend.log'
   )
   const outFd = fs.openSync(backendLogPath, 'a')
   const errFd = fs.openSync(backendLogPath, 'a')
