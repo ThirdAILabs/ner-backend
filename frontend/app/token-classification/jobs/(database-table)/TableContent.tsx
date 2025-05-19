@@ -288,10 +288,10 @@ export function TableContent({
           <details className="group text-sm leading-relaxed bg-white rounded border border-gray-100 shadow-sm mb-4">
             <summary className="p-3 cursor-pointer bg-gray-100 flex items-center">
               <div className="flex items-center gap-2">
-                <ChevronRight
-                  className="w-4 h-4 transition-transform group-open:rotate-90"
-                />
-                <span className="font-semibold" style={{ userSelect: 'none' }}>{record.sourceObject.split('/').slice(-1)}</span>
+                <ChevronRight className="w-4 h-4 transition-transform group-open:rotate-90" />
+                <span className="font-semibold" style={{ userSelect: 'none' }}>
+                  {record.sourceObject.split('/').slice(-1)}
+                </span>
               </div>
             </summary>
             <div className="p-4">
