@@ -9,15 +9,10 @@ interface SaveButtonProps {
 
 const SaveButton: React.FC<SaveButtonProps> = ({ onClick, style }) => {
   return (
-    <Button
-      variant="contained"
-      color="primary"
-      onClick={onClick}
-      style={style}
-    >
+    <Button variant="contained" color="primary" onClick={onClick} style={style}>
       <SaveAlt />
     </Button>
   );
 };
 
-export default SaveButton; 
+export default SaveButton;

@@ -31,4 +31,4 @@ export interface TrainReportData {
     label_metrics: Record<string, LabelMetrics>;
   };
   examples: ExampleCategories;
-} 
+}

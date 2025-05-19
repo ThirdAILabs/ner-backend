@@ -8,9 +8,5 @@ interface ProvidersProps {
 }
 
 export function Providers({ children }: ProvidersProps) {
-  return (
-    <HealthProvider>
-      {children}
-    </HealthProvider>
-  );
+  return <HealthProvider>{children}</HealthProvider>;
 }

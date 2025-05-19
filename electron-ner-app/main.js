@@ -1,9 +1,17 @@
-const { app, BrowserWindow, dialog } = require('electron');
-const path = require('path');
-const fs = require('fs');
-const serve = require('electron-serve');
-const { autoUpdater } = require('electron-updater');
-const log = require('electron-log');
+import { app, BrowserWindow, dialog } from 'electron';
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import serve from 'electron-serve';
+import { startBackend } from './scripts/start-backend.js';
+import log from 'electron-log';
+import electronUpdater from 'electron-updater';
+
+const { autoUpdater } = electronUpdater;
+
+// Get __dirname equivalent in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const appServe = app.isPackaged ? serve({
   directory: path.join(__dirname, "frontend-dist")
@@ -12,14 +20,12 @@ const appServe = app.isPackaged ? serve({
 // Safely check if we're in development mode with fallback if module is missing
 let isDev = false;
 try {
-  const electronIsDev = require('electron-is-dev');
-  isDev = electronIsDev;
+  const electronIsDev = await import('electron-is-dev');
+  isDev = electronIsDev.default;
 } catch (error) {
   console.warn('electron-is-dev module not found, assuming production mode');
   isDev = false;
 }
-
-const { startBackend } = require('./scripts/start-backend');
 
 // Force NODE_ENV to 'production' when not in development mode
 if (!isDev) {

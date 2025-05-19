@@ -12,39 +12,48 @@ const mockLabels = ['NAME', 'PHONE', 'EMAIL', 'ADDRESS', 'DATE', 'ORGANIZATION',
 const mockSamples = [
   {
     id: 1,
-    text: "Please contact John Doe at john.doe@example.com or 555-123-4567.",
-    tokens: ["Please", "contact", "John", "Doe", "at", "john.doe@example.com", "or", "555-123-4567"],
-    tags: ["O", "O", "NAME", "NAME", "O", "EMAIL", "O", "PHONE"],
-    timestamp: "11/15/2023, 8:32:00 AM"
+    text: 'Please contact John Doe at john.doe@example.com or 555-123-4567.',
+    tokens: [
+      'Please',
+      'contact',
+      'John',
+      'Doe',
+      'at',
+      'john.doe@example.com',
+      'or',
+      '555-123-4567',
+    ],
+    tags: ['O', 'O', 'NAME', 'NAME', 'O', 'EMAIL', 'O', 'PHONE'],
+    timestamp: '11/15/2023, 8:32:00 AM',
   },
   {
     id: 2,
-    text: "Our office is located at 123 Main St",
-    tokens: ["Our", "office", "is", "located", "at", "123", "Main", "St"],
-    tags: ["O", "O", "O", "O", "O", "ADDRESS", "ADDRESS", "ADDRESS"],
-    timestamp: "11/14/2023, 3:18:00 AM"
+    text: 'Our office is located at 123 Main St',
+    tokens: ['Our', 'office', 'is', 'located', 'at', '123', 'Main', 'St'],
+    tags: ['O', 'O', 'O', 'O', 'O', 'ADDRESS', 'ADDRESS', 'ADDRESS'],
+    timestamp: '11/14/2023, 3:18:00 AM',
   },
   {
     id: 3,
-    text: "Robert Johnson will visit on January 15th",
-    tokens: ["Robert", "Johnson", "will", "visit", "on", "January", "15th"],
-    tags: ["NAME", "NAME", "O", "O", "O", "DATE", "DATE"],
-    timestamp: "11/13/2023, 10:45:00 AM"
+    text: 'Robert Johnson will visit on January 15th',
+    tokens: ['Robert', 'Johnson', 'will', 'visit', 'on', 'January', '15th'],
+    tags: ['NAME', 'NAME', 'O', 'O', 'O', 'DATE', 'DATE'],
+    timestamp: '11/13/2023, 10:45:00 AM',
   },
   {
     id: 4,
-    text: "The meeting is at Google headquarters",
-    tokens: ["The", "meeting", "is", "at", "Google", "headquarters"],
-    tags: ["O", "O", "O", "O", "ORGANIZATION", "O"],
-    timestamp: "11/12/2023, 9:30:00 AM"
+    text: 'The meeting is at Google headquarters',
+    tokens: ['The', 'meeting', 'is', 'at', 'Google', 'headquarters'],
+    tags: ['O', 'O', 'O', 'O', 'ORGANIZATION', 'O'],
+    timestamp: '11/12/2023, 9:30:00 AM',
   },
   {
     id: 5,
-    text: "Please email Jane Doe at jane.doe@example.com",
-    tokens: ["Please", "email", "Jane", "Doe", "at", "jane.doe@example.com"],
-    tags: ["O", "O", "NAME", "NAME", "O", "EMAIL"],
-    timestamp: "11/11/2023, 2:15:00 PM"
-  }
+    text: 'Please email Jane Doe at jane.doe@example.com',
+    tokens: ['Please', 'email', 'Jane', 'Doe', 'at', 'jane.doe@example.com'],
+    tags: ['O', 'O', 'NAME', 'NAME', 'O', 'EMAIL'],
+    timestamp: '11/11/2023, 2:15:00 PM',
+  },
 ];
 
 const Separator: React.FC = () => <hr className="my-3 border-t border-gray-200" />;
@@ -73,14 +82,15 @@ function HighlightedSample({ tokens, tags, tagColors }: HighlightedSampleProps) 
           }}
         >
           {token}
-          {tagColors[tags[index]] && (index === tokens.length - 1 || tags[index] !== tags[index + 1]) && (
-            <span
-              className="text-xs font-bold text-white rounded px-1 py-0.5 ml-1 align-text-top"
-              style={{ backgroundColor: tagColors[tags[index]].tag }}
-            >
-              {tags[index]}
-            </span>
-          )}
+          {tagColors[tags[index]] &&
+            (index === tokens.length - 1 || tags[index] !== tags[index + 1]) && (
+              <span
+                className="text-xs font-bold text-white rounded px-1 py-0.5 ml-1 align-text-top"
+                style={{ backgroundColor: tagColors[tags[index]].tag }}
+              >
+                {tags[index]}
+              </span>
+            )}
         </span>
       ))}
     </div>
@@ -109,9 +119,9 @@ const RecentSamples: React.FC<RecentSamplesProps> = ({ deploymentUrl }) => {
   ];
 
   // Extract all unique tags from samples (excluding 'O')
-  const uniqueLabels = Array.from(
-    new Set(samples.flatMap(sample => sample.tags))
-  ).filter(tag => tag !== 'O');
+  const uniqueLabels = Array.from(new Set(samples.flatMap((sample) => sample.tags))).filter(
+    (tag) => tag !== 'O'
+  );
 
   useEffect(() => {
     const allTags = samples.flatMap((sample) => sample.tags);
@@ -139,10 +149,10 @@ const RecentSamples: React.FC<RecentSamplesProps> = ({ deploymentUrl }) => {
   const handleRefresh = async () => {
     setIsLoadingLabels(true);
     setIsLoadingSamples(true);
-    
+
     // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
+    await new Promise((resolve) => setTimeout(resolve, 800));
+
     setIsLoadingLabels(false);
     setIsLoadingSamples(false);
   };
@@ -202,4 +212,4 @@ const RecentSamples: React.FC<RecentSamplesProps> = ({ deploymentUrl }) => {
   );
 };
 
-export default RecentSamples; 
+export default RecentSamples;

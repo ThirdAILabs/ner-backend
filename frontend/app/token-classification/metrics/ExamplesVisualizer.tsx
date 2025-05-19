@@ -23,106 +23,106 @@ interface TrainReportData {
 const mockReport: TrainReportData = {
   after_train_examples: {
     true_positives: {
-      'O': [
+      O: [
         {
           source: 'Contact John at john@example.com for more information about the project.',
           target: 'O O NAME O EMAIL O O O O O O O',
           predictions: 'O O NAME O EMAIL O O O O O O O',
-          index: 2
+          index: 2,
         },
         {
           source: 'Please send your documents to 555 Main Street, New York, NY 10001.',
           target: 'O O O O O ADDRESS ADDRESS ADDRESS ADDRESS ADDRESS',
           predictions: 'O O O O O ADDRESS ADDRESS ADDRESS ADDRESS ADDRESS ADDRESS',
-          index: 5
-        }
+          index: 5,
+        },
       ],
-      'NAME': [
+      NAME: [
         {
           source: 'Sarah Johnson will be presenting at the conference tomorrow.',
           target: 'NAME NAME O O O O O O O',
           predictions: 'NAME NAME O O O O O O O',
-          index: 0
-        }
+          index: 0,
+        },
       ],
-      'PHONE': [
+      PHONE: [
         {
           source: 'You can reach customer service at (800) 555-1234 from 9am to 5pm.',
           target: 'O O O O O O O PHONE PHONE PHONE O O O O',
           predictions: 'O O O O O O O PHONE PHONE PHONE O O O O',
-          index: 7
-        }
+          index: 7,
+        },
       ],
-      'EMAIL': [
+      EMAIL: [
         {
           source: 'For technical support, email support@company.com with your query.',
           target: 'O O O O EMAIL O O O',
           predictions: 'O O O O EMAIL O O O',
-          index: 4
-        }
+          index: 4,
+        },
       ],
-      'ADDRESS': [
+      ADDRESS: [
         {
           source: 'The new office is located at 123 Business Ave, Suite 400, Chicago, IL.',
           target: 'O O O O O O ADDRESS ADDRESS ADDRESS ADDRESS ADDRESS ADDRESS',
           predictions: 'O O O O O O ADDRESS ADDRESS ADDRESS ADDRESS ADDRESS ADDRESS',
-          index: 6
-        }
-      ]
+          index: 6,
+        },
+      ],
     },
     false_positives: {
-      'O': [
+      O: [
         {
           source: 'Contact Alex from the marketing team for updates.',
           target: 'O NAME O O O O O O',
           predictions: 'O O O O O O O O',
-          index: 1
-        }
+          index: 1,
+        },
       ],
-      'NAME': [
+      NAME: [
         {
           source: 'The company headquarters is in San Francisco.',
           target: 'O O O O O ADDRESS',
           predictions: 'O O O O O NAME',
-          index: 5
-        }
+          index: 5,
+        },
       ],
-      'EMAIL': [
+      EMAIL: [
         {
           source: 'Send a message to the team chat.',
           target: 'O O O O O O O',
           predictions: 'O O O O O EMAIL O',
-          index: 5
-        }
-      ]
+          index: 5,
+        },
+      ],
     },
     false_negatives: {
-      'NAME': [
+      NAME: [
         {
           source: 'Michael Brown is the new project manager starting next month.',
           target: 'NAME NAME O O O O O O O O',
           predictions: 'O O O O O O O O O O',
-          index: 0
-        }
+          index: 0,
+        },
       ],
-      'PHONE': [
+      PHONE: [
         {
           source: 'Call me at 212-555-6789 when you arrive.',
           target: 'O O O PHONE O O O',
           predictions: 'O O O O O O O',
-          index: 3
-        }
+          index: 3,
+        },
       ],
-      'ADDRESS': [
+      ADDRESS: [
         {
           source: 'The meeting will be at 350 Fifth Avenue, New York.',
           target: 'O O O O O ADDRESS ADDRESS ADDRESS',
           predictions: 'O O O O O O O O',
-          index: 5
-        }
-      ]
-    }
-  }
+          index: 5,
+        },
+      ],
+    },
+  },
 };
 
 interface TokenHighlightProps {
@@ -339,4 +339,4 @@ const ExamplesVisualizer: React.FC<ExamplesVisualizerProps> = ({ report = mockRe
   );
 };
 
-export default ExamplesVisualizer; 
+export default ExamplesVisualizer;

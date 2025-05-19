@@ -6,14 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import {
-  CheckCircle,
-  ArrowLeft,
-  RefreshCw,
-  Pause,
-  Square,
-  Plus
-} from 'lucide-react';
+import { ArrowLeft, RefreshCw, Square } from 'lucide-react';
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
 import { DatabaseTable } from './(database-table)/DatabaseTable';
 import { nerService } from '@/lib/backend';
@@ -23,68 +16,31 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Box,
-  Typography,
-  CircularProgress,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem
-} from '@mui/material';
+import { Box } from '@mui/material';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Suspense } from 'react';
 
 // Calculate progress based on InferenceTaskStatuses
 const calculateProgress = (report: Report | null): number => {
-  if (!report || !report.InferenceTaskStatuses) return 0;
+  if (!report || !report.CompletedFileCount || !report.FileCount) return 0;
 
-  const statuses = report.InferenceTaskStatuses;
-
-  // Sum up all task sizes
-  let totalSize = 0;
-  let completedSize = 0;
-
-  // Add completed tasks
-  if (statuses.COMPLETED) {
-    totalSize += statuses.COMPLETED.TotalSize;
-    completedSize += statuses.COMPLETED.TotalSize;
-  }
-
-  // Add running tasks
-  if (statuses.RUNNING) {
-    totalSize += statuses.RUNNING.TotalSize;
-  }
-
-  // Add queued tasks
-  if (statuses.QUEUED) {
-    totalSize += statuses.QUEUED.TotalSize;
-  }
-
-  // Add failed tasks
-  if (statuses.FAILED) {
-    totalSize += statuses.FAILED.TotalSize;
-  }
-
-  // Calculate percentage
-  if (totalSize === 0) return 0;
-  return Math.round((completedSize / totalSize) * 100);
+  return (report.CompletedFileCount / report.FileCount) * 100;
 };
 
 // Get the total number of processed tokens
 const getProcessedTokens = (report: Report | null): number => {
-  if (
-    !report ||
-    !report.InferenceTaskStatuses ||
-    !report.InferenceTaskStatuses.COMPLETED
-  ) {
+  if (!report || !report.InferenceTaskStatuses) {
     return 0;
   }
 
-  return report.InferenceTaskStatuses.COMPLETED.TotalSize;
+  return (
+    (report.InferenceTaskStatuses.COMPLETED?.TotalSize || 0) +
+    (report.InferenceTaskStatuses.FAILED?.TotalSize || 0) +
+    (report.InferenceTaskStatuses.RUNNING?.TotalSize || 0)
+  );
 };
 
 // Source option card component
@@ -101,14 +57,15 @@ const SourceOption: React.FC<SourceOptionProps> = ({
   description,
   isSelected = false,
   disabled = false,
-  onClick
+  onClick,
 }) => (
   <div
     className={`relative p-6 border rounded-md transition-all
       ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200'}
-      ${disabled
-        ? 'opacity-50 cursor-not-allowed bg-gray-50'
-        : 'cursor-pointer hover:border-blue-300'
+      ${
+        disabled
+          ? 'opacity-50 cursor-not-allowed bg-gray-50'
+          : 'cursor-pointer hover:border-blue-300'
       }
     `}
     onClick={() => !disabled && onClick()}
@@ -134,7 +91,7 @@ const Tag: React.FC<TagProps> = ({
   onClick,
   custom = false,
   addNew = false,
-  displayOnly = false
+  displayOnly = false,
 }) => {
   return (
     <div
@@ -203,9 +160,7 @@ const NewTagDialog: React.FC<{
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Create Custom Tag</DialogTitle>
-          <DialogDescription>
-            Define a new custom tag with a regex pattern.
-          </DialogDescription>
+          <DialogDescription>Define a new custom tag with a regex pattern.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
@@ -240,11 +195,7 @@ const NewTagDialog: React.FC<{
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button
-              type="submit"
-              variant="default"
-              className="bg-blue-400 hover:bg-blue-500"
-            >
+            <Button type="submit" variant="default" className="bg-blue-400 hover:bg-blue-500">
               Create Tag
             </Button>
           </DialogFooter>
@@ -257,22 +208,19 @@ const NewTagDialog: React.FC<{
 function JobDetail() {
   const searchParams = useSearchParams();
   const reportId: string = searchParams.get('jobId') as string;
-  const deploymentId = searchParams.get('deploymentId') as string;
-  const [lastUpdated, setLastUpdated] = useState(0);
   const [tabValue, setTabValue] = useState('analytics');
   const [selectedSource, setSelectedSource] = useState<'s3' | 'local'>('s3');
 
   // Remove selectedTags state, just keep availableTags
   const [availableTags, setAvailableTags] = useState<string[]>([]);
-  const [availableTagsCount, setAvailableTagsCount] = useState<
-    { type: string; count: number }[]
-  >([]);
+  const [availableTagsCount, setAvailableTagsCount] = useState<{ type: string; count: number }[]>(
+    []
+  );
 
   const [timeTaken, setTimeTaken] = useState(0);
 
   const [reportData, setReportData] = useState<Report | null>(null);
   const [customTags, setCustomTags] = useState<CustomTag[]>([]);
-  const [isNewTagDialogOpen, setIsNewTagDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchTags = async () => {
@@ -300,7 +248,7 @@ function JobDetail() {
         const customTagName: string[] = Object.keys(customTagsObj);
         const allCustomTags: CustomTag[] = customTagName.map((tag) => ({
           name: tag,
-          pattern: customTagsObj[tag]
+          pattern: customTagsObj[tag],
         }));
 
         setCustomTags(allCustomTags);
@@ -312,7 +260,7 @@ function JobDetail() {
         const allTagsCounts = tags.map((tag) => {
           return {
             type: tag,
-            count: tagObject[tag]
+            count: tagObject[tag],
           };
         });
         setAvailableTagsCount(allTagsCounts);
@@ -325,104 +273,20 @@ function JobDetail() {
   };
 
   useEffect(() => {
-    fetchTags();
+    const pollInterval = setInterval(async () => {
+      await fetchTags();
 
-    // Set up refresh timer
-    const timer = setInterval(() => {
-      setLastUpdated((prev) => prev + 1);
+      const currentProgress = calculateProgress(reportData);
+
+      if (currentProgress === 100) {
+        clearInterval(pollInterval);
+      }
     }, 1000);
 
-    return () => clearInterval(timer);
-  }, [reportId]);
-
-  // Optional: Add a refresh function that gets called when the refresh button is clicked
-  const handleRefresh = () => {
-    setLastUpdated(0);
-    fetchTags();
-  };
-
-  // Define real data loading functions for entities
-  const loadRealClassifiedTokenRecords = async (offset = 0, limit = 50) => {
-    try {
-      const entities = await nerService.getReportEntities(reportId, {
-        offset,
-        limit
-      });
-      console.log(
-        'API entities response:',
-        entities.length > 0 ? entities[0] : 'No entities'
-      );
-
-      // Extract unique entity types from the API response
-      const uniqueTypes = new Set(entities.map((entity) => entity.Label));
-      console.log(
-        'Unique entity types in API response:',
-        Array.from(uniqueTypes)
-      );
-      console.log('Tag filters available in UI:', availableTags);
-
-      return entities.map((entity) => {
-        const record = {
-          token: entity.Text,
-          tag: entity.Label,
-          sourceObject: entity.Object,
-          context: {
-            left: entity.LContext || '',
-            right: entity.RContext || ''
-          },
-          start: entity.Start,
-          end: entity.End,
-          groups:
-            reportData?.Groups?.filter((group) =>
-              group.Objects?.includes(entity.Object)
-            ).map((g) => g.Name) || []
-        };
-
-        // Log the first transformed record for debugging
-        if (entity === entities[0]) {
-          console.log('Transformed record:', record);
-        }
-
-        return record;
-      });
-    } catch (error) {
-      console.error('Error loading entities:', error);
-      return [];
-    }
-  };
-
-  // Loads data for the Objects tab view, showing complete sentences with tagged tokens
-  // Uses the GET /reports/{report_id}/entities endpoint and transforms the data
-  // since the /objects endpoint doesn't exist yet in the backend
-  const loadRealObjectRecords = async () => {
-    try {
-      // Get object previews (transformed from entities)
-      const objectPreviews = await nerService.getReportObjects(reportId, {
-        limit: 100
-      });
-
-      return objectPreviews.map((preview) => {
-        // Create tagged tokens array from the parallel tokens and tags arrays
-        const taggedTokens = preview.tokens.map((token, index) => [
-          token,
-          preview.tags[index]
-        ]) as [string, string][];
-
-        return {
-          taggedTokens,
-          sourceObject: preview.object,
-          // Get groups that include this object
-          groups:
-            reportData?.Groups?.filter((group) =>
-              group.Objects?.includes(preview.object)
-            ).map((g) => g.Name) || []
-        };
-      });
-    } catch (error) {
-      console.error('Error loading object records:', error);
-      return [];
-    }
-  };
+    return () => {
+      clearInterval(pollInterval);
+    };
+  }, [reportId, reportData?.CompletedFileCount]);
 
   return (
     <div className="container px-4 py-8 w-3/4 mx-auto">
@@ -463,18 +327,6 @@ function JobDetail() {
               Info
             </TabsTrigger>
           </TabsList>
-
-          <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-500">
-              Last updated: {lastUpdated} seconds ago
-            </span>
-            <Button variant="ghost" size="icon" onClick={handleRefresh}>
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon">
-              <Square className="h-4 w-4" />
-            </Button>
-          </div>
         </div>
 
         <TabsContent value="configuration" className="mt-0">
@@ -484,9 +336,7 @@ function JobDetail() {
             <h2 className="text-2xl font-medium mb-4">Source</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {selectedSource === 's3' && reportData?.SourceS3Bucket && (
-                <Box
-                  sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 2, boxShadow: 1 }}
-                >
+                <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 2, boxShadow: 1 }}>
                   <h3 className="text-lg font-medium mb-1">S3 Bucket</h3>
                   <p className="text-sm text-gray-600">
                     {reportData.SourceS3Bucket === 'uploads'
@@ -497,9 +347,7 @@ function JobDetail() {
               )}
 
               {selectedSource === 'local' && (
-                <Box
-                  sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 2 }}
-                >
+                <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 2 }}>
                   <h3 className="text-lg font-medium mb-1">Local Files</h3>
                   {/* <p className="text-sm text-gray-600">File Location...</p> */}
                 </Box>
@@ -508,9 +356,7 @@ function JobDetail() {
           </Box>
 
           {/* Tags */}
-          <Box
-            sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3, marginTop: 3 }}
-          >
+          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3, marginTop: 3 }}>
             <h2 className="text-2xl font-medium mb-4">Tags</h2>
             <div className="flex justify-between items-center mb-4">
               {isLoading ? (
@@ -530,9 +376,7 @@ function JobDetail() {
           </Box>
 
           {/* Custom Tags */}
-          <Box
-            sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3, marginTop: 3 }}
-          >
+          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3, marginTop: 3 }}>
             <h2 className="text-2xl font-medium mb-4">Tags</h2>
             <div className="flex justify-between items-center mb-4">
               {isLoading ? (
@@ -557,18 +401,14 @@ function JobDetail() {
                 </div>
               ) : (
                 <div className="text-center py-10 bg-gray-50 border border-dashed border-gray-200 rounded-lg w-[400px]">
-                  <p className="text-gray-500">
-                    No custom tags defined for this report
-                  </p>
+                  <p className="text-gray-500">No custom tags defined for this report</p>
                 </div>
               )}
             </div>
           </Box>
 
           {/* Groups */}
-          <Box
-            sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3, marginTop: 3 }}
-          >
+          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3, marginTop: 3 }}>
             <h2 className="text-2xl font-medium mb-4">Groups</h2>
             <div className="flex justify-between items-center mb-4">
               {isLoading ? (
@@ -578,25 +418,18 @@ function JobDetail() {
               ) : (reportData?.Groups ?? []).length > 0 ? (
                 <div className="grid grid-cols-3 md:grid-cols-3 gap-4">
                   {reportData?.Groups?.map((group) => (
-                    <GroupCard
-                      key={group.Id}
-                      name={group.Name}
-                      definition={group.Query}
-                    />
+                    <GroupCard key={group.Id} name={group.Name} definition={group.Query} />
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-10 bg-gray-50 border border-dashed border-gray-200 rounded-lg w-[400px]">
-                  <p className="text-gray-500">
-                    No groups defined for this report
-                  </p>
+                  <p className="text-gray-500">No groups defined for this report</p>
                 </div>
               )}
             </div>
           </Box>
 
           {/* ENDS */}
-
         </TabsContent>
 
         <TabsContent value="analytics">
@@ -605,6 +438,9 @@ function JobDetail() {
             tokensProcessed={getProcessedTokens(reportData)}
             tags={availableTagsCount}
             timeTaken={timeTaken}
+            completedFileCount={reportData?.CompletedFileCount || 0}
+            failedFileCount={reportData?.FailedFileCount || 0}
+            totalFileCount={reportData?.FileCount || 0}
           />
         </TabsContent>
 
@@ -620,7 +456,9 @@ function JobDetail() {
 }
 
 export default function Page() {
-  return <Suspense>
-    <JobDetail />
-  </Suspense>
+  return (
+    <Suspense>
+      <JobDetail />
+    </Suspense>
+  );
 }
