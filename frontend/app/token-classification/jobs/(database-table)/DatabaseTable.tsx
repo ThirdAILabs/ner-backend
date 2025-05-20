@@ -302,8 +302,8 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
 
   const handleTagFilterChange = (filterKey: string) => {
     const activeTagList = tags
-      .map(tag => tag.type)
-      .filter(tag => tag === filterKey ? !tagFilters[tag] : tagFilters[tag]);
+      .map((tag) => tag.type)
+      .filter((tag) => (tag === filterKey ? !tagFilters[tag] : tagFilters[tag]));
 
     setSelectedTags(activeTagList);
 
