@@ -96,7 +96,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
                   <span className="text-2xl font-bold text-gray-700">{infMetrics.InProgress}</span>
                 </div>
               </div>
-              <h3 className="mt-auto text-sm text-muted-foreground">In-Progress Files</h3>
+              <h3 className="mt-auto text-center text-sm text-muted-foreground">In-Progress Reports</h3>
             </CardContent>
           </Card>
 
@@ -108,7 +108,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
                   <span className="text-2xl font-bold text-gray-700">{infMetrics.Completed}</span>
                 </div>
               </div>
-              <h3 className="mt-auto text-sm text-muted-foreground">Completed Files</h3>
+              <h3 className="mt-auto text-center text-sm text-muted-foreground">Completed Reports</h3>
             </CardContent>
           </Card>
 
@@ -142,12 +142,12 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
             <CardContent className="flex flex-col items-center justify-center flex-1 pt-6">
               <div className="relative h-32 w-32">
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-2xl font-bold text-gray-700">
+                  <span className="text-2xl text-center font-bold text-gray-700">
                     {infMetrics.DataProcessedMB.toFixed(2).toLocaleString()} MB
                   </span>
                 </div>
               </div>
-              <h3 className="mt-auto text-sm text-muted-foreground">Data Processed</h3>
+              <h3 className="mt-auto text-center text-sm text-muted-foreground">Data Processed</h3>
             </CardContent>
           </Card>
 
@@ -156,7 +156,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
             <CardContent className="flex flex-col items-center justify-center flex-1 pt-6">
               <div className="relative h-32 w-32">
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-2xl font-bold text-gray-700">
+                  <span className="text-2xl text-center font-bold text-gray-700">
                     {infMetrics.TokensProcessed.toLocaleString()}
                   </span>
                 </div>
