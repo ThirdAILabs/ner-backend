@@ -230,39 +230,6 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
     loadedInitialObjectRecords.current = true;
   }, []);
 
-  // Update filters when groups/tags change
-  useEffect(() => {
-    setGroupFilters((prev) => {
-      const newFilters = { ...prev };
-      let changed = false;
-
-      groups.forEach((group) => {
-        if (!(group in newFilters)) {
-          newFilters[group] = true;
-          changed = true;
-        }
-      });
-
-      return changed ? newFilters : prev;
-    });
-  }, [groups]);
-
-  useEffect(() => {
-    setTagFilters((prev) => {
-      const newFilters = { ...prev };
-      let changed = false;
-
-      tags.forEach((tag) => {
-        if (!(tag.type in newFilters)) {
-          newFilters[tag.type] = true;
-          changed = true;
-        }
-      });
-
-      return changed ? newFilters : prev;
-    });
-  }, [tags]);
-
   // Scroll handler for infinite loading
   const handleTableScroll = () => {
     if (tableScrollRef.current) {
