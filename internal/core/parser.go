@@ -45,6 +45,7 @@ func (parser *DefaultParser) Parse(object string, data io.Reader) chan ParsedChu
 		case ".pdf":
 			parser.parsePdf(object, data, output)
 		case ".txt", ".csv", ".html", ".json", ".xml":
+			slog.Info("Parsing plaintext", "object", object)
 			parser.parsePlaintext(object, data, output)
 		default:
 			slog.Warn("unsupported file type", "object", object)

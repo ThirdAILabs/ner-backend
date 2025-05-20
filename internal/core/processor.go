@@ -128,6 +128,10 @@ func (proc *TaskProcessor) ProcessTask(task messaging.Task) {
 }
 
 func (proc *TaskProcessor) getStorageClient(report *database.Report) (storage.Provider, error) {
+	if report.SourceS3Bucket == "chat" {
+		return storage.NewChatProvider(report.Id)
+	}
+
 	if report.IsUpload {
 		return proc.storage, nil
 	}
@@ -312,13 +316,16 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 	go func() {
 		defer close(queue)
 		for _, object := range objects {
+			slog.Info("Processing object", "object", object)
 			objectStream, err := storage.GetObjectStream(bucket, object)
+			slog.Info("Got object stream", "object", object)
 			if err != nil {
 				queue <- objectChunkStream{object: object, chunks: nil, err: err}
 				continue
 			}
 
 			chunks := parser.Parse(object, objectStream)
+			slog.Info("Parsed chunks", "object", object, "chunks", len(chunks))
 			queue <- objectChunkStream{object: object, chunks: chunks, err: nil}
 		}
 	}()

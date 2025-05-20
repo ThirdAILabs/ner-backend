@@ -547,7 +547,7 @@ export default function Jobs() {
               )}
             </TableBody>
           </Table>
-        </TableContainer>
+        </TableContainer>        
       </CardContent>
     </Card>
   );

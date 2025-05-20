@@ -100,7 +100,7 @@ export default function NewJobPage() {
   const router = useRouter();
 
   // Essential state
-  const [selectedSource, setSelectedSource] = useState<'s3' | 'files'>('files');
+  const [selectedSource, setSelectedSource] = useState<'s3' | 'files' | 'chat'>('files');
   const [sourceS3Endpoint, setSourceS3Endpoint] = useState('');
   const [sourceS3Region, setSourceS3Region] = useState('');
   const [sourceS3Bucket, setSourceS3Bucket] = useState('');
@@ -454,8 +454,12 @@ export default function NewJobPage() {
               SourceS3Bucket: sourceS3Bucket,
               SourceS3Prefix: sourceS3Prefix || undefined,
             }
-          : {
+          : selectedSource === 'files'
+            ? {
               UploadId: uploadId,
+            }
+            : {
+              SourceS3Bucket: 'chat',
             }),
         Groups: groups,
         report_name: jobName,
@@ -589,6 +593,12 @@ export default function NewJobPage() {
                 isSelected={selectedSource === 's3'}
                 onClick={() => setSelectedSource('s3')}
               />
+              <SourceOption
+                title="Chat"
+                description="Just chat bby"
+                isSelected={selectedSource === 'chat'}
+                onClick={() => setSelectedSource('chat')}
+              />
             </div>
 
             {selectedSource === 's3' ? (
@@ -671,7 +681,7 @@ export default function NewJobPage() {
                   />
                 </div>
               </div>
-            ) : (
+            ) : selectedSource === 'files' ? (
               <div className="w-full">
                 <input
                   type="file"
@@ -746,7 +756,10 @@ export default function NewJobPage() {
                   </div>
                 )}
               </div>
-            )}
+            ) : selectedSource === 'chat' ? (
+              <div className="w-full">
+              </div>
+            ) : null}
           </Box>
 
           {/* Model Selection */}

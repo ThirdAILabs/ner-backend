@@ -67,6 +67,11 @@ func (s *BackendService) AddRoutes(r chi.Router) {
 		r.Get("/{report_id}/objects", RestHandler(s.GetReportPreviews))
 	})
 
+	r.Route("/chat", func(r chi.Router) {
+		r.Post("/add/{report_id}", RestHandler(s.AddChatMessage))
+		r.Post("/end/{report_id}", RestHandler(s.EndChat))
+	})
+
 	r.Route("/uploads", func(r chi.Router) {
 		r.Post("/", RestHandler(s.UploadFiles))
 	})
@@ -236,11 +241,11 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		return nil, CodedErrorf(http.StatusUnprocessableEntity, "the following fields are required: SourceS3Bucket or UploadId")
 	}
 
-	if req.UploadId == uuid.Nil {
-		if err := attemptS3Connection(s3Endpoint, s3Region, sourceS3Bucket, s3Prefix); err != nil {
-			return nil, err
-		}
-	}
+	// if req.UploadId == uuid.Nil {
+	// 	if err := attemptS3Connection(s3Endpoint, s3Region, sourceS3Bucket, s3Prefix); err != nil {
+	// 		return nil, err
+	// 	}
+	// }
 
 	if err := validateReportName(req.ReportName); err != nil {
 		return nil, err
@@ -919,4 +924,51 @@ func (s *BackendService) AttemptS3Connection(r *http.Request) (any, error) {
 	bucket := r.URL.Query().Get("bucket")
 	prefix := r.URL.Query().Get("prefix")
 	return nil, attemptS3Connection(endpoint, region, bucket, prefix)
+}
+
+type AddChatMessageRequest struct {
+	Message string `json:"message"`
+}
+
+func (s *BackendService) AddChatMessage(r *http.Request) (any, error) {
+	req, err := ParseRequest[AddChatMessageRequest](r)
+	if err != nil {
+		return nil, err
+	}
+
+	reportID, err := URLParamUUID(r, "report_id")
+	if err != nil {
+		return nil, err
+	}
+
+	queue, err := storage.NewChatQueue(reportID)
+	if err != nil {
+		return nil, err
+	}
+
+	err = queue.Append(req.Message)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (s *BackendService) EndChat(r *http.Request) (any, error) {
+	reportID, err := URLParamUUID(r, "report_id")
+	if err != nil {
+		return nil, err
+	}
+
+	queue, err := storage.NewChatQueue(reportID)
+	if err != nil {
+		return nil, err
+	}
+	
+	err = queue.EndChat()
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
 }

@@ -300,4 +300,13 @@ export const nerService = {
       return 'Failed to connect to S3 bucket. Please make sure that it is a valid public bucket.';
     }
   },
+
+  addChatMessage: async (reportId: string, message: string): Promise<void> => {
+    await axiosInstance.post(`/chat/add/${reportId}`, { message });
+  },
+
+  endChat: async (reportId: string): Promise<void> => {
+    await axiosInstance.post(`/chat/end/${reportId}`);
+  },
+  
 };

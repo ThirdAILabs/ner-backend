@@ -12,15 +12,18 @@ import (
 	"strings"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/google/uuid"
 )
 
 var MAX_CHAT_HISTORY = 1000
+var BASE_PATH = "chat/"
 
 type ChatQueue struct {
 	path string
 }
 
-func NewChatQueue(path string) (*ChatQueue, error) {
+func NewChatQueue(uuid uuid.UUID) (*ChatQueue, error) {
+	path := filepath.Join(BASE_PATH, uuid.String())
 	// Create a new folder at path if it doesn't already exist.
 	err := os.MkdirAll(path, 0755)
 	if err != nil {
@@ -119,6 +122,7 @@ func (s *ChatQueue) EndChat() error {
 
 // Returns (message, endOfChat, error)
 func (s *ChatQueue) Pop(newlyCreatedFile string, removeAfterRead bool) (string, bool, error) {
+	slog.Info("Pop", "newlyCreatedFile", filepath.Base(newlyCreatedFile))
 	// First check if we have reached the end of the chat.
 	if filepath.Base(newlyCreatedFile) == "end.txt" {
 		return "", true, nil
@@ -127,19 +131,25 @@ func (s *ChatQueue) Pop(newlyCreatedFile string, removeAfterRead bool) (string, 
 	// In AppendChatMessage, we write the latest message to
 	// highestIndex.txt and then we create highestIndex + 1.txt.
 	// Hence the lastMessageIndex is the extensionless part of newlyCreatedFile - 1.
-	lastMessageIndex, err := s.objNameToIndex(filepath.Base(newlyCreatedFile))
+	newlyCreatedFileIndex, err := s.objNameToIndex(filepath.Base(newlyCreatedFile))
 	if err != nil {
 		slog.Error("Failed to convert file name to int", "error", err)
 		return "", false, fmt.Errorf("failed to convert file name to int: %w", err)
 	}
+	lastMessageIndex := newlyCreatedFileIndex - 1
+	
+	slog.Info("Pop", "lastMessageIndex", lastMessageIndex)
 	
 	// Read and return the message in path/index.txt
 	filePath := filepath.Join(s.path, s.indexToObjName(lastMessageIndex))
+	slog.Info("Pop", "filePath", filePath)
 	message, err := os.ReadFile(filePath)
 	if err != nil {
 		slog.Error("Failed to read file", "error", err)
 		return "", false, fmt.Errorf("failed to read file: %w", err)
 	}
+
+	slog.Info("Pop", "message", string(message))
 
 	if removeAfterRead {
 		err = os.Remove(filePath)
@@ -157,10 +167,11 @@ type ChatProvider struct {
 	queue *ChatQueue
 	messages []string
 	newMessageReceived chan struct{}
+	done bool
 }
 
-func NewChatProvider(path string) (*ChatProvider, error) {
-	queue, err := NewChatQueue(path)
+func NewChatProvider(uuid uuid.UUID) (*ChatProvider, error) {
+	queue, err := NewChatQueue(uuid)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create chat storage: %w", err)
 	}
@@ -178,10 +189,12 @@ func NewChatProvider(path string) (*ChatProvider, error) {
 		queue: queue,
 		messages: messages,
 		newMessageReceived: newMessageReceived,
+		done: false,
 	}
 
     // Start listening for events.
     go func() {
+		seen := make(map[string]bool)
         for {
             select {
             case event, ok := <-watcher.Events:
@@ -190,18 +203,29 @@ func NewChatProvider(path string) (*ChatProvider, error) {
                 }
 				slog.Info("event", "event", event)
                 if event.Has(fsnotify.Create) {
-					message, endOfChat, err := queue.Pop(event.Name, true)
+					slog.Info("Handling event", "file", event.Name)
+					if seen[event.Name] {
+						slog.Info("Already seen", "file", event.Name)
+						continue
+					}
+					seen[event.Name] = true
+					message, endOfChat, err := queue.Pop(event.Name, false)
 					if err != nil {
 						slog.Error("Failed to get last message", "error", err)
 						continue
 					}
 					if endOfChat {
 						watcher.Close()
+						provider.done = true
+						provider.newMessageReceived <- struct{}{}
+						slog.Info("Done")
 						return
 					} else {
+						slog.Info("Appending message", "message", message)
 						// TODO Is this going to update correctly?
 						provider.messages = append(provider.messages, message)
 						provider.newMessageReceived <- struct{}{}
+						slog.Info("Notified")
 					}
                 }
             case err, ok := <-watcher.Errors:
@@ -213,10 +237,10 @@ func NewChatProvider(path string) (*ChatProvider, error) {
 		}
 	}()
 
-	err = watcher.Add(path)
+	err = watcher.Add(queue.path)
 	if err != nil {
-		slog.Error("Failed to add path to watcher", "path", path, "error", err)
-		return nil, fmt.Errorf("failed to add path %s to watcher: %w", path, err)
+		slog.Error("Failed to add path to watcher", "path", queue.path, "error", err)
+		return nil, fmt.Errorf("failed to add path %s to watcher: %w", queue.path, err)
 	}
 
 	return provider, nil
@@ -225,17 +249,28 @@ func NewChatProvider(path string) (*ChatProvider, error) {
 // These methods are needed to process inference tasks.
 
 func (p *ChatProvider) GetObjectStream(bucket, key string) (io.Reader, error) {
+	slog.Info("GetObjectStream", "bucket", bucket, "key", key)
 	index, err := p.queue.objNameToIndex(key)
 	if err != nil {
 		return nil, err
 	}
 
 	// Wait for the message to be received.
-	for ; index < len(p.messages); index++ {
+	for ; index >= len(p.messages) && !p.done; {
+		slog.Info("Waiting for message", "index", index, "current", len(p.messages), "done", p.done)
 		<- p.newMessageReceived
+		slog.Info("Notified and done waiting", "index", index, "current", len(p.messages), "done", p.done)
+	}
+
+	slog.Info("Done waiting", "index", index, "current", len(p.messages), "done", p.done)
+
+	if p.done && index >= len(p.messages) {
+		slog.Info("Done", "index", index, "current", len(p.messages), "done", p.done)
+		return bytes.NewReader([]byte{}), nil
 	}
 
 	message := p.messages[index]
+	slog.Info("Returning message", "message", message)
 	return bytes.NewReader([]byte(message)), nil
 }
 

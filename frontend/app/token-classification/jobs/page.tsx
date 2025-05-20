@@ -224,6 +224,7 @@ function JobDetail() {
   const [reportData, setReportData] = useState<Report | null>(null);
   const [customTags, setCustomTags] = useState<CustomTag[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [message, setMessage] = useState('');
 
   const fetchTags = async () => {
     setIsLoading(true);
@@ -460,6 +461,44 @@ function JobDetail() {
           />
         </TabsContent>
       </Tabs>
+      
+      <div className="flex gap-2 mt-4">
+        <Input 
+          type="text"
+          placeholder="Enter message"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          className="flex-1"
+        />
+        <Button 
+          onClick={async () => {
+            try {
+              await nerService.addChatMessage(reportId, message);
+              setMessage('');
+            } catch (error) {
+              console.error('Error sending message:', error);
+            }
+          }}
+          className="bg-blue-400 hover:bg-blue-500"
+        >
+          Send Message
+        </Button>
+      </div>
+      <div className="flex justify-end mt-2">
+        <Button
+          onClick={async () => {
+            try {
+              await nerService.endChat(reportId);
+            } catch (error) {
+              console.error('Error ending chat:', error);
+            }
+          }}
+          variant="outline"
+          className="text-red-500 hover:text-red-600"
+        >
+          End Chat
+        </Button>
+      </div>
     </div>
   );
 }
