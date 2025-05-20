@@ -161,3 +161,12 @@ func writeSamplesToCSV(w io.Writer, samples []api.Sample, tokensCol, tagsCol str
 	writer.Flush()
 	return writer.Error()
 }
+
+func (ner *NER) Redact(text string) (redacted string, entities []types.Entity, err error) {
+	return text, nil, errors.New("redact not supported for bolt model")
+}
+
+func (ner *NER) Restore(redacted string, entities []types.Entity) (original string) {
+	// Bolt does not support restoring redacted text
+	return redacted
+}

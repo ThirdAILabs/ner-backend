@@ -68,6 +68,14 @@ func (m *regexModel) Finetune(taskPrompt string, tags []api.TagInfo, samples []a
 	return nil
 }
 
+func (m *regexModel) Redact(text string) (string, []types.Entity, error) {
+	return text, nil, nil
+}
+
+func (m *regexModel) Restore(redacted string, entities []types.Entity) string {
+	return redacted
+}
+
 func (m *regexModel) Save(modelDir string) error {
 	data := make(map[string]string)
 	for label, pattern := range m.patterns {

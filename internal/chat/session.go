@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"ner-backend/internal/core"
 	"ner-backend/internal/database"
 	"sync"
 
@@ -19,9 +20,10 @@ type ChatSession struct {
 	model        string
 	apiKey       string
 	openAIClient *openai.LLM
+	ner          core.Model
 }
 
-func NewChatSession(db *gorm.DB, sessionID, model, apiKey string) (*ChatSession, error) {
+func NewChatSession(db *gorm.DB, sessionID, model, apiKey string, ner core.Model) (*ChatSession, error) {
 	client, err := openai.New(openai.WithToken(apiKey), openai.WithModel(model))
 	if err != nil {
 		return nil, fmt.Errorf("could not create OpenAI client: %v", err)
@@ -33,6 +35,7 @@ func NewChatSession(db *gorm.DB, sessionID, model, apiKey string) (*ChatSession,
 		model:        model,
 		apiKey:       apiKey,
 		openAIClient: client,
+		ner:          ner,
 	}, nil
 }
 
@@ -54,10 +57,17 @@ func (session *ChatSession) Chat(userInput string) (string, error) {
 		context += fmt.Sprintf("%s: %s\n", msg.MessageType, msg.Content)
 	}
 
-	openAIResponse, err := session.getOpenAIResponse(context + "user: " + userInput)
+	redactedCtx, entities, err := session.ner.Redact(context + "user: " + userInput)
+	if err != nil {
+		return "", fmt.Errorf("error redacting user input: %v", err)
+	}
+
+	openAIRedactedResponse, err := session.getOpenAIResponse(redactedCtx)
 	if err != nil {
 		return "", err
 	}
+
+	openAIResponse := session.ner.Restore(openAIRedactedResponse, entities)
 
 	if err := session.saveMessage("ai", openAIResponse); err != nil {
 		return "", err

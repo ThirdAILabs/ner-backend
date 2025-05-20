@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 
 	"ner-backend/internal/chat"
+	"ner-backend/internal/core"
 	"ner-backend/internal/database"
 	"ner-backend/pkg/api"
 )
@@ -15,12 +16,14 @@ import (
 type ChatService struct {
 	db      *gorm.DB
 	manager *chat.ChatSessionManager
+	model   core.Model
 }
 
-func NewChatService(db *gorm.DB) *ChatService {
+func NewChatService(db *gorm.DB, model core.Model) *ChatService {
 	return &ChatService{
 		db:      db,
 		manager: chat.NewChatSessionManager(db),
+		model:   model,
 	}
 }
 
@@ -59,7 +62,7 @@ func (s *ChatService) SendMessage(r *http.Request) (any, error) {
 		return nil, err
 	}
 
-	session, err := chat.NewChatSession(s.db, sessionID, req.Model, req.APIKey)
+	session, err := chat.NewChatSession(s.db, sessionID, req.Model, req.APIKey, s.model)
 	if err != nil {
 		return nil, err
 	}
