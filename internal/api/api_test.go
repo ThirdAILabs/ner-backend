@@ -312,6 +312,8 @@ func TestGetReport(t *testing.T) {
 		assert.Equal(t, map[string]string{"tag1": "pattern1"}, report.CustomTags)
 		assert.Equal(t, 2, len(report.Groups))
 		assert.Equal(t, database.JobCompleted, report.ShardDataTaskStatus)
+		assert.GreaterOrEqual(t, report.TotalInferenceTimeSeconds, 0.0)
+		assert.GreaterOrEqual(t, report.ShardDataTimeSeconds, 0.0)
 	})
 
 	t.Run("GetReportGroups", func(t *testing.T) {

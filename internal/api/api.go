@@ -423,8 +423,8 @@ func (s *BackendService) GetReport(r *http.Request) (any, error) {
 	now := time.Now().UTC()
 
 	var infBounds struct {
-		MinStart string `gorm:"column:min_start"`
-		MaxEnd   string `gorm:"column:max_end"`
+		MinStart sql.NullTime `gorm:"column:min_start"`
+		MaxEnd   sql.NullTime `gorm:"column:max_end"`
 	}
 
 	if err := s.db.WithContext(ctx).
@@ -435,17 +435,9 @@ func (s *BackendService) GetReport(r *http.Request) (any, error) {
 		slog.Error("error fetching time bounds", "err", err)
 	}
 
-	const layout = "2006-01-02 15:04:05.999999-07:00"
-
-	tMin, err1 := time.Parse(layout, infBounds.MinStart)
-	tMax, err2 := time.Parse(layout, infBounds.MaxEnd)
-	if err1 != nil || err2 != nil {
-		slog.Error("failed to parse bounds",
-			"min_start", infBounds.MinStart, "err1", err1,
-			"max_end", infBounds.MaxEnd, "err2", err2,
-		)
-	} else {
-		apiReport.TotalInferenceTimeSeconds = tMax.Sub(tMin).Seconds()
+	if infBounds.MinStart.Valid && infBounds.MaxEnd.Valid {
+		apiReport.TotalInferenceTimeSeconds =
+			infBounds.MaxEnd.Time.Sub(infBounds.MinStart.Time).Seconds()
 	}
 
 	var shardSecs float64

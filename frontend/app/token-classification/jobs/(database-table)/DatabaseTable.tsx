@@ -23,7 +23,6 @@ function joinAdjacentEntities(entities: Entity[]) {
   let prevEntity = entities[0];
 
   for (let i = 1; i < entities.length; i++) {
-    console.log(entities[i]);
     const numSpacesAfterPrevEntity = (prevEntity.RContext || '').match(/^\s*/)?.[0].length || 0;
     if (
       prevEntity.Object === entities[i].Object &&
@@ -314,8 +313,8 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
 
     setFilteredObjects([]);
     resetPagination();
-    loadTokenRecords(0, activeTagsList, 100);
-    loadObjectRecords(0, activeTagsList, 100);
+    loadTokenRecords(0, activeTagsList);
+    loadObjectRecords(0, activeTagsList);
   };
 
   const handleSelectAllGroups = () => {
