@@ -292,7 +292,12 @@ export const nerService = {
   ): Promise<string | null> => {
     try {
       await axiosInstance.get('/validate/s3', {
-        params: { S3Endpoint: endpoint, S3Region: region, SourceS3Bucket: bucket, SourceS3Prefix: prefix },
+        params: {
+          S3Endpoint: endpoint,
+          S3Region: region,
+          SourceS3Bucket: bucket,
+          SourceS3Prefix: prefix,
+        },
       });
 
       return null;
