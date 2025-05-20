@@ -138,12 +138,12 @@ type ThroughputResponse struct {
 }
 
 type ValidateGroupDefinitionRequest struct {
-	GroupQuery string `schema:"group_query"`
+	GroupQuery string
 }
 
 type ValidateS3BucketRequest struct {
-	Endpoint string `schema:"endpoint"`
-	Region   string `schema:"region"`
-	Bucket   string `schema:"bucket"`
-	Prefix   string `schema:"prefix"`
+	S3Endpoint     string
+	S3Region       string
+	SourceS3Bucket string
+	SourceS3Prefix string
 }

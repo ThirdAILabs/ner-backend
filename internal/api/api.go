@@ -907,5 +907,5 @@ func (s *BackendService) ValidateS3Bucket(r *http.Request) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return nil, attemptS3Connection(req.Endpoint, req.Region, req.Bucket, req.Prefix)
+	return nil, attemptS3Connection(req.S3Endpoint, req.S3Region, req.SourceS3Bucket, req.SourceS3Prefix)
 }

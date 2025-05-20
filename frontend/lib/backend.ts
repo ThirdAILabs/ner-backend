@@ -273,7 +273,7 @@ export const nerService = {
   validateGroupDefinition: async (groupQuery: string): Promise<string | null> => {
     try {
       await axiosInstance.get('/validate/group', {
-        params: { group_query: groupQuery },
+        params: { GroupQuery: groupQuery },
       });
       return null;
     } catch (error) {
@@ -292,7 +292,7 @@ export const nerService = {
   ): Promise<string | null> => {
     try {
       await axiosInstance.get('/validate/s3', {
-        params: { endpoint, region, bucket, prefix },
+        params: { S3Endpoint: endpoint, S3Region: region, SourceS3Bucket: bucket, SourceS3Prefix: prefix },
       });
 
       return null;
