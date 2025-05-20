@@ -76,12 +76,9 @@ func (s *BackendService) AddRoutes(r chi.Router) {
 		r.Get("/throughput", RestHandler(s.GetThroughputMetrics))
 	})
 
-	r.Route("/validate-group-definition", func(r chi.Router) {
-		r.Get("/", RestHandler(s.ValidateGroupDefinition))
-	})
-
-	r.Route("/attempt-s3-connection", func(r chi.Router) {
-		r.Get("/", RestHandler(s.AttemptS3Connection))
+	r.Route("/validate", func(r chi.Router) {
+		r.Get("/s3", RestHandler(s.ValidateS3Bucket))
+		r.Get("/group", RestHandler(s.ValidateGroupDefinition))
 	})
 }
 
@@ -905,7 +902,7 @@ func attemptS3Connection(endpoint string, region string, bucket string, prefix s
 	return nil
 }
 
-func (s *BackendService) AttemptS3Connection(r *http.Request) (any, error) {
+func (s *BackendService) ValidateS3Bucket(r *http.Request) (any, error) {
 	endpoint := r.URL.Query().Get("endpoint")
 	region := r.URL.Query().Get("region")
 	bucket := r.URL.Query().Get("bucket")
