@@ -678,12 +678,12 @@ func TestAttemptS3Connection_PublicBucket(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rec.Code)
 }
 
-func TestAttemptS3Connection_PrivateBucket(t *testing.T) {
+func TestAttemptS3Connection_InvalidBucket(t *testing.T) {
 	service := backend.NewBackendService(nil, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
-	url := "/attempt-s3-connection?endpoint=&region=us-east-1&bucket=thirdai-prism-data&prefix="
+	url := "/attempt-s3-connection?endpoint=&region=us-east-1&bucket=test-bucket&prefix="
 	req := httptest.NewRequest(http.MethodGet, url, nil)
 	rec := httptest.NewRecorder()
 
