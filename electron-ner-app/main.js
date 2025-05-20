@@ -59,7 +59,7 @@ function fixWorkingDirectory() {
         process.chdir(resourcesPath);
         console.log('Changed working directory to:', process.cwd());
       } catch (error) {
-        console.error('Failed to change working directory:', error);
+        log.error('Failed to change working directory:', error);
       }
     } else {
       console.warn('Binary directory not found in resources:', binPath);
@@ -115,7 +115,7 @@ async function ensureBackendStarted() {
         backendStarted = true;
       } else {
         const errorMsg = 'Failed to start backend process. Backend executable not found.';
-        console.error(errorMsg);
+        log.error(errorMsg);
         
         // Show error dialog in GUI mode
         if (mainWindow) {
@@ -129,7 +129,7 @@ sudo chmod 755 "/Applications/PocketShield.app/Contents/Resources/bin/main"`);
         }
       }
     } catch (error) {
-      console.error('Error starting backend:', error);
+      log.error('Error starting backend:', error);
       
       // Show error dialog in GUI mode
       if (mainWindow) {
@@ -150,22 +150,22 @@ autoUpdater.autoDownload = true;
 
 // Set up auto-updater event listeners
 autoUpdater.on('checking-for-update', () => {
-  log.info('Checking for update...');
+  console.log('Checking for update...');
 });
 autoUpdater.on('update-available', (info) => {
-  log.info('Update available:', info);
+  console.log('Update available:', info);
   dialog.showMessageBox({ type: 'info', title: 'Update available', message: `A new version (${info.version}) is available. Downloading now...` });
 });
 autoUpdater.on('update-not-available', (info) => {
-  log.info('Update not available:', info);
+  console.log('Update not available:', info);
 });
 autoUpdater.on('error', (err) => {
-  log.error('Error in auto-updater:', err);
+  log.err('Error in auto-updater:', err);
 });
 autoUpdater.on('download-progress', (progressObj) => {
   let log_message = "Download speed: " + progressObj.bytesPerSecond;
   log_message = log_message + ' - Downloaded ' + Math.round(progressObj.percent) + '%';
-  log.info(log_message);
+  console.log(log_message);
 });
 autoUpdater.on('update-downloaded', () => {
   dialog.showMessageBox({ title: 'Install updates', message: 'Updates downloaded, application will be quit for update...' })
@@ -183,23 +183,29 @@ if (process.env.DEBUG_UPDATER === 'true') {
 }
 
 // This method will be called when Electron has finished initialization
-app.whenReady().then(() => {
-  // Always start the backend first, regardless of dev/prod mode
+app.whenReady().then(async () => {
+  try {
+    await ensureBackendStarted();
+  } catch (err) {
+    log.error('Backend failed to start, quitting.', err);
+    return app.quit();
+  }
+
   createWindow();
-  ensureBackendStarted();
   
   // Check for updates on launch (in production or when DEBUG_UPDATER is set)
   if (!isDev || process.env.DEBUG_UPDATER === 'true') {
-    log.info(`Checking for updates (isDev=${isDev}), current version: ${app.getVersion()}`);
+    console.log(`Checking for updates (isDev=${isDev}), current version: ${app.getVersion()}`);
     autoUpdater.checkForUpdatesAndNotify()
-      .then((result) => log.info('checkForUpdatesAndNotify result:', result))
-      .catch((error) => log.error('checkForUpdatesAndNotify error:', error));
+      .then((result) => console.log('checkForUpdatesAndNotify result:', result))
+      .catch((error) => log.err('checkForUpdatesAndNotify error:', error));
   }
 
   app.on('activate', () => {
     // On macOS it's common to re-create a window when the dock icon is clicked
     if (mainWindow === null) createWindow();
   });
+
 });
 
 // Quit when all windows are closed, except on macOS

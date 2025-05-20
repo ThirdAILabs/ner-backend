@@ -40,7 +40,7 @@ type Report struct {
 	Stopped            bool
 	CreationTime       time.Time
 	TotalFileCount     int `json:"FileCount"`
-	CompletedFileCount int `json:"CompletedFileCount"`
+	SucceededFileCount int `json:"SucceededFileCount"`
 	FailedFileCount    int `json:"FailedFileCount"`
 
 	Tags       []string          `json:"Tags,omitempty"`

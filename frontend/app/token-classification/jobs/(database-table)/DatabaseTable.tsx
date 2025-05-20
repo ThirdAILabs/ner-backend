@@ -376,8 +376,8 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
   const [showFilterSection, setShowFilterSection] = useState<boolean>(true);
 
   return (
-    <Card className="h-[70vh]">
-      <CardContent className="p-0 h-full">
+    <Card className="h-[79vh]">
+      <CardContent className="pb-2 h-full">
         <div className="flex h-full">
           <FilterSection
             groups={groups}
