@@ -181,15 +181,27 @@ func (ner *PythonModel) Predict(text string) ([]types.Entity, error) {
 	return allEntities, nil
 }
 
-func convertProtoEntitiesToTypes(protoEntities []*proto.Entity, text string, startOffset int) []types.Entity {
+func convertProtoEntitiesToTypes(protoEntities []*proto.Entity, text string, sentenceOffset int, sentence string) []types.Entity {
+	if len(protoEntities) == 0 {
+		return nil // so we can skip unicode offset computation if no entities
+	}
+
+	// Python returns offsets in terms of unicode code points, this converts that back into a byte offset.
+	runeIdxToByteIdx := make([]int, len(sentence)+1)
+	cnt := 0
+	for i := range sentence {
+		runeIdxToByteIdx[cnt] = i
+		cnt++
+	}
+	runeIdxToByteIdx[cnt] = len(sentence)
+	runeIdxToByteIdx = runeIdxToByteIdx[:cnt+1]
 
 	typesEntities := make([]types.Entity, len(protoEntities))
-	runes := []rune(text)
 	for i, pe := range protoEntities {
 		if pe != nil {
-			start := int(pe.Start) + startOffset
-			end := int(pe.End) + startOffset
-			typesEntities[i] = types.CreateEntityWithRune(pe.Label, runes, start, end)
+			start := runeIdxToByteIdx[pe.Start] + sentenceOffset
+			end := runeIdxToByteIdx[pe.End] + sentenceOffset
+			typesEntities[i] = types.CreateEntity(pe.Label, text, start, end)
 		}
 	}
 	return typesEntities
