@@ -96,7 +96,9 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
                   <span className="text-2xl font-bold text-gray-700">{infMetrics.InProgress}</span>
                 </div>
               </div>
-              <h3 className="mt-auto text-center text-sm text-muted-foreground">In-Progress Reports</h3>
+              <h3 className="mt-auto text-center text-sm text-muted-foreground">
+                In-Progress Reports
+              </h3>
             </CardContent>
           </Card>
 
@@ -108,7 +110,9 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
                   <span className="text-2xl font-bold text-gray-700">{infMetrics.Completed}</span>
                 </div>
               </div>
-              <h3 className="mt-auto text-center text-sm text-muted-foreground">Completed Reports</h3>
+              <h3 className="mt-auto text-center text-sm text-muted-foreground">
+                Completed Reports
+              </h3>
             </CardContent>
           </Card>
 
