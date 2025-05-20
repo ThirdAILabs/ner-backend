@@ -869,12 +869,12 @@ func (s *BackendService) GetThroughputMetrics(r *http.Request) (any, error) {
 }
 
 func (s *BackendService) ValidateGroupDefinition(r *http.Request) (any, error) {
-	groupQuery := r.URL.Query().Get("group_query")
-	if groupQuery == "" {
-		return nil, CodedErrorf(http.StatusBadRequest, "group query is required")
+	req, err := ParseRequestQueryParams[api.ValidateGroupDefinitionRequest](r)
+	if err != nil {
+		return nil, err
 	}
-	if _, err := core.ParseQuery(groupQuery); err != nil {
-		return nil, CodedErrorf(http.StatusUnprocessableEntity, "invalid query '%s': %v", groupQuery, err)
+	if _, err := core.ParseQuery(req.GroupQuery); err != nil {
+		return nil, CodedErrorf(http.StatusUnprocessableEntity, "invalid query '%s': %v", req.GroupQuery, err)
 	}
 	return nil, nil
 }
@@ -903,9 +903,9 @@ func attemptS3Connection(endpoint string, region string, bucket string, prefix s
 }
 
 func (s *BackendService) ValidateS3Bucket(r *http.Request) (any, error) {
-	endpoint := r.URL.Query().Get("endpoint")
-	region := r.URL.Query().Get("region")
-	bucket := r.URL.Query().Get("bucket")
-	prefix := r.URL.Query().Get("prefix")
-	return nil, attemptS3Connection(endpoint, region, bucket, prefix)
+	req, err := ParseRequestQueryParams[api.ValidateS3BucketRequest](r)
+	if err != nil {
+		return nil, err
+	}
+	return nil, attemptS3Connection(req.Endpoint, req.Region, req.Bucket, req.Prefix)
 }
