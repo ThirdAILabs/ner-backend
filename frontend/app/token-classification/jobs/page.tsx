@@ -26,10 +26,11 @@ import { floor } from 'lodash';
 
 // Calculate progress based on InferenceTaskStatuses
 const calculateProgress = (report: Report | null): number => {
-  if (!report || !report.SucceededFileCount || !report.FailedFileCount || !report.FileCount)
-    return 0;
+  const successfulFiles = report?.SucceededFileCount || 0;
+  const failedFiles = report?.FailedFileCount || 0;
+  const totalFiles = report?.FileCount || 1;
 
-  return floor(((report.SucceededFileCount + report.FailedFileCount) / report.FileCount) * 100);
+  return floor(((successfulFiles + failedFiles) / totalFiles) * 100);
 };
 
 // Get the total number of processed tokens
@@ -279,6 +280,8 @@ function JobDetail() {
       await fetchTags();
 
       const currentProgress = calculateProgress(reportData);
+      // const temp = floor(((reportData.SucceededFileCount + reportData.FailedFileCount)/reportData.FileCount) * 100);
+      // console.log('Current Progress:', temp);
 
       if (currentProgress === 100) {
         clearInterval(pollInterval);
