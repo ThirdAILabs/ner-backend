@@ -666,12 +666,12 @@ func TestGetInferenceMetrics_WithTasks(t *testing.T) {
 	})
 }
 
-func TestAttemptS3Connection_PublicBucket(t *testing.T) {
+func TestValidateGroupDefinition_ValidDefinition(t *testing.T) {
 	service := backend.NewBackendService(nil, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
-	url := "/attempt-s3-connection?endpoint=&region=us-east-2&bucket=thirdai-corp-public&prefix="
+	url := "/validate/group?GroupQuery=" + url.QueryEscape("COUNT(label1) > 0")
 	req := httptest.NewRequest(http.MethodGet, url, nil)
 	rec := httptest.NewRecorder()
 
@@ -680,12 +680,41 @@ func TestAttemptS3Connection_PublicBucket(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rec.Code)
 }
 
-func TestAttemptS3Connection_InvalidBucket(t *testing.T) {
+func TestValidateGroupDefinition_InvalidDefinition(t *testing.T) {
 	service := backend.NewBackendService(nil, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
-	url := "/attempt-s3-connection?endpoint=&region=us-east-1&bucket=test-bucket&prefix="
+	url := "/validate/group?GroupQuery=FAKEQUERY"
+	req := httptest.NewRequest(http.MethodGet, url, nil)
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusUnprocessableEntity, rec.Code)
+	assert.Contains(t, rec.Body.String(), "invalid query")
+}
+
+func TestValidateS3Bucket_PublicBucket(t *testing.T) {
+	service := backend.NewBackendService(nil, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	router := chi.NewRouter()
+	service.AddRoutes(router)
+
+	url := "/validate/s3?S3Endpoint=&S3Region=us-east-2&SourceS3Bucket=thirdai-corp-public&SourceS3Prefix="
+	req := httptest.NewRequest(http.MethodGet, url, nil)
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+}
+
+func TestValidateS3Bucket_InvalidBucket(t *testing.T) {
+	service := backend.NewBackendService(nil, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	router := chi.NewRouter()
+	service.AddRoutes(router)
+
+	url := "/validate/s3?S3Endpoint=&S3Region=us-east-1&SourceS3Bucket=test-bucket&SourceS3Prefix="
 	req := httptest.NewRequest(http.MethodGet, url, nil)
 	rec := httptest.NewRecorder()
 

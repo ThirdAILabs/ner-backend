@@ -77,8 +77,8 @@ func (s *BackendService) AddRoutes(r chi.Router) {
 	})
 
 	r.Route("/validate", func(r chi.Router) {
-		r.Get("/s3", RestHandler(s.ValidateS3Bucket))
 		r.Get("/group", RestHandler(s.ValidateGroupDefinition))
+		r.Get("/s3", RestHandler(s.ValidateS3Bucket))
 	})
 }
 
