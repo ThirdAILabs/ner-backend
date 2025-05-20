@@ -209,16 +209,32 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 	}
 
 	totalTokens, errorCount, workerErr := proc.runInferenceOnBucket(ctx, task.ReportId, storage, task.Report.Model.Id, task.Report.Model.Type, tags, customTags, groupToQuery, task.Report.SourceS3Bucket, s3Objects)
+
 	if delta := len(s3Objects) - errorCount; delta > 0 {
 		if err := proc.db.
 			Model(&database.Report{}).
 			Where("id = ?", reportId).
-			UpdateColumn("completed_file_count",
-				gorm.Expr("completed_file_count + ?", delta),
+			UpdateColumn("succeeded_file_count",
+				gorm.Expr("succeeded_file_count + ?", delta),
 			).Error; err != nil {
-			slog.Error("could not increment completed_file_count",
+			slog.Error("could not increment succeeded_file_count",
 				"report_id", reportId,
 				"delta", delta,
+				"err", err,
+			)
+		}
+	}
+
+	if errorCount > 0 {
+		if err := proc.db.
+			Model(&database.Report{}).
+			Where("id = ?", reportId).
+			UpdateColumn("failed_file_count",
+				gorm.Expr("failed_file_count + ?", errorCount),
+			).Error; err != nil {
+			slog.Error("could not increment failed_file_count",
+				"report_id", reportId,
+				"errorCount", errorCount,
 				"err", err,
 			)
 		}

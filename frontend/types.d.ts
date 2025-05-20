@@ -27,7 +27,7 @@ interface Report {
     [key: string]: string;
   };
   FileCount: number;
-  CompletedFileCount: number;
+  SucceededFileCount: number;
   FailedFileCount: number;
   Groups?: Group[];
   ShardDataTaskStatus?: string;

@@ -29,7 +29,7 @@ interface AnalyticsDashboardProps {
   tokensProcessed: number; // This is actually bytes processed
   tags: Tag[];
   timeTaken: number;
-  completedFileCount: number;
+  succeededFileCount: number;
   failedFileCount: number;
   totalFileCount: number;
 }
@@ -61,13 +61,13 @@ export function AnalyticsDashboard({
   tokensProcessed,
   tags,
   timeTaken,
-  completedFileCount,
+  succeededFileCount,
   failedFileCount,
   totalFileCount,
 }: AnalyticsDashboardProps) {
   const tokenChartData = tags;
-  const filesSucceeded = (completedFileCount * 100) / totalFileCount || 0;
-  const filesFailed = (failedFileCount * 100) / totalFileCount || 0;
+  const filesSucceeded = ((succeededFileCount * 100) / totalFileCount).toFixed(0) || 0;
+  const filesFailed = ((failedFileCount * 100) / totalFileCount).toFixed(0) || 0;
 
   return (
     <div className="space-y-6 w-full">
@@ -79,7 +79,8 @@ export function AnalyticsDashboard({
             <div className="relative h-36 w-36">
               <svg className="h-full w-full" viewBox="0 0 120 120">
                 {/* Background circle */}
-                <circle cx="60" cy="60" r="48" fill="none" stroke="#facc15" strokeWidth="10" />
+                {/* <circle cx="60" cy="60" r="48" fill="none" stroke="#facc15" strokeWidth="10" /> */}
+                <circle cx="60" cy="60" r="48" fill="none" stroke="#dddddd" strokeWidth="10" />
 
                 {/* Success arc (green) */}
                 <circle
@@ -89,7 +90,7 @@ export function AnalyticsDashboard({
                   fill="none"
                   stroke="#4caf50"
                   strokeWidth="10"
-                  strokeDasharray={`${(completedFileCount / totalFileCount) * 301.592} 301.592`}
+                  strokeDasharray={`${(succeededFileCount / totalFileCount) * 301.592} 301.592`}
                   transform="rotate(-90 60 60)"
                 />
 
@@ -102,7 +103,7 @@ export function AnalyticsDashboard({
                   stroke="#ef4444"
                   strokeWidth="10"
                   strokeDasharray={`${(failedFileCount / totalFileCount) * 301.592} 301.592`}
-                  strokeDashoffset={-((completedFileCount / totalFileCount) * 301.592)}
+                  strokeDashoffset={-((succeededFileCount / totalFileCount) * 301.592)}
                   transform="rotate(-90 60 60)"
                 />
               </svg>

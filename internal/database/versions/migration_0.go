@@ -1,19 +1,54 @@
-package database
+package versions
 
 import (
 	"database/sql"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/datatypes"
+	"gorm.io/gorm"
 )
 
-const (
-	ModelQueued   string = "QUEUED"
-	ModelTraining string = "TRAINING"
-	ModelTrained  string = "TRAINED"
-	ModelFailed   string = "FAILED"
-)
+type ObjectGroup struct {
+	ReportId uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Object   string    `gorm:"primaryKey"`
+	GroupId  uuid.UUID `gorm:"type:uuid;primaryKey"`
+}
+
+type ModelTag struct {
+	ModelId uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Tag     string    `gorm:"primaryKey"`
+}
+
+type ReportTag struct {
+	ReportId uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Tag      string    `gorm:"primaryKey"`
+	Count    uint64    `gorm:"default:0"`
+}
+
+type CustomTag struct {
+	ReportId uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Tag      string    `gorm:"primaryKey"`
+	Pattern  string
+	Count    uint64 `gorm:"default:0"`
+}
+
+type Group struct {
+	Id       uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Name     string
+	ReportId uuid.UUID `gorm:"type:uuid"`
+	Query    string
+
+	Objects []ObjectGroup `gorm:"foreignKey:GroupId;constraint:OnDelete:CASCADE"`
+}
+
+type ReportError struct {
+	ReportId  uuid.UUID `gorm:"type:uuid;primaryKey"`
+	ErrorId   uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Error     string
+	Timestamp time.Time
+}
 
 type Model struct {
 	Id uuid.UUID `gorm:"type:uuid;primaryKey"`
@@ -30,62 +65,12 @@ type Model struct {
 	Tags []ModelTag `gorm:"foreignKey:ModelId;constraint:OnDelete:CASCADE"`
 }
 
-type ModelTag struct {
-	ModelId uuid.UUID `gorm:"type:uuid;primaryKey"`
-	Tag     string    `gorm:"primaryKey"`
-}
-
 const (
 	JobQueued    string = "QUEUED"
 	JobRunning   string = "RUNNING"
 	JobCompleted string = "COMPLETED"
 	JobFailed    string = "FAILED"
 )
-
-type Report struct {
-	Id         uuid.UUID `gorm:"type:uuid;primaryKey"`
-	ReportName string    `gorm:"not null"`
-
-	ModelId uuid.UUID `gorm:"type:uuid"`
-	Model   *Model    `gorm:"foreignKey:ModelId"`
-
-	Deleted bool `gorm:"default:false"`
-	Stopped bool `gorm:"default:false"`
-
-	S3Endpoint     sql.NullString
-	S3Region       sql.NullString
-	SourceS3Bucket string
-	SourceS3Prefix sql.NullString
-	IsUpload       bool
-
-	CreationTime       time.Time
-	SucceededFileCount int `gorm:"default:0"`
-	FailedFileCount    int `gorm:"default:0"`
-	TotalFileCount     int `gorm:"default:0"`
-
-	Tags       []ReportTag `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
-	CustomTags []CustomTag `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
-
-	Groups []Group `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
-
-	ShardDataTask  *ShardDataTask  `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
-	InferenceTasks []InferenceTask `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
-
-	Errors []ReportError `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
-}
-
-type ReportTag struct {
-	ReportId uuid.UUID `gorm:"type:uuid;primaryKey"`
-	Tag      string    `gorm:"primaryKey"`
-	Count    uint64    `gorm:"default:0"`
-}
-
-type CustomTag struct {
-	ReportId uuid.UUID `gorm:"type:uuid;primaryKey"`
-	Tag      string    `gorm:"primaryKey"`
-	Pattern  string
-	Count    uint64 `gorm:"default:0"`
-}
 
 type ShardDataTask struct {
 	ReportId uuid.UUID `gorm:"type:uuid;primaryKey"`
@@ -113,19 +98,36 @@ type InferenceTask struct {
 	TokenCount   int64 `gorm:"not null;default:0"`
 }
 
-type Group struct {
-	Id       uuid.UUID `gorm:"type:uuid;primaryKey"`
-	Name     string
-	ReportId uuid.UUID `gorm:"type:uuid"`
-	Query    string
+type Report struct {
+	Id         uuid.UUID `gorm:"type:uuid;primaryKey"`
+	ReportName string    `gorm:"not null"`
 
-	Objects []ObjectGroup `gorm:"foreignKey:GroupId;constraint:OnDelete:CASCADE"`
-}
+	ModelId uuid.UUID `gorm:"type:uuid"`
+	Model   *Model    `gorm:"foreignKey:ModelId"`
 
-type ObjectGroup struct {
-	ReportId uuid.UUID `gorm:"type:uuid;primaryKey"`
-	Object   string    `gorm:"primaryKey"`
-	GroupId  uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Deleted bool `gorm:"default:false"`
+	Stopped bool `gorm:"default:false"`
+
+	S3Endpoint     sql.NullString
+	S3Region       sql.NullString
+	SourceS3Bucket string
+	SourceS3Prefix sql.NullString
+	IsUpload       bool
+
+	CreationTime       time.Time
+	SucceededFileCount int `gorm:"default:0"`
+	TotalFileCount     int `gorm:"default:0"`
+	FailedFileCount    int `gorm:"default:0"`
+
+	Tags       []ReportTag `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
+	CustomTags []CustomTag `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
+
+	Groups []Group `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
+
+	ShardDataTask  *ShardDataTask  `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
+	InferenceTasks []InferenceTask `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
+
+	Errors []ReportError `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
 }
 
 type ObjectEntity struct {
@@ -145,9 +147,12 @@ type ObjectPreview struct {
 	TokenTags datatypes.JSON `gorm:"type:jsonb;not null"` // [{"token":"…","tag":"…"},…]
 }
 
-type ReportError struct {
-	ReportId  uuid.UUID `gorm:"type:uuid;primaryKey"`
-	ErrorId   uuid.UUID `gorm:"type:uuid;primaryKey"`
-	Error     string
-	Timestamp time.Time
+func Migration0(db *gorm.DB) error {
+	err := db.AutoMigrate(
+		&Model{}, &ModelTag{}, &Report{}, &ReportTag{}, &CustomTag{}, &ShardDataTask{}, &InferenceTask{}, &Group{}, &ObjectGroup{}, &ObjectEntity{}, &ReportError{}, &ObjectPreview{},
+	)
+	if err != nil {
+		return fmt.Errorf("initial migration failed: %w", err)
+	}
+	return nil
 }
