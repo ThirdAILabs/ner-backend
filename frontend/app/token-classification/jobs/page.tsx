@@ -450,7 +450,7 @@ function JobDetail() {
             timeTaken={timeTaken}
             succeededFileCount={reportData?.SucceededFileCount || 0}
             failedFileCount={reportData?.FailedFileCount || 0}
-            totalFileCount={reportData?.FileCount || 0}
+            totalFileCount={reportData?.FileCount || 1}
           />
         </TabsContent>
 
