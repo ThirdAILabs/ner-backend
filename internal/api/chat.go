@@ -1,0 +1,98 @@
+package api
+
+import (
+	"net/http"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
+	"gorm.io/gorm"
+
+	"ner-backend/internal/chat"
+	"ner-backend/internal/database"
+	"ner-backend/pkg/api"
+)
+
+type ChatService struct {
+	db      *gorm.DB
+	manager *chat.ChatSessionManager
+}
+
+func NewChatService(db *gorm.DB) *ChatService {
+	return &ChatService{
+		db:      db,
+		manager: chat.NewChatSessionManager(db),
+	}
+}
+
+func (s *ChatService) AddRoutes(r chi.Router) {
+	r.Route("/chat", func(r chi.Router) {
+		r.Post("/sessions", RestHandler(s.StartSession))
+		r.Route("/sessions/{session_id}", func(r chi.Router) {
+			r.Post("/messages", RestHandler(s.SendMessage))
+			r.Get("/history", RestHandler(s.GetHistory))
+		})
+	})
+}
+
+func (s *ChatService) StartSession(r *http.Request) (any, error) {
+	req, err := ParseRequest[api.StartSessionRequest](r)
+	if err != nil {
+		return nil, err
+	}
+
+	sessionID := uuid.New().String()
+	if err := s.manager.ValidateModel(req.Model); err != nil {
+		return nil, err
+	}
+
+	return api.StartSessionResponse{SessionID: sessionID}, nil
+}
+
+func (s *ChatService) SendMessage(r *http.Request) (any, error) {
+	sessionID := chi.URLParam(r, "session_id")
+	req, err := ParseRequest[api.ChatRequest](r)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.manager.ValidateModel(req.Model); err != nil {
+		return nil, err
+	}
+
+	session, err := chat.NewChatSession(s.db, sessionID, req.Model, req.APIKey)
+	if err != nil {
+		return nil, err
+	}
+
+	reply, err := session.Chat(req.Message)
+	if err != nil {
+		return nil, err
+	}
+
+	return api.ChatResponse{Reply: reply}, nil
+}
+
+func (s *ChatService) GetHistory(r *http.Request) (any, error) {
+	sessionID := chi.URLParam(r, "session_id")
+
+	var history []database.ChatHistory
+	err := s.db.
+		Where("session_id = ?", sessionID).
+		Order("timestamp ASC").
+		Find(&history).
+		Error
+	if err != nil {
+		return nil, err
+	}
+
+	var resp []api.ChatHistoryItem
+	for _, msg := range history {
+		resp = append(resp, api.ChatHistoryItem{
+			MessageType: msg.MessageType,
+			Content:     msg.Content,
+			Timestamp:   msg.Timestamp,
+		})
+	}
+
+	return resp, nil
+}

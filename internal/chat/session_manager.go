@@ -21,15 +21,10 @@ func NewChatSessionManager(db *gorm.DB) *ChatSessionManager {
 	}
 }
 
-func (manager *ChatSessionManager) StartSession(model, sessionID, apiKey string) (*ChatSession, error) {
+func (manager *ChatSessionManager) ValidateModel(model string) error {
 	if _, exists := manager.models[model]; !exists {
-		return nil, fmt.Errorf("model %s not supported", model)
+		return fmt.Errorf("model %s not supported", model)
 	}
 
-	session, err := NewChatSession(manager.db, sessionID, model, apiKey)
-	if err != nil {
-		return nil, err
-	}
-
-	return session, nil
+	return nil
 }

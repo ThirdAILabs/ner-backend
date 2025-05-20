@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"ner-backend/internal/database"
 	"sync"
 
 	"github.com/tmc/langchaingo/llms"
@@ -81,7 +82,7 @@ func (session *ChatSession) getOpenAIResponse(ctx string) (string, error) {
 }
 
 func (session *ChatSession) saveMessage(messageType, content string) error {
-	chatMessage := ChatHistory{
+	chatMessage := database.ChatHistory{
 		SessionID:   session.sessionID,
 		MessageType: messageType,
 		Content:     content,
@@ -89,8 +90,8 @@ func (session *ChatSession) saveMessage(messageType, content string) error {
 	return session.db.Create(&chatMessage).Error
 }
 
-func (session *ChatSession) getChatHistory() ([]ChatHistory, error) {
-	var history []ChatHistory
+func (session *ChatSession) getChatHistory() ([]database.ChatHistory, error) {
+	var history []database.ChatHistory
 	err := session.db.Where("session_id = ?", session.sessionID).Order("timestamp ASC").Find(&history).Error
 	if err != nil {
 		return nil, err

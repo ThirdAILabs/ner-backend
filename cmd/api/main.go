@@ -100,10 +100,12 @@ func main() {
 	r.Use(middleware.Timeout(60 * time.Second)) // Set request timeout
 
 	apiHandler := api.NewBackendService(db, s3Client, publisher, cfg.ChunkTargetBytes)
+	chatHandler := api.NewChatService(db)
 
 	// Your existing API routes should be prefixed with /api to avoid conflicts
 	r.Route("/api/v1", func(r chi.Router) {
 		apiHandler.AddRoutes(r)
+		chatHandler.AddRoutes(r)
 	})
 
 	// --- Start HTTP Server ---
