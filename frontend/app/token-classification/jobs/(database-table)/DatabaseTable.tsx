@@ -84,6 +84,9 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
     Object.fromEntries(tags.map((tag) => [tag.type, true]))
   );
 
+  //This list will contain all the selected filters
+  const [selectedTags, setSelectedTags] = useState<string[]>(tags.map((tag) => tag.type));
+
   // Load records functions
   const loadTokenRecords = (newOffset = 0, tagFilter?: string[], limit = TOKENS_LIMIT) => {
     if (isLoadingTokenRecords || (!hasMoreTokens && newOffset > 0)) {
@@ -91,14 +94,13 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
       return;
     }
 
-    console.log(`Loading token records from offset=${newOffset}, tagFilter:`, tagFilter);
     setIsLoadingTokenRecords(true);
 
     nerService
       .getReportEntities(reportId, {
         offset: newOffset,
         limit: limit,
-        ...(tagFilter && { tags: tagFilter }),
+        tags: tagFilter,
       })
       .then((entities) => {
         console.log(`Loaded ${entities.length} token records from offset ${newOffset}`);
@@ -137,7 +139,6 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
       return;
     }
 
-    console.log(`Loading object records from offset=${newOffset}`);
     setIsLoadingObjectRecords(true);
 
     // Use the API service to fetch objects with pagination
@@ -276,7 +277,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
         if (viewMode === 'object' && !isLoadingObjectRecords && hasMoreObjects) {
           loadObjectRecords(objectOffset, filteredObjects.length ? filteredObjects : undefined);
         } else if (viewMode === 'classified-token' && !isLoadingTokenRecords && hasMoreTokens) {
-          loadTokenRecords(tokenOffset);
+          loadTokenRecords(tokenOffset, selectedTags);
         }
       }
     }
@@ -287,7 +288,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
     if (viewMode === 'object' && !isLoadingObjectRecords && hasMoreObjects) {
       loadObjectRecords(objectOffset, filteredObjects.length ? filteredObjects : undefined);
     } else if (viewMode === 'classified-token' && !isLoadingTokenRecords && hasMoreTokens) {
-      loadTokenRecords(tokenOffset);
+      loadTokenRecords(tokenOffset, selectedTags);
     }
   };
 
@@ -300,21 +301,21 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
   };
 
   const handleTagFilterChange = (filterKey: string) => {
+    const activeTagList = tags
+      .map(tag => tag.type)
+      .filter(tag => tag === filterKey ? !tagFilters[tag] : tagFilters[tag]);
+
+    setSelectedTags(activeTagList);
+
     setTagFilters((prev) => ({
       ...prev,
       [filterKey]: !prev[filterKey],
     }));
 
-    let activeTagsList = Object.entries(tagFilters)
-      .filter(([_, isActive]) => isActive)
-      .map(([tagName]) => tagName);
-
-    activeTagsList.push(filterKey);
-
     setFilteredObjects([]);
     resetPagination();
-    loadTokenRecords(0, activeTagsList);
-    loadObjectRecords(0, activeTagsList);
+    loadTokenRecords(0, activeTagList);
+    loadObjectRecords(0, activeTagList);
   };
 
   const handleSelectAllGroups = () => {
@@ -328,16 +329,18 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
   };
 
   const handleSelectAllTags = () => {
+    const activeTags = tags.map((tag) => tag.type);
     setFilteredObjects([]);
     resetPagination();
-    loadTokenRecords(0);
+    loadTokenRecords(0, activeTags);
     loadObjectRecords(0);
-
+    setSelectedTags(activeTags);
     setTagFilters(Object.fromEntries(tags.map((tag) => [tag.type, true])));
   };
 
   const handleDeselectAllTags = () => {
     setTagFilters(Object.fromEntries(tags.map((tag) => [tag.type, false])));
+    setSelectedTags([]);
   };
 
   // Handle view mode changes
@@ -348,7 +351,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
     if (newMode === 'object' && objectRecords.length === 0) {
       loadObjectRecords(0);
     } else if (newMode === 'classified-token' && tokenRecords.length === 0) {
-      loadTokenRecords(0);
+      loadTokenRecords(0, selectedTags);
     }
   };
 
