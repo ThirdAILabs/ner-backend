@@ -762,7 +762,7 @@ func (s *BackendService) GetInferenceMetrics(r *http.Request) (any, error) {
 	var completed, running, failed statusMetrics
 
 	q1 := s.db.Model(&database.InferenceTask{}).
-		Select("COUNT(*) AS count, COALESCE(SUM(total_size),0) AS size, COALESCE(SUM(token_count),0) AS tokens").
+		Select("COUNT(DISTINCT report_id) AS count, COALESCE(SUM(total_size),0) AS size, COALESCE(SUM(token_count),0) AS tokens").
 		Where("inference_tasks.status = ? AND inference_tasks.completion_time >= ?", database.JobCompleted, since)
 	if modelID != uuid.Nil {
 		q1 = q1.
@@ -775,7 +775,7 @@ func (s *BackendService) GetInferenceMetrics(r *http.Request) (any, error) {
 	}
 
 	q2 := s.db.Model(&database.InferenceTask{}).
-		Select("COUNT(*) AS count, COALESCE(SUM(total_size),0) AS size, COALESCE(SUM(token_count),0) AS tokens").
+		Select("COUNT(DISTINCT report_id) AS count, COALESCE(SUM(total_size),0) AS size, COALESCE(SUM(token_count),0) AS tokens").
 		Where("inference_tasks.status = ? AND inference_tasks.creation_time >= ?", database.JobRunning, since)
 	if modelID != uuid.Nil {
 		q2 = q2.
@@ -788,7 +788,7 @@ func (s *BackendService) GetInferenceMetrics(r *http.Request) (any, error) {
 	}
 
 	q3 := s.db.Model(&database.InferenceTask{}).
-		Select("COUNT(*) AS count, COALESCE(SUM(total_size),0) AS size, COALESCE(SUM(token_count),0) AS tokens").
+		Select("COUNT(DISTINCT report_id) AS count, COALESCE(SUM(total_size),0) AS size, COALESCE(SUM(token_count),0) AS tokens").
 		Where("inference_tasks.status = ? AND inference_tasks.creation_time >= ?", database.JobFailed, since)
 	if modelID != uuid.Nil {
 		q3 = q3.
