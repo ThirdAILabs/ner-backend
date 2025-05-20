@@ -280,9 +280,7 @@ function JobDetail() {
       await fetchTags();
 
       const currentProgress = calculateProgress(reportData);
-      // const temp = floor(((reportData.SucceededFileCount + reportData.FailedFileCount)/reportData.FileCount) * 100);
-      // console.log('Current Progress:', temp);
-
+      
       if (currentProgress === 100) {
         clearInterval(pollInterval);
       }
