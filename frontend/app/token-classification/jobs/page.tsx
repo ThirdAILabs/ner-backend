@@ -280,7 +280,7 @@ function JobDetail() {
       await fetchTags();
 
       const currentProgress = calculateProgress(reportData);
-      
+
       if (currentProgress === 100) {
         clearInterval(pollInterval);
       }
