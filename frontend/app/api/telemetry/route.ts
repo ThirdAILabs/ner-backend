@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Pool } from 'pg';
 
 // Force Node.js runtime so we can use the 'pg' module
-export const config = { runtime: 'nodejs' };
+export const runtime = 'nodejs';
 
 // Initialize a connection pool for AWS RDS Postgres
 const pool = new Pool({
