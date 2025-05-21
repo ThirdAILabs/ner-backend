@@ -105,7 +105,8 @@
       "gatekeeperAssess": false,
       "extendInfo": {
         "NSLocalNetworkUsageDescription": "This app needs to communicate with a local backend server for NLP processing."
-      }
+      },
+      "notarize": false
     },
     "win": {
       "target": "nsis"
