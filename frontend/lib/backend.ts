@@ -308,5 +308,4 @@ export const nerService = {
   endChat: async (reportId: string): Promise<void> => {
     await axiosInstance.post(`/chat/end/${reportId}`);
   },
-  
 };

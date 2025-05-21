@@ -66,9 +66,10 @@ const SourceOption: React.FC<SourceOptionProps> = ({
   <div
     className={`relative p-6 border rounded-md transition-all
       ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200'}
-      ${disabled
-        ? 'opacity-50 cursor-not-allowed bg-gray-50'
-        : 'cursor-pointer hover:border-blue-300'
+      ${
+        disabled
+          ? 'opacity-50 cursor-not-allowed bg-gray-50'
+          : 'cursor-pointer hover:border-blue-300'
       }
     `}
     onClick={() => !disabled && onClick()}
@@ -213,9 +214,8 @@ function JobDetail() {
   const reportId: string = searchParams.get('jobId') as string;
   const mode: string = searchParams.get('mode') as string;
   const [tabValue, setTabValue] = useState<string>(() => {
-    if (mode === 'report')
-      return 'analytics';
-    return 'chat'
+    if (mode === 'report') return 'analytics';
+    return 'chat';
   });
   const [selectedSource, setSelectedSource] = useState<'s3' | 'local'>('s3');
 
@@ -317,12 +317,14 @@ function JobDetail() {
       <Tabs value={tabValue} onValueChange={setTabValue}>
         <div className="flex items-center justify-between border-b mb-6">
           <TabsList className="border-0 bg-transparent p-0">
-            {mode === 'chat' && <TabsTrigger
-              value="chat"
-              className="data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:shadow-none rounded-none bg-transparent px-4 py-3 data-[state=active]:bg-transparent"
-            >
-              Chat
-            </TabsTrigger>}
+            {mode === 'chat' && (
+              <TabsTrigger
+                value="chat"
+                className="data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:shadow-none rounded-none bg-transparent px-4 py-3 data-[state=active]:bg-transparent"
+              >
+                Chat
+              </TabsTrigger>
+            )}
 
             <TabsTrigger
               value="analytics"
@@ -344,7 +346,7 @@ function JobDetail() {
             </TabsTrigger>
           </TabsList>
         </div>
-        <TabsContent value='chat'>
+        <TabsContent value="chat">
           <ChatInterface
             jobId={reportId}
             onSendMessage={async () => {

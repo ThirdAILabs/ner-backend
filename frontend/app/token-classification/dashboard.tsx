@@ -116,10 +116,8 @@ const Dashboard = () => {
             </FormControl>
           </Box>
         </Box>
-
         {/* Your new metrics viewer */}
         <MetricsDataViewer modelId={selectedModel || undefined} days={days} />
-
         Hellooo
       </div>
     </Box>

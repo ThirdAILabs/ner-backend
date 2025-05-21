@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation';
 
 import {
   Box,
@@ -93,14 +93,14 @@ export default function Jobs() {
           prev.map((r) =>
             r.Id === report.Id
               ? {
-                ...r,
-                SucceededFileCount: detailedReport.SucceededFileCount,
-                detailedStatus: {
-                  ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
-                  InferenceTaskStatuses: detailedReport.InferenceTaskStatuses,
-                },
-                isLoadingStatus: false,
-              }
+                  ...r,
+                  SucceededFileCount: detailedReport.SucceededFileCount,
+                  detailedStatus: {
+                    ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
+                    InferenceTaskStatuses: detailedReport.InferenceTaskStatuses,
+                  },
+                  isLoadingStatus: false,
+                }
               : r
           )
         );
@@ -155,7 +155,7 @@ export default function Jobs() {
       }
     };
     if (healthStatus) fetchReports();
-    return () => { };
+    return () => {};
   }, [healthStatus]);
 
   const dropDownRef = useOutsideClick(() => {
@@ -409,8 +409,6 @@ export default function Jobs() {
     }
   };
 
-
-
   return (
     <Card sx={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)', bgcolor: 'grey.100' }}>
       <CardContent sx={{ p: 3 }}>
@@ -444,7 +442,9 @@ export default function Jobs() {
                 borderRadius: '50%',
               }}
               disabled={!healthStatus}
-              onClick={() => { setIsOpen(prev => !prev) }}
+              onClick={() => {
+                setIsOpen((prev) => !prev);
+              }}
             >
               <Plus size={24} />
             </Button>
@@ -454,14 +454,18 @@ export default function Jobs() {
                 <div className="py-2">
                   <button
                     className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-left transition-colors flex items-center gap-2"
-                    onClick={() => { router.push("/token-classification/jobs/new?mode=report") }}
+                    onClick={() => {
+                      router.push('/token-classification/jobs/new?mode=report');
+                    }}
                   >
                     <FileText className="w-4 h-4" />
                     <span>Report</span>
                   </button>
                   <button
                     className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-left transition-colors flex items-center gap-2"
-                    onClick={() => { router.push("/token-classification/jobs/new?mode=chat") }}
+                    onClick={() => {
+                      router.push('/token-classification/jobs/new?mode=chat');
+                    }}
                   >
                     <MessageSquare className="w-4 h-4" />
                     <span>Chat</span>
@@ -518,7 +522,7 @@ export default function Jobs() {
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         <Link
-                          href={`/token-classification/jobs?jobId=${report.Id}&mode=${report.SourceS3Bucket === "chat" ? 'chat' : 'report'}`}
+                          href={`/token-classification/jobs?jobId=${report.Id}&mode=${report.SourceS3Bucket === 'chat' ? 'chat' : 'report'}`}
                           style={{
                             color: '#1976d2',
                             textDecoration: 'none',
