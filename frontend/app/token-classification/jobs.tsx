@@ -174,22 +174,6 @@ export default function Jobs() {
             <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.125rem' }}>
               Report
             </Typography>
-            <Link href={`/token-classification/jobs/new`} passHref>
-              <Button
-                variant="contained"
-                color="primary"
-                sx={{
-                  bgcolor: '#1976d2',
-                  '&:hover': {
-                    bgcolor: '#1565c0',
-                  },
-                  textTransform: 'none',
-                  fontWeight: 500,
-                }}
-              >
-                <Plus size={16} />
-              </Button>
-            </Link>
           </Box>
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
             <CircularProgress size={24} />
