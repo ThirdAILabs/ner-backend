@@ -766,10 +766,13 @@ func (s *BackendService) GetInferenceMetrics(r *http.Request) (any, error) {
 		Tokens sql.NullInt64 `gorm:"column:tokens"`
 	}
 
-	var completed, running statusMetrics
+	var completed, running, failed statusMetrics
+
+	// We count distinct report IDs because we are querying the InferenceTask table, 
+	// where the same report ID can appear multiple times.
 
 	q1 := s.db.Model(&database.InferenceTask{}).
-		Select("COUNT(*) AS count, COALESCE(SUM(total_size),0) AS size, COALESCE(SUM(token_count),0) AS tokens").
+		Select("COUNT(DISTINCT report_id) AS count, COALESCE(SUM(total_size),0) AS size, COALESCE(SUM(token_count),0) AS tokens").
 		Where("inference_tasks.status = ? AND inference_tasks.completion_time >= ?", database.JobCompleted, since)
 	if modelID != uuid.Nil {
 		q1 = q1.
@@ -782,7 +785,7 @@ func (s *BackendService) GetInferenceMetrics(r *http.Request) (any, error) {
 	}
 
 	q2 := s.db.Model(&database.InferenceTask{}).
-		Select("COUNT(*) AS count, COALESCE(SUM(total_size),0) AS size, COALESCE(SUM(token_count),0) AS tokens").
+		Select("COUNT(DISTINCT report_id) AS count, COALESCE(SUM(total_size),0) AS size, COALESCE(SUM(token_count),0) AS tokens").
 		Where("inference_tasks.status = ? AND inference_tasks.creation_time >= ?", database.JobRunning, since)
 	if modelID != uuid.Nil {
 		q2 = q2.
@@ -794,12 +797,26 @@ func (s *BackendService) GetInferenceMetrics(r *http.Request) (any, error) {
 		return nil, CodedErrorf(http.StatusInternalServerError, "error %d: error retrieving metrics", ErrCodeDB)
 	}
 
-	totalBytes := completed.Size.Int64 + running.Size.Int64
-	totalTokens := completed.Tokens.Int64 + running.Tokens.Int64
+	q3 := s.db.Model(&database.InferenceTask{}).
+		Select("COUNT(DISTINCT report_id) AS count, COALESCE(SUM(total_size),0) AS size, COALESCE(SUM(token_count),0) AS tokens").
+		Where("inference_tasks.status = ? AND inference_tasks.creation_time >= ?", database.JobFailed, since)
+	if modelID != uuid.Nil {
+		q3 = q3.
+			Joins("JOIN reports ON reports.id = inference_tasks.report_id").
+			Where("reports.model_id = ?", modelID)
+	}
+	if err := q3.Scan(&failed).Error; err != nil {
+		slog.Error("error fetching in-progress metrics", "error", err)
+		return nil, CodedErrorf(http.StatusInternalServerError, "error %d: error retrieving metrics", ErrCodeDB)
+	}
+
+	totalBytes := completed.Size.Int64 + running.Size.Int64 + failed.Size.Int64
+	totalTokens := completed.Tokens.Int64 + running.Tokens.Int64 + failed.Tokens.Int64
 	dataProcessedMB := float64(totalBytes) / (1024 * 1024)
 
 	return api.InferenceMetricsResponse{
 		Completed:       completed.Count,
+		Failed:          failed.Count,
 		InProgress:      running.Count,
 		DataProcessedMB: dataProcessedMB,
 		TokensProcessed: totalTokens,
@@ -834,7 +851,7 @@ func (s *BackendService) GetThroughputMetrics(r *http.Request) (any, error) {
 	}
 	q := s.db.Model(&database.InferenceTask{}).
 		Joins("JOIN reports ON reports.id = inference_tasks.report_id").
-		Where("inference_tasks.status = ?", database.JobCompleted).
+		Where("inference_tasks.status = ? OR inference_tasks.status = ?", database.JobCompleted, database.JobFailed).
 		Where("reports.model_id = ?", modelID)
 	if reportID != uuid.Nil {
 		q = q.Where("inference_tasks.report_id = ?", reportID)
