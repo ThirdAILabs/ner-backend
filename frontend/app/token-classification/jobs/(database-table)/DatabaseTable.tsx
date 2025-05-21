@@ -92,7 +92,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
   };
 
   // Load records functions
-  const loadTokenRecords = (newOffset = 0, tagFilter?: string[], limit = TOKENS_LIMIT) => {
+  const loadTokenRecords = (newOffset = 0, tagFilter: string[], limit = TOKENS_LIMIT) => {
     if (isLoadingTokenRecords || (!hasMoreTokens && newOffset > 0)) {
       console.log('Skipping token records load - already loading or no more data');
       return;
@@ -186,7 +186,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
       // If empty query, reset filters and reload data
       setFilteredObjects([]);
       resetPagination();
-      loadTokenRecords(0);
+      loadTokenRecords(0, toActiveTagList(tagFilters));
       loadObjectRecords(0);
       return;
     }
@@ -204,7 +204,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
         loadObjectRecords(0, result.Objects);
         // For token records, we'll let them load unfiltered first
         // then filter them in the TableContent component
-        loadTokenRecords(0);
+        loadTokenRecords(0, toActiveTagList(tagFilters));
       }
     } catch (error) {
       console.error('Error searching:', error);
@@ -228,7 +228,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
     // Force immediate loading of token records
     console.log('Component mounted, loading initial data');
     resetPagination();
-    loadTokenRecords(0);
+    loadTokenRecords(0, toActiveTagList(tagFilters));
     loadObjectRecords(0);
     loadedInitialTokenRecords.current = true;
     loadedInitialObjectRecords.current = true;
