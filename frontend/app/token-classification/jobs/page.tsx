@@ -23,6 +23,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Suspense } from 'react';
 import { floor } from 'lodash';
+import ChatInterface from '@/components/Chat';
 
 // Calculate progress based on InferenceTaskStatuses
 const calculateProgress = (report: Report | null): number => {
@@ -65,10 +66,9 @@ const SourceOption: React.FC<SourceOptionProps> = ({
   <div
     className={`relative p-6 border rounded-md transition-all
       ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200'}
-      ${
-        disabled
-          ? 'opacity-50 cursor-not-allowed bg-gray-50'
-          : 'cursor-pointer hover:border-blue-300'
+      ${disabled
+        ? 'opacity-50 cursor-not-allowed bg-gray-50'
+        : 'cursor-pointer hover:border-blue-300'
       }
     `}
     onClick={() => !disabled && onClick()}
@@ -211,7 +211,12 @@ const NewTagDialog: React.FC<{
 function JobDetail() {
   const searchParams = useSearchParams();
   const reportId: string = searchParams.get('jobId') as string;
-  const [tabValue, setTabValue] = useState('analytics');
+  const mode: string = searchParams.get('mode') as string;
+  const [tabValue, setTabValue] = useState<string>(() => {
+    if (mode === 'report')
+      return 'analytics';
+    return 'chat'
+  });
   const [selectedSource, setSelectedSource] = useState<'s3' | 'local'>('s3');
 
   // Remove selectedTags state, just keep availableTags
@@ -312,6 +317,13 @@ function JobDetail() {
       <Tabs value={tabValue} onValueChange={setTabValue}>
         <div className="flex items-center justify-between border-b mb-6">
           <TabsList className="border-0 bg-transparent p-0">
+            {mode === 'chat' && <TabsTrigger
+              value="chat"
+              className="data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:shadow-none rounded-none bg-transparent px-4 py-3 data-[state=active]:bg-transparent"
+            >
+              Chat
+            </TabsTrigger>}
+
             <TabsTrigger
               value="analytics"
               className="data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:shadow-none rounded-none bg-transparent px-4 py-3 data-[state=active]:bg-transparent"
@@ -332,7 +344,21 @@ function JobDetail() {
             </TabsTrigger>
           </TabsList>
         </div>
-
+        <TabsContent value='chat'>
+          <ChatInterface
+            jobId={reportId}
+            onSendMessage={async () => {
+              try {
+                await nerService.addChatMessage(reportId, message);
+                setMessage('');
+              } catch (error) {
+                console.error('Error sending message:', error);
+              }
+            }}
+            // messages={[]}
+            isLoading={isLoading}
+          />
+        </TabsContent>
         <TabsContent value="configuration" className="mt-0">
           {/* STARTS */}
           {/* Source */}
@@ -462,16 +488,16 @@ function JobDetail() {
           />
         </TabsContent>
       </Tabs>
-      
-      <div className="flex gap-2 mt-4">
-        <Input 
+
+      {/* <div className="flex gap-2 mt-4">
+        <Input
           type="text"
           placeholder="Enter message"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           className="flex-1"
         />
-        <Button 
+        <Button
           onClick={async () => {
             try {
               await nerService.addChatMessage(reportId, message);
@@ -499,7 +525,7 @@ function JobDetail() {
         >
           End Chat
         </Button>
-      </div>
+      </div> */}
     </div>
   );
 }

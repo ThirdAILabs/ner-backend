@@ -518,7 +518,7 @@ export default function Jobs() {
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         <Link
-                          href={`/token-classification/jobs?jobId=${report.Id}`}
+                          href={`/token-classification/jobs?jobId=${report.Id}&mode=${report.SourceS3Bucket === "chat" ? 'chat' : 'report'}`}
                           style={{
                             color: '#1976d2',
                             textDecoration: 'none',
