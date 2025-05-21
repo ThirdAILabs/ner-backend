@@ -48,14 +48,6 @@ func (m *regexModel) Save(path string) error {
 
 func (m *regexModel) Release() {}
 
-func (m *regexModel) Redact(text string) (string, []types.Entity, error) {
-	return text, nil, nil
-}
-
-func (m *regexModel) Restore(redacted string, entities []types.Entity) string {
-	return redacted
-}
-
 const testDoc = "This is a test doc. It contains a phone number: 012-345-6789, an email: test@email.com, and a special token a1b2c3."
 
 func TestObjectInference(t *testing.T) {
