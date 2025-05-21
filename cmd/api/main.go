@@ -139,10 +139,12 @@ func main() {
 		}
 	}()
 
-	chi.Walk(r, func(method, route string, _ http.Handler, _ ...func(http.Handler) http.Handler) error {
-		log.Printf("ROUTE %s %s", method, route)
+	if err := chi.Walk(r, func(method, route string, _ http.Handler, _ ...func(http.Handler) http.Handler) error {
+		log.Printf("%s %s\n", method, route)
 		return nil
-	})
+	}); err != nil {
+		log.Printf("failed to list routes: %v", err)
+	}
 
 	log.Printf("API server listening on port %s", cfg.APIPort)
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
