@@ -30,10 +30,8 @@ func NewChatService(db *gorm.DB, model core.Model) *ChatService {
 func (s *ChatService) AddRoutes(r chi.Router) {
 	r.Route("/chat", func(r chi.Router) {
 		r.Post("/sessions", RestHandler(s.StartSession))
-		r.Route("/sessions/{session_id}", func(r chi.Router) {
-			r.Post("/messages", RestHandler(s.SendMessage))
-			r.Get("/history", RestHandler(s.GetHistory))
-		})
+		r.Post("/sessions/{session_id}/messages", RestHandler(s.SendMessage))
+		r.Get("/sessions/{session_id}/history", RestHandler(s.GetHistory))
 	})
 }
 
@@ -62,7 +60,12 @@ func (s *ChatService) SendMessage(r *http.Request) (any, error) {
 		return nil, err
 	}
 
-	session, err := chat.NewChatSession(s.db, sessionID, req.Model, req.APIKey, s.model)
+	engine, err := s.manager.EngineName(req.Model)
+	if err != nil {
+		return nil, err
+	}
+
+	session, err := chat.NewChatSession(s.db, sessionID, engine, req.APIKey, s.model)
 	if err != nil {
 		return nil, err
 	}
@@ -94,6 +97,7 @@ func (s *ChatService) GetHistory(r *http.Request) (any, error) {
 			MessageType: msg.MessageType,
 			Content:     msg.Content,
 			Timestamp:   msg.Timestamp,
+			Metadata:    msg.Metadata,
 		})
 	}
 

@@ -1,8 +1,7 @@
 package api
 
 type StartSessionRequest struct {
-	Model  string `json:"model"`
-	APIKey string `json:"api_key"`
+	Model string `json:"model"`
 }
 
 type StartSessionResponse struct {
@@ -16,7 +15,7 @@ type ChatRequest struct {
 }
 
 type ChatResponse struct {
-	Reply string `json:"reply"`
+	Reply  string            `json:"reply"`
 	TagMap map[string]string `json:"tag_map"`
 }
 
@@ -24,4 +23,5 @@ type ChatHistoryItem struct {
 	MessageType string `json:"message_type"` // "user" or "ai"
 	Content     string `json:"content"`
 	Timestamp   string `json:"timestamp"`
+	Metadata    any    `json:"metadata,omitempty"` // Optional metadata field
 }

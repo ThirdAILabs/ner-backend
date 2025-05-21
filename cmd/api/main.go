@@ -139,6 +139,11 @@ func main() {
 		}
 	}()
 
+	chi.Walk(r, func(method, route string, _ http.Handler, _ ...func(http.Handler) http.Handler) error {
+		log.Printf("ROUTE %s %s", method, route)
+		return nil
+	})
+
 	log.Printf("API server listening on port %s", cfg.APIPort)
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("Could not listen on %s: %v\n", cfg.APIPort, err)

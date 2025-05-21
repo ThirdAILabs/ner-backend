@@ -15,8 +15,8 @@ func NewChatSessionManager(db *gorm.DB) *ChatSessionManager {
 	return &ChatSessionManager{
 		db: db,
 		models: map[string]string{
-			"gpt-4": "gpt-4",
-			"gpt-3": "gpt-3.5",
+			"gpt-4": "gpt-4o-mini",
+			"gpt-3": "gpt-3.5-turbo",
 		},
 	}
 }
@@ -27,4 +27,11 @@ func (manager *ChatSessionManager) ValidateModel(model string) error {
 	}
 
 	return nil
+}
+
+func (m *ChatSessionManager) EngineName(key string) (string, error) {
+	if eng, ok := m.models[key]; ok {
+		return eng, nil
+	}
+	return "", fmt.Errorf("model %q not supported", key)
 }

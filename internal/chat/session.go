@@ -8,6 +8,7 @@ import (
 	"ner-backend/internal/core"
 	"ner-backend/internal/database"
 	"sort"
+	"strings"
 	"sync"
 
 	"github.com/tmc/langchaingo/llms"
@@ -45,39 +46,47 @@ func NewChatSession(db *gorm.DB, sessionID, model, apiKey string, ner core.Model
 func (session *ChatSession) Redact(text string) (string, map[string]string, error) {
 	entities, err := session.ner.Predict(text)
 	if err != nil {
-		return "", nil, fmt.Errorf("error predicting entities: %v", err)
+		return "", nil, fmt.Errorf("error predicting entities: %w", err)
 	}
-
-	redactedText := text
-	// user-tag --> entity-text
-	userTagMap := make(map[string]string)
-
-	// map to store unique tags for each entity label
-	uniqueTagId := make(map[string]int)
-
-	// map to store if (entity, label) is seen and what is the user-tag mapped for it.
-	// This is being used because same entity text can be tagged as different label in different parts of the text.
-	tempMp := make(map[string]string)
 
 	sort.Slice(entities, func(i, j int) bool {
-		return entities[i].Start > entities[j].Start
+		if entities[i].Start == entities[j].Start {
+			return entities[i].End > entities[j].End
+		}
+		return entities[i].Start < entities[j].Start
 	})
 
-	for _, entity := range entities {
-		var userTag string
-		key := fmt.Sprintf("%s_%s", entity.Text, entity.Label)
-		if existingTag, exists := tempMp[key]; exists {
-			userTag = existingTag
-		} else {
-			uniqueTagId[entity.Label]++
-			userTag = fmt.Sprintf("[%s_%d]", entity.Label, uniqueTagId[key])
-			tempMp[key] = userTag
-			userTagMap[userTag] = entity.Text
+	var b strings.Builder
+	cursor := 0
+	tagMap := make(map[string]string)
+
+	labelCounts := make(map[string]int)
+
+	assigned := make(map[string]string)
+
+	for _, ent := range entities {
+
+		if ent.Start < cursor || ent.End > len(text) {
+			continue
 		}
 
-		redactedText = redactedText[:entity.Start] + userTag + redactedText[entity.End:]
+		b.WriteString(text[cursor:ent.Start])
+
+		key := fmt.Sprintf("%s_%s", ent.Text, ent.Label)
+		userTag, ok := assigned[key]
+		if !ok {
+			labelCounts[ent.Label]++
+			userTag = fmt.Sprintf("[%s_%d]", ent.Label, labelCounts[ent.Label])
+			assigned[key] = userTag
+			tagMap[userTag] = ent.Text
+		}
+
+		b.WriteString(userTag)
+		cursor = ent.End
 	}
-	return redactedText, userTagMap, nil
+
+	b.WriteString(text[cursor:])
+	return b.String(), tagMap, nil
 }
 
 func (session *ChatSession) Chat(userInput string) (string, map[string]string, error) {
