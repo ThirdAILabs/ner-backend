@@ -760,6 +760,8 @@ func (s *BackendService) GetInferenceMetrics(r *http.Request) (any, error) {
 	}
 
 	var completed, running, failed statusMetrics
+	// We count distinct report IDs because we are querying the InferenceTask table, 
+	// where the same report ID can appear multiple times.
 
 	q1 := s.db.Model(&database.InferenceTask{}).
 		Select("COUNT(DISTINCT report_id) AS count, COALESCE(SUM(total_size),0) AS size, COALESCE(SUM(token_count),0) AS tokens").
