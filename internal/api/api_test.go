@@ -249,7 +249,7 @@ func TestCreateReport_InvalidS3(t *testing.T) {
 	router.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
-	assert.Contains(t, rec.Body.String(), "Failed to connect to S3 bucket")
+	assert.Contains(t, rec.Body.String(), "failed to verify access to s3")
 }
 
 func TestGetReport(t *testing.T) {
@@ -721,5 +721,5 @@ func TestValidateS3Bucket_InvalidBucket(t *testing.T) {
 	router.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
-	assert.Contains(t, rec.Body.String(), "Failed to connect to S3 bucket")
+	assert.Contains(t, rec.Body.String(), "failed to verify access to s3")
 }

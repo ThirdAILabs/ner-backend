@@ -78,7 +78,7 @@ func (s *BackendService) AddRoutes(r chi.Router) {
 
 	r.Route("/validate", func(r chi.Router) {
 		r.Get("/group", RestHandler(s.ValidateGroupDefinition))
-		r.Get("/s3", RestHandler(s.ValidateS3Bucket))
+		r.Get("/s3", RestHandler(s.ValidateS3Access))
 	})
 }
 
@@ -234,7 +234,7 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 	}
 
 	if req.UploadId == uuid.Nil {
-		if err := attemptS3Connection(s3Endpoint, s3Region, sourceS3Bucket, s3Prefix); err != nil {
+		if err := validateS3Access(s3Endpoint, s3Region, sourceS3Bucket, s3Prefix); err != nil {
 			return nil, err
 		}
 	}
@@ -879,7 +879,7 @@ func (s *BackendService) ValidateGroupDefinition(r *http.Request) (any, error) {
 	return nil, nil
 }
 
-func attemptS3Connection(endpoint string, region string, bucket string, prefix string) error {
+func validateS3Access(endpoint string, region string, bucket string, prefix string) error {
 	s3Client, err := storage.NewS3Provider(storage.S3ProviderConfig{
 		S3EndpointURL: endpoint,
 		S3Region:      region,
@@ -891,21 +891,13 @@ func attemptS3Connection(endpoint string, region string, bucket string, prefix s
 	}
 
 	ctx := context.Background()
-	for _, err := range s3Client.IterObjects(ctx, bucket, prefix) {
-		if err != nil {
-			slog.Error("error iterating over S3 objects", "error", err)
-			return CodedErrorf(http.StatusInternalServerError, "Failed to connect to S3 bucket. %v", err)
-		}
-		break
-	}
-
-	return nil
+	return s3Client.ValidateAccess(ctx, bucket, prefix)
 }
 
-func (s *BackendService) ValidateS3Bucket(r *http.Request) (any, error) {
+func (s *BackendService) ValidateS3Access(r *http.Request) (any, error) {
 	req, err := ParseRequestQueryParams[api.ValidateS3BucketRequest](r)
 	if err != nil {
 		return nil, err
 	}
-	return nil, attemptS3Connection(req.S3Endpoint, req.S3Region, req.SourceS3Bucket, req.SourceS3Prefix)
+	return nil, validateS3Access(req.S3Endpoint, req.S3Region, req.SourceS3Bucket, req.SourceS3Prefix)
 }
