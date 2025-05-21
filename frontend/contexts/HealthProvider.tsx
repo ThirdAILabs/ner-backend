@@ -36,7 +36,8 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    pollHealth();
+    // Delay first health check by 5 seconds
+    timeoutId = setTimeout(pollHealth, 5000);
 
     return () => {
       if (timeoutId) {
