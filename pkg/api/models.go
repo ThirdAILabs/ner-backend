@@ -136,3 +136,14 @@ type ThroughputResponse struct {
 	ReportID            uuid.UUID `json:"ReportId"`
 	ThroughputMBPerHour float64   `json:"ThroughputMBPerHour"`
 }
+
+type ValidateGroupDefinitionRequest struct {
+	GroupQuery string
+}
+
+type ValidateS3BucketRequest struct {
+	S3Endpoint     string
+	S3Region       string
+	SourceS3Bucket string
+	SourceS3Prefix string
+}

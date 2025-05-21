@@ -76,8 +76,9 @@ func (s *BackendService) AddRoutes(r chi.Router) {
 		r.Get("/throughput", RestHandler(s.GetThroughputMetrics))
 	})
 
-	r.Route("/validate-group-definition", func(r chi.Router) {
-		r.Get("/", RestHandler(s.ValidateGroupDefinition))
+	r.Route("/validate", func(r chi.Router) {
+		r.Get("/group", RestHandler(s.ValidateGroupDefinition))
+		r.Get("/s3", RestHandler(s.ValidateS3Access))
 	})
 }
 
@@ -230,6 +231,12 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 
 	if sourceS3Bucket == "" {
 		return nil, CodedErrorf(http.StatusUnprocessableEntity, "the following fields are required: SourceS3Bucket or UploadId")
+	}
+
+	if req.UploadId == uuid.Nil {
+		if err := validateS3Access(s3Endpoint, s3Region, sourceS3Bucket, s3Prefix); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := validateReportName(req.ReportName); err != nil {
@@ -862,12 +869,35 @@ func (s *BackendService) GetThroughputMetrics(r *http.Request) (any, error) {
 }
 
 func (s *BackendService) ValidateGroupDefinition(r *http.Request) (any, error) {
-	groupQuery := r.URL.Query().Get("group_query")
-	if groupQuery == "" {
-		return nil, CodedErrorf(http.StatusBadRequest, "group query is required")
+	req, err := ParseRequestQueryParams[api.ValidateGroupDefinitionRequest](r)
+	if err != nil {
+		return nil, err
 	}
-	if _, err := core.ParseQuery(groupQuery); err != nil {
-		return nil, CodedErrorf(http.StatusUnprocessableEntity, "invalid query '%s': %v", groupQuery, err)
+	if _, err := core.ParseQuery(req.GroupQuery); err != nil {
+		return nil, CodedErrorf(http.StatusUnprocessableEntity, "invalid query '%s': %v", req.GroupQuery, err)
 	}
 	return nil, nil
+}
+
+func validateS3Access(endpoint string, region string, bucket string, prefix string) error {
+	s3Client, err := storage.NewS3Provider(storage.S3ProviderConfig{
+		S3EndpointURL: endpoint,
+		S3Region:      region,
+	})
+	
+	if err != nil {
+		slog.Error("error connecting to S3", "s3_endpoint", endpoint, "region", region, "error", err)
+		return CodedErrorf(http.StatusInternalServerError, "Failed to connect to S3 endpoint. %v", err)
+	}
+
+	ctx := context.Background()
+	return s3Client.ValidateAccess(ctx, bucket, prefix)
+}
+
+func (s *BackendService) ValidateS3Access(r *http.Request) (any, error) {
+	req, err := ParseRequestQueryParams[api.ValidateS3BucketRequest](r)
+	if err != nil {
+		return nil, err
+	}
+	return nil, validateS3Access(req.S3Endpoint, req.S3Region, req.SourceS3Bucket, req.SourceS3Prefix)
 }
