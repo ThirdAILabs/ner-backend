@@ -296,7 +296,7 @@ function JobDetail() {
       {/* Header with Back Button and Title */}
       <div className="flex items-center justify-between mb-6">
         <Button variant="outline" size="sm" asChild>
-          <Link href={`/?tab=jobs`} className="flex items-center">
+          <Link href={`/token-classification/landing?tab=jobs`} className="flex items-center">
             <ArrowLeft className="mr-1 h-4 w-4" /> Back to Reports
           </Link>
         </Button>
