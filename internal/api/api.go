@@ -760,6 +760,7 @@ func (s *BackendService) GetInferenceMetrics(r *http.Request) (any, error) {
 	}
 
 	var completed, running, failed statusMetrics
+
 	// We count distinct report IDs because we are querying the InferenceTask table, 
 	// where the same report ID can appear multiple times.
 
