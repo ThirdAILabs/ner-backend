@@ -84,7 +84,6 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
     Object.fromEntries(tags.map((tag) => [tag.type, true]))
   );
 
-
   const toActiveTagList = (filters: Record<string, boolean>): string[] => {
     return Object.entries(filters)
       .filter(([_, isActive]) => isActive)
@@ -298,7 +297,6 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
     console.log('Deselecting all groups');
     setGroupFilters(Object.fromEntries(groups.map((group) => [group, false])));
   };
-
 
   const handleSelectAllTags = () => {
     const newFilters = Object.fromEntries(tags.map((tag) => [tag.type, true]));
