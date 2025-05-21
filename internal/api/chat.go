@@ -93,10 +93,11 @@ func (s *ChatService) GetHistory(r *http.Request) (any, error) {
 
 	var resp []api.ChatHistoryItem
 	for _, msg := range history {
+		ts := msg.Timestamp.Format("2006-01-02 15:04:05")
 		resp = append(resp, api.ChatHistoryItem{
 			MessageType: msg.MessageType,
 			Content:     msg.Content,
-			Timestamp:   msg.Timestamp,
+			Timestamp:   ts,
 			Metadata:    msg.Metadata,
 		})
 	}
