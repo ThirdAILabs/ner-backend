@@ -107,7 +107,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
             <CardContent className="flex flex-col items-center justify-center flex-1 pt-6">
               <div className="relative h-32 w-32">
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-2xl font-bold text-gray-700">{infMetrics.Completed}</span>
+                  <span className="text-2xl font-bold text-gray-700">{infMetrics.Completed + infMetrics.Failed}</span>
                 </div>
               </div>
               <h3 className="mt-auto text-center text-sm text-muted-foreground">

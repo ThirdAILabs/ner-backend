@@ -76,6 +76,7 @@ interface CreateReportRequest {
 
 export interface InferenceMetrics {
   Completed: number;
+  Failed: number;
   InProgress: number;
   DataProcessedMB: number;
   TokensProcessed: number;

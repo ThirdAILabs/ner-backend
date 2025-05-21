@@ -805,7 +805,8 @@ func (s *BackendService) GetInferenceMetrics(r *http.Request) (any, error) {
 	dataProcessedMB := float64(totalBytes) / (1024 * 1024)
 
 	return api.InferenceMetricsResponse{
-		Completed:       completed.Count + failed.Count,
+		Completed:       completed.Count,
+		Failed:          failed.Count,
 		InProgress:      running.Count,
 		DataProcessedMB: dataProcessedMB,
 		TokensProcessed: totalTokens,
