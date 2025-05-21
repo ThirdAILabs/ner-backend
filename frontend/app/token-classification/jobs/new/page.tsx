@@ -101,6 +101,8 @@ export default function NewJobPage() {
 
   // Essential state
   const [selectedSource, setSelectedSource] = useState<'s3' | 'files' | 'directory'>('files');
+  const [sourceS3Endpoint, setSourceS3Endpoint] = useState('');
+  const [sourceS3Region, setSourceS3Region] = useState('');
   const [sourceS3Bucket, setSourceS3Bucket] = useState('');
   const [sourceS3Prefix, setSourceS3Prefix] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -141,6 +143,7 @@ export default function NewJobPage() {
 
   // Error/Success messages
   const [error, setError] = useState<string | null>(null);
+  const [s3Error, setS3Error] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   const [patternType, setPatternType] = useState('string');
@@ -371,6 +374,24 @@ export default function NewJobPage() {
     input.value = '';
   };
 
+  const validateS3Bucket = async () => {
+    if (!sourceS3Bucket || !sourceS3Region) {
+      return;
+    }
+    setS3Error('');
+    const s3Error = await nerService.attemptS3Connection(
+      sourceS3Endpoint,
+      sourceS3Region,
+      sourceS3Bucket,
+      sourceS3Prefix
+    );
+    if (s3Error) {
+      setS3Error(s3Error);
+    } else {
+      setS3Error('');
+    }
+  };
+
   const removeFile = (index: number) => {
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   };
@@ -416,8 +437,13 @@ export default function NewJobPage() {
       return;
     }
 
-    if (selectedSource === 's3' && !sourceS3Bucket) {
-      setError('S3 bucket is required');
+    if (selectedSource === 's3' && !(sourceS3Region && sourceS3Bucket)) {
+      setError('S3 region and bucket are required');
+      return;
+    }
+
+    if (selectedSource === 's3' && s3Error) {
+      setError(s3Error);
       return;
     }
 
@@ -460,6 +486,8 @@ export default function NewJobPage() {
         CustomTags: customTagsObj,
         ...(selectedSource === 's3'
           ? {
+              S3Endpoint: sourceS3Endpoint,
+              S3Region: sourceS3Region,
               SourceS3Bucket: sourceS3Bucket,
               SourceS3Prefix: sourceS3Prefix || undefined,
             }
@@ -518,12 +546,12 @@ export default function NewJobPage() {
     return true;
   };
 
-  const [showTooltip, setShowTooltip] = useState(false);
-  const copyToClipboard = (text: string) => {
+  const [showTooltip, setShowTooltip] = useState<Record<string, boolean>>({});
+  const copyToClipboard = (text: string, tooltipId: string) => {
     navigator.clipboard.writeText(text);
-    setShowTooltip(true);
+    setShowTooltip((prev) => ({ ...prev, [tooltipId]: true }));
     setTimeout(() => {
-      setShowTooltip(false);
+      setShowTooltip((prev) => ({ ...prev, [tooltipId]: false }));
     }, 1000);
   };
 
@@ -643,6 +671,59 @@ export default function NewJobPage() {
                   return (
                     <div className="space-y-4">
                       <div>
+                        <div className="text-sm text-gray-500 mt-1 mb-3">
+                          Your S3 bucket must be public. Private bucket support is available on the
+                          enterprise platform. Reach out to{' '}
+                          <div className="relative inline-block">
+                            <span
+                              className="text-blue-500 underline cursor-pointer hover:text-blue-700"
+                              onClick={() => copyToClipboard('contact@thirdai.com', 's3')}
+                              title="Click to copy email"
+                            >
+                              contact@thirdai.com
+                            </span>
+                            {showTooltip['s3'] && (
+                              <div className="absolute left-1/2 -translate-x-1/2 mt-1 w-max px-2 py-1 text-xs bg-gray-800 text-white rounded shadow-md z-10">
+                                Email Copied
+                              </div>
+                            )}
+                          </div>{' '}
+                          for an enterprise subscription.
+                        </div>
+                        {s3Error && (
+                          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded">
+                            {s3Error}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          S3 Endpoint (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          value={sourceS3Endpoint}
+                          onChange={(e) => setSourceS3Endpoint(e.target.value)}
+                          onBlur={validateS3Bucket}
+                          className="w-full p-2 border border-gray-300 rounded"
+                          placeholder="s3.amazonaws.com"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          S3 Region
+                        </label>
+                        <input
+                          type="text"
+                          value={sourceS3Region}
+                          onChange={(e) => setSourceS3Region(e.target.value)}
+                          onBlur={validateS3Bucket}
+                          className="w-full p-2 border border-gray-300 rounded"
+                          placeholder="us-east-1"
+                          required
+                        />
+                      </div>
+                      <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                           S3 Bucket Name
                         </label>
@@ -650,6 +731,7 @@ export default function NewJobPage() {
                           type="text"
                           value={sourceS3Bucket}
                           onChange={(e) => setSourceS3Bucket(e.target.value)}
+                          onBlur={validateS3Bucket}
                           className="w-full p-2 border border-gray-300 rounded"
                           placeholder="my-bucket"
                           required
@@ -808,12 +890,12 @@ export default function NewJobPage() {
                       <div className="relative inline-block">
                         <span
                           className="text-blue-500 underline cursor-pointer hover:text-blue-700"
-                          onClick={() => copyToClipboard('contact@thirdai.com')}
+                          onClick={() => copyToClipboard('contact@thirdai.com', 'advanced-model')}
                           title="Click to copy email"
                         >
                           contact@thirdai.com
                         </span>
-                        {showTooltip && (
+                        {showTooltip['advanced-model'] && (
                           <div className="absolute left-1/2 -translate-x-1/2 mt-1 w-max px-2 py-1 text-xs bg-gray-800 text-white rounded shadow-md z-10">
                             Email Copied
                           </div>
