@@ -84,8 +84,12 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
     Object.fromEntries(tags.map((tag) => [tag.type, true]))
   );
 
-  //This list will contain all the selected filters
-  const [selectedTags, setSelectedTags] = useState<string[]>(tags.map((tag) => tag.type));
+
+  const toActiveTagList = (filters: Record<string, boolean>): string[] => {
+    return Object.entries(filters)
+      .filter(([_, isActive]) => isActive)
+      .map(([tagType]) => tagType);
+  };
 
   // Load records functions
   const loadTokenRecords = (newOffset = 0, tagFilter?: string[], limit = TOKENS_LIMIT) => {
@@ -244,7 +248,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
         if (viewMode === 'object' && !isLoadingObjectRecords && hasMoreObjects) {
           loadObjectRecords(objectOffset, filteredObjects.length ? filteredObjects : undefined);
         } else if (viewMode === 'classified-token' && !isLoadingTokenRecords && hasMoreTokens) {
-          loadTokenRecords(tokenOffset, selectedTags);
+          loadTokenRecords(tokenOffset, toActiveTagList(tagFilters));
         }
       }
     }
@@ -255,7 +259,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
     if (viewMode === 'object' && !isLoadingObjectRecords && hasMoreObjects) {
       loadObjectRecords(objectOffset, filteredObjects.length ? filteredObjects : undefined);
     } else if (viewMode === 'classified-token' && !isLoadingTokenRecords && hasMoreTokens) {
-      loadTokenRecords(tokenOffset, selectedTags);
+      loadTokenRecords(tokenOffset, toActiveTagList(tagFilters));
     }
   };
 
@@ -268,21 +272,21 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
   };
 
   const handleTagFilterChange = (filterKey: string) => {
-    const activeTagList = tags
-      .map((tag) => tag.type)
-      .filter((tag) => (tag === filterKey ? !tagFilters[tag] : tagFilters[tag]));
+    setTagFilters((prev) => {
+      const newFilters = {
+        ...prev,
+        [filterKey]: !prev[filterKey],
+      };
 
-    setSelectedTags(activeTagList);
+      const activeTagList = toActiveTagList(newFilters);
 
-    setTagFilters((prev) => ({
-      ...prev,
-      [filterKey]: !prev[filterKey],
-    }));
+      setFilteredObjects([]);
+      resetPagination();
+      loadTokenRecords(0, activeTagList);
+      loadObjectRecords(0, activeTagList);
 
-    setFilteredObjects([]);
-    resetPagination();
-    loadTokenRecords(0, activeTagList);
-    loadObjectRecords(0, activeTagList);
+      return newFilters;
+    });
   };
 
   const handleSelectAllGroups = () => {
@@ -295,19 +299,19 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
     setGroupFilters(Object.fromEntries(groups.map((group) => [group, false])));
   };
 
+
   const handleSelectAllTags = () => {
-    const activeTags = tags.map((tag) => tag.type);
+    const newFilters = Object.fromEntries(tags.map((tag) => [tag.type, true]));
+    setTagFilters(newFilters);
     setFilteredObjects([]);
     resetPagination();
-    loadTokenRecords(0, activeTags);
+    loadTokenRecords(0, toActiveTagList(newFilters));
     loadObjectRecords(0);
-    setSelectedTags(activeTags);
-    setTagFilters(Object.fromEntries(tags.map((tag) => [tag.type, true])));
   };
 
   const handleDeselectAllTags = () => {
-    setTagFilters(Object.fromEntries(tags.map((tag) => [tag.type, false])));
-    setSelectedTags([]);
+    const newFilters = Object.fromEntries(tags.map((tag) => [tag.type, false]));
+    setTagFilters(newFilters);
   };
 
   // Handle view mode changes
@@ -318,7 +322,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
     if (newMode === 'object' && objectRecords.length === 0) {
       loadObjectRecords(0);
     } else if (newMode === 'classified-token' && tokenRecords.length === 0) {
-      loadTokenRecords(0, selectedTags);
+      loadTokenRecords(0, toActiveTagList(tagFilters));
     }
   };
 
