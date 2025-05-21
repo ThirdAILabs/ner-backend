@@ -23,10 +23,6 @@ type Model interface {
 	Save(path string) error
 
 	Release()
-
-	Redact(text string) (redacted string, entities []types.Entity, err error)
-
-	Restore(redacted string, entities []types.Entity) (original string)
 }
 
 type ModelLoader func(string) (Model, error)

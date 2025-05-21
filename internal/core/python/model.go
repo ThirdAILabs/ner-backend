@@ -198,12 +198,3 @@ func convertProtoEntitiesToTypes(protoEntities []*proto.Entity, text string, sen
 	}
 	return typesEntities
 }
-
-func (ner *PythonModel) Redact(text string) (redacted string, entities []types.Entity, err error) {
-	return text, nil, fmt.Errorf("redact not supported for python model")
-}
-
-func (ner *PythonModel) Restore(redacted string, entities []types.Entity) (original string) {
-	// Python does not support restoring redacted text
-	return redacted
-}

@@ -17,6 +17,7 @@ type ChatRequest struct {
 
 type ChatResponse struct {
 	Reply string `json:"reply"`
+	TagMap map[string]string `json:"tag_map"`
 }
 
 type ChatHistoryItem struct {

@@ -252,15 +252,6 @@ func (m *PresidioModel) Save(path string) error {
 
 func (m *PresidioModel) Release() {}
 
-func (m *PresidioModel) Redact(text string) (string, []types.Entity, error) {
-	return text, nil, fmt.Errorf("redact not supported for presidio model")
-}
-
-func (m *PresidioModel) Restore(redacted string, entities []types.Entity) string {
-	// Presidio does not support restoring redacted text
-	return redacted
-}
-
 func (m *PresidioModel) GetTags() []string {
 	seen := make(map[string]struct{})
 	tags := make([]string, 0, len(m.recognizers))
