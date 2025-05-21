@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Box } from '@mui/material';
@@ -56,10 +56,9 @@ const SourceOption: React.FC<SourceOptionProps> = ({
   <div
     className={`relative p-6 border rounded-md transition-all
       ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200 border-2'}
-      ${
-        disabled
-          ? 'opacity-85 cursor-not-allowed bg-gray-50'
-          : 'cursor-pointer hover:border-blue-300'
+      ${disabled
+        ? 'opacity-85 cursor-not-allowed bg-gray-50'
+        : 'cursor-pointer hover:border-blue-300'
       }
     `}
     onClick={() => !disabled && onClick()}
@@ -98,9 +97,15 @@ interface CustomTag {
 
 export default function NewJobPage() {
   const router = useRouter();
-
+  const searchParams = useSearchParams();
+  const mode = searchParams.get('mode');
   // Essential state
-  const [selectedSource, setSelectedSource] = useState<'s3' | 'files' | 'directory' | 'chat'>('files');
+  const [selectedSource, setSelectedSource] = useState<'s3' | 'files' | 'directory' | 'chat'>(() => {
+    if (mode === 'report')
+      return 'files';
+    return 'chat';
+  });
+
   const [sourceS3Endpoint, setSourceS3Endpoint] = useState('');
   const [sourceS3Region, setSourceS3Region] = useState('');
   const [sourceS3Bucket, setSourceS3Bucket] = useState('');
@@ -486,11 +491,11 @@ export default function NewJobPage() {
         CustomTags: customTagsObj,
         ...(selectedSource === 's3'
           ? {
-              S3Endpoint: sourceS3Endpoint,
-              S3Region: sourceS3Region,
-              SourceS3Bucket: sourceS3Bucket,
-              SourceS3Prefix: sourceS3Prefix || undefined,
-            }
+            S3Endpoint: sourceS3Endpoint,
+            S3Region: sourceS3Region,
+            SourceS3Bucket: sourceS3Bucket,
+            SourceS3Prefix: sourceS3Prefix || undefined,
+          }
           : selectedSource === 'files'
             ? {
               UploadId: uploadId,
@@ -506,7 +511,7 @@ export default function NewJobPage() {
 
       // Redirect after success
       setTimeout(() => {
-        router.push(`/token-classification/jobs?jobId=${response.ReportId}`);
+        router.push(`/token-classification/jobs?jobId=${response.ReportId}?mode=${mode}`);
       }, 2000);
     } catch (err: unknown) {
       let errorMessage = 'An unexpected error occurred';
@@ -532,17 +537,17 @@ export default function NewJobPage() {
 
   const validateJobName = (name: string): boolean => {
     if (!name) {
-      setNameError('Report name is required');
+      setNameError(`${mode === 'report' ? 'Report' : 'Chat'} name is required`);
       return false;
     }
 
     if (!/^[A-Za-z0-9_-]+$/.test(name)) {
-      setNameError('Report name can only contain letters, numbers, underscores, and hyphens');
+      setNameError(`${mode === 'report' ? 'Report' : 'Chat'} name can only contain letters, numbers, underscores, and hyphens`);
       return false;
     }
 
     if (name.length > 50) {
-      setNameError('Report name must be less than 50 characters');
+      setNameError(`${mode === 'report' ? 'Report' : 'Chat'} name must be less than 50 characters`);
       return false;
     }
 
@@ -609,13 +614,13 @@ export default function NewJobPage() {
 
       {success ? (
         <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-6">
-          Job created successfully! Redirecting...
+          {`${mode === 'report' ? 'Report' : 'Chat'} created successfully! Redirecting...`}
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Job Name Field */}
           <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
-            <h2 className="text-2xl font-medium mb-4">Report Name</h2>
+            <h2 className="text-2xl font-medium mb-4">{`${mode === 'report' ? 'Report' : 'Chat'} Name`}</h2>
             <div className="w-full">
               <input
                 type="text"
@@ -626,10 +631,9 @@ export default function NewJobPage() {
                   validateJobName(value);
                 }}
                 onBlur={() => validateJobName(jobName)}
-                className={`w-full p-2 border ${
-                  nameError ? 'border-red-500' : 'border-gray-300'
-                } rounded`}
-                placeholder="Enter_Report_Name"
+                className={`w-full p-2 border ${nameError ? 'border-red-500' : 'border-gray-300'
+                  } rounded`}
+                placeholder={`Enter ${mode === 'report' ? 'Report' : 'Chat'} Name`}
                 required
               />
               {nameError ? (
@@ -646,7 +650,7 @@ export default function NewJobPage() {
           </Box>
 
           {/* Source Section */}
-          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
+          {mode === 'report' && <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
             <h2 className="text-2xl font-medium mb-4">Source</h2>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
               <SourceOption
@@ -667,12 +671,12 @@ export default function NewJobPage() {
                 isSelected={selectedSource === 's3'}
                 onClick={() => setSelectedSource('s3')}
               />
-              <SourceOption
+              {/* <SourceOption
                 title="Chat"
                 description="Just chat bby"
                 isSelected={selectedSource === 'chat'}
                 onClick={() => setSelectedSource('chat')}
-              />
+              /> */}
             </div>
 
             {(() => {
@@ -680,83 +684,83 @@ export default function NewJobPage() {
                 case 's3':
                   return (
                     <div className="space-y-4">
-                <div>
-                  <div className="text-sm text-gray-500 mt-1 mb-3">
-                    Your S3 bucket must be public. Private bucket support is available on the
-                    enterprise platform. Reach out to{' '}
-                    <div className="relative inline-block">
-                      <span
-                        className="text-blue-500 underline cursor-pointer hover:text-blue-700"
-                        onClick={() => copyToClipboard('contact@thirdai.com', 's3')}
-                        title="Click to copy email"
-                      >
-                        contact@thirdai.com
-                      </span>
-                      {showTooltip['s3'] && (
-                        <div className="absolute left-1/2 -translate-x-1/2 mt-1 w-max px-2 py-1 text-xs bg-gray-800 text-white rounded shadow-md z-10">
-                          Email Copied
+                      <div>
+                        <div className="text-sm text-gray-500 mt-1 mb-3">
+                          Your S3 bucket must be public. Private bucket support is available on the
+                          enterprise platform. Reach out to{' '}
+                          <div className="relative inline-block">
+                            <span
+                              className="text-blue-500 underline cursor-pointer hover:text-blue-700"
+                              onClick={() => copyToClipboard('contact@thirdai.com', 's3')}
+                              title="Click to copy email"
+                            >
+                              contact@thirdai.com
+                            </span>
+                            {showTooltip['s3'] && (
+                              <div className="absolute left-1/2 -translate-x-1/2 mt-1 w-max px-2 py-1 text-xs bg-gray-800 text-white rounded shadow-md z-10">
+                                Email Copied
+                              </div>
+                            )}
+                          </div>{' '}
+                          for an enterprise subscription.
                         </div>
-                      )}
-                    </div>{' '}
-                    for an enterprise subscription.
-                  </div>
-                  {s3Error && (
-                    <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded">
-                      {s3Error}
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    S3 Endpoint (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={sourceS3Endpoint}
-                    onChange={(e) => setSourceS3Endpoint(e.target.value)}
-                    onBlur={validateS3Bucket}
-                    className="w-full p-2 border border-gray-300 rounded"
-                    placeholder="s3.amazonaws.com"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">S3 Region</label>
-                  <input
-                    type="text"
-                    value={sourceS3Region}
-                    onChange={(e) => setSourceS3Region(e.target.value)}
-                    onBlur={validateS3Bucket}
-                    className="w-full p-2 border border-gray-300 rounded"
-                    placeholder="us-east-1"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    S3 Bucket Name
-                  </label>
-                  <input
-                    type="text"
-                    value={sourceS3Bucket}
-                    onChange={(e) => setSourceS3Bucket(e.target.value)}
-                    onBlur={validateS3Bucket}
-                    className="w-full p-2 border border-gray-300 rounded"
-                    placeholder="my-bucket"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    S3 Prefix (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={sourceS3Prefix}
-                    onChange={(e) => setSourceS3Prefix(e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded"
-                    placeholder="folder/path/"
-                  />
-                </div>
+                        {s3Error && (
+                          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded">
+                            {s3Error}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          S3 Endpoint (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          value={sourceS3Endpoint}
+                          onChange={(e) => setSourceS3Endpoint(e.target.value)}
+                          onBlur={validateS3Bucket}
+                          className="w-full p-2 border border-gray-300 rounded"
+                          placeholder="s3.amazonaws.com"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">S3 Region</label>
+                        <input
+                          type="text"
+                          value={sourceS3Region}
+                          onChange={(e) => setSourceS3Region(e.target.value)}
+                          onBlur={validateS3Bucket}
+                          className="w-full p-2 border border-gray-300 rounded"
+                          placeholder="us-east-1"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          S3 Bucket Name
+                        </label>
+                        <input
+                          type="text"
+                          value={sourceS3Bucket}
+                          onChange={(e) => setSourceS3Bucket(e.target.value)}
+                          onBlur={validateS3Bucket}
+                          className="w-full p-2 border border-gray-300 rounded"
+                          placeholder="my-bucket"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          S3 Prefix (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          value={sourceS3Prefix}
+                          onChange={(e) => setSourceS3Prefix(e.target.value)}
+                          className="w-full p-2 border border-gray-300 rounded"
+                          placeholder="folder/path/"
+                        />
+                      </div>
                     </div>
                   );
 
@@ -873,7 +877,7 @@ export default function NewJobPage() {
                   return null;
               }
             })()}
-          </Box>
+          </Box>}
 
           {/* Model Selection */}
           <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
@@ -918,7 +922,7 @@ export default function NewJobPage() {
                     </>
                   }
                   isSelected={false}
-                  onClick={() => {}}
+                  onClick={() => { }}
                   disabled={true}
                 />
               </div>
@@ -1077,9 +1081,8 @@ export default function NewJobPage() {
                         value={customTagName}
                         onChange={(e) => handleTagNameChange(e.target.value)}
                         onBlur={(e) => handleTagNameChange(e.target.value)}
-                        className={`w-full p-2 border ${
-                          nameError ? 'border-red-500' : 'border-gray-300'
-                        } rounded`}
+                        className={`w-full p-2 border ${nameError ? 'border-red-500' : 'border-gray-300'
+                          } rounded`}
                         placeholder="CUSTOM_TAG_NAME"
                         required
                       />
@@ -1356,7 +1359,7 @@ export default function NewJobPage() {
                   Creating...
                 </>
               ) : (
-                'Create Report'
+                `Create ${mode === 'report' ? 'Report' : 'Chat'}`
               )}{' '}
             </Button>
           </div>

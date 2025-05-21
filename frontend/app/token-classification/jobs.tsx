@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation'
+
 import {
   Box,
   Typography,
@@ -71,6 +73,7 @@ interface ReportWithStatus {
 export default function Jobs() {
   const searchParams = useSearchParams();
   const deploymentId = searchParams.get('deploymentId');
+  const router = useRouter();
   const [reports, setReports] = useState<ReportWithStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -451,17 +454,17 @@ export default function Jobs() {
                 <div className="py-2">
                   <button
                     className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-left transition-colors flex items-center gap-2"
-                    onClick={() => {/* handle PDF */ }}
-                  >
-                    <MessageSquare className="w-4 h-4" />
-                    <span>Chat</span>
-                  </button>
-                  <button
-                    className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-left transition-colors flex items-center gap-2"
-                    onClick={() => {/* handle Excel */ }}
+                    onClick={() => { router.push("/token-classification/jobs/new?mode=report") }}
                   >
                     <FileText className="w-4 h-4" />
                     <span>Report</span>
+                  </button>
+                  <button
+                    className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-left transition-colors flex items-center gap-2"
+                    onClick={() => { router.push("/token-classification/jobs/new?mode=chat") }}
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    <span>Chat</span>
                   </button>
                 </div>
               </div>
