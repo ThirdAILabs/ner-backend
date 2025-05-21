@@ -14,7 +14,7 @@ import {
   Paper,
   CircularProgress,
 } from '@mui/material';
-import { Plus } from 'lucide-react';
+import { Plus, MessageSquare, FileText } from 'lucide-react';
 
 import { Card, CardContent } from '@mui/material';
 import Link from 'next/link';
@@ -24,6 +24,7 @@ import { nerService } from '@/lib/backend';
 import { IconButton, Tooltip } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useHealth } from '@/contexts/HealthProvider';
+import useOutsideClick from '@/hooks/useOutsideClick';
 // Import the TaskStatusCategory from backend.ts
 interface TaskStatusCategory {
   TotalTasks: number;
@@ -74,6 +75,7 @@ export default function Jobs() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { healthStatus } = useHealth();
+  const [isOpen, setIsOpen] = useState<boolean>(false);
 
   const fetchReportStatus = async (report: ReportWithStatus) => {
     const pollStatus = async () => {
@@ -88,14 +90,14 @@ export default function Jobs() {
           prev.map((r) =>
             r.Id === report.Id
               ? {
-                  ...r,
-                  SucceededFileCount: detailedReport.SucceededFileCount,
-                  detailedStatus: {
-                    ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
-                    InferenceTaskStatuses: detailedReport.InferenceTaskStatuses,
-                  },
-                  isLoadingStatus: false,
-                }
+                ...r,
+                SucceededFileCount: detailedReport.SucceededFileCount,
+                detailedStatus: {
+                  ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
+                  InferenceTaskStatuses: detailedReport.InferenceTaskStatuses,
+                },
+                isLoadingStatus: false,
+              }
               : r
           )
         );
@@ -150,8 +152,12 @@ export default function Jobs() {
       }
     };
     if (healthStatus) fetchReports();
-    return () => {};
+    return () => { };
   }, [healthStatus]);
+
+  const dropDownRef = useOutsideClick(() => {
+    setIsOpen(false);
+  });
 
   if (loading) {
     return (
@@ -416,6 +422,8 @@ export default function Jobs() {
     }
   };
 
+
+
   return (
     <Card sx={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)', bgcolor: 'grey.100' }}>
       <CardContent sx={{ p: 3 }}>
@@ -430,7 +438,8 @@ export default function Jobs() {
           <Typography variant="h6" sx={{ fontWeight: 500, fontSize: '1.25rem' }}>
             Reports
           </Typography>
-          <Link href={`/token-classification/jobs/new`} passHref>
+          {/* <Link href={`/token-classification/jobs/new`} passHref> */}
+          <div ref={dropDownRef}>
             <Button
               variant="contained"
               color="primary"
@@ -448,10 +457,32 @@ export default function Jobs() {
                 borderRadius: '50%',
               }}
               disabled={!healthStatus}
+              onClick={() => { setIsOpen(prev => !prev) }}
             >
               <Plus size={24} />
             </Button>
-          </Link>
+            {/* </Link> */}
+            {isOpen && (
+              <div className="absolute mt-2 w-40 bg-white rounded-md shadow-lg border border-gray-200 right-56">
+                <div className="py-2">
+                  <button
+                    className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-left transition-colors flex items-center gap-2"
+                    onClick={() => {/* handle PDF */ }}
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    <span>Chat</span>
+                  </button>
+                  <button
+                    className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-left transition-colors flex items-center gap-2"
+                    onClick={() => {/* handle Excel */ }}
+                  >
+                    <FileText className="w-4 h-4" />
+                    <span>Report</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </Box>
 
         <TableContainer
@@ -550,7 +581,7 @@ export default function Jobs() {
               )}
             </TableBody>
           </Table>
-        </TableContainer>        
+        </TableContainer>
       </CardContent>
     </Card>
   );
