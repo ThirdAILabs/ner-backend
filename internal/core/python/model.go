@@ -171,6 +171,7 @@ func (ner *PythonModel) Predict(text string) ([]types.Entity, error) {
 				resp.Entities,
 				text,
 				startOffsets[idx],
+				sentences[idx],
 			)
 			allEntities = append(allEntities, ents...)
 		}
