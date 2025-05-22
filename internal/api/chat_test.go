@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -67,7 +68,7 @@ func TestChatEndpoint(t *testing.T) {
 	chatPayload := pkgapi.ChatRequest{
 		Model:   "gpt-3",
 		APIKey:  apiKey,
-		Message: "Hello, I am Gautam sharma, How are you?",
+		Message: "Hello, how are you today? I am Yashwanth and I work at ThirdAI and my email is yash@thirdai.com",
 	}
 	chatBody, _ := json.Marshal(chatPayload)
 	req = httptest.NewRequest(http.MethodPost, "/chat/sessions/"+sessionID+"/messages", bytes.NewReader(chatBody))
@@ -81,6 +82,8 @@ func TestChatEndpoint(t *testing.T) {
 	if err := json.NewDecoder(rec.Body).Decode(&chatResp); err != nil {
 		t.Fatalf("decode chat response: %v", err)
 	}
+
+	fmt.Printf("Chat Response: %+v\n", chatResp)
 
 	expectedRedacted := "Hello, I am [NAME_1], Ask me how I am doing by my mentioned name"
 
@@ -106,6 +109,8 @@ func TestChatEndpoint(t *testing.T) {
 	if len(history) != 2 {
 		t.Fatalf("expected 2 history items, got %d", len(history))
 	}
+
+	fmt.Printf("History: %+v\n", history)
 
 	userItem := history[0]
 	assert.Equal(t, "user", userItem.MessageType)
