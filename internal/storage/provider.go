@@ -28,4 +28,6 @@ type Provider interface {
 	ListObjects(ctx context.Context, bucket, prefix string) ([]Object, error)
 
 	IterObjects(ctx context.Context, bucket, prefix string) ObjectIterator
+
+	ValidateAccess(ctx context.Context, bucket, prefix string) error
 }
