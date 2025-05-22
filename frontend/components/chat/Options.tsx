@@ -50,39 +50,49 @@ export default function Options({
 }: OptionsDropdownProps) {
   const apiKeyRef = useRef<HTMLInputElement>(null);
   const [editingApiKey, setEditingApiKey] = useState<boolean>(false);
-  const [intermediateApiKey, setIntermediateApiKey] = useState<string>('');
+  const [intermediateApiKey, setIntermediateApiKey] = useState<string>(apiKey);
   const [showInvalidKeyError, setShowInvalidKeyError] = useState<boolean>(invalidApiKey);
+
+  const promptInvalidKey = () => {
+    setShowInvalidKeyError(true);
+    setEditingApiKey(true);
+    apiKeyRef.current?.focus();
+  };
+
+  const doneEditing = () => {
+    setShowInvalidKeyError(false);
+    setEditingApiKey(false);
+    apiKeyRef.current?.blur();
+  };
 
   useEffect(() => {
     setIntermediateApiKey(apiKey);
   }, [apiKey]);
 
   useEffect(() => {
+    setShowInvalidKeyError(invalidApiKey);
     if (invalidApiKey) {
-      apiKeyRef.current?.focus();
-      setEditingApiKey(true);
+      promptInvalidKey();
     }
   }, [invalidApiKey]);
 
   const handleSaveApiKey = () => {
     if (intermediateApiKey === '' || (intermediateApiKey === apiKey && invalidApiKey)) {
-      setShowInvalidKeyError(true);
-    } else {
-      setEditingApiKey(false);
-      apiKeyRef.current?.blur();
-      onSaveApiKey(intermediateApiKey);
+      promptInvalidKey();
+      return;
     }
+    doneEditing();
+    onSaveApiKey(intermediateApiKey);
   };
 
   const handleCancelApiKey = () => {
     setIntermediateApiKey(apiKey);
-    if (apiKey !== '' && !invalidApiKey) {
-      setEditingApiKey(false);
-      setShowInvalidKeyError(false);
-      onCancelApiKey();
-    } else {
-      setShowInvalidKeyError(true);
+    if (apiKey === '' || invalidApiKey) {
+      promptInvalidKey();
+      return;
     }
+    doneEditing();
+    onCancelApiKey();
   };
 
   const handleApiKeyChange = (e: ChangeEvent<HTMLInputElement>) => {
