@@ -419,52 +419,56 @@ func (s *BackendService) GetReport(r *http.Request) (any, error) {
 
 	now := time.Now().UTC()
 
-	// This code wasn't working properly.
-	// var infBounds struct {
-	// 	MinStart sql.NullTime `gorm:"column:min_start"`
-	// 	MaxEnd   sql.NullTime `gorm:"column:max_end"`
-	// }
+	dbType := s.db.Dialector.Name()
 
-	// if err := s.db.WithContext(ctx).
-	// 	Model(&database.InferenceTask{}).
-	// 	Select("MIN(start_time) AS min_start, MAX(completion_time) AS max_end").
-	// 	Where("report_id = ? AND start_time IS NOT NULL AND completion_time IS NOT NULL", reportId).
-	// 	Scan(&infBounds).Error; err != nil {
-	// 	slog.Error("error fetching time bounds", "err", err)
-	// }
+	switch dbType {
+	case "sqlite", "sqlite3":
+		var infBounds struct {
+			MinStart string `gorm:"column:min_start"`
+			MaxEnd   string `gorm:"column:max_end"`
+		}
 
-	// if infBounds.MinStart.Valid && infBounds.MaxEnd.Valid {
-	// 	apiReport.TotalInferenceTimeSeconds =
-	// 		infBounds.MaxEnd.Time.Sub(infBounds.MinStart.Time).Seconds()
-	// }
+		if err := s.db.WithContext(ctx).
+			Model(&database.InferenceTask{}).
+			Select("MIN(start_time) AS min_start, MAX(completion_time) AS max_end").
+			Where("report_id = ? AND start_time IS NOT NULL AND completion_time IS NOT NULL", reportId).
+			Scan(&infBounds).Error; err != nil {
+			slog.Error("error fetching time bounds", "err", err)
+		}
 
-	var infBounds struct {
-		MinStart string `gorm:"column:min_start"`
-		MaxEnd   string `gorm:"column:max_end"`
-	}
+		const sqliteTimeLayout = "2006-01-02 15:04:05.999999999Z07:00"
 
-	if err := s.db.WithContext(ctx).
-		Model(&database.InferenceTask{}).
-		Select("MIN(start_time) AS min_start, MAX(completion_time) AS max_end").
-		Where("report_id = ? AND start_time IS NOT NULL AND completion_time IS NOT NULL", reportId).
-		Scan(&infBounds).Error; err != nil {
-		slog.Error("error fetching time bounds", "err", err)
-	}
+		startTime, err := time.Parse(sqliteTimeLayout, infBounds.MinStart)
+		if err != nil {
+			slog.Error("error parsing min_start", "raw", infBounds.MinStart, "err", err)
+		}
 
-	const sqliteTimeLayout = "2006-01-02 15:04:05.999999999Z07:00"
+		endTime, err := time.Parse(sqliteTimeLayout, infBounds.MaxEnd)
+		if err != nil {
+			slog.Error("error parsing max_end", "raw", infBounds.MaxEnd, "err", err)
+		}
 
-	startTime, err := time.Parse(sqliteTimeLayout, infBounds.MinStart)
-	if err != nil {
-		slog.Error("error parsing min_start", "raw", infBounds.MinStart, "err", err)
-	}
+		if !startTime.IsZero() && !endTime.IsZero() {
+			apiReport.TotalInferenceTimeSeconds = endTime.Sub(startTime).Seconds()
+		}
+	case "postgres":
+		var infBounds struct {
+			MinStart sql.NullTime `gorm:"column:min_start"`
+			MaxEnd   sql.NullTime `gorm:"column:max_end"`
+		}
 
-	endTime, err := time.Parse(sqliteTimeLayout, infBounds.MaxEnd)
-	if err != nil {
-		slog.Error("error parsing max_end", "raw", infBounds.MaxEnd, "err", err)
-	}
+		if err := s.db.WithContext(ctx).
+			Model(&database.InferenceTask{}).
+			Select("MIN(start_time) AS min_start, MAX(completion_time) AS max_end").
+			Where("report_id = ? AND start_time IS NOT NULL AND completion_time IS NOT NULL", reportId).
+			Scan(&infBounds).Error; err != nil {
+			slog.Error("error fetching time bounds", "err", err)
+		}
 
-	if !startTime.IsZero() && !endTime.IsZero() {
-		apiReport.TotalInferenceTimeSeconds = endTime.Sub(startTime).Seconds()
+		if infBounds.MinStart.Valid && infBounds.MaxEnd.Valid {
+			apiReport.TotalInferenceTimeSeconds =
+				infBounds.MaxEnd.Time.Sub(infBounds.MinStart.Time).Seconds()
+		}
 	}
 
 	var shardSecs float64
