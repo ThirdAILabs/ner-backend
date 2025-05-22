@@ -19,6 +19,16 @@ export default function Page() {
   const selectedId = searchParams.get('id');
   const { title, updateTitle, previews, messages, sendMessage } = useSafeGPT(selectedId || 'new');
   const [showRedaction, setShowRedaction] = useState<boolean>(false);
+  const [apiKey, setAPIKey] = useState<string>("");
+  const [invalidApiKey, setInvalidApiKey] = useState<boolean>(true);
+
+  const saveAPIKey = (key: string) => {
+    setAPIKey(key);
+    setInvalidApiKey(false);
+    setTimeout(() => {
+      setInvalidApiKey(true);
+    }, 3000);
+  }
 
   const handleToggleRedaction = () => {
     setShowRedaction((prev) => !prev);
@@ -63,7 +73,7 @@ export default function Page() {
           />
         </div>
         <div className="w-[calc(100vw-250px)]">
-          <ChatInterface messages={messages} onSendMessage={sendMessage} />
+          <ChatInterface messages={messages} onSendMessage={sendMessage} invalidApiKey={invalidApiKey} apiKey={apiKey} setAPIKey={saveAPIKey} />
         </div>
       </div>
     </div>

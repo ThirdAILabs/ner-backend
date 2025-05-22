@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import SaveAndCancel from './SaveAndCancel';
 
 export interface ChatTitleProps {
   title: string;
@@ -20,52 +21,6 @@ function EditButton({ onClick }: { onClick: () => void }) {
         strokeLinejoin="round"
       >
         <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
-      </svg>
-    </button>
-  );
-}
-
-function SaveButton({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="p-1.5 rounded-full border border-black bg-black hover:border-[rgb(85,152,229)] hover:bg-[rgb(85,152,229)] text-white transition-colors"
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M20 6L9 17l-5-5" />
-      </svg>
-    </button>
-  );
-}
-
-function CancelButton({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="p-1.5 rounded-full border border-black text-black hover:border-red-500 hover:text-red-500 transition-colors"
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M18 6L6 18M6 6l12 12" />
       </svg>
     </button>
   );
@@ -99,20 +54,16 @@ export default function ChatTitle({
                     autoFocus
                   />
                 </div>
-                <div className="flex gap-2">
-                  <SaveButton
-                    onClick={() => {
-                      setIsEditing(false);
-                      setTitle(inputValue);
-                    }}
-                  />
-                  <CancelButton
-                    onClick={() => {
-                      setIsEditing(false);
-                      setInputValue(title);
-                    }}
-                  />
-                </div>
+                <SaveAndCancel
+                  onSave={() => {
+                    setIsEditing(false);
+                    setTitle(inputValue);
+                  }}
+                  onCancel={() => {
+                    setIsEditing(false);
+                    setInputValue(title);
+                  }}
+                />
               </>
             ) : (
               <>
