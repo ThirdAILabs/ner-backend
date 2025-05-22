@@ -25,8 +25,9 @@ export default function Page() {
   };
 
   return <div>
-    <div className="flex flex-row h-[70px] items-center justify-start border-b border-gray-200">
-      <div style={{width: SIDEBAR_WIDTH, paddingLeft: "20px"}}>
+    <div className="flex flex-row h-[70px] items-center justify-start relative bg-white">
+      <div className="absolute bottom-0 left-[17%] right-0 h-[1px] bg-gray-200"></div>
+      <div style={{ width: SIDEBAR_WIDTH, paddingLeft: "20px" }}>
         <Button variant="outline" size="sm" asChild>
           <Link href={`/`} className="flex items-center">
             <ArrowLeft className="mr-1 h-4 w-4" /> Back
@@ -38,13 +39,13 @@ export default function Page() {
       </div>
     </div>
     <div className="flex flex-row h-[calc(100vh-70px)]">
-      <div style={{width: SIDEBAR_WIDTH}}>
-        <Sidebar 
-          items={previews} 
-          onSelect={handleSelectChat} 
-          selectedId={selectedId || undefined} 
-          onNewChat={handleNewChat} 
-          padding={20} 
+      <div style={{ width: SIDEBAR_WIDTH }}>
+        <Sidebar
+          items={previews}
+          onSelect={handleSelectChat}
+          selectedId={selectedId || undefined}
+          onNewChat={handleNewChat}
+          padding={20}
         />
       </div>
       <div className="w-[calc(100vw-250px)]">
