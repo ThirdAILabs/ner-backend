@@ -17,8 +17,11 @@ export default function Page() {
   const searchParams = useSearchParams();
   const selectedId = searchParams.get('id');
   const { title, updateTitle, previews, messages, sendMessage } = useSafeGPT(selectedId || "new");
-  const handleSelect = (id: string) => {
+  const handleSelectChat = (id: string) => {
     router.push(`/safegpt?id=${id}`);
+  };
+  const handleNewChat = () => {
+    router.push(`/safegpt?id=new`);
   };
 
   return <div>
@@ -38,9 +41,9 @@ export default function Page() {
       <div style={{width: SIDEBAR_WIDTH}}>
         <Sidebar 
           items={previews} 
-          onSelect={handleSelect} 
+          onSelect={handleSelectChat} 
           selectedId={selectedId || undefined} 
-          onNewChat={() => {}} 
+          onNewChat={handleNewChat} 
           padding={20} 
         />
       </div>
