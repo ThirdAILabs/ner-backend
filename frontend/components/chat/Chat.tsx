@@ -126,7 +126,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           <button
             type="submit"
             disabled={!inputMessage.trim() || isLoading}
-            className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-blue-500 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-[rgb(85,152,229)] hover:text-[rgb(85,152,229)]/90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Send size={20} />
           </button>
@@ -134,7 +134,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             <button
               disabled={isLoading}
               onClick={() => setIsDropdownOpen((prev) => !prev)}
-              className="absolute right-10 top-1/2 -translate-y-1/2 p-2 text-blue-500 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="absolute right-10 top-1/2 -translate-y-1/2 p-2 text-[rgb(85,152,229)] hover:text-[rgb(85,152,229)]/90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <HiChip size={22} />
             </button>
@@ -143,7 +143,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 <div className="py-2">
                   <button
                     type="button"
-                    className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-left transition-colors flex items-center gap-2"
+                    className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-[rgb(85,152,229)]/5 text-left transition-colors flex items-center gap-2"
                     onClick={() => {
                       // Handle basic mode
                       setIsDropdownOpen(false);

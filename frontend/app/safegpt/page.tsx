@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import Sidebar, { ChatPreview } from '@/components/chat/Sidebar';
 import { useRouter, useSearchParams } from 'next/navigation';
 import useSafeGPT from './useSafeGPT';
+import Toggle from '@/components/chat/Toggle';
 
 const SIDEBAR_WIDTH = 250;
 
@@ -33,22 +34,22 @@ export default function Page() {
 
   return (
     <div>
-      <div className="flex flex-row h-[70px] items-center justify-start relative bg-white">
-        <div className="absolute bottom-0 left-[17%] right-0 h-[1px] bg-gray-200"></div>
-        <div style={{ width: SIDEBAR_WIDTH, paddingLeft: '20px' }}>
+      <div className="flex flex-row h-[70px] items-center justify-start relative bg-white border-b border-gray-200">
+        <div className="flex flex-row items-center h-[70px] border-r border-gray-200" style={{ width: SIDEBAR_WIDTH, paddingLeft: '20px' }}>
           <Button variant="outline" size="sm" asChild>
             <Link href={`/`} className="flex items-center">
               <ArrowLeft className="mr-1 h-4 w-4" /> Back
             </Link>
           </Button>
         </div>
-        <div className="flex-1 flex justify-center">
+        <div className="flex-1 flex justify-center items-center">
           <ChatTitle
             title={title}
             setTitle={updateTitle}
-            showRedaction={showRedaction}
-            onToggleRedaction={handleToggleRedaction}
           />
+          <div className="absolute right-[20px]">
+            <Toggle checked={showRedaction} onChange={handleToggleRedaction} />
+          </div>
         </div>
       </div>
       <div className="flex flex-row h-[calc(100vh-70px)]">
