@@ -3,8 +3,6 @@ import { useState, useEffect } from 'react';
 export interface ChatTitleProps {
   title: string;
   setTitle: (title: string) => void;
-  showRedaction: boolean;
-  onToggleRedaction: () => void;
 }
 
 function EditButton({ onClick }: { onClick: () => void }) {
@@ -73,28 +71,9 @@ function CancelButton({ onClick }: { onClick: () => void }) {
   );
 }
 
-function Toggle({ checked, onChange }: { checked?: boolean; onChange?: () => void }) {
-  return (
-    <button
-      onClick={onChange}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-        checked ? 'bg-blue-600' : 'bg-gray-200'
-      }`}
-    >
-      <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-          checked ? 'translate-x-6' : 'translate-x-1'
-        }`}
-      />
-    </button>
-  );
-}
-
 export default function ChatTitle({
   title,
   setTitle,
-  showRedaction = false,
-  onToggleRedaction,
 }: ChatTitleProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [inputValue, setInputValue] = useState(title);
@@ -105,13 +84,6 @@ export default function ChatTitle({
   
   return (
     <div className="flex items-center w-full px-4 relative">
-      <div className="absolute right-36">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-gray-600">Show redaction</span>
-          <Toggle checked={showRedaction} onChange={onToggleRedaction} />
-        </div>
-      </div>
-
       <div className="flex-1 flex justify-center">
         <div className="flex flex-col">
           <div className="flex items-center gap-2">
@@ -144,6 +116,8 @@ export default function ChatTitle({
               </>
             ) : (
               <>
+                {/* This div is the same width as the edit button to center the title */}
+                <div className="w-[16px] text-transparent">.</div>
                 <span className="text-xl font-medium" onClick={() => setIsEditing(true)}>
                   {title}
                 </span>
