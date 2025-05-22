@@ -55,28 +55,22 @@ export default function Options({
 
   useEffect(() => {
     setIntermediateApiKey(apiKey);
-    if (apiKey === '') {
-      setShowInvalidKeyError(true);
-    }
   }, [apiKey]);
 
   useEffect(() => {
     if (invalidApiKey) {
       apiKeyRef.current?.focus();
       setEditingApiKey(true);
-    } else {
-      apiKeyRef.current?.blur();
-      setEditingApiKey(false);
     }
   }, [invalidApiKey]);
 
   const handleSaveApiKey = () => {
-    if (intermediateApiKey === '') {
+    if (intermediateApiKey === '' || (intermediateApiKey === apiKey && invalidApiKey)) {
       setShowInvalidKeyError(true);
     } else {
       setEditingApiKey(false);
-      onSaveApiKey(intermediateApiKey);
       apiKeyRef.current?.blur();
+      onSaveApiKey(intermediateApiKey);
     }
   };
 
@@ -84,8 +78,8 @@ export default function Options({
     setIntermediateApiKey(apiKey);
     if (apiKey !== '' && !invalidApiKey) {
       setEditingApiKey(false);
-      onCancelApiKey();
       setShowInvalidKeyError(false);
+      onCancelApiKey();
     } else {
       setShowInvalidKeyError(true);
     }
@@ -93,9 +87,9 @@ export default function Options({
 
   const handleApiKeyChange = (e: ChangeEvent<HTMLInputElement>) => {
     setEditingApiKey(true);
-    onEditApiKey();
-    setIntermediateApiKey(e.target.value);
     setShowInvalidKeyError(false);
+    setIntermediateApiKey(e.target.value);
+    onEditApiKey();
   };
 
   const handleBlur = () => {

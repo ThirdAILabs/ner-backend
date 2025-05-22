@@ -27,10 +27,54 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   apiKey,
   setApiKey,
 }) => {
+  // Options dropdown-related logic
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [editingApiKey, setEditingApiKey] = useState<boolean>(false);
+
+  const openDropdown = () => {
+    setIsDropdownOpen(true);
+  };
+
+  const closeDropdown = () => {
+    setIsDropdownOpen(false);
+    setEditingApiKey(false);
+  };
+
+  const closeDropdownIfNotEditing = () => {
+    if (!editingApiKey) {
+      setIsDropdownOpen(false);
+    }
+  };
+
+  const dropdownRef = useOutsideClick(() => {
+    closeDropdownIfNotEditing();
+  });
+
+  useEffect(() => {
+    if (invalidApiKey) {
+      openDropdown();
+      setEditingApiKey(true);
+    }
+  }, [invalidApiKey]);
+
+  const handleSaveApiKey = (key: string) => {
+    setApiKey(key);
+    closeDropdown();
+  };
+
+  const handleCancelApiKey = () => {
+    closeDropdown();
+  };
+
+  const handleEditApiKey = () => {
+    setEditingApiKey(true);
+  };
+  
+  // Chat-related logic
+
   const [inputMessage, setInputMessage] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  console.log('Editing API key: ', editingApiKey);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (inputMessage.trim() && onSendMessage) {
@@ -42,7 +86,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       }
     }
   };
-  console.log('Input message...', inputMessage);
+  
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -64,41 +108,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     1. Css for llm message should be good.
     2. Correct the "Your messages are end-to-end encrypted and securely stored" message.
      */
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const dropdownRef = useOutsideClick(() => {
-    handleCloseDropdown();
-  });
-
-  useEffect(() => {
-    if (invalidApiKey) {
-      setIsDropdownOpen(true);
-      setEditingApiKey(true);
-    }
-  }, [invalidApiKey]);
-
-  const handleCloseDropdown = () => {
-    if (!editingApiKey) {
-      setIsDropdownOpen(false);
-    }
-  };
-
-  const handleSaveApiKey = (key: string) => {
-    setApiKey(key);
-    setEditingApiKey(false);
-    setIsDropdownOpen(false);
-  };
-
-  const handleCancelApiKey = () => {
-    if (apiKey !== '' && !invalidApiKey) {
-      setEditingApiKey(false);
-      setIsDropdownOpen(false);
-    }
-  };
-
-  const handleEditApiKey = () => {
-    setEditingApiKey(true);
-  };
-
+  
   return (
     <div className="flex flex-col h-[100%] relative w-[80%] ml-[10%]">
       <div className="flex-1 overflow-y-auto p-4 space-y-4 mb-20">
@@ -152,17 +162,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           <div className="relative" ref={dropdownRef}>
             <button
               disabled={isLoading}
-              onClick={() =>
-                setIsDropdownOpen((prev) => {
-                  if (!prev) {
-                    return true;
-                  }
-                  if (!editingApiKey) {
-                    return false;
-                  }
-                  return prev;
-                })
-              }
+              onClick={() => {
+                if (isDropdownOpen) {
+                  closeDropdownIfNotEditing();
+                } else {
+                  openDropdown();
+                }
+              }}
               className="absolute right-10 top-1/2 -translate-y-1/2 p-2 text-[rgb(85,152,229)] hover:text-[rgb(85,152,229)]/90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <HiChip size={22} />
@@ -170,7 +176,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             {isDropdownOpen && (
               <div className="absolute bottom-12 right-0 w-[350px]">
                 <Options
-                  handleBasicMode={handleCloseDropdown}
+                  handleBasicMode={closeDropdownIfNotEditing}
                   handleAdvancedMode={() => {}}
                   apiKey={apiKey}
                   invalidApiKey={invalidApiKey}
