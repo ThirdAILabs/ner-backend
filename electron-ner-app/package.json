@@ -69,6 +69,7 @@
       "main.js",
       "preload.js",
       "telemetry.js",
+      "userIdManager.js",
       "frontend-dist/**/*",
       "scripts/**/*",
       "!**/node_modules/**/{CHANGELOG.md,README.md,README,readme.md,readme}",

@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import serve from 'electron-serve';
 import { startBackend } from './scripts/start-backend.js';
 import { initTelemetry, insertTelemetryEvent, closeTelemetry } from './telemetry.js';
+import { initializeUserId, getCurrentUserId } from './userIdManager.js';
 import log from 'electron-log';
 import electronUpdater from 'electron-updater';
 
@@ -188,8 +189,16 @@ ipcMain.handle('telemetry', async (event, data) => {
   await insertTelemetryEvent(data);
 });
 
+// Set up user ID IPC handler
+ipcMain.handle('get-user-id', async () => {
+  return getCurrentUserId();
+});
+
 // This method will be called when Electron has finished initialization
 app.whenReady().then(async () => {
+  // Initialize user ID first
+  await initializeUserId();
+  
   // Initialize telemetry
   await initTelemetry();
   
