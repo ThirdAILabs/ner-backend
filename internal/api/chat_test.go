@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"log"
-	"ner-backend/internal/core"
-	"ner-backend/internal/database"
-	"ner-backend/pkg/api"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
+
+	"ner-backend/internal/core"
+	"ner-backend/internal/database"
+	pkgapi "ner-backend/pkg/api"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
@@ -36,6 +37,7 @@ func init() {
 	if err != nil {
 		log.Fatalf("could not load NER model: %v", err)
 	}
+
 	chatService := NewChatService(db, nerModel)
 	router = chi.NewRouter()
 	chatService.AddRoutes(router)
@@ -46,72 +48,82 @@ func TestChatEndpoint(t *testing.T) {
 	if apiKey == "" {
 		t.Fatal("OPENAI_API_KEY must be set for TestChatEndpoint")
 	}
-	// Create a new session first
-	startPayload := api.StartSessionRequest{
-		Model: "gpt-3",
-	}
-	startPayloadBytes, err := json.Marshal(startPayload)
-	if err != nil {
-		t.Fatalf("Failed to marshal start session payload: %v", err)
-	}
-	req := httptest.NewRequest(http.MethodPost, "/chat/sessions", bytes.NewReader(startPayloadBytes))
+
+	startPayload := pkgapi.StartSessionRequest{Model: "gpt-3"}
+	startBody, _ := json.Marshal(startPayload)
+	req := httptest.NewRequest(http.MethodPost, "/chat/sessions", bytes.NewReader(startBody))
 	req.Header.Set("Content-Type", "application/json")
+
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
-
 	assert.Equal(t, http.StatusOK, rec.Code)
 
-	var startSessionResponse api.StartSessionResponse
-	if err := json.NewDecoder(rec.Body).Decode(&startSessionResponse); err != nil {
-		t.Fatalf("Failed to decode start-session response: %v", err)
+	var startResp pkgapi.StartSessionResponse
+	if err := json.NewDecoder(rec.Body).Decode(&startResp); err != nil {
+		t.Fatalf("decode start-session response: %v", err)
 	}
-	sessionID := startSessionResponse.SessionID
+	sessionID := startResp.SessionID
 
-	reqBody := api.ChatRequest{
+	chatPayload := pkgapi.ChatRequest{
 		Model:   "gpt-3",
 		APIKey:  apiKey,
 		Message: "Hello, I am Gautam sharma, How are you?",
 	}
-
-	body, err := json.Marshal(reqBody)
-	if err != nil {
-		t.Fatalf("Failed to marshal request body: %v", err)
-	}
-	req = httptest.NewRequest(http.MethodPost, "/chat/sessions/"+sessionID+"/messages", bytes.NewReader(body))
+	chatBody, _ := json.Marshal(chatPayload)
+	req = httptest.NewRequest(http.MethodPost, "/chat/sessions/"+sessionID+"/messages", bytes.NewReader(chatBody))
 	req.Header.Set("Content-Type", "application/json")
+
 	rec = httptest.NewRecorder()
-
 	router.ServeHTTP(rec, req)
-
 	assert.Equal(t, http.StatusOK, rec.Code)
 
-	var chatResponse api.ChatResponse
-	if err := json.NewDecoder(rec.Body).Decode(&chatResponse); err != nil {
-		t.Fatalf("Failed to decode chat response: %v", err)
+	var chatResp pkgapi.ChatResponse
+	if err := json.NewDecoder(rec.Body).Decode(&chatResp); err != nil {
+		t.Fatalf("decode chat response: %v", err)
 	}
-	assert.Equal(t, chatResponse.InputText, "Hello, I am [NAME_1], Ask me how I am doing by my mentioned name")
-	assert.Equal(t, chatResponse.TagMap, map[string]string{
-		"[NAME_1]": "Gautam sharma",
-	})
 
-	// Test GetHistory endpoint
+	expectedRedacted := "Hello, I am [NAME_1], Ask me how I am doing by my mentioned name"
+
+	assert.Equal(t, expectedRedacted, chatResp.InputText)
+
+	assert.Equal(t,
+		map[string]string{"[NAME_1]": "Gautam sharma"},
+		chatResp.TagMap,
+	)
+
+	assert.NotEmpty(t, chatResp.Reply)
+
 	req = httptest.NewRequest(http.MethodGet, "/chat/sessions/"+sessionID+"/history", nil)
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	assert.Equal(t, http.StatusOK, rec.Code)
-	var historyResponse []api.ChatHistoryItem
-	if err := json.NewDecoder(rec.Body).Decode(&historyResponse); err != nil {
-		t.Fatalf("Failed to decode history: %v", err)
+
+	var history []pkgapi.ChatHistoryItem
+	if err := json.NewDecoder(rec.Body).Decode(&history); err != nil {
+		t.Fatalf("decode history: %v", err)
 	}
-	assert.Equal(t, len(historyResponse), 2)
-	assert.Equal(t, historyResponse[0].MessageType, "user")
-	assert.Equal(t, historyResponse[0].Content, "Hello, I am [NAME_1], Ask me how I am doing by my mentioned name")
-	assert.Equal(t, historyResponse[0].Metadata, map[string]string{
-		"[NAME_1]": "Gautam sharma",
-	})
-	assert.Equal(t, historyResponse[1].MessageType, "ai")
-	assert.Contains(t, historyResponse[1].Content, "[NAME_1]")
-	assert.Equal(t, historyResponse[1].Metadata, map[string]string{
-		"[NAME_1]": "Gautam sharma",
-	})
+
+	if len(history) != 2 {
+		t.Fatalf("expected 2 history items, got %d", len(history))
+	}
+
+	userItem := history[0]
+	assert.Equal(t, "user", userItem.MessageType)
+	assert.Equal(t, expectedRedacted, userItem.Content)
+
+	userMeta, ok := userItem.Metadata.(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected user metadata to be map[string]interface{}, got %T", userItem.Metadata)
+	}
+	assert.Equal(t, "Gautam sharma", userMeta["[NAME_1]"])
+
+	aiItem := history[1]
+	assert.Equal(t, "ai", aiItem.MessageType)
+	assert.Equal(t, chatResp.Reply, aiItem.Content)
+
+	aiMeta, ok := aiItem.Metadata.(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected ai metadata to be map[string]interface{}, got %T", aiItem.Metadata)
+	}
+	assert.Equal(t, "Gautam sharma", aiMeta["[NAME_1]"])
 }
