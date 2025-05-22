@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { Send, MessageSquare } from 'lucide-react';
+import { Send, MessageSquare, Lock } from 'lucide-react';
 import { HiChip } from "react-icons/hi";
+import useOutsideClick from '@/hooks/useOutsideClick';
 
 export interface Message {
   id: string;
@@ -70,6 +71,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     1. Css for llm message should be good.
     2. Correct the "Your messages are end-to-end encrypted and securely stored" message.
      */
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useOutsideClick(() => {
+    setIsDropdownOpen(false);
+  });
+
   return (
     <div className="flex flex-col h-[100%] relative w-[80%] ml-[10%]">
       <div className="flex-1 overflow-y-auto p-4 space-y-4 mb-20">
@@ -109,7 +115,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             onKeyDown={handleKeyPress}
             placeholder="Type a message..."
             rows={1}
-            className="flex-1 p-4 pr-12 border-[1px] rounded-2xl resize-none min-h-[56px] max-h-[150px] overflow-y-auto"
+            className="flex-1 p-4 pr-16 border-[1px] rounded-2xl resize-none min-h-[56px] max-h-[150px] overflow-y-auto"
             disabled={isLoading}
           />
           <button
@@ -119,12 +125,46 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           >
             <Send size={20} />
           </button>
-          <button
-            disabled={isLoading}
-            className="absolute right-10 top-1/2 -translate-y-1/2 p-2 text-blue-500 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <HiChip size={22} />
-          </button>
+          <div className="relative" ref={dropdownRef}>
+            <button
+              disabled={isLoading}
+              onClick={() => setIsDropdownOpen(prev => !prev)}
+              className="absolute right-10 top-1/2 -translate-y-1/2 p-2 text-blue-500 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <HiChip size={22} />
+            </button>
+            {isDropdownOpen && (
+              <div className="absolute bottom-12 right-0 w-48 bg-white rounded-md shadow-lg border border-gray-200">
+                <div className="py-2">
+                  <button
+                    type="button"
+                    className="w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 text-left transition-colors flex items-center gap-2"
+                    onClick={() => {
+                      // Handle basic mode
+                      setIsDropdownOpen(false);
+                    }}
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    <span>Basic</span>
+                  </button>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      disabled
+                      className="w-full px-4 py-2 text-sm text-gray-400 hover:bg-gray-50 text-left transition-colors flex items-center gap-2 cursor-not-allowed"
+                      onClick={() => setIsDropdownOpen(false)}
+                    >
+                      <Lock className="w-4 h-4" />
+                      <span>Advanced</span>
+                    </button>
+                    <div className="absolute invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity bg-gray-800 text-white text-xs rounded py-1 px-2 right-full mr-2 top-1/2 -translate-y-1/2 w-48">
+                      Requires pro subscription. Email us at contact@thirdai.com
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </form>
       </div>
     </div>
