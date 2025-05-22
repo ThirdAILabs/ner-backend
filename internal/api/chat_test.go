@@ -8,6 +8,7 @@ import (
 	"ner-backend/pkg/api"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
@@ -36,22 +37,34 @@ func init() {
 }
 
 func TestChatEndpoint(t *testing.T) {
+	apiKey := os.Getenv("OPENAI_API_KEY")
+	if apiKey == "" {
+		t.Fatal("OPENAI_API_KEY must be set for TestChatEndpoint")
+	}
 	// Create a new session first
-	req := httptest.NewRequest(http.MethodPost, "/chat/sessions", nil)
+	startPayload := api.StartSessionRequest{
+		Model: "gpt-3",
+	}
+	startPayloadBytes, err := json.Marshal(startPayload)
+	if err != nil {
+		t.Fatalf("Failed to marshal start session payload: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/chat/sessions", bytes.NewReader(startPayloadBytes))
+	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusOK, rec.Code)
 
 	var startSessionResponse api.StartSessionResponse
-	err := json.NewDecoder(rec.Body).Decode(&startSessionResponse)
-	if err != nil {
-		t.Fatalf("Failed to decode start session response: %v", err)
+	if err := json.NewDecoder(rec.Body).Decode(&startSessionResponse); err != nil {
+		t.Fatalf("Failed to decode start-session response: %v", err)
 	}
 	sessionID := startSessionResponse.SessionID
 
 	reqBody := api.ChatRequest{
-		Model:   "gpt-4",
+		Model:   "gpt-3",
+		APIKey:  apiKey,
 		Message: "Hello, I am Gautam sharma, How are you?",
 	}
 
@@ -60,6 +73,7 @@ func TestChatEndpoint(t *testing.T) {
 		t.Fatalf("Failed to marshal request body: %v", err)
 	}
 	req = httptest.NewRequest(http.MethodPost, "/chat/sessions/"+sessionID+"/messages", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
 	rec = httptest.NewRecorder()
 
 	router.ServeHTTP(rec, req)
@@ -67,8 +81,7 @@ func TestChatEndpoint(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rec.Code)
 
 	var chatResponse api.ChatResponse
-	err = json.NewDecoder(rec.Body).Decode(&chatResponse)
-	if err != nil {
+	if err := json.NewDecoder(rec.Body).Decode(&chatResponse); err != nil {
 		t.Fatalf("Failed to decode chat response: %v", err)
 	}
 	assert.Equal(t, chatResponse.InputText, "Hello, I am [NAME_1], Ask me how I am doing by my mentioned name")
@@ -82,9 +95,8 @@ func TestChatEndpoint(t *testing.T) {
 	router.ServeHTTP(rec, req)
 	assert.Equal(t, http.StatusOK, rec.Code)
 	var historyResponse []api.ChatHistoryItem
-	err = json.NewDecoder(rec.Body).Decode(&historyResponse)
-	if err != nil {
-		t.Fatalf("Failed to decode history response: %v", err)
+	if err := json.NewDecoder(rec.Body).Decode(&historyResponse); err != nil {
+		t.Fatalf("Failed to decode history: %v", err)
 	}
 	assert.Equal(t, len(historyResponse), 2)
 	assert.Equal(t, historyResponse[0].MessageType, "user")
