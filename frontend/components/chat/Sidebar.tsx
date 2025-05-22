@@ -36,14 +36,13 @@ export default function Sidebar({ items, onSelect, selectedId, padding, onNewCha
         <NewChatButton onNewChat={onNewChat} />
       </div>
       <ul className="flex flex-col">
-        
         {items.map((item) => (
           <li key={item.id}>
             <button
               className={`w-full text-left py-3 transition-colors duration-150 cursor-pointer focus:outline-none
                 ${selectedId === item.id ? 'bg-[rgb(85,152,229)]/10 text-[rgb(85,152,229)] font-semibold' : 'hover:bg-[rgb(85,152,229)]/5'}
               `}
-              style={{paddingLeft: padding || 16, paddingRight: 16}}
+              style={{ paddingLeft: padding || 16, paddingRight: 16 }}
               onClick={() => onSelect(item.id)}
             >
               {item.title}

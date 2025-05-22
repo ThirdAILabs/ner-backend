@@ -114,12 +114,15 @@ function PageContents() {
 
   return (
     <div style={{ width: '75%', minHeight: '100vh', margin: '0 auto' }}>
-      <header style={{
-        width: '100%', padding: '16px',
-        borderBottom: '1px solid #e0e0e0',
-        display: 'flex',
-        flexDirection: 'row',
-      }}>
+      <header
+        style={{
+          width: '100%',
+          padding: '16px',
+          borderBottom: '1px solid #e0e0e0',
+          display: 'flex',
+          flexDirection: 'row',
+        }}
+      >
         <Button variant="outline" size="sm" asChild>
           <Link href={`/`} className="flex items-center">
             <ArrowLeft className="mr-1 h-4 w-4" /> Back
@@ -133,7 +136,7 @@ function PageContents() {
             display: 'flex',
             flexDirection: 'row',
             gap: '20px',
-            marginLeft: "30%"
+            marginLeft: '30%',
           }}
         >
           <Image
