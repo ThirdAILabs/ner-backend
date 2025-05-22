@@ -10,6 +10,7 @@ import Sidebar, { ChatPreview } from '@/components/chat/Sidebar';
 import { useRouter, useSearchParams } from 'next/navigation';
 import useSafeGPT from './useSafeGPT';
 import Toggle from '@/components/chat/Toggle';
+import useApiKeyStore from '@/hooks/useApiKeyStore';
 
 const SIDEBAR_WIDTH = 250;
 
@@ -19,13 +20,8 @@ export default function Page() {
   const selectedId = searchParams.get('id');
   const { title, updateTitle, previews, messages, sendMessage } = useSafeGPT(selectedId || 'new');
   const [showRedaction, setShowRedaction] = useState<boolean>(false);
-  const [apiKey, setApiKey] = useState<string>('');
+  const { apiKey, saveApiKey } = useApiKeyStore();
   const [invalidApiKey, setInvalidApiKey] = useState<boolean>(true);
-
-  const saveApiKey = (key: string) => {
-    setApiKey(key);
-    setInvalidApiKey(false);
-  };
 
   const handleToggleRedaction = () => {
     setShowRedaction((prev) => !prev);
@@ -72,10 +68,10 @@ export default function Page() {
         <div className="w-[calc(100vw-250px)]">
           <ChatInterface
             messages={messages}
-            onSendMessage={sendMessage}
+            onSendMessage={(message) => sendMessage(message, apiKey)}
             invalidApiKey={invalidApiKey}
             apiKey={apiKey}
-            setApiKey={saveApiKey}
+            saveApiKey={saveApiKey}
           />
         </div>
       </div>

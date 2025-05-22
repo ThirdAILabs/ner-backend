@@ -16,7 +16,7 @@ interface ChatInterfaceProps {
   isLoading?: boolean;
   invalidApiKey: boolean;
   apiKey: string;
-  setApiKey: (key: string) => void;
+  saveApiKey: (key: string) => void;
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -25,7 +25,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   isLoading = false,
   invalidApiKey,
   apiKey,
-  setApiKey,
+  saveApiKey,
 }) => {
   // Options dropdown-related logic
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -58,7 +58,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   }, [invalidApiKey]);
 
   const handleSaveApiKey = (key: string) => {
-    setApiKey(key);
+    saveApiKey(key);
     closeDropdown();
   };
 

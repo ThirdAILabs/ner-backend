@@ -305,4 +305,22 @@ export const nerService = {
       return 'Failed to connect to S3 bucket. Please make sure that it is a valid public bucket.';
     }
   },
+
+  getOpenAIApiKey: async (): Promise<{ apiKey: string, error: string | null }> => {
+    try {
+      const response = await axiosInstance.get('/openai/api-key');
+      return { apiKey: response.data.ApiKey, error: null };
+    } catch (error) {
+      return { apiKey: '', error: 'Failed to get OpenAI API key' };
+    }
+  },
+
+  setOpenAIApiKey: async (apiKey: string): Promise<string | null> => {
+    try {
+      await axiosInstance.post('/openai/api-key', { apiKey });
+      return null;
+    } catch (error) {
+      return 'Failed to set OpenAI API key';
+    }
+  },
 };

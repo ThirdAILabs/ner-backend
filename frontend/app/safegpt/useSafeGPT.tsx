@@ -43,7 +43,7 @@ export default function useSafeGPT(chatId: string) {
     ];
   };
 
-  const sendMessage = async (message: string) => {
+  const sendMessage = async (message: string, apiKey: string) => {
     // TODO: Implement
     // TODO: If id is new, create a new chat history, append to previews.
     setMessages((prev) => [
