@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"ner-backend/internal/core"
+	"ner-backend/internal/database"
 	"ner-backend/pkg/api"
 	"net/http"
 	"net/http/httptest"
@@ -23,6 +24,10 @@ func init() {
 	db, err := gorm.Open(sqlite.Open("file::memory:"), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
+	}
+
+	if err := database.GetMigrator(db).Migrate(); err != nil {
+		log.Fatalf("Failed to migrate database: %v", err)
 	}
 
 	// presidio model doesn't require python path or plugin path
