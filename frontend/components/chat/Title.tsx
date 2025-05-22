@@ -26,17 +26,14 @@ function EditButton({ onClick }: { onClick: () => void }) {
   );
 }
 
-export default function ChatTitle({
-  title,
-  setTitle,
-}: ChatTitleProps) {
+export default function ChatTitle({ title, setTitle }: ChatTitleProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [inputValue, setInputValue] = useState(title);
-  
+
   useEffect(() => {
     setInputValue(title);
   }, [title]);
-  
+
   return (
     <div className="flex items-center w-full px-4 relative">
       <div className="flex-1 flex justify-center">

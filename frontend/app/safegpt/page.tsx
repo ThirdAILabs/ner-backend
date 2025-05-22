@@ -19,7 +19,7 @@ export default function Page() {
   const selectedId = searchParams.get('id');
   const { title, updateTitle, previews, messages, sendMessage } = useSafeGPT(selectedId || 'new');
   const [showRedaction, setShowRedaction] = useState<boolean>(false);
-  const [apiKey, setAPIKey] = useState<string>("");
+  const [apiKey, setAPIKey] = useState<string>('');
   const [invalidApiKey, setInvalidApiKey] = useState<boolean>(true);
 
   const saveAPIKey = (key: string) => {
@@ -28,7 +28,7 @@ export default function Page() {
     setTimeout(() => {
       setInvalidApiKey(true);
     }, 3000);
-  }
+  };
 
   const handleToggleRedaction = () => {
     setShowRedaction((prev) => !prev);
@@ -45,7 +45,10 @@ export default function Page() {
   return (
     <div>
       <div className="flex flex-row h-[70px] items-center justify-start relative bg-white border-b border-gray-200">
-        <div className="flex flex-row items-center h-[70px] border-r border-gray-200" style={{ width: SIDEBAR_WIDTH, paddingLeft: '20px' }}>
+        <div
+          className="flex flex-row items-center h-[70px] border-r border-gray-200"
+          style={{ width: SIDEBAR_WIDTH, paddingLeft: '20px' }}
+        >
           <Button variant="outline" size="sm" asChild>
             <Link href={`/`} className="flex items-center">
               <ArrowLeft className="mr-1 h-4 w-4" /> Back
@@ -53,10 +56,7 @@ export default function Page() {
           </Button>
         </div>
         <div className="flex-1 flex justify-center items-center">
-          <ChatTitle
-            title={title}
-            setTitle={updateTitle}
-          />
+          <ChatTitle title={title} setTitle={updateTitle} />
           <div className="absolute right-[20px]">
             <Toggle checked={showRedaction} onChange={handleToggleRedaction} />
           </div>
@@ -73,7 +73,13 @@ export default function Page() {
           />
         </div>
         <div className="w-[calc(100vw-250px)]">
-          <ChatInterface messages={messages} onSendMessage={sendMessage} invalidApiKey={invalidApiKey} apiKey={apiKey} setAPIKey={saveAPIKey} />
+          <ChatInterface
+            messages={messages}
+            onSendMessage={sendMessage}
+            invalidApiKey={invalidApiKey}
+            apiKey={apiKey}
+            setAPIKey={saveAPIKey}
+          />
         </div>
       </div>
     </div>
