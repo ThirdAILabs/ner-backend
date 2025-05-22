@@ -8,6 +8,7 @@ services:
       - "15672:15672" # Management UI port
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
     environment:
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:-user}
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASS:-password}
