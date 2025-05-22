@@ -29,7 +29,7 @@ interface AnalyticsDashboardProps {
   tokensProcessed: number; // This is actually bytes processed
   tags: Tag[];
   timeTaken: number;
-  completedFileCount: number;
+  succeededFileCount: number;
   failedFileCount: number;
   totalFileCount: number;
 }
@@ -61,11 +61,13 @@ export function AnalyticsDashboard({
   tokensProcessed,
   tags,
   timeTaken,
-  completedFileCount,
+  succeededFileCount,
   failedFileCount,
   totalFileCount,
 }: AnalyticsDashboardProps) {
   const tokenChartData = tags;
+  const filesSucceeded = ((succeededFileCount * 100) / totalFileCount).toFixed(0) || 0;
+  const filesFailed = ((failedFileCount * 100) / totalFileCount).toFixed(0) || 0;
 
   return (
     <div className="space-y-6 w-full">
@@ -74,39 +76,41 @@ export function AnalyticsDashboard({
         {/* Progress Widget */}
         <Card className="col-start-1 flex flex-col justify-between">
           <CardContent className="flex flex-col items-center justify-center flex-1 pt-6">
-            <div className="relative h-32 w-32">
-              <svg className="h-full w-full" viewBox="0 0 100 100">
+            <div className="relative h-36 w-36">
+              <svg className="h-full w-full" viewBox="0 0 120 120">
                 {/* Background circle */}
-                <circle cx="50" cy="50" r="40" fill="none" stroke="#facc15" strokeWidth="10" />
+                {/* <circle cx="60" cy="60" r="48" fill="none" stroke="#facc15" strokeWidth="10" /> */}
+                <circle cx="60" cy="60" r="48" fill="none" stroke="#dddddd" strokeWidth="10" />
 
                 {/* Success arc (green) */}
                 <circle
-                  cx="50"
-                  cy="50"
-                  r="40"
+                  cx="60"
+                  cy="60"
+                  r="48"
                   fill="none"
                   stroke="#4caf50"
                   strokeWidth="10"
-                  strokeDasharray={`${(completedFileCount / totalFileCount) * 251.327} 251.327`}
-                  transform="rotate(-90 50 50)"
+                  strokeDasharray={`${(succeededFileCount / totalFileCount) * 301.592} 301.592`}
+                  transform="rotate(-90 60 60)"
                 />
 
                 {/* Failure arc (red), offset by the success arc */}
                 <circle
-                  cx="50"
-                  cy="50"
-                  r="40"
+                  cx="60"
+                  cy="60"
+                  r="48"
                   fill="none"
                   stroke="#ef4444"
                   strokeWidth="10"
-                  strokeDasharray={`${(failedFileCount / totalFileCount) * 251.327} 251.327`}
-                  strokeDashoffset={-((completedFileCount / totalFileCount) * 251.327)}
-                  transform="rotate(-90 50 50)"
+                  strokeDasharray={`${(failedFileCount / totalFileCount) * 301.592} 301.592`}
+                  strokeDashoffset={-((succeededFileCount / totalFileCount) * 301.592)}
+                  transform="rotate(-90 60 60)"
                 />
               </svg>
-
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-2xl font-bold text-gray-700">{progress}%</span>
+              <div className="absolute inset-0 flex flex-col items-center justify-center space-y-0">
+                <span className="text-xl font-bold text-gray-700">{progress}%</span>
+                <span className="text-xs  text-gray-400">{filesSucceeded}% succeeded</span>
+                <span className="text-xs  text-gray-400">{filesFailed}% failed</span>
               </div>
             </div>
             <h3 className="mt-auto text-sm text-muted-foreground">Progress</h3>

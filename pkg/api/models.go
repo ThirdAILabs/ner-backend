@@ -40,7 +40,7 @@ type Report struct {
 	Stopped            bool
 	CreationTime       time.Time
 	TotalFileCount     int `json:"FileCount"`
-	CompletedFileCount int `json:"CompletedFileCount"`
+	SucceededFileCount int `json:"SucceededFileCount"`
 	FailedFileCount    int `json:"FailedFileCount"`
 
 	Tags       []string          `json:"Tags,omitempty"`
@@ -126,6 +126,7 @@ type ObjectPreviewResponse struct {
 
 type InferenceMetricsResponse struct {
 	Completed       int64   `json:"Completed"`
+	Failed          int64   `json:"Failed"`
 	InProgress      int64   `json:"InProgress"`
 	DataProcessedMB float64 `json:"DataProcessedMB"`
 	TokensProcessed int64   `json:"TokensProcessed"`
@@ -135,4 +136,15 @@ type ThroughputResponse struct {
 	ModelID             uuid.UUID `json:"ModelId"`
 	ReportID            uuid.UUID `json:"ReportId"`
 	ThroughputMBPerHour float64   `json:"ThroughputMBPerHour"`
+}
+
+type ValidateGroupDefinitionRequest struct {
+	GroupQuery string
+}
+
+type ValidateS3BucketRequest struct {
+	S3Endpoint     string
+	S3Region       string
+	SourceS3Bucket string
+	SourceS3Prefix string
 }

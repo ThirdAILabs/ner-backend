@@ -7,7 +7,9 @@
     "start": "electron .",
     "copy-model": "node scripts/copy-model.js",
     "copy-backend": "node scripts/copy-backend.js",
-    "prepare-files": "rm -rf bin && npm run copy-backend && npm run copy-model",
+    "copy-libomp": "otool -L bin/main | grep libomp | awk '{print $1}' | xargs -I {} cp {} resources/",
+    "sign-libomp": "codesign --force --sign \"ThirdAI Corp (KJ35JRW2T6)\"  --options runtime --entitlements build/entitlements.mac.plist resources/libomp.dylib",
+    "prepare-files": "rm -rf bin && npm run copy-backend && npm run copy-model && rm -rf resources && mkdir resources && npm run copy-libomp && npm run sign-libomp",
     "dev": "npm run prepare-files && concurrently --kill-others \"cd ../frontend && npm run dev && cd ../electron-ner-app\" \"wait-on http://localhost:3007 && electron .\"",
     "start-backend": "node scripts/start-backend.js",
     "build": "cd ../frontend && BUILD_STATIC=true npm run build && rm -rf ../electron-ner-app/frontend-dist && mv out ../electron-ner-app/frontend-dist && cd ../electron-ner-app && npm run prepare-files && electron-builder",
@@ -30,9 +32,6 @@
   ],
   "author": "",
   "license": "ISC",
-  "dependencies": {
-    "pg": "^8.16.0"
-  },
   "devDependencies": {
     "@types/node": "^20.14.10",
     "@vitejs/plugin-react": "^4.2.1",
@@ -52,6 +51,7 @@
     "electron-updater": "^6.6.2",
     "get-port": "^7.1.0",
     "http-proxy": "^1.18.1",
+    "pg": "^8.16.0",
     "portfinder": "^1.0.37",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -84,6 +84,10 @@
       {
         "from": "node_modules/electron-is-dev",
         "to": "node_modules/electron-is-dev"
+      },
+      {
+        "from": "resources/libomp.dylib",
+        "to": "../Frameworks/libomp.dylib"
       }
     ],
     "asarUnpack": [
@@ -92,13 +96,20 @@
     "afterPack": "./scripts/after-pack.js",
     "asar": true,
     "mac": {
+      "identity": "ThirdAI Corp (KJ35JRW2T6)",
       "category": "public.app-category.developer-tools",
       "target": [
         "dmg",
         "zip"
       ],
       "hardenedRuntime": true,
-      "gatekeeperAssess": false
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "gatekeeperAssess": false,
+      "extendInfo": {
+        "NSLocalNetworkUsageDescription": "This app needs to communicate with a local backend server for NLP processing."
+      },
+      "notarize": false
     },
     "win": {
       "target": "nsis"
