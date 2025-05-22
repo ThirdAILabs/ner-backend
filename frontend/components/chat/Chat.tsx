@@ -1,14 +1,16 @@
 import React, { useState, useRef } from 'react';
 import { Send, MessageSquare } from 'lucide-react';
 
+export interface Message {
+  id: string;
+  content: string;
+  role: 'user' | 'llm';
+}
+
 interface ChatInterfaceProps {
   jobId?: string;
   onSendMessage?: (message: string) => void;
-  messages?: Array<{
-    id: string;
-    content: string;
-    role: 'user' | 'llm';
-  }>;
+  messages?: Message[];
   isLoading?: boolean;
 }
 
