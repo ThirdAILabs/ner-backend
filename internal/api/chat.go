@@ -70,12 +70,12 @@ func (s *ChatService) SendMessage(r *http.Request) (any, error) {
 		return nil, err
 	}
 
-	reply, tagMap, err := session.Chat(req.Message)
+	redactedIpText, reply, tagMap, err := session.Chat(req.Message)
 	if err != nil {
 		return nil, err
 	}
 
-	return api.ChatResponse{Reply: reply, TagMap: tagMap}, nil
+	return api.ChatResponse{InputText: redactedIpText, Reply: reply, TagMap: tagMap}, nil
 }
 
 func (s *ChatService) GetHistory(r *http.Request) (any, error) {

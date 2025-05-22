@@ -89,22 +89,22 @@ func (session *ChatSession) Redact(text string) (string, map[string]string, erro
 	return b.String(), tagMap, nil
 }
 
-func (session *ChatSession) Chat(userInput string) (string, map[string]string, error) {
+func (session *ChatSession) Chat(userInput string) (string, string, map[string]string, error) {
 	session.mu.Lock()
 	defer session.mu.Unlock()
 
 	redactedText, tagMap, err := session.Redact(userInput)
 	if err != nil {
-		return "", nil, fmt.Errorf("error redacting user input: %v", err)
+		return "", "", nil, fmt.Errorf("error redacting user input: %v", err)
 	}
 
 	if err := session.saveMessage("user", redactedText, tagMap); err != nil {
-		return "", nil, err
+		return "", "", nil, err
 	}
 
 	history, err := session.getChatHistory()
 	if err != nil {
-		return "", nil, err
+		return "", "", nil, err
 	}
 
 	context := ""
@@ -114,14 +114,14 @@ func (session *ChatSession) Chat(userInput string) (string, map[string]string, e
 
 	openaiResp, err := session.getOpenAIResponse(context)
 	if err != nil {
-		return "", nil, err
+		return "", "", nil, err
 	}
 
-	if err := session.saveMessage("ai", openaiResp, nil); err != nil {
-		return "", nil, err
+	if err := session.saveMessage("ai", openaiResp, tagMap); err != nil {
+		return "", "", nil, err
 	}
 
-	return openaiResp, tagMap, nil
+	return redactedText, openaiResp, tagMap, nil
 }
 
 func (session *ChatSession) getOpenAIResponse(ctx string) (string, error) {
