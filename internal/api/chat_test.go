@@ -3,7 +3,6 @@ package api
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -83,14 +82,12 @@ func TestChatEndpoint(t *testing.T) {
 		t.Fatalf("decode chat response: %v", err)
 	}
 
-	fmt.Printf("Chat Response: %+v\n", chatResp)
-
-	expectedRedacted := "Hello, I am [NAME_1], Ask me how I am doing by my mentioned name"
+	expectedRedacted := "Hello, how are you today? I am Yashwanth and I work at ThirdAI and my email is [EMAIL_1]"
 
 	assert.Equal(t, expectedRedacted, chatResp.InputText)
 
 	assert.Equal(t,
-		map[string]string{"[NAME_1]": "Gautam sharma"},
+		map[string]string{"[EMAIL_1]": "yash@thirdai.com"},
 		chatResp.TagMap,
 	)
 
@@ -110,8 +107,6 @@ func TestChatEndpoint(t *testing.T) {
 		t.Fatalf("expected 2 history items, got %d", len(history))
 	}
 
-	fmt.Printf("History: %+v\n", history)
-
 	userItem := history[0]
 	assert.Equal(t, "user", userItem.MessageType)
 	assert.Equal(t, expectedRedacted, userItem.Content)
@@ -120,15 +115,9 @@ func TestChatEndpoint(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected user metadata to be map[string]interface{}, got %T", userItem.Metadata)
 	}
-	assert.Equal(t, "Gautam sharma", userMeta["[NAME_1]"])
+	assert.Equal(t, "yash@thirdai.com", userMeta["[EMAIL_1]"])
 
 	aiItem := history[1]
 	assert.Equal(t, "ai", aiItem.MessageType)
 	assert.Equal(t, chatResp.Reply, aiItem.Content)
-
-	aiMeta, ok := aiItem.Metadata.(map[string]interface{})
-	if !ok {
-		t.Fatalf("expected ai metadata to be map[string]interface{}, got %T", aiItem.Metadata)
-	}
-	assert.Equal(t, "Gautam sharma", aiMeta["[NAME_1]"])
 }

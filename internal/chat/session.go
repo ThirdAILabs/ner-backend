@@ -117,7 +117,7 @@ func (session *ChatSession) Chat(userInput string) (string, string, map[string]s
 		return "", "", nil, err
 	}
 
-	if err := session.saveMessage("ai", openaiResp, tagMap); err != nil {
+	if err := session.saveMessage("ai", openaiResp, nil); err != nil {
 		return "", "", nil, err
 	}
 
