@@ -34,10 +34,9 @@ interface OptionsDropdownProps {
   handleAdvancedMode: () => void;
   apiKey: string;
   invalidApiKey: boolean;
-  editingApiKey: boolean;
   onEditApiKey: () => void;
-  onSaveAPIKey: (key: string) => void;
-  onCancelAPIKey: () => void;
+  onSaveApiKey: (key: string) => void;
+  onCancelApiKey: () => void;
 }
 
 export default function Options({
@@ -45,48 +44,47 @@ export default function Options({
   handleAdvancedMode,
   apiKey,
   invalidApiKey,
-  editingApiKey,
   onEditApiKey,
-  onSaveAPIKey,
-  onCancelAPIKey,
+  onSaveApiKey,
+  onCancelApiKey,
 }: OptionsDropdownProps) {
   const apiKeyRef = useRef<HTMLInputElement>(null);
-  const [intAPIKey, setIntAPIKey] = useState<string>('');
+  const [editingApiKey, setEditingApiKey] = useState<boolean>(false);
+  const [intermediateApiKey, setIntermediateApiKey] = useState<string>('');
   const [showInvalidKeyError, setShowInvalidKeyError] = useState<boolean>(invalidApiKey);
 
   useEffect(() => {
-    setIntAPIKey(apiKey);
+    setIntermediateApiKey(apiKey);
     if (apiKey === '') {
       setShowInvalidKeyError(true);
     }
   }, [apiKey]);
 
   useEffect(() => {
-    setShowInvalidKeyError(invalidApiKey);
-  }, [invalidApiKey]);
-
-  useEffect(() => {
-    if (editingApiKey) {
+    if (invalidApiKey) {
       apiKeyRef.current?.focus();
+      setEditingApiKey(true);
     } else {
       apiKeyRef.current?.blur();
+      setEditingApiKey(false);
     }
-  }, [editingApiKey]);
+  }, [invalidApiKey]);
 
   const handleSaveApiKey = () => {
-    if (intAPIKey === '') {
+    if (intermediateApiKey === '') {
       setShowInvalidKeyError(true);
     } else {
-      onSaveAPIKey(intAPIKey);
-      console.log('Blurring...');
+      setEditingApiKey(false);
+      onSaveApiKey(intermediateApiKey);
       apiKeyRef.current?.blur();
     }
   };
 
   const handleCancelApiKey = () => {
-    setIntAPIKey(apiKey);
+    setIntermediateApiKey(apiKey);
     if (apiKey !== '' && !invalidApiKey) {
-      onCancelAPIKey();
+      setEditingApiKey(false);
+      onCancelApiKey();
       setShowInvalidKeyError(false);
     } else {
       setShowInvalidKeyError(true);
@@ -94,9 +92,16 @@ export default function Options({
   };
 
   const handleApiKeyChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setEditingApiKey(true);
     onEditApiKey();
-    setIntAPIKey(e.target.value);
+    setIntermediateApiKey(e.target.value);
     setShowInvalidKeyError(false);
+  };
+
+  const handleBlur = () => {
+    if (invalidApiKey || editingApiKey) {
+      apiKeyRef.current?.focus();
+    }
   };
 
   return (
@@ -129,17 +134,9 @@ export default function Options({
           <input
             type="text"
             ref={apiKeyRef}
-            value={intAPIKey}
+            value={intermediateApiKey}
             onChange={handleApiKeyChange}
-            onFocus={() => {
-              console.log('Focusing...');
-            }}
-            onBlur={() => {
-              if (editingApiKey) {
-                console.log('editingApiKey is', editingApiKey);
-                apiKeyRef.current?.focus();
-              }
-            }}
+            onBlur={handleBlur}
             placeholder="Your API key here..."
             className="flex-1 px-4 py-2 min-w-[100px] border-[1px] rounded-md"
           />

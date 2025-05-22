@@ -19,11 +19,11 @@ export default function Page() {
   const selectedId = searchParams.get('id');
   const { title, updateTitle, previews, messages, sendMessage } = useSafeGPT(selectedId || 'new');
   const [showRedaction, setShowRedaction] = useState<boolean>(false);
-  const [apiKey, setAPIKey] = useState<string>('');
+  const [apiKey, setApiKey] = useState<string>('');
   const [invalidApiKey, setInvalidApiKey] = useState<boolean>(true);
 
-  const saveAPIKey = (key: string) => {
-    setAPIKey(key);
+  const saveApiKey = (key: string) => {
+    setApiKey(key);
     setInvalidApiKey(false);
     setTimeout(() => {
       setInvalidApiKey(true);
@@ -78,7 +78,7 @@ export default function Page() {
             onSendMessage={sendMessage}
             invalidApiKey={invalidApiKey}
             apiKey={apiKey}
-            setAPIKey={saveAPIKey}
+            setApiKey={saveApiKey}
           />
         </div>
       </div>

@@ -16,7 +16,7 @@ interface ChatInterfaceProps {
   isLoading?: boolean;
   invalidApiKey: boolean;
   apiKey: string;
-  setAPIKey: (key: string) => void;
+  setApiKey: (key: string) => void;
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -25,7 +25,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   isLoading = false,
   invalidApiKey,
   apiKey,
-  setAPIKey,
+  setApiKey,
 }) => {
   const [editingApiKey, setEditingApiKey] = useState<boolean>(false);
   const [inputMessage, setInputMessage] = useState('');
@@ -83,7 +83,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   };
 
   const handleSaveApiKey = (key: string) => {
-    setAPIKey(key);
+    setApiKey(key);
     setEditingApiKey(false);
     setIsDropdownOpen(false);
   };
@@ -174,10 +174,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   handleAdvancedMode={() => {}}
                   apiKey={apiKey}
                   invalidApiKey={invalidApiKey}
-                  editingApiKey={editingApiKey}
                   onEditApiKey={handleEditApiKey}
-                  onSaveAPIKey={handleSaveApiKey}
-                  onCancelAPIKey={handleCancelApiKey}
+                  onSaveApiKey={handleSaveApiKey}
+                  onCancelApiKey={handleCancelApiKey}
                 />
               </div>
             )}
