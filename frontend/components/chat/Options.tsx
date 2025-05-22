@@ -19,7 +19,7 @@ function ModelOption({ children, onClick, selected, disabled }: ModelOptionProps
   return (
     <button
       type="button"
-      className={`inline w-full rounded-sm px-4 py-2 text-sm border text-left transition-colors flex items-center gap-2
+      className={`inline w-full rounded-md px-4 py-2 text-sm border text-left transition-colors flex items-center gap-2
       ${selected ? selectedStyle : unselectedStyle}
       ${disabled ? disabledStyle : enabledStyle}`}
       onClick={onClick}
@@ -109,8 +109,8 @@ export default function Options({
   };
 
   return (
-    <div className="w-full bg-white rounded-md shadow-lg border border-gray-200">
-      <div className="p-2 flex flex-col gap-1">
+    <div className="w-full bg-white rounded-xl shadow-lg border border-gray-200">
+      <div className="p-4 flex flex-col gap-1">
         <div className="inline font-semibold p-1">Redaction Model</div>
 
         <div className="flex flex-row w-full gap-2">

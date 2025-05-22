@@ -25,9 +25,6 @@ export default function Page() {
   const saveApiKey = (key: string) => {
     setApiKey(key);
     setInvalidApiKey(false);
-    setTimeout(() => {
-      setInvalidApiKey(true);
-    }, 3000);
   };
 
   const handleToggleRedaction = () => {
