@@ -149,32 +149,33 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             onKeyDown={handleKeyPress}
             placeholder="Type a message..."
             rows={1}
-            className="flex-1 p-4 pr-16 border-[1px] rounded-2xl resize-none min-h-[56px] max-h-[150px] overflow-y-auto"
+            className="flex-1 p-4 pr-[85px] border-[1px] rounded-2xl resize-none min-h-[56px] max-h-[150px] overflow-y-auto"
             disabled={isLoading}
           />
           <button
             type="submit"
             disabled={!inputMessage.trim() || isLoading}
-            className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-[rgb(85,152,229)] hover:text-[rgb(85,152,229)]/90 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="absolute right-[55px] top-1/2 -translate-y-1/2 p-2 text-[rgb(85,152,229)] hover:text-[rgb(85,152,229)]/90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Send size={20} />
           </button>
           <div className="relative" ref={dropdownRef}>
             <button
               disabled={isLoading}
-              onClick={() => {
+              onClick={(e) => {
+                e.preventDefault();
                 if (isDropdownOpen) {
                   closeDropdownIfNotEditing();
                 } else {
                   openDropdown();
                 }
               }}
-              className="absolute right-10 top-1/2 -translate-y-1/2 p-2 text-[rgb(85,152,229)] hover:text-[rgb(85,152,229)]/90 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-[rgb(85,152,229)] hover:text-[rgb(85,152,229)]/90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <HiChip size={22} />
             </button>
             {isDropdownOpen && (
-              <div className="absolute bottom-12 right-0 w-[350px]">
+              <div className="absolute bottom-12 right-4 w-[350px]">
                 <Options
                   handleBasicMode={closeDropdownIfNotEditing}
                   handleAdvancedMode={() => {}}
