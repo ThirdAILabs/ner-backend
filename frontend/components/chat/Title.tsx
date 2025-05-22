@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export interface ChatTitleProps {
   title: string;
@@ -46,8 +46,11 @@ function CancelButton({ onClick }: { onClick: () => void }) {
 export default function ChatTitle({ title, setTitle }: ChatTitleProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [inputValue, setInputValue] = useState(title);
-  console.log("Title is", title);
-  console.log("Input value is", inputValue);
+  
+  useEffect(() => {
+    setInputValue(title);
+  }, [title]);
+  
   return (
     <div className="flex flex-col">
       <div className="flex items-center gap-2">
