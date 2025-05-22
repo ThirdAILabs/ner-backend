@@ -15,7 +15,13 @@ function ToggleButton({ checked, onChange }: { checked?: boolean; onChange?: () 
   );
 }
 
-export default function Toggle({ checked, onChange }: { checked?: boolean; onChange?: () => void }) {
+export default function Toggle({
+  checked,
+  onChange,
+}: {
+  checked?: boolean;
+  onChange?: () => void;
+}) {
   return (
     <div className="flex items-center gap-2">
       <span className="text-sm font-semibold text-gray-600">Show redaction</span>

@@ -49,14 +49,13 @@ interface SaveAndCancelProps {
   onCancel: () => void;
 }
 
-export default function SaveAndCancel({
-  onSave,
-  onCancel,
-}: SaveAndCancelProps) {
-  return <div className="block w-[68px]">
+export default function SaveAndCancel({ onSave, onCancel }: SaveAndCancelProps) {
+  return (
+    <div className="block w-[68px]">
       <div className="flex gap-2 h-full items-center">
         <SaveButton onClick={onSave} />
         <CancelButton onClick={onCancel} />
       </div>
     </div>
+  );
 }
