@@ -419,9 +419,28 @@ func (s *BackendService) GetReport(r *http.Request) (any, error) {
 
 	now := time.Now().UTC()
 
+	// This code wasn't working properly.
+	// var infBounds struct {
+	// 	MinStart sql.NullTime `gorm:"column:min_start"`
+	// 	MaxEnd   sql.NullTime `gorm:"column:max_end"`
+	// }
+
+	// if err := s.db.WithContext(ctx).
+	// 	Model(&database.InferenceTask{}).
+	// 	Select("MIN(start_time) AS min_start, MAX(completion_time) AS max_end").
+	// 	Where("report_id = ? AND start_time IS NOT NULL AND completion_time IS NOT NULL", reportId).
+	// 	Scan(&infBounds).Error; err != nil {
+	// 	slog.Error("error fetching time bounds", "err", err)
+	// }
+
+	// if infBounds.MinStart.Valid && infBounds.MaxEnd.Valid {
+	// 	apiReport.TotalInferenceTimeSeconds =
+	// 		infBounds.MaxEnd.Time.Sub(infBounds.MinStart.Time).Seconds()
+	// }
+
 	var infBounds struct {
-		MinStart sql.NullTime `gorm:"column:min_start"`
-		MaxEnd   sql.NullTime `gorm:"column:max_end"`
+		MinStart string `gorm:"column:min_start"`
+		MaxEnd   string `gorm:"column:max_end"`
 	}
 
 	if err := s.db.WithContext(ctx).
@@ -432,9 +451,20 @@ func (s *BackendService) GetReport(r *http.Request) (any, error) {
 		slog.Error("error fetching time bounds", "err", err)
 	}
 
-	if infBounds.MinStart.Valid && infBounds.MaxEnd.Valid {
-		apiReport.TotalInferenceTimeSeconds =
-			infBounds.MaxEnd.Time.Sub(infBounds.MinStart.Time).Seconds()
+	const sqliteTimeLayout = "2006-01-02 15:04:05.999999999Z07:00"
+
+	startTime, err := time.Parse(sqliteTimeLayout, infBounds.MinStart)
+	if err != nil {
+		slog.Error("error parsing min_start", "raw", infBounds.MinStart, "err", err)
+	}
+
+	endTime, err := time.Parse(sqliteTimeLayout, infBounds.MaxEnd)
+	if err != nil {
+		slog.Error("error parsing max_end", "raw", infBounds.MaxEnd, "err", err)
+	}
+
+	if !startTime.IsZero() && !endTime.IsZero() {
+		apiReport.TotalInferenceTimeSeconds = endTime.Sub(startTime).Seconds()
 	}
 
 	var shardSecs float64
@@ -768,7 +798,7 @@ func (s *BackendService) GetInferenceMetrics(r *http.Request) (any, error) {
 
 	var completed, running, failed statusMetrics
 
-	// We count distinct report IDs because we are querying the InferenceTask table, 
+	// We count distinct report IDs because we are querying the InferenceTask table,
 	// where the same report ID can appear multiple times.
 
 	q1 := s.db.Model(&database.InferenceTask{}).
@@ -901,7 +931,7 @@ func validateS3Access(endpoint string, region string, bucket string, prefix stri
 		S3EndpointURL: endpoint,
 		S3Region:      region,
 	})
-	
+
 	if err != nil {
 		slog.Error("error connecting to S3", "s3_endpoint", endpoint, "region", region, "error", err)
 		return CodedErrorf(http.StatusInternalServerError, "Failed to connect to S3 endpoint. %v", err)
