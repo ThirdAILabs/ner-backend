@@ -71,49 +71,55 @@ export default function ChatTitle({ title, setTitle, showRedaction = false, onTo
 
   console.log("Title is", title);
   console.log("Input value is", inputValue);
+
   return (
-    <div className="flex items-center justify-between w-full px-4">
-      <div className="flex flex-col">
+    <div className="flex items-center w-full px-4 relative">
+      <div className="absolute right-36">
         <div className="flex items-center gap-2">
-          {isEditing ? (
-            <>
-              <div className="relative inline-block">
-                <input
-                  type="text"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  className="text-xl font-medium bg-transparent border-none border-b-2 border-gray-300 focus:outline-none focus:border-blue-500 transition-all w-full text-center"
-                  style={{ width: `${inputValue.length}ch` }}
-                  autoFocus
-                />
-              </div>
-              <div className="flex gap-2">
-                <SaveButton onClick={() => {
-                  setIsEditing(false);
-                  setTitle(inputValue);
-                }} />
-                <CancelButton onClick={() => {
-                  setIsEditing(false);
-                  setInputValue(title);
-                }} />
-              </div>
-            </>
-          ) : (
-            <>
-              <span
-                className="text-xl font-medium"
-                onClick={() => setIsEditing(true)}
-              >
-                {title}
-              </span>
-              <EditButton onClick={() => setIsEditing(true)} />
-            </>
-          )}
+          <span className="text-sm font-semibold text-gray-600">Show redaction</span>
+          <Toggle checked={showRedaction} onChange={onToggleRedaction} />
         </div>
       </div>
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-gray-600">Show redaction</span>
-        <Toggle checked={showRedaction} onChange={onToggleRedaction} />
+
+      <div className="flex-1 flex justify-center">
+        <div className="flex flex-col">
+          <div className="flex items-center gap-2">
+            {isEditing ? (
+              <>
+                <div className="relative inline-block">
+                  <input
+                    type="text"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    className="text-xl font-medium bg-transparent border-none border-b-2 border-gray-300 focus:outline-none focus:border-blue-500 transition-all w-full text-center"
+                    style={{ width: `${inputValue.length}ch` }}
+                    autoFocus
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <SaveButton onClick={() => {
+                    setIsEditing(false);
+                    setTitle(inputValue);
+                  }} />
+                  <CancelButton onClick={() => {
+                    setIsEditing(false);
+                    setInputValue(title);
+                  }} />
+                </div>
+              </>
+            ) : (
+              <>
+                <span
+                  className="text-xl font-medium"
+                  onClick={() => setIsEditing(true)}
+                >
+                  {title}
+                </span>
+                <EditButton onClick={() => setIsEditing(true)} />
+              </>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
