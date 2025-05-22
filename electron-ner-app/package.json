@@ -1,6 +1,6 @@
 {
   "name": "electron-ner-app",
-  "version": "1.1.0",
+  "version": "1.4.0",
   "description": "Electron app for Named Entity Recognition",
   "main": "main.js",
   "scripts": {
@@ -10,7 +10,7 @@
     "prepare-files": "rm -rf bin && npm run copy-backend && npm run copy-model",
     "dev": "npm run prepare-files && concurrently --kill-others \"cd ../frontend && npm run dev && cd ../electron-ner-app\" \"wait-on http://localhost:3007 && electron .\"",
     "start-backend": "node scripts/start-backend.js",
-    "build": "cd ../frontend && npm run build && rm -rf ../electron-ner-app/frontend-dist && mv out ../electron-ner-app/frontend-dist && cd ../electron-ner-app && npm run prepare-files && electron-builder",
+    "build": "cd ../frontend && BUILD_STATIC=true npm run build && rm -rf ../electron-ner-app/frontend-dist && mv out ../electron-ner-app/frontend-dist && cd ../electron-ner-app && npm run prepare-files && electron-builder",
     "vite-build": "cd src && vite build",
     "electron-build": "npm run copy-backend && electron-builder",
     "build-dmg": "node scripts/build-dmg.js",
@@ -30,6 +30,9 @@
   ],
   "author": "",
   "license": "ISC",
+  "dependencies": {
+    "pg": "^8.16.0"
+  },
   "devDependencies": {
     "@types/node": "^20.14.10",
     "@vitejs/plugin-react": "^4.2.1",
@@ -65,6 +68,7 @@
       "build/**/*",
       "main.js",
       "preload.js",
+      "telemetry.js",
       "frontend-dist/**/*",
       "scripts/**/*",
       "!**/node_modules/**/{CHANGELOG.md,README.md,README,readme.md,readme}",

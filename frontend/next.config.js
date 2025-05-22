@@ -1,10 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  env: {
-    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  },
-  output: 'export',
+  // PostgreSQL configuration is now handled server-side via API routes
+  // No need to expose credentials to the client
+  // Conditionally use static export only for Electron builds
+  ...(process.env.BUILD_STATIC === 'true' 
+    ? { output: 'export', distDir: 'out' } 
+    : {}),
   trailingSlash: true,
   images: {
     unoptimized: true,

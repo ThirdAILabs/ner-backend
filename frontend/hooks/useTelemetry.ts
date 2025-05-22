@@ -1,5 +1,4 @@
 import { useCallback } from 'react';
-import { supabase } from '@/lib/supabaseClient';
 
 export type TelemetryEvent = {
   UserAction: string;
@@ -32,9 +31,31 @@ export default function useTelemetry() {
       event: eventType,
     };
 
-    const { error } = await supabase.from('telemetry_events')
-      .insert([telemetryPackage]);
-    if (error) console.error('Telemetry insert error:', error);
+    try {
+      // Check if we're in Electron
+      const isElectron = typeof window !== 'undefined' && 
+        (window as any).electronAPI !== undefined;
+
+      if (isElectron) {
+        // Use Electron IPC for telemetry
+        (window as any).electronAPI.sendTelemetry(telemetryPackage);
+      } else {
+        // Use API route for web/dev mode
+        const response = await fetch('/api/telemetry', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(telemetryPackage),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+      }
+    } catch (error) {
+      console.error('Telemetry insert error:', error);
+    }
   }, []);
 
   return recordEvent;
