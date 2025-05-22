@@ -7,21 +7,19 @@ import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import Sidebar, { ChatPreview } from "@/components/chat/Sidebar";
+import { useRouter, useSearchParams } from "next/navigation";
+import useSafeGPT from "./useSafeGPT";
+
 const SIDEBAR_WIDTH = 250;
 
 export default function Page() {
-  const [title, setTitle] = useState("SafeGPT");
-  const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
-  const [chats, setChats] = useState<ChatPreview[]>([]);
-
-  useEffect(() => {
-    setChats(
-      Array.from({ length: 101 }, (_, i) => ({
-        id: i.toString(),
-        title: `Chat ${i}`
-      }))
-    );
-  }, []);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const selectedId = searchParams.get('id');
+  const { title, updateTitle, previews, messages, sendMessage } = useSafeGPT(selectedId || "new");
+  const handleSelect = (id: string) => {
+    router.push(`/safegpt?id=${id}`);
+  };
 
   return <div>
     <div className="flex flex-row h-[70px] items-center justify-start border-b border-gray-200">
@@ -33,15 +31,21 @@ export default function Page() {
         </Button>
       </div>
       <div className="flex-1 flex justify-center">
-        <ChatTitle title={title} setTitle={setTitle} />
+        <ChatTitle title={title} setTitle={updateTitle} />
       </div>
     </div>
     <div className="flex flex-row h-[calc(100vh-70px)]">
       <div style={{width: SIDEBAR_WIDTH}}>
-        <Sidebar items={chats} onSelect={setSelectedId} selectedId={selectedId} padding={20} />
+        <Sidebar 
+          items={previews} 
+          onSelect={handleSelect} 
+          selectedId={selectedId || undefined} 
+          onNewChat={() => {}} 
+          padding={20} 
+        />
       </div>
       <div className="w-[calc(100vw-250px)]">
-        <ChatInterface />
+        <ChatInterface messages={messages} onSendMessage={sendMessage} />
       </div>
     </div>
   </div>;

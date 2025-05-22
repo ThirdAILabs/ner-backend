@@ -101,7 +101,7 @@ export default function Page() {
             <Choice
               title="SafeGPT"
               icon={<MessageSquare size={80} color="#000" style={{ marginBottom: 24 }} strokeWidth={1} />}
-              href="/safegpt"
+              href="/safegpt?id=new"
             />
           </Box>
         </Box>
