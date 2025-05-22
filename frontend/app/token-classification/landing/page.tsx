@@ -6,6 +6,9 @@ import { Tabs, Tab, Box, CircularProgress, Typography, Link as MuiLink } from '@
 import * as _ from 'lodash';
 import { useParams, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 
 // Import our implemented components
 // import Interact from './interact';
@@ -111,7 +114,17 @@ function PageContents() {
 
   return (
     <div style={{ width: '75%', minHeight: '100vh', margin: '0 auto' }}>
-      <header style={{ width: '100%', padding: '16px', borderBottom: '1px solid #e0e0e0' }}>
+      <header style={{
+        width: '100%', padding: '16px',
+        borderBottom: '1px solid #e0e0e0',
+        display: 'flex',
+        flexDirection: 'row',
+      }}>
+        <Button variant="outline" size="sm" asChild>
+          <Link href={`/`} className="flex items-center">
+            <ArrowLeft className="mr-1 h-4 w-4" /> Back
+          </Link>
+        </Button>
         <div
           style={{
             maxWidth: '1200px',
@@ -120,6 +133,7 @@ function PageContents() {
             display: 'flex',
             flexDirection: 'row',
             gap: '20px',
+            marginLeft: "30%"
           }}
         >
           <Image
