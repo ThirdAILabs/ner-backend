@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Send, MessageSquare, Lock } from 'lucide-react';
 import { HiChip } from "react-icons/hi";
 import useOutsideClick from '@/hooks/useOutsideClick';
+import { Tooltip } from '@mui/material';
 
 export interface Message {
   id: string;
@@ -148,18 +149,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     <span>Basic</span>
                   </button>
                   <div className="relative">
-                    <button
-                      type="button"
-                      disabled
-                      className="w-full px-4 py-2 text-sm text-gray-400 hover:bg-gray-50 text-left transition-colors flex items-center gap-2 cursor-not-allowed"
-                      onClick={() => setIsDropdownOpen(false)}
-                    >
-                      <Lock className="w-4 h-4" />
-                      <span>Advanced</span>
-                    </button>
-                    <div className="absolute invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity bg-gray-800 text-white text-xs rounded py-1 px-2 right-full mr-2 top-1/2 -translate-y-1/2 w-48">
-                      Requires pro subscription. Email us at contact@thirdai.com
-                    </div>
+                    <Tooltip
+                      title="Requires pro subscription. Email us at contact@thirdai.com">
+                      <button
+                        type="button"
+                        disabled
+                        className="w-full px-4 py-2 text-sm text-gray-400 hover:bg-gray-50 text-left transition-colors flex items-center gap-2 cursor-not-allowed"
+                        onClick={() => setIsDropdownOpen(false)}
+                      >
+                        <Lock className="w-4 h-4" />
+                        <span>Advanced</span>
+                      </button>
+                    </Tooltip>
                   </div>
                 </div>
               </div>
