@@ -195,6 +195,8 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 	assert.Equal(t, dataBucket, report.SourceS3Bucket)
 	assert.Equal(t, 11, report.InferenceTaskStatuses[database.JobCompleted].TotalTasks)
 	assert.Equal(t, 2, len(report.Groups))
+	assert.Greater(t, report.TotalInferenceTimeSeconds, 0.0)
+	assert.Greater(t, report.ShardDataTimeSeconds, 0.0)
 
 	entities := getReportEntities(t, router, reportId)
 	assert.Equal(t, 21, len(entities))
@@ -391,7 +393,7 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 			assert.GreaterOrEqualf(
 				t,
 				pct, 90.0,
-				"only %.1f%% of expected texts were found (need ≥80%%)", pct,
+				"only %.1f%% of expected texts were found (need ≥90%%)", pct,
 			)
 			assert.Greater(t, len(entities), 40)
 		})
