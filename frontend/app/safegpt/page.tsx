@@ -17,12 +17,19 @@ export default function Page() {
   const searchParams = useSearchParams();
   const selectedId = searchParams.get('id');
   const { title, updateTitle, previews, messages, sendMessage } = useSafeGPT(selectedId || "new");
+  const [showRedaction, setShowRedaction] = useState<boolean>(false);
+
+  const handleToggleRedaction = () => {
+    setShowRedaction(prev => !prev);
+  }
+
   const handleSelectChat = (id: string) => {
     router.push(`/safegpt?id=${id}`);
   };
   const handleNewChat = () => {
     router.push(`/safegpt?id=new`);
   };
+  console.log("Previews...", previews);
 
   return <div>
     <div className="flex flex-row h-[70px] items-center justify-start relative bg-white">
@@ -35,7 +42,7 @@ export default function Page() {
         </Button>
       </div>
       <div className="flex-1 flex justify-center">
-        <ChatTitle title={title} setTitle={updateTitle} />
+        <ChatTitle title={title} setTitle={updateTitle} showRedaction={showRedaction} onToggleRedaction={handleToggleRedaction} />
       </div>
     </div>
     <div className="flex flex-row h-[calc(100vh-70px)]">

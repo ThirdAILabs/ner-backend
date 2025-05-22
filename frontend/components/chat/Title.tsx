@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 export interface ChatTitleProps {
   title: string;
   setTitle: (title: string) => void;
+  showRedaction: boolean;
+  onToggleRedaction: () => void;
 }
 
 function EditButton({ onClick }: { onClick: () => void }) {
@@ -43,7 +45,23 @@ function CancelButton({ onClick }: { onClick: () => void }) {
     </button>
   );
 }
-export default function ChatTitle({ title, setTitle }: ChatTitleProps) {
+
+function Toggle({ checked, onChange }: { checked?: boolean; onChange?: () => void }) {
+  return (
+    <button
+      onClick={onChange}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${checked ? 'bg-blue-600' : 'bg-gray-200'
+        }`}
+    >
+      <span
+        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'
+          }`}
+      />
+    </button>
+  );
+}
+
+export default function ChatTitle({ title, setTitle, showRedaction = false, onToggleRedaction }: ChatTitleProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [inputValue, setInputValue] = useState(title);
   
@@ -52,42 +70,48 @@ export default function ChatTitle({ title, setTitle }: ChatTitleProps) {
   }, [title]);
   
   return (
-    <div className="flex flex-col">
+    <div className="flex items-center justify-between w-full px-4">
+      <div className="flex flex-col">
+        <div className="flex items-center gap-2">
+          {isEditing ? (
+            <>
+              <div className="relative inline-block">
+                <input
+                  type="text"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  className="text-xl font-medium bg-transparent border-none border-b-2 border-gray-300 focus:outline-none focus:border-blue-500 transition-all w-full text-center"
+                  style={{ width: `${inputValue.length}ch` }}
+                  autoFocus
+                />
+              </div>
+              <div className="flex gap-2">
+                <SaveButton onClick={() => {
+                  setIsEditing(false);
+                  setTitle(inputValue);
+                }} />
+                <CancelButton onClick={() => {
+                  setIsEditing(false);
+                  setInputValue(title);
+                }} />
+              </div>
+            </>
+          ) : (
+            <>
+              <span
+                className="text-xl font-medium"
+                onClick={() => setIsEditing(true)}
+              >
+                {title}
+              </span>
+              <EditButton onClick={() => setIsEditing(true)} />
+            </>
+          )}
+        </div>
+      </div>
       <div className="flex items-center gap-2">
-        {isEditing ? (
-          <>
-            <div className="relative inline-block">
-              <input
-                type="text"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                className="text-xl font-medium bg-transparent border-none border-b-2 border-gray-300 focus:outline-none focus:border-blue-500 transition-all w-full text-center"
-                style={{ width: `${inputValue.length}ch` }}
-                autoFocus
-              />
-            </div>
-            <div className="flex gap-2">
-              <SaveButton onClick={() => {
-                setIsEditing(false);
-                setTitle(inputValue);
-              }} />
-              <CancelButton onClick={() => {
-                setIsEditing(false);
-                setInputValue(title);
-              }} />
-            </div>
-          </>
-        ) : (
-          <>
-            <span
-              className="text-xl font-medium"
-              onClick={() => setIsEditing(true)}
-            >
-              {title}
-            </span>
-            <EditButton onClick={() => setIsEditing(true)} />
-          </>
-        )}
+        <span className="text-sm text-gray-600">Show redaction</span>
+        <Toggle checked={showRedaction} onChange={onToggleRedaction} />
       </div>
     </div>
   );
