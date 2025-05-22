@@ -7,27 +7,17 @@ import { Card, CardTitle } from '@/components/ui/card/index';
 import { FileText, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 
-function Choice({
-    title,
-    icon,
-    href,
-}: {
-    title: string;
-    icon: React.ReactNode;
-    href: string;
-}) {
-    return (
-      <Link href={href}>
-        <Card className="w-[300px] h-[250px] flex justify-center items-center hover:scale-105 transition-transform duration-200 hover:shadow-lg cursor-pointer">
-          <Box>
-            {icon}
-            <CardTitle className="text-center">
-              {title}
-            </CardTitle>
-          </Box>
-        </Card>
-      </Link>
-    )
+function Choice({ title, icon, href }: { title: string; icon: React.ReactNode; href: string }) {
+  return (
+    <Link href={href}>
+      <Card className="w-[300px] h-[250px] flex justify-center items-center hover:scale-105 transition-transform duration-200 hover:shadow-lg cursor-pointer">
+        <Box>
+          {icon}
+          <CardTitle className="text-center">{title}</CardTitle>
+        </Box>
+      </Card>
+    </Link>
+  );
 }
 
 export default function Page() {
@@ -67,7 +57,17 @@ export default function Page() {
         </div>
       </header>
 
-      <main style={{ maxWidth: '1200px', height: '80%', margin: '0 auto', padding: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <main
+        style={{
+          maxWidth: '1200px',
+          height: '80%',
+          margin: '0 auto',
+          padding: '50px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         <Box sx={{ position: 'relative' }}>
           <Box sx={{ textAlign: 'center', mb: 8 }}>
             <Typography
@@ -83,24 +83,33 @@ export default function Page() {
               What would you like to do today?
             </Typography>
           </Box>
-          <Box 
-            sx={{ 
-              display: 'flex', 
-              flexDirection: 'row', 
-              justifyContent: 'center', 
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'row',
+              justifyContent: 'center',
               alignItems: 'center',
               gap: '50px',
-              width: '100%'
+              width: '100%',
             }}
           >
             <Choice
               title="Scan Files"
-              icon={<FileText size={80} color="#000" style={{ marginBottom: 24 }} strokeWidth={1} />}
+              icon={
+                <FileText size={80} color="#000" style={{ marginBottom: 24 }} strokeWidth={1} />
+              }
               href="/token-classification/landing"
             />
             <Choice
               title="SafeGPT"
-              icon={<MessageSquare size={80} color="#000" style={{ marginBottom: 24 }} strokeWidth={1} />}
+              icon={
+                <MessageSquare
+                  size={80}
+                  color="#000"
+                  style={{ marginBottom: 24 }}
+                  strokeWidth={1}
+                />
+              }
               href="/safegpt?id=new"
             />
           </Box>
