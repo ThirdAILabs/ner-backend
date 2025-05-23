@@ -306,10 +306,105 @@ export const nerService = {
     }
   },
 
+  getChatSessions: async (): Promise<{ data: { id: string; title: string }[]; error: string | null }> => {
+    try {
+      const { data } = await axiosInstance.get('/chat/sessions');
+      return { data, error: null };
+    } catch (error) {
+      const errorMsg = axios.isAxiosError(error) && error.response?.data 
+        ? error.response.data 
+        : 'Failed to get chat sessions';
+      return { data: [], error: errorMsg };
+    }
+  },
+
+  startChatSession: async (model: string, title: string): Promise<{ data: { session_id: string } | null; error: string | null }> => {
+    try {
+      const { data } = await axiosInstance.post('/chat/sessions', { model, title });
+      return { data, error: null };
+    } catch (error) {
+      const errorMsg = axios.isAxiosError(error) && error.response?.data
+        ? error.response.data
+        : 'Failed to start chat session';
+      return { data: null, error: errorMsg };
+    }
+  },
+
+  getChatSession: async (sessionId: string): Promise<{ data: { id: string; title: string } | null; error: string | null }> => {
+    try {
+      const { data } = await axiosInstance.get(`/chat/sessions/${sessionId}`);
+      return { data, error: null };
+    } catch (error) {
+      const errorMsg = axios.isAxiosError(error) && error.response?.data
+        ? error.response.data
+        : 'Failed to get chat session';
+      return { data: null, error: errorMsg };
+    }
+  },
+
+  renameChatSession: async (sessionId: string, title: string): Promise<{ error: string | null }> => {
+    try {
+      await axiosInstance.post(`/chat/sessions/${sessionId}/rename`, { title });
+      return { error: null };
+    } catch (error) {
+      const errorMsg = axios.isAxiosError(error) && error.response?.data
+        ? error.response.data
+        : 'Failed to rename chat session';
+      return { error: errorMsg };
+    }
+  },
+
+  sendChatMessage: async (
+    sessionId: string,
+    model: string,
+    apiKey: string,
+    message: string
+  ): Promise<{
+    data: { input_text: string; reply: string; tag_map: Record<string, string> } | null;
+    error: string | null;
+  }> => {
+    try {
+      const { data } = await axiosInstance.post(`/chat/sessions/${sessionId}/messages`, {
+        model,
+        api_key: apiKey,
+        message,
+      });
+      return { data, error: null };
+    } catch (error) {
+      const errorMsg = axios.isAxiosError(error) && error.response?.data
+        ? error.response.data
+        : 'Failed to send chat message';
+      return { data: null, error: errorMsg };
+    }
+  },
+
+  getChatHistory: async (
+    sessionId: string
+  ): Promise<{
+    data: Array<{
+      id: string;
+      message_type: string;
+      content: string;
+      timestamp: string;
+      metadata?: any;
+    }>;
+    error: string | null;
+  }> => {
+    try {
+      const { data } = await axiosInstance.get(`/chat/sessions/${sessionId}/history`);
+      return { data, error: null };
+    } catch (error) {
+      const errorMsg = axios.isAxiosError(error) && error.response?.data
+        ? error.response.data
+        : 'Failed to get chat history';
+      return { data: [], error: errorMsg };
+    }
+  },
+
   getOpenAIApiKey: async (): Promise<{ apiKey: string, error: string | null }> => {
     try {
-      const response = await axiosInstance.get('/openai/api-key');
-      return { apiKey: response.data.ApiKey, error: null };
+      const response = await axiosInstance.get('/chat/api-key');
+      return { apiKey: response.data.api_key, error: null };
     } catch (error) {
       return { apiKey: '', error: 'Failed to get OpenAI API key' };
     }
@@ -317,7 +412,7 @@ export const nerService = {
 
   setOpenAIApiKey: async (apiKey: string): Promise<string | null> => {
     try {
-      await axiosInstance.post('/openai/api-key', { apiKey });
+      await axiosInstance.post('/chat/api-key', { apiKey });
       return null;
     } catch (error) {
       return 'Failed to set OpenAI API key';

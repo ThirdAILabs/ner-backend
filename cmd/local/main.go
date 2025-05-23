@@ -109,8 +109,18 @@ func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publish
 
 	apiHandler := api.NewBackendService(db, storage, queue, chunkTargetBytes)
 
+	loaders := core.NewModelLoaders("python", "plugin/plugin-python/plugin.py")
+	//Whatever model you want to load, just add it to the loaders map
+	// TODO: Change to UDT.
+	nerModel, err := loaders["presidio"]("")
+	if err != nil {
+		log.Fatalf("could not load NER model: %v", err)
+	}
+	chatHandler := api.NewChatService(db, nerModel)
+
 	r.Route("/api/v1", func(r chi.Router) {
 		apiHandler.AddRoutes(r)
+		chatHandler.AddRoutes(r)
 	})
 
 	return &http.Server{

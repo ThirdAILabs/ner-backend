@@ -1,11 +1,27 @@
 package api
 
+import "github.com/google/uuid"
+
 type StartSessionRequest struct {
 	Model string `json:"model"`
+	Title string `json:"title"`
+}
+
+type ChatSessionMetadata struct {
+	ID      uuid.UUID `json:"id"`
+	Title   string `json:"title"`
+}
+
+type GetSessionsResponse struct {
+	Sessions []ChatSessionMetadata `json:"sessions"`
 }
 
 type StartSessionResponse struct {
 	SessionID string `json:"session_id"`
+}
+
+type RenameSessionRequest struct {
+	Title string `json:"title"`
 }
 
 type ChatRequest struct {
@@ -21,8 +37,13 @@ type ChatResponse struct {
 }
 
 type ChatHistoryItem struct {
+	ID          string `json:"id"`
 	MessageType string `json:"message_type"` // "user" or "ai"
 	Content     string `json:"content"`
 	Timestamp   string `json:"timestamp"`
 	Metadata    any    `json:"metadata,omitempty"` // Optional metadata field
+}
+
+type ApiKey struct {
+	ApiKey string `json:"api_key"`
 }

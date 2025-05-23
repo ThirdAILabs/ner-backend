@@ -147,7 +147,3 @@ type ValidateS3BucketRequest struct {
 	SourceS3Bucket string
 	SourceS3Prefix string
 }
-
-type OpenAIApiKeyRequest struct {
-	ApiKey string
-}

@@ -21,7 +21,7 @@ export default function Page() {
   const { title, updateTitle, previews, messages, sendMessage } = useSafeGPT(selectedId || 'new');
   const [showRedaction, setShowRedaction] = useState<boolean>(false);
   const { apiKey, saveApiKey } = useApiKeyStore();
-  const [invalidApiKey, setInvalidApiKey] = useState<boolean>(true);
+  const [invalidApiKey, setInvalidApiKey] = useState<boolean>(false);
 
   const handleToggleRedaction = () => {
     setShowRedaction((prev) => !prev);

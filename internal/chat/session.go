@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/google/uuid"
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/openai"
 	"gorm.io/datatypes"
@@ -20,14 +21,23 @@ import (
 type ChatSession struct {
 	mu           sync.Mutex
 	db           *gorm.DB
-	sessionID    string
+	sessionID    uuid.UUID
 	model        string
 	apiKey       string
 	openAIClient *openai.LLM
 	ner          core.Model
 }
 
-func NewChatSession(db *gorm.DB, sessionID, model, apiKey string, ner core.Model) (*ChatSession, error) {
+func NewChatSession(db *gorm.DB, sessionID uuid.UUID, model, apiKey string, ner core.Model) (*ChatSession, error) {
+	var sessions []database.ChatSession
+	err := db.Where("id = ?", sessionID).Find(&sessions).Error
+	if err != nil {
+		return nil, err
+	}
+	if len(sessions) == 0 {
+		return nil, fmt.Errorf("session not found")
+	}
+
 	client, err := openai.New(openai.WithToken(apiKey), openai.WithModel(model))
 	if err != nil {
 		return nil, fmt.Errorf("could not create OpenAI client: %v", err)

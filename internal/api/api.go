@@ -80,11 +80,6 @@ func (s *BackendService) AddRoutes(r chi.Router) {
 		r.Get("/group", RestHandler(s.ValidateGroupDefinition))
 		r.Get("/s3", RestHandler(s.ValidateS3Access))
 	})
-
-	r.Route("/openai", func(r chi.Router) {
-		r.Get("/api-key", RestHandler(s.GetOpenAIApiKey))
-		r.Post("/api-key", RestHandler(s.SetOpenAIApiKey))
-	})
 }
 
 func (s *BackendService) ListModels(r *http.Request) (any, error) {
@@ -905,15 +900,4 @@ func (s *BackendService) ValidateS3Access(r *http.Request) (any, error) {
 		return nil, err
 	}
 	return nil, validateS3Access(req.S3Endpoint, req.S3Region, req.SourceS3Bucket, req.SourceS3Prefix)
-}
-
-func (s *BackendService) GetOpenAIApiKey(r *http.Request) (any, error) {
-	// TODO: Implement
-	apiKey := "test-api-key"
-	return api.OpenAIApiKeyRequest{ApiKey: apiKey}, nil
-}
-
-func (s *BackendService) SetOpenAIApiKey(r *http.Request) (any, error) {
-	// TODO: Implement
-	return nil, nil
 }

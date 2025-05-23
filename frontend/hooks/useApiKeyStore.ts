@@ -10,6 +10,7 @@ export default function useApiKeyStore() {
       alert(error);
       return "";
     }
+    console.log("API key is", apiKey);
     return apiKey;
   };
 
