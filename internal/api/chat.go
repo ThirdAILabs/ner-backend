@@ -186,10 +186,7 @@ func (s *ChatService) GetHistory(r *http.Request) (any, error) {
 func (s *ChatService) GetOpenAIApiKey(r *http.Request) (any, error) {
 	// TODO: Store in a more secure way.
 	apiKey := ""
-	data, err := os.ReadFile("api-key.txt");
-	if err != nil {
-		return nil, err
-	} else {
+	if data, err := os.ReadFile("api-key.txt"); err == nil {
 		apiKey = strings.TrimSpace(string(data));
 	}
 	return api.ApiKey{ApiKey: apiKey}, nil
