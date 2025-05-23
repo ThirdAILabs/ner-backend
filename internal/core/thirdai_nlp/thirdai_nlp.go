@@ -9,7 +9,7 @@ package thirdai_nlp
 import "C"
 import (
 	"fmt"
-	"ner-backend/internal/core"
+
 	"ner-backend/internal/core/types"
 	"ner-backend/internal/core/utils"
 	"ner-backend/pkg/api"
@@ -20,19 +20,17 @@ type CnnModel struct {
 	ptr unsafe.Pointer
 }
 
-var _ core.Model = (*CnnModel)(nil)
-
-func LoadCnnModel(modelPath string) (CnnModel, error) {
+func LoadCnnModel(modelPath string) (*CnnModel, error) {
 	cModelPath := C.CString(modelPath)
 	defer C.free(unsafe.Pointer(cModelPath))
 
 	result := C.cnn_model_load(cModelPath)
 	defer C.cnn_model_free_load_result(result)
 	if result.error_msg != nil {
-		return CnnModel{}, fmt.Errorf("failed to load cnn model: %v", C.GoString(result.error_msg))
+		return nil, fmt.Errorf("failed to load cnn model: %v", C.GoString(result.error_msg))
 	}
 
-	return CnnModel{ptr: result.model_ptr}, nil
+	return &CnnModel{ptr: result.model_ptr}, nil
 }
 
 func (m *CnnModel) Release() {
