@@ -95,12 +95,21 @@ export default function useSafeGPT(chatId: string) {
       return [];
     }
 
-    return history.data.map((message, idx) => ({
-      id: `m-${idx}`,
-      content: message.content,
-      redactedContent: [{ original: message.content }], // TODO: get redacted content
-      role: message.message_type === 'user' ? 'user' : 'llm',
-    }));
+    const messages: Message[] = [];
+    let lastTagMap: Record<string, string> = {};
+    for (const message of history.data) {
+      if (message.message_type === 'user') {
+        lastTagMap = message.metadata;
+      }
+
+      messages.push({
+        content: unredactContent(message.content, lastTagMap),
+        redactedContent: toRedactedContent(message.content, lastTagMap),
+        role: message.message_type === 'user' ? 'user' : 'llm',
+      });
+    }
+
+    return messages;
   };
 
   const deleteChat = async (selectedId: string) => {
@@ -129,7 +138,6 @@ export default function useSafeGPT(chatId: string) {
     setMessages([
       ...prevMessages,
       {
-        id: `m-${prevMessages.length + 1}`,
         content: message,
         redactedContent: [{ original: message }],
         role: 'user',
@@ -161,13 +169,11 @@ export default function useSafeGPT(chatId: string) {
     setMessages([
       ...prevMessages,
       {
-        id: `m-${prevMessages.length + 1}`,
         content: message,
         redactedContent: toRedactedContent(response.data?.input_text || message, response.data?.tag_map || {}),
         role: 'user',
       },
       {
-        id: `m-${prevMessages.length + 2}`,
         content: unredactContent(response.data?.reply || '', response.data?.tag_map || {}),
         redactedContent: toRedactedContent(response.data?.reply || '', response.data?.tag_map || {}),
         role: 'llm',
