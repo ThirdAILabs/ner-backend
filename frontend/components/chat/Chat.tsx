@@ -4,10 +4,15 @@ import { HiChip } from 'react-icons/hi';
 import useOutsideClick from '@/hooks/useOutsideClick';
 import Options from './Options';
 
+export interface RedactedContentPiece {
+  original: string;
+  replacement?: string;
+}
+
 export interface Message {
   id: string;
   content: string;
-  redactedContent: string;
+  redactedContent: RedactedContentPiece[];
   role: 'user' | 'llm';
 }
 
@@ -141,7 +146,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     : 'text-gray-600 text-lg/8 mt-6'
                 } leading-relaxed`}
               >
-                <div dangerouslySetInnerHTML={{ __html: showRedaction ? message.redactedContent : message.content }} />
+                { 
+                  !showRedaction ? message.content : (
+                    message.redactedContent.map((piece, idx) => (
+                      piece.replacement
+                        ? <span key={idx} className="inline-flex items-center gap-1 bg-red-500/10 p-1 pl-2 rounded-md">
+                          <del>{piece.original}</del>
+                          <span className="bg-red-500 px-1 rounded-sm text-white">{piece.replacement}</span>
+                        </span> 
+                        : piece.original
+                    ))
+                  )
+                }
               </div>
             </div>
           ))}

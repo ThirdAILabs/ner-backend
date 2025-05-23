@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Trash } from 'lucide-react';
 
 export interface ChatPreview {
   id: string;
@@ -11,6 +11,7 @@ interface SidebarProps {
   selectedId?: string;
   padding?: number;
   onSelect: (id: string) => void;
+  onDelete: (id: string) => void;
   onNewChat: () => void;
 }
 
@@ -29,7 +30,7 @@ function NewChatButton({ onNewChat }: { onNewChat: () => void }) {
   );
 }
 
-export default function Sidebar({ items, onSelect, selectedId, padding, onNewChat }: SidebarProps) {
+export default function Sidebar({ items, onSelect, selectedId, padding, onNewChat, onDelete }: SidebarProps) {
   return (
     <div className="w-full h-full overflow-y-auto bg-white border-r border-gray-200">
       <div className="p-4">
@@ -39,13 +40,24 @@ export default function Sidebar({ items, onSelect, selectedId, padding, onNewCha
         {items.map((item) => (
           <li key={item.id}>
             <button
-              className={`w-full text-left py-3 transition-colors duration-150 cursor-pointer focus:outline-none
+              className={`flex w-full text-left py-3 transition-colors duration-150 cursor-pointer focus:outline-none items-center justify-between
                 ${selectedId === item.id ? 'bg-[rgb(85,152,229)]/10 text-[rgb(85,152,229)] font-semibold' : 'hover:bg-[rgb(85,152,229)]/5'}
               `}
               style={{ paddingLeft: padding || 16, paddingRight: 16 }}
               onClick={() => onSelect(item.id)}
             >
               {item.title}
+              {item.id !== "new" && (
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(item.id);
+                  }}
+                  className="hover:text-red-500 transition-colors duration-200"
+                >
+                  <Trash size={18} />
+                </button>
+              )}
             </button>
           </li>
         ))}

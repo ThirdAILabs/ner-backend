@@ -2,7 +2,7 @@
 
 import { ChatPreview } from '@/components/chat/Sidebar';
 import { useEffect, useState } from 'react';
-import { Message } from '@/components/chat/Chat';
+import { Message, RedactedContentPiece } from '@/components/chat/Chat';
 import { nerService } from '@/lib/backend';
 
 const NEW_CHAT_ID = "new";
@@ -16,12 +16,36 @@ const strikethrough = (text: string) => {
   );
 }
 
-const displayRedactedContent = (redactedContent: string, tagMap: Record<string, string>) => {
-  let displayContent = redactedContent;
-  for (const [replacement, original] of Object.entries(tagMap)) {
-    displayContent = displayContent.replace(replacement, `<del>${original}</del>` + ' ' + replacement);
+const toRedactedContent = (redactedContent: string, tagMap: Record<string, string>): RedactedContentPiece[] => {
+  const redactedPieces: RedactedContentPiece[] = [];
+  const regex = /\[(.*?)_\d+\]/g;
+  let lastEndIndex = 0;
+  let match;
+  
+  while ((match = regex.exec(redactedContent)) !== null) {
+    const replacement = match[0];
+    const original = tagMap[replacement];
+    const startIndex = match.index;
+    
+    // Add the content that precedes the redacted tokens.
+    redactedPieces.push({ original: redactedContent.slice(lastEndIndex, startIndex) });
+
+    if (!original) {
+      // False positive. This is an instance of [...] that has nothing to do with redaction.
+      // TODO: Make sure replacement token does not appear in the original text.
+      redactedPieces.push({ original: replacement })
+    } else {
+      redactedPieces.push({ original, replacement });
+    }
+
+    lastEndIndex = startIndex + replacement.length;
   }
-  return displayContent;
+
+  if (lastEndIndex < redactedContent.length) {
+    redactedPieces.push({ original: redactedContent.slice(lastEndIndex) });
+  }
+
+  return redactedPieces;
 }
 
 const unredactContent = (content: string, tagMap: Record<string, string>) => {
@@ -48,7 +72,7 @@ export default function useSafeGPT(chatId: string) {
     return sessions.data.map((session) => ({
       id: session.id,
       title: session.title,
-    }));
+    })).reverse(); // reverse to show most recent chats first TODO this should be handled by backend and based on last modified not last created.
   };
 
   const getChat = async (chatId: string): Promise<Message[]> => {
@@ -74,9 +98,20 @@ export default function useSafeGPT(chatId: string) {
     return history.data.map((message, idx) => ({
       id: `m-${idx}`,
       content: message.content,
-      redactedContent: message.content, // TODO: get redacted content
+      redactedContent: [{ original: message.content }], // TODO: get redacted content
       role: message.message_type === 'user' ? 'user' : 'llm',
     }));
+  };
+
+  const deleteChat = async (selectedId: string) => {
+    if (selectedId === NEW_CHAT_ID) {
+      return;
+    }
+    await nerService.deleteChatSession(selectedId);
+    setPreviews(prevPreviews => prevPreviews.filter(preview => preview.id !== chatId));
+    if (selectedId === chatId) {
+      window.location.href = `/safegpt?id=new`;
+    }
   };
 
   const sendMessage = async (message: string, apiKey: string): Promise<void> => {
@@ -96,22 +131,30 @@ export default function useSafeGPT(chatId: string) {
       {
         id: `m-${prevMessages.length + 1}`,
         content: message,
-        redactedContent: message,
+        redactedContent: [{ original: message }],
         role: 'user',
       },
     ]);
 
     const response = await nerService.sendChatMessage(sessionId, "gpt-4", apiKey, message);
     
-    if (response.error && response.error.includes('Incorrect API key')) {
+    if (response.error && (response.error.includes('Incorrect API key') || response.error.includes('missing the OpenAI API key'))) {
       console.log("Invalid API key");
       setMessages(prevMessages);
       setInvalidApiKey(true);
+      if (sessionId !== chatId) {
+        deleteChat(sessionId);
+      }
+      throw new Error(response.error);
     }
 
     if (response.error) {
       setMessages(prevMessages);
       alert(response.error);
+      if (sessionId !== chatId) {
+        deleteChat(sessionId);
+      }
+      throw new Error(response.error);
     }
 
     // TODO: Set messages to ...prevMessages, response
@@ -120,29 +163,37 @@ export default function useSafeGPT(chatId: string) {
       {
         id: `m-${prevMessages.length + 1}`,
         content: message,
-        redactedContent: displayRedactedContent(response.data?.input_text || message, response.data?.tag_map || {}),
+        redactedContent: toRedactedContent(response.data?.input_text || message, response.data?.tag_map || {}),
         role: 'user',
       },
       {
         id: `m-${prevMessages.length + 2}`,
         content: unredactContent(response.data?.reply || '', response.data?.tag_map || {}),
-        redactedContent: displayRedactedContent(response.data?.reply || '', response.data?.tag_map || {}),
+        redactedContent: toRedactedContent(response.data?.reply || '', response.data?.tag_map || {}),
         role: 'llm',
       },
     ])
+
+    if (sessionId !== chatId) {
+      window.location.href = `/safegpt?id=${sessionId}`;
+    }
   };
 
-  const updateTitle = async (title: string) => {
+  const updateTitle = async (newTitle: string) => {
     let sessionId = chatId;
     if (chatId === NEW_CHAT_ID) {
-      const { data } = await nerService.startChatSession("gpt-4", title);
+      const { data } = await nerService.startChatSession("gpt-4", newTitle);
       if (data?.session_id) {
         sessionId = data.session_id;
       }
     }
-    await nerService.renameChatSession(sessionId, title);
-    setTitle(title);
-    window.location.href = `/safegpt?id=${sessionId}`;
+    await nerService.renameChatSession(sessionId, newTitle);
+    setTitle(newTitle);
+    setPreviews(prevPreviews => prevPreviews.map(preview => preview.id === chatId ? { ...preview, title: newTitle } : preview));
+
+    if (sessionId !== chatId) {
+      window.location.href = `/safegpt?id=${sessionId}`;
+    }
   };
 
   useEffect(() => {
@@ -170,5 +221,6 @@ export default function useSafeGPT(chatId: string) {
     messages,
     sendMessage,
     invalidApiKey,
+    deleteChat,
   };
 }

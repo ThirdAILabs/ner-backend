@@ -330,6 +330,15 @@ export const nerService = {
     }
   },
 
+  deleteChatSession: async (sessionId: string): Promise<{ error: string | null }> => {
+    try {
+      await axiosInstance.delete(`/chat/sessions/${sessionId}`);
+      return { error: null };
+    } catch (error) {
+      return { error: 'Failed to delete chat session' };
+    }
+  },
+
   getChatSession: async (sessionId: string): Promise<{ data: { id: string; title: string } | null; error: string | null }> => {
     try {
       const { data } = await axiosInstance.get(`/chat/sessions/${sessionId}`);
