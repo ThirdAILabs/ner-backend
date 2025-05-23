@@ -49,12 +49,35 @@ func TestChatEndpoint(t *testing.T) {
 		t.Fatal("OPENAI_API_KEY must be set for TestChatEndpoint")
 	}
 
-	startPayload := pkgapi.StartSessionRequest{Model: "gpt-3"}
+	// Test setting API key
+	setKeyPayload := pkgapi.ApiKey{ApiKey: apiKey}
+	setKeyBody, _ := json.Marshal(setKeyPayload)
+	req := httptest.NewRequest(http.MethodPost, "/chat/api-key", bytes.NewReader(setKeyBody))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	// Test getting API key
+	req = httptest.NewRequest(http.MethodGet, "/chat/api-key", nil)
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var getKeyResp pkgapi.ApiKey
+	if err := json.NewDecoder(rec.Body).Decode(&getKeyResp); err != nil {
+		t.Fatalf("decode get-api-key response: %v", err)
+	}
+	assert.Equal(t, apiKey, getKeyResp.ApiKey)
+
+	// Test Chat Session
+
+	startPayload := pkgapi.StartSessionRequest{Model: "gpt-3", Title: "Test Session"}
 	startBody, _ := json.Marshal(startPayload)
-	req := httptest.NewRequest(http.MethodPost, "/chat/sessions", bytes.NewReader(startBody))
+	req = httptest.NewRequest(http.MethodPost, "/chat/sessions", bytes.NewReader(startBody))
 	req.Header.Set("Content-Type", "application/json")
 
-	rec := httptest.NewRecorder()
+	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -64,6 +87,52 @@ func TestChatEndpoint(t *testing.T) {
 	}
 	sessionID := startResp.SessionID
 
+	// Get all sessions and verify our new session is there
+	req = httptest.NewRequest(http.MethodGet, "/chat/sessions", nil)
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var sessionsResp pkgapi.GetSessionsResponse
+	if err := json.NewDecoder(rec.Body).Decode(&sessionsResp); err != nil {
+		t.Fatalf("decode get-sessions response: %v", err)
+	}
+	assert.Equal(t, 1, len(sessionsResp.Sessions))
+	assert.Equal(t, "Test Session", sessionsResp.Sessions[0].Title)
+
+	// Get specific session
+	req = httptest.NewRequest(http.MethodGet, "/chat/sessions/"+sessionID, nil)
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var sessionResp pkgapi.ChatSessionMetadata
+	if err := json.NewDecoder(rec.Body).Decode(&sessionResp); err != nil {
+		t.Fatalf("decode get-session response: %v", err)
+	}
+	assert.Equal(t, "Test Session", sessionResp.Title)
+
+	// Rename the session
+	renamePayload := pkgapi.RenameSessionRequest{Title: "Renamed Test Session"}
+	renameBody, _ := json.Marshal(renamePayload)
+	req = httptest.NewRequest(http.MethodPost, "/chat/sessions/"+sessionID+"/rename", bytes.NewReader(renameBody))
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	// Verify rename worked
+	req = httptest.NewRequest(http.MethodGet, "/chat/sessions/"+sessionID, nil)
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	if err := json.NewDecoder(rec.Body).Decode(&sessionResp); err != nil {
+		t.Fatalf("decode get-session response: %v", err)
+	}
+	assert.Equal(t, "Renamed Test Session", sessionResp.Title)
+
+	// Send a message to the session
 	chatPayload := pkgapi.ChatRequest{
 		Model:   "gpt-3",
 		APIKey:  apiKey,
@@ -93,6 +162,7 @@ func TestChatEndpoint(t *testing.T) {
 
 	assert.NotEmpty(t, chatResp.Reply)
 
+	// Get history
 	req = httptest.NewRequest(http.MethodGet, "/chat/sessions/"+sessionID+"/history", nil)
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
