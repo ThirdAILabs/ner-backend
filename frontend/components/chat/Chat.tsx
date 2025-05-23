@@ -10,7 +10,6 @@ export interface RedactedContentPiece {
 }
 
 export interface Message {
-  id: string;
   content: string;
   redactedContent: RedactedContentPiece[];
   role: 'user' | 'llm';
@@ -134,9 +133,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           </div>
         )}
         {messages.length !== 0 &&
-          messages.map((message) => (
+          messages.map((message, idx) => (
             <div
-              key={message.id}
+              key={idx}
               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
