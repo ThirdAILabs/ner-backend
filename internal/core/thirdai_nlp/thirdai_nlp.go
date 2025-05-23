@@ -1,7 +1,7 @@
 package thirdai_nlp
 
 // #cgo linux LDFLAGS: -L./lib/linux_amd64 -L./lib/linux_arm64 -lthirdai_nlp_c
-// #cgo darwin LDFLAGS: -L./lib/macos_arm64 -L /usr/local/lib -lthirdai_nlp_c -ltorch -ltorch_cpu -lc10 -lstdc++ -lbz2 -Wl,-rpath,/usr/local/lib
+// #cgo darwin LDFLAGS: -L./lib/macos_arm64 -L /Users/nmeisburger/ThirdAI/libtorch/lib -lthirdai_nlp_c -ltorch -ltorch_cpu -lc10 -lstdc++ -lbz2 -Wl,-rpath,/Users/nmeisburger/ThirdAI/libtorch/lib
 // #cgo CFLAGS: -O3
 // #cgo CXXFLAGS: -O3 -fPIC -std=c++17 -I./include -fvisibility=hidden
 // #include <stdlib.h>
@@ -67,7 +67,7 @@ func (m *CnnModel) Predict(text string) ([]types.Entity, error) {
 	batchOffsets := unsafe.Slice(cResult.batch_offsets, cResult.batch_size+1)
 	predictions := unsafe.Slice(cResult.predictions, batchOffsets[len(batchOffsets)-1])
 
-	for i := range len(results) {
+	for i := range cResult.batch_size {
 		start := int(batchOffsets[i])
 		end := int(batchOffsets[i+1])
 
