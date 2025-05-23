@@ -187,7 +187,10 @@ func (s *ChatService) GetOpenAIApiKey(r *http.Request) (any, error) {
 	// TODO: Store in a more secure way.
 	apiKey := ""
 	if data, err := os.ReadFile("api-key.txt"); err == nil {
+		slog.Info("API key", "apiKey", string(data))
 		apiKey = strings.TrimSpace(string(data));
+	} else {
+		slog.Error("Error reading API key", "error", err)
 	}
 	return api.ApiKey{ApiKey: apiKey}, nil
 }
@@ -198,6 +201,8 @@ func (s *ChatService) SetOpenAIApiKey(r *http.Request) (any, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	slog.Info("Setting API key", "apiKey", req.ApiKey)
 
 	err = os.WriteFile("api-key.txt", []byte(req.ApiKey), 0600)
 	if err != nil {

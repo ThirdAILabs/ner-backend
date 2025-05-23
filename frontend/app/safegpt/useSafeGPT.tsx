@@ -5,10 +5,31 @@ import { useEffect, useState } from 'react';
 import { Message } from '@/components/chat/Chat';
 import { nerService } from '@/lib/backend';
 
-interface SendMessageResponse {
-  invalidApiKey: boolean;
-  unsentMessage: string;
-  errorMessage: string;
+const NEW_CHAT_ID = "new";
+
+const strikethrough = (text: string) => {
+  return (
+    text
+      .split('')
+      .map(char => char + '\u0336')
+      .join('')
+  );
+}
+
+const displayRedactedContent = (redactedContent: string, tagMap: Record<string, string>) => {
+  let displayContent = redactedContent;
+  for (const [replacement, original] of Object.entries(tagMap)) {
+    displayContent = displayContent.replace(replacement, `<del>${original}</del>` + ' ' + replacement);
+  }
+  return displayContent;
+}
+
+const unredactContent = (content: string, tagMap: Record<string, string>) => {
+  let unredactedContent = content;
+  for (const [replacement, original] of Object.entries(tagMap)) {
+    unredactedContent = unredactedContent.replace(replacement, original);
+  }
+  return unredactedContent;
 }
 
 export default function useSafeGPT(chatId: string) {
@@ -31,7 +52,7 @@ export default function useSafeGPT(chatId: string) {
   };
 
   const getChat = async (chatId: string): Promise<Message[]> => {
-    if (chatId === 'new') {
+    if (chatId === NEW_CHAT_ID) {
       setTitle('New chat');
       return [];
     }
@@ -46,43 +67,51 @@ export default function useSafeGPT(chatId: string) {
 
     const history = await nerService.getChatHistory(chatId);
 
+    if (!history.data) {
+      return [];
+    }
+
     return history.data.map((message, idx) => ({
       id: `m-${idx}`,
       content: message.content,
+      redactedContent: message.content, // TODO: get redacted content
       role: message.message_type === 'user' ? 'user' : 'llm',
     }));
   };
 
-  const sendMessage = async (message: string, apiKey: string): Promise<SendMessageResponse> => {
+  const sendMessage = async (message: string, apiKey: string): Promise<void> => {
+    setInvalidApiKey(false);
+
+    let sessionId = chatId;
+    if (chatId === NEW_CHAT_ID) {
+      const { data } = await nerService.startChatSession("gpt-4", title);
+      if (data?.session_id) {
+        sessionId = data.session_id;
+      }
+    }
+    
     const prevMessages = messages;
     setMessages([
       ...prevMessages,
       {
         id: `m-${prevMessages.length + 1}`,
         content: message,
+        redactedContent: message,
         role: 'user',
       },
     ]);
 
-    const response = await nerService.sendChatMessage(chatId, "gpt-4", message, apiKey);
+    const response = await nerService.sendChatMessage(sessionId, "gpt-4", apiKey, message);
     
-    if (response.error && response.error.includes('could not create OpenAI client')) {
+    if (response.error && response.error.includes('Incorrect API key')) {
+      console.log("Invalid API key");
       setMessages(prevMessages);
-      return {
-        invalidApiKey: false,
-        unsentMessage: message,
-        errorMessage: response.error,
-      };
+      setInvalidApiKey(true);
     }
 
     if (response.error) {
       setMessages(prevMessages);
       alert(response.error);
-      return {
-        invalidApiKey: false,
-        unsentMessage: message,
-        errorMessage: response.error,
-      };
     }
 
     // TODO: Set messages to ...prevMessages, response
@@ -91,25 +120,29 @@ export default function useSafeGPT(chatId: string) {
       {
         id: `m-${prevMessages.length + 1}`,
         content: message,
+        redactedContent: displayRedactedContent(response.data?.input_text || message, response.data?.tag_map || {}),
         role: 'user',
       },
       {
         id: `m-${prevMessages.length + 2}`,
-        content: response.data?.reply || '',
+        content: unredactContent(response.data?.reply || '', response.data?.tag_map || {}),
+        redactedContent: displayRedactedContent(response.data?.reply || '', response.data?.tag_map || {}),
         role: 'llm',
       },
     ])
-
-    return {
-      invalidApiKey: false,
-      unsentMessage: '',
-      errorMessage: '',
-    }
   };
 
-  const updateTitle = (title: string) => {
-    // TODO: Implement.
+  const updateTitle = async (title: string) => {
+    let sessionId = chatId;
+    if (chatId === NEW_CHAT_ID) {
+      const { data } = await nerService.startChatSession("gpt-4", title);
+      if (data?.session_id) {
+        sessionId = data.session_id;
+      }
+    }
+    await nerService.renameChatSession(sessionId, title);
     setTitle(title);
+    window.location.href = `/safegpt?id=${sessionId}`;
   };
 
   useEffect(() => {
@@ -122,10 +155,10 @@ export default function useSafeGPT(chatId: string) {
 
   return {
     previews: [
-      ...(chatId === 'new'
+      ...(chatId === NEW_CHAT_ID
         ? [
             {
-              id: 'new',
+              id: NEW_CHAT_ID,
               title: 'New chat',
             },
           ]

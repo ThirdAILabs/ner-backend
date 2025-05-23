@@ -67,13 +67,11 @@ export default function Page() {
         <div className="w-[calc(100vw-250px)]">
           <ChatInterface
             messages={messages}
-            onSendMessage={(message) => {
-              sendMessage(message, apiKey)
-              
-            }}
+            onSendMessage={(message) => sendMessage(message, apiKey)}
             invalidApiKey={invalidApiKey}
             apiKey={apiKey}
             saveApiKey={saveApiKey}
+            showRedaction={showRedaction}
           />
         </div>
       </div>

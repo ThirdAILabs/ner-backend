@@ -309,7 +309,7 @@ export const nerService = {
   getChatSessions: async (): Promise<{ data: { id: string; title: string }[]; error: string | null }> => {
     try {
       const { data } = await axiosInstance.get('/chat/sessions');
-      return { data, error: null };
+      return { data: data.sessions, error: null };
     } catch (error) {
       const errorMsg = axios.isAxiosError(error) && error.response?.data 
         ? error.response.data 
@@ -403,6 +403,7 @@ export const nerService = {
   getOpenAIApiKey: async (): Promise<{ apiKey: string, error: string | null }> => {
     try {
       const response = await axiosInstance.get('/chat/api-key');
+      console.log("API key", response.data);
       return { apiKey: response.data.api_key, error: null };
     } catch (error) {
       return { apiKey: '', error: 'Failed to get OpenAI API key' };
@@ -411,7 +412,7 @@ export const nerService = {
 
   setOpenAIApiKey: async (apiKey: string): Promise<string | null> => {
     try {
-      await axiosInstance.post('/chat/api-key', { apiKey });
+      await axiosInstance.post('/chat/api-key', { api_key: apiKey });
       return null;
     } catch (error) {
       return 'Failed to set OpenAI API key';

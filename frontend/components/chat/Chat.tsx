@@ -7,16 +7,18 @@ import Options from './Options';
 export interface Message {
   id: string;
   content: string;
+  redactedContent: string;
   role: 'user' | 'llm';
 }
 
 interface ChatInterfaceProps {
-  onSendMessage?: (message: string) => void;
+  onSendMessage?: (message: string) => Promise<void>;
   messages: Message[];
   isLoading?: boolean;
   invalidApiKey: boolean;
   apiKey: string;
   saveApiKey: (key: string) => void;
+  showRedaction: boolean;
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -26,6 +28,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   invalidApiKey,
   apiKey,
   saveApiKey,
+  showRedaction,
 }) => {
   // Options dropdown-related logic
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -78,7 +81,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (inputMessage.trim() && onSendMessage) {
-      onSendMessage(inputMessage);
+      onSendMessage(inputMessage).catch((error) => {
+        // Set input message to the last message that was sent
+        // if send message fails.
+        setInputMessage(inputMessage);
+      });
       setInputMessage('');
 
       if (textareaRef.current) {
@@ -134,7 +141,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     : 'text-gray-600 text-lg/8 mt-6'
                 } leading-relaxed`}
               >
-                {message.content}
+                <div dangerouslySetInnerHTML={{ __html: showRedaction ? message.redactedContent : message.content }} />
               </div>
             </div>
           ))}

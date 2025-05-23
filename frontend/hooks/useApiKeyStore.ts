@@ -24,7 +24,10 @@ export default function useApiKeyStore() {
   };
 
   useEffect(() => {
-    getApiKey().then(setApiKey);
+    getApiKey().then(key => {
+      console.log("Setting API key", key);
+      setApiKey(key);
+    });
   }, []);
 
   return {
