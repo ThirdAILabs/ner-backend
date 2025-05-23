@@ -13,6 +13,7 @@ import Toggle from '@/components/chat/Toggle';
 import useApiKeyStore from '@/hooks/useApiKeyStore';
 import { Box, CircularProgress } from '@mui/material';
 import { Typography } from '@mui/material';
+import { useHealth } from '@/contexts/HealthProvider';
 
 const SIDEBAR_WIDTH = 250;
 
@@ -136,16 +137,25 @@ function SafeGPTContent() {
   );
 }
 
-export default function Page() {
+function Loading() {
   return (
-    <Suspense fallback={
-      <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" minHeight="100vh" gap={4}>
-        <CircularProgress sx={{ color: 'rgb(85,152,229)' }} />
-        <Typography className="text-gray-500" variant="h5" sx={{ fontWeight: 600, mb: 2 }}>
-          Securing the environment
-        </Typography>
-      </Box>
-    }>
+    <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" minHeight="100vh" gap={4}>
+      <CircularProgress sx={{ color: 'rgb(85,152,229)' }} />
+      <Typography className="text-gray-500" variant="h5" sx={{ fontWeight: 600, mb: 2 }}>
+        Securing the environment
+      </Typography>
+    </Box>
+  );
+}
+
+export default function Page() {
+  const { healthStatus } = useHealth();
+  if (!healthStatus) {
+    return <Loading />;
+  }
+
+  return (
+    <Suspense fallback={<Loading />}>
       <SafeGPTContent />
     </Suspense>
   );
