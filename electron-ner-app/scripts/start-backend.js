@@ -227,8 +227,8 @@ export async function startBackend() {
       env:    {
         ...process.env,
         PORT:       FIXED_PORT.toString(),
-        MODEL_PATH: getBinPath(),
-        MODEL_TYPE: 'cnn',
+        MODEL_DIR: getBinPath(),
+        MODEL_TYPE: 'cnn_model', // TODO: gotta make this configurable
         PLUGIN_SERVER: pluginPath,
       },
       stdio:  ['ignore', outFd, errFd]
