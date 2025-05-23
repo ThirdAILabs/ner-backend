@@ -145,10 +145,10 @@ func TestFinetuningAllModels(t *testing.T) {
 			require.NoError(t, cmd.InitializeBoltModel(db, s3, modelBucket, "basic", filepath.Join(os.Getenv("HOST_MODEL_DIR"), "model.bin")))
 			modelName = "basic"
 		} else if modelType == "cnn" {
-			require.NoError(t, cmd.InitializeCnnNerExtractor(ctx, db, s3, modelBucket, os.Getenv("HOST_MODEL_DIR")))
+			require.NoError(t, cmd.InitializeCnnNerExtractor(ctx, db, s3, modelBucket, "advanced", os.Getenv("HOST_MODEL_DIR")))
 			modelName = "advanced"
 		} else if modelType == "transformer" {
-			require.NoError(t, cmd.InitializeTransformerModel(ctx, db, s3, modelBucket, os.Getenv("HOST_MODEL_DIR")))
+			require.NoError(t, cmd.InitializeTransformerModel(ctx, db, s3, modelBucket, "ultra", os.Getenv("HOST_MODEL_DIR")))
 			modelName = "ultra"
 		} else {
 			t.Fatalf("Invalid model type: %s", modelType)

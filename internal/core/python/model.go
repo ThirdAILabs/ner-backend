@@ -7,6 +7,7 @@ import (
 	"ner-backend/pkg/api"
 	"ner-backend/plugin/proto"
 	"ner-backend/plugin/shared"
+	"os"
 	"os/exec"
 
 	"github.com/hashicorp/go-plugin"
@@ -20,15 +21,20 @@ type PythonModel struct {
 }
 
 func LoadPythonModel(PythonExecutable, PluginScript, PluginModelName, KwargsJSON string) (*PythonModel, error) {
+	var cmd *exec.Cmd
+
+	// If PLUGIN_SERVER env var is set, use the PyInstaller executable
+	if pluginServer := os.Getenv("PLUGIN_SERVER"); pluginServer != "" {
+		cmd = exec.Command(pluginServer, "--model-name", PluginModelName, "--model-config", KwargsJSON)
+	} else {
+		// Fallback to using Python interpreter + script for development
+		cmd = exec.Command(PythonExecutable, PluginScript, "--model-name", PluginModelName, "--model-config", KwargsJSON)
+	}
+
 	client := plugin.NewClient(&plugin.ClientConfig{
 		HandshakeConfig: shared.Handshake,
 		Plugins:         shared.PluginMap,
-		Cmd: exec.Command(
-			PythonExecutable,
-			PluginScript,
-			"--model-name", PluginModelName,
-			"--model-config", KwargsJSON,
-		),
+		Cmd:             cmd,
 		AllowedProtocols: []plugin.Protocol{
 			plugin.ProtocolNetRPC, plugin.ProtocolGRPC},
 	})
