@@ -70,6 +70,12 @@ func (m *CnnModel) Predict(text string) ([]types.Entity, error) {
 		end := int(batchOffsets[i+1])
 
 		for _, pred := range predictions[start:end] {
+			label := C.GoString(pred.label)
+
+			if label == "GENDER" || label == "SEXUAL_ORENTATION" || label == "ENTNICITY" {
+				continue
+			}
+
 			entity := types.CreateEntity(
 				C.GoString(pred.label),
 				text,
