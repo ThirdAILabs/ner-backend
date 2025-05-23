@@ -134,7 +134,7 @@ export function AnalyticsDashboard({
         <Card className="flex flex-col justify-between">
           <CardContent className="flex flex-col items-center pt-6 h-full">
             <div className="flex-1 flex items-center">
-              <span className="text-4xl font-semibold text-gray-700">
+              <span className="text-4xl font-semibold text-gray-700 text-center">
                 {formatFileSize(tokensProcessed)}
               </span>
             </div>
@@ -143,27 +143,28 @@ export function AnalyticsDashboard({
         </Card>
 
         {/* Time Taken */}
-        <Card className="flex flex-col justify-between">
-          <CardContent className="flex flex-col items-center pt-6 h-full">
-            <div className="flex-1 flex items-center">
-              <span
-                className={`font-semibold text-gray-700 text-center ${
-                  timeTaken == null
-                    ? 'text-2xl'
-                    : timeTaken > 100
+        {timeTaken !== null && timeTaken > 0 && (
+          <Card className="flex flex-col justify-between">
+            <CardContent className="flex flex-col items-center pt-6 h-full">
+              <div className="flex-1 flex items-center">
+                <span
+                  className={`text-4xl font-semibold text-gray-700 text-center ${
+                    timeTaken == null
                       ? 'text-2xl'
-                      : timeTaken > 10
-                        ? 'text-3xl'
-                        : 'text-4xl'
-                }`}
-              >
-                {/* {timeTaken == null ? '-' : `${timeTaken.toFixed(2)}s`} */}
-                {timeTaken == null ? '-' : formatTime(timeTaken)}
-              </span>
-            </div>
-            <h3 className="text-sm text-muted-foreground">Time Taken</h3>
-          </CardContent>
-        </Card>
+                      : timeTaken > 100
+                        ? 'text-2xl'
+                        : timeTaken > 10
+                          ? 'text-3xl'
+                          : 'text-4xl'
+                  }`}
+                >
+                  {formatTime(timeTaken)}
+                </span>
+              </div>
+              <h3 className="text-sm text-muted-foreground">Time Taken</h3>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Token Distribution Chart */}
