@@ -105,7 +105,7 @@ func filterExcludedTags(tags []string) []string {
 func initializeModel(
 	ctx context.Context,
 	db *gorm.DB,
-	s3p *storage.S3Provider,
+	s3p storage.Provider,
 	bucket,
 	name,
 	modelType,
@@ -172,21 +172,23 @@ func initializeModel(
 	return nil
 }
 
-func InitializeCnnNerExtractor(ctx context.Context, db *gorm.DB, s3p *storage.S3Provider, bucket string, hostModelDir string) error {
+func InitializeCnnNerExtractor(ctx context.Context, db *gorm.DB, s3p storage.Provider, bucket, name, hostModelDir string) error {
+	slog.Info("initializing bolt model", "model_name", "cnn_model", "local_model_path", filepath.Join(hostModelDir, "cnn_model"))
 	return initializeModel(ctx, db, s3p, bucket,
-		"advanced", "cnn", filepath.Join(hostModelDir, "cnn_model"),
+		name, "cnn", filepath.Join(hostModelDir, "cnn_model"),
 		commonModelTags,
 	)
 }
 
-func InitializeTransformerModel(ctx context.Context, db *gorm.DB, s3p *storage.S3Provider, bucket string, hostModelDir string) error {
+func InitializeTransformerModel(ctx context.Context, db *gorm.DB, s3p storage.Provider, bucket, name, hostModelDir string) error {
 	return initializeModel(ctx, db, s3p, bucket,
-		"ultra", "transformer", filepath.Join(hostModelDir, "transformer_model"),
+		name, "transformer", filepath.Join(hostModelDir, "transformer_model"),
 		commonModelTags,
 	)
 }
 
-func InitializeBoltModel(db *gorm.DB, s3 storage.Provider, modelBucket, name, localModelPath string) error {
+func InitializeBoltModel(db *gorm.DB, s3 storage.Provider, modelBucket, name, hostModelDir string) error {
+	localModelPath := filepath.Join(hostModelDir, "udt_model", "udt_complete.model")
 	slog.Info("initializing bolt model", "model_name", name, "local_model_path", localModelPath)
 
 	modelId := uuid.New()

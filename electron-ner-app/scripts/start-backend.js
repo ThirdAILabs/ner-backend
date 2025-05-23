@@ -217,6 +217,9 @@ export async function startBackend() {
 
   log.debug(`All backend output → ${backendLogPath}`)
 
+  // Get the plugin executable path
+  const pluginPath = path.join(backendDir, 'plugin', 'plugin');
+
   const proc = spawn(
     backendPath,
     [], {
@@ -224,7 +227,9 @@ export async function startBackend() {
       env:    {
         ...process.env,
         PORT:       FIXED_PORT.toString(),
-        MODEL_PATH: getDefaultModelPath(),
+        MODEL_PATH: getBinPath(),
+        MODEL_TYPE: 'cnn',
+        PLUGIN_SERVER: pluginPath,
       },
       stdio:  ['ignore', outFd, errFd]
     }

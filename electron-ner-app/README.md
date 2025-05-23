@@ -35,8 +35,12 @@ This will start both the Vite development server and the Electron app that conne
 To build the app for production:
 
 ```bash
-npm run build
+MODEL_DIR=/path/to/models MODEL_TYPE=cnn_model npm run build
 ```
+
+Ensure that you have a python 3.11 environment activated when running the build command. 
+
+/path/to/models should have a directory called cnn_model with cnn_model.pth inside, or it should have a directory called udt_model with udt_complete.model inside.
 
 ## Migration Notes
 

@@ -29,10 +29,11 @@ import (
 )
 
 type Config struct {
-	Root          string `env:"ROOT" envDefault:"./pocket-shield"`
-	Port          int    `env:"PORT" envDefault:"3001"`
-	License       string `env:"LICENSE_KEY" envDefault:""`
-	BoltModelPath string `env:"MODEL_PATH" envDefault:""`
+	Root      string `env:"ROOT" envDefault:"./pocket-shield"`
+	Port      int    `env:"PORT" envDefault:"3001"`
+	License   string `env:"LICENSE_KEY" envDefault:""`
+	ModelDir  string `env:"MODEL_DIR" envDefault:""`
+	ModelType string `env:"MODEL_TYPE" envDefault:"cnn_model"`
 }
 
 const (
@@ -158,9 +159,18 @@ func main() {
 		log.Fatalf("Worker: Failed to create storage client: %v", err)
 	}
 
-	if cfg.BoltModelPath != "" {
-		if err := cmd.InitializeBoltModel(db, storage, modelBucket, "basic", cfg.BoltModelPath); err != nil {
-			log.Fatalf("Failed to initialize basic model: %v", err)
+	if cfg.ModelDir != "" {
+		switch cfg.ModelType {
+		case "udt_model":
+			if err := cmd.InitializeBoltModel(db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
+				log.Fatalf("Failed to initialize basic model: %v", err)
+			}
+		case "cnn_model":
+			if err := cmd.InitializeCnnNerExtractor(context.Background(), db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
+				log.Fatalf("Failed to init & upload CNN NER model: %v", err)
+			}
+		default:
+			log.Fatalf("Invalid model type: %s. Must be either 'bolt' or 'cnn'", cfg.ModelType)
 		}
 	} else {
 		cmd.InitializePresidioModel(db)
