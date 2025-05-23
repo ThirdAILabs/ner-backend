@@ -1,8 +1,9 @@
 package api
 
 import (
-	"log/slog"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -170,18 +171,28 @@ func (s *ChatService) GetHistory(r *http.Request) (any, error) {
 }
 
 func (s *ChatService) GetOpenAIApiKey(r *http.Request) (any, error) {
-	// TODO: Implement
-	apiKey := "test-api-key"
+	// TODO: Store in a more secure way.
+	apiKey := ""
+	data, err := os.ReadFile("api-key.txt");
+	if err != nil {
+		return nil, err
+	} else {
+		apiKey = strings.TrimSpace(string(data));
+	}
 	return api.ApiKey{ApiKey: apiKey}, nil
 }
 
 func (s *ChatService) SetOpenAIApiKey(r *http.Request) (any, error) {
-	// TODO: Implement
+	// TODO: Store in a more secure way.
 	req, err := ParseRequest[api.ApiKey](r)
 	if err != nil {
 		return nil, err
 	}
-	slog.Info("setting openai api key", "api_key", req.ApiKey)
+
+	err = os.WriteFile("api-key.txt", []byte(req.ApiKey), 0600)
+	if err != nil {
+		return nil, err
+	}
 
 	return nil, nil
 }
