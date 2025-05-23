@@ -235,12 +235,6 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 			)
 		}
 	}
-	if workerErr != nil {
-		slog.Error("error running inference task", "report_id", reportId, "task_id", payload.TaskId, "error", workerErr)
-		database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobFailed) // nolint:errcheck
-		database.SaveReportError(ctx, proc.db, reportId, workerErr.Error())
-		return fmt.Errorf("error running inference task: %w", workerErr)
-	}
 
 	if err := proc.db.
 		Model(&database.InferenceTask{}).
@@ -248,6 +242,13 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 		Update("token_count", totalTokens).
 		Error; err != nil {
 		slog.Error("unable to update token_count", "report_id", reportId, "task_id", taskId, "error", err)
+	}
+
+	if workerErr != nil {
+		slog.Error("error running inference task", "report_id", reportId, "task_id", payload.TaskId, "error", workerErr)
+		database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobFailed) // nolint:errcheck
+		database.SaveReportError(ctx, proc.db, reportId, workerErr.Error())
+		return fmt.Errorf("error running inference task: %w", workerErr)
 	}
 
 	if err := database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobCompleted); err != nil {

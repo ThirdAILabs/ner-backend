@@ -126,6 +126,7 @@ type ObjectPreviewResponse struct {
 
 type InferenceMetricsResponse struct {
 	Completed       int64   `json:"Completed"`
+	Failed          int64   `json:"Failed"`
 	InProgress      int64   `json:"InProgress"`
 	DataProcessedMB float64 `json:"DataProcessedMB"`
 	TokensProcessed int64   `json:"TokensProcessed"`

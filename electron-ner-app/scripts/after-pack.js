@@ -132,7 +132,20 @@ export async function afterPack(context) {
     console.error('Error copying electron-is-dev module:', error);
     // Continue even if this fails, since we have a fallback in the code
   }
-  
+
+  // Ensure libomp.dylib is executable for ShipIt quarantine stripping
+  if (electronPlatformName === 'darwin') {
+    const appName = packager.appInfo.productFilename;
+    const frameworksDir = path.join(appOutDir, `${appName}.app`, 'Contents', 'Frameworks');
+    const libPath = path.join(frameworksDir, 'libomp.dylib');
+    console.log('🔧 Setting permissions on libomp.dylib to 755:', libPath);
+    try {
+      fs.chmodSync(libPath, 0o755);
+    } catch (err) {
+      console.warn('⚠️ Could not chmod libomp.dylib:', err);
+    }
+  }
+
   console.log('After-pack hook completed successfully!');
 }
 
@@ -156,4 +169,4 @@ function copyRecursive(src, dest) {
       fs.copyFileSync(srcPath, destPath);
     }
   }
-} 
+}

@@ -107,7 +107,7 @@ export default function NewJobPage() {
   const [sourceS3Prefix, setSourceS3Prefix] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
+  const [existingReportName, setExistingReportName] = useState<string[]>([]);
   //Job Name
   const [jobName, setJobName] = useState('');
 
@@ -172,6 +172,12 @@ export default function NewJobPage() {
     };
 
     fetchModels();
+
+    const fetchReportNames = async () => {
+      const response = await nerService.listReports();
+      setExistingReportName(response.map((report) => report.ReportName));
+    };
+    fetchReportNames();
   }, []);
 
   // Load tags when a model is selected
@@ -529,6 +535,11 @@ export default function NewJobPage() {
   const validateJobName = (name: string): boolean => {
     if (!name) {
       setNameError('Report name is required');
+      return false;
+    }
+
+    if (existingReportName.includes(name)) {
+      setNameError('Report with this name already exists.');
       return false;
     }
 

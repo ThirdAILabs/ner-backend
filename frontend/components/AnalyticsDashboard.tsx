@@ -34,7 +34,6 @@ interface AnalyticsDashboardProps {
   totalFileCount: number;
 }
 
-// Format file size in bytes to human-readable format
 const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return '0 Bytes';
 
@@ -54,6 +53,20 @@ const formatNumber = (num: number): string => {
     return `${(num / 1000).toFixed(1)}K`;
   }
   return num.toString();
+};
+
+const formatTime = (time: number): string => {
+  if (time < 60) return `${time.toFixed(2)}s`;
+
+  const minutes = Math.floor(time / 60);
+  if (minutes < 60) {
+    const remainingSeconds = time % 60;
+    return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds.toFixed(0)}s` : `${minutes}m`;
+  }
+
+  const hours = Math.floor(time / 3600);
+  const remainingMinutes = Math.floor((time % 3600) / 60);
+  return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
 };
 
 export function AnalyticsDashboard({
@@ -121,7 +134,7 @@ export function AnalyticsDashboard({
         <Card className="flex flex-col justify-between">
           <CardContent className="flex flex-col items-center pt-6 h-full">
             <div className="flex-1 flex items-center">
-              <span className="text-4xl font-semibold text-gray-700">
+              <span className="text-4xl font-semibold text-gray-700 text-center">
                 {formatFileSize(tokensProcessed)}
               </span>
             </div>
@@ -130,26 +143,28 @@ export function AnalyticsDashboard({
         </Card>
 
         {/* Time Taken */}
-        <Card className="flex flex-col justify-between">
-          <CardContent className="flex flex-col items-center pt-6 h-full">
-            <div className="flex-1 flex items-center">
-              <span
-                className={`font-semibold text-gray-700 text-center ${
-                  timeTaken == null
-                    ? 'text-2xl'
-                    : timeTaken > 100
+        {timeTaken !== null && timeTaken > 0 && (
+          <Card className="flex flex-col justify-between">
+            <CardContent className="flex flex-col items-center pt-6 h-full">
+              <div className="flex-1 flex items-center">
+                <span
+                  className={`text-4xl font-semibold text-gray-700 text-center ${
+                    timeTaken == null
                       ? 'text-2xl'
-                      : timeTaken > 10
-                        ? 'text-3xl'
-                        : 'text-4xl'
-                }`}
-              >
-                {timeTaken == null ? '-' : `${timeTaken.toFixed(4)}s`}
-              </span>
-            </div>
-            <h3 className="text-sm text-muted-foreground">Time Taken</h3>
-          </CardContent>
-        </Card>
+                      : timeTaken > 100
+                        ? 'text-2xl'
+                        : timeTaken > 10
+                          ? 'text-3xl'
+                          : 'text-4xl'
+                  }`}
+                >
+                  {formatTime(timeTaken)}
+                </span>
+              </div>
+              <h3 className="text-sm text-muted-foreground">Time Taken</h3>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Token Distribution Chart */}
