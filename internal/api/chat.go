@@ -1,6 +1,7 @@
 package api
 
 import (
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
@@ -33,7 +34,7 @@ func (s *ChatService) AddRoutes(r chi.Router) {
 	r.Route("/chat", func(r chi.Router) {
 		r.Get("/sessions", RestHandler(s.GetSessions))
 		r.Post("/sessions", RestHandler(s.StartSession))
-		r.Post("/sessions/{session_id}", RestHandler(s.GetSession))
+		r.Get("/sessions/{session_id}", RestHandler(s.GetSession))
 		r.Post("/sessions/{session_id}/rename", RestHandler(s.RenameSession))
 		r.Post("/sessions/{session_id}/messages", RestHandler(s.SendMessage))
 		r.Get("/sessions/{session_id}/history", RestHandler(s.GetHistory))
@@ -49,7 +50,15 @@ func (s *ChatService) GetSessions(r *http.Request) (any, error) {
 		return nil, err
 	}
 
-	return sessions, nil
+	apiSessions := make([]api.ChatSessionMetadata, len(sessions))
+	for i, session := range sessions {
+		apiSessions[i] = api.ChatSessionMetadata{
+			ID:      session.ID,
+			Title:   session.Title,
+		}
+	}
+
+	return api.GetSessionsResponse{Sessions: apiSessions}, nil
 }
 
 func (s *ChatService) StartSession(r *http.Request) (any, error) {
@@ -83,10 +92,14 @@ func (s *ChatService) GetSession(r *http.Request) (any, error) {
 	var session database.ChatSession
 	err = s.db.Where("id = ?", sessionID).First(&session).Error
 	if err != nil {
+		slog.Error("Error getting session", "error", err)
 		return nil, err
 	}
 
-	return session, nil
+	return api.ChatSessionMetadata{
+		ID:      session.ID,
+		Title:   session.Title,
+	}, nil
 }
 
 func (s *ChatService) RenameSession(r *http.Request) (any, error) {
