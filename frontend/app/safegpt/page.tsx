@@ -4,17 +4,19 @@ import ChatInterface from '@/components/chat/Chat';
 import ChatTitle from '@/components/chat/Title';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import Sidebar, { ChatPreview } from '@/components/chat/Sidebar';
 import { useRouter, useSearchParams } from 'next/navigation';
 import useSafeGPT from './useSafeGPT';
 import Toggle from '@/components/chat/Toggle';
 import useApiKeyStore from '@/hooks/useApiKeyStore';
+import { Box, CircularProgress } from '@mui/material';
+import { Typography } from '@mui/material';
 
 const SIDEBAR_WIDTH = 250;
 
-export default function Page() {
+function SafeGPTContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedId = searchParams.get('id');
@@ -131,5 +133,20 @@ export default function Page() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={
+      <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" minHeight="100vh" gap={4}>
+        <CircularProgress sx={{ color: 'rgb(85,152,229)' }} />
+        <Typography className="text-gray-500" variant="h5" sx={{ fontWeight: 600, mb: 2 }}>
+          Securing the environment
+        </Typography>
+      </Box>
+    }>
+      <SafeGPTContent />
+    </Suspense>
   );
 }
