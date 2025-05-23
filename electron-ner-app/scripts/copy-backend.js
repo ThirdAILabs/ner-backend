@@ -90,49 +90,49 @@ function copyRecursivePreservingSymlinks(src, dest) {
   }
 }
 
-// Copy the plugin directory
-try {
-  // Ensure pluginDir and targetPluginDir are defined before this block.
-  // For example:
-  // const pluginDir = '/path/to/your/source/plugin';
-  // const targetPluginDir = '/path/to/your/destination/plugin';
+// // Copy the plugin directory
+// try {
+//   // Ensure pluginDir and targetPluginDir are defined before this block.
+//   // For example:
+//   // const pluginDir = '/path/to/your/source/plugin';
+//   // const targetPluginDir = '/path/to/your/destination/plugin';
 
-  console.log(`Copying plugin directory from ${pluginDir} to ${targetPluginDir}`);
-  fs.rmSync(targetPluginDir, { recursive: true, force: true }); // Remove existing target directory
-  fs.mkdirSync(targetPluginDir, { recursive: true }); // Create new target directory
+//   console.log(`Copying plugin directory from ${pluginDir} to ${targetPluginDir}`);
+//   fs.rmSync(targetPluginDir, { recursive: true, force: true }); // Remove existing target directory
+//   fs.mkdirSync(targetPluginDir, { recursive: true }); // Create new target directory
 
-  // Copy entire plugin directory using the custom function
-  if (fs.existsSync(pluginDir)) {
-    // Iterate over the items in the root of pluginDir and copy them to targetPluginDir
-    const items = fs.readdirSync(pluginDir);
-    for (const item of items) {
-        copyRecursivePreservingSymlinks(
-            path.join(pluginDir, item),
-            path.join(targetPluginDir, item)
-        );
-    }
+//   // Copy entire plugin directory using the custom function
+//   if (fs.existsSync(pluginDir)) {
+//     // Iterate over the items in the root of pluginDir and copy them to targetPluginDir
+//     const items = fs.readdirSync(pluginDir);
+//     for (const item of items) {
+//         copyRecursivePreservingSymlinks(
+//             path.join(pluginDir, item),
+//             path.join(targetPluginDir, item)
+//         );
+//     }
     
-    // Make plugin executable (assuming it's named 'plugin' at the top level)
-    const pluginExecutableName = 'plugin'; // As in your original script
-    const targetPluginExe = path.join(targetPluginDir, pluginExecutableName);
+//     // Make plugin executable (assuming it's named 'plugin' at the top level)
+//     const pluginExecutableName = 'plugin'; // As in your original script
+//     const targetPluginExe = path.join(targetPluginDir, pluginExecutableName);
     
-    if (fs.existsSync(targetPluginExe)) {
-      // fs.chmodSync will operate on the symlink's target on most POSIX systems if targetPluginExe is a symlink.
-      fs.chmodSync(targetPluginExe, '755');
-      console.log(`Executable permissions set for ${targetPluginExe}`);
-    } else {
-      // It's possible the executable is not at the top level or has a different name.
-      // You might want to adjust this warning or the logic if 'plugin' isn't always the name/location.
-      console.warn(`Plugin executable '${pluginExecutableName}' not found at ${targetPluginExe}. Permissions not set.`);
-    }
+//     if (fs.existsSync(targetPluginExe)) {
+//       // fs.chmodSync will operate on the symlink's target on most POSIX systems if targetPluginExe is a symlink.
+//       fs.chmodSync(targetPluginExe, '755');
+//       console.log(`Executable permissions set for ${targetPluginExe}`);
+//     } else {
+//       // It's possible the executable is not at the top level or has a different name.
+//       // You might want to adjust this warning or the logic if 'plugin' isn't always the name/location.
+//       console.warn(`Plugin executable '${pluginExecutableName}' not found at ${targetPluginExe}. Permissions not set.`);
+//     }
     
-    console.log('Plugin directory copied successfully using custom function!');
-  } else {
-    console.error(`Plugin directory not found at: ${pluginDir}`);
-    process.exit(1); // Exit if source plugin directory doesn't exist
-  }
-} catch (error) {
-  console.error('Failed to copy plugin directory:', error.message);
-  console.error(error.stack); // It's good practice to log the stack for better debugging
-  process.exit(1); // Exit on any error during the copy process
-}
+//     console.log('Plugin directory copied successfully using custom function!');
+//   } else {
+//     console.error(`Plugin directory not found at: ${pluginDir}`);
+//     process.exit(1); // Exit if source plugin directory doesn't exist
+//   }
+// } catch (error) {
+//   console.error('Failed to copy plugin directory:', error.message);
+//   console.error(error.stack); // It's good practice to log the stack for better debugging
+//   process.exit(1); // Exit on any error during the copy process
+// }

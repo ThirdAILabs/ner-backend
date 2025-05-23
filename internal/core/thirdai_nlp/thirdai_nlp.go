@@ -1,7 +1,7 @@
 package thirdai_nlp
 
 // #cgo linux LDFLAGS: -L./lib/linux_amd64 -L./lib/linux_arm64 -lthirdai_nlp_c
-// #cgo darwin LDFLAGS: -L./lib/macos_arm64 -L /usr/local/lib -lthirdai_nlp_c -ltorch -ltorch_cpu -lc10 -lstdc++ -lbz2 -Wl,-rpath,/usr/local/lib
+// #cgo darwin LDFLAGS: -L./lib/macos_arm64 -L ./libtorch/lib -lthirdai_nlp_c -ltorch -ltorch_cpu -lc10 -lstdc++ -lbz2 -Wl,-rpath,./libtorch/lib
 // #cgo CFLAGS: -O3
 // #cgo CXXFLAGS: -O3 -fPIC -std=c++17 -I./include -fvisibility=hidden
 // #include <stdlib.h>
