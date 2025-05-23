@@ -378,6 +378,8 @@ func (s *BackendService) GetInferenceTime(ctx context.Context, reportId uuid.UUI
 		Select("MIN(start_time) AS min_start, MAX(completion_time) AS max_end").
 		Where("report_id = ? AND start_time IS NOT NULL AND completion_time IS NOT NULL", reportId)
 
+	var startingTime time.Time
+
 	switch dbType {
 	case "sqlite", "sqlite3":
 		var infBounds struct {
@@ -401,9 +403,14 @@ func (s *BackendService) GetInferenceTime(ctx context.Context, reportId uuid.UUI
 			slog.Error("error parsing max_end", "raw", infBounds.MaxEnd, "err", err)
 		}
 
+		if !startTime.IsZero() {
+			startingTime = startTime
+		}
+
 		if !startTime.IsZero() && !endTime.IsZero() {
 			return endTime.Sub(startTime).Seconds()
 		}
+
 	case "postgres":
 		var infBounds struct {
 			MinStart sql.NullTime `gorm:"column:min_start"`
@@ -414,10 +421,19 @@ func (s *BackendService) GetInferenceTime(ctx context.Context, reportId uuid.UUI
 			slog.Error("error fetching time bounds", "err", err)
 		}
 
+		if infBounds.MinStart.Valid {
+			startingTime = infBounds.MinStart.Time
+		}
+
 		if infBounds.MinStart.Valid && infBounds.MaxEnd.Valid {
 			return infBounds.MaxEnd.Time.Sub(infBounds.MinStart.Time).Seconds()
 		}
 	}
+
+	if !startingTime.IsZero() {
+		return time.Now().UTC().Sub(startingTime).Seconds()
+	}
+
 	return 0
 }
 
