@@ -34,7 +34,6 @@ interface AnalyticsDashboardProps {
   totalFileCount: number;
 }
 
-// Format file size in bytes to human-readable format
 const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return '0 Bytes';
 
@@ -54,6 +53,20 @@ const formatNumber = (num: number): string => {
     return `${(num / 1000).toFixed(1)}K`;
   }
   return num.toString();
+};
+
+const formatTime = (time: number): string => {
+  if (time < 60) return `${time.toFixed(2)}s`;
+
+  const minutes = Math.floor(time / 60);
+  if (minutes < 60) {
+    const remainingSeconds = time % 60;
+    return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds.toFixed(0)}s` : `${minutes}m`;
+  }
+
+  const hours = Math.floor(time / 3600);
+  const remainingMinutes = Math.floor((time % 3600) / 60);
+  return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
 };
 
 export function AnalyticsDashboard({
@@ -144,7 +157,8 @@ export function AnalyticsDashboard({
                         : 'text-4xl'
                 }`}
               >
-                {timeTaken == null ? '-' : `${timeTaken.toFixed(4)}s`}
+                {/* {timeTaken == null ? '-' : `${timeTaken.toFixed(2)}s`} */}
+                {timeTaken == null ? '-' : formatTime(timeTaken)}
               </span>
             </div>
             <h3 className="text-sm text-muted-foreground">Time Taken</h3>
