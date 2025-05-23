@@ -24,7 +24,7 @@ export default function Toggle({
 }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-sm font-semibold text-gray-600">Show redaction</span>
+      <span className="text-sm font-semibold text-gray-600">What GPT sees</span>
       <ToggleButton checked={checked} onChange={onChange} />
     </div>
   );

@@ -121,7 +121,7 @@ export default function Options({
             </ModelOption>
           </div>
           <div className="w-full">
-            <Tooltip title="Requires pro subscription. Email us at contact@thirdai.com">
+            <Tooltip title="Requires enterprise subscription. Email us at contact@thirdai.com">
               {/* Need span because tooltip child cannot be a custom react component. */}
               <span className="w-full">
                 <ModelOption onClick={handleAdvancedMode} selected={false} disabled>

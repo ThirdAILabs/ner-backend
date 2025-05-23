@@ -13,7 +13,7 @@ function Choice({ title, icon, href }: { title: string; icon: React.ReactNode; h
       <Card className="w-[300px] h-[250px] flex justify-center items-center hover:scale-105 transition-transform duration-200 hover:shadow-lg cursor-pointer">
         <Box>
           {icon}
-          <CardTitle className="text-center">{title}</CardTitle>
+          <CardTitle className="text-center text-gray-500">{title}</CardTitle>
         </Box>
       </Card>
     </Link>
@@ -71,13 +71,13 @@ export default function Page() {
         <Box sx={{ position: 'relative' }}>
           <Box sx={{ textAlign: 'center', mb: 8 }}>
             <Typography
+              className="text-gray-500"
               variant="h5"
               title={'PocketShield'}
               sx={{
                 mt: 0.5,
                 fontFamily: '"Plus Jakarta Sans", sans-serif',
                 fontWeight: 600,
-                color: '#000',
               }}
             >
               What would you like to do today?
@@ -96,7 +96,7 @@ export default function Page() {
             <Choice
               title="Scan Files"
               icon={
-                <FileText size={80} color="#000" style={{ marginBottom: 24 }} strokeWidth={1} />
+                <FileText className="text-[rgb(85,152,229)]" size={80} style={{ marginBottom: 24 }} strokeWidth={1} />
               }
               href="/token-classification/landing"
             />
@@ -104,8 +104,8 @@ export default function Page() {
               title="SafeGPT"
               icon={
                 <MessageSquare
+                  className="text-[rgb(85,152,229)]"
                   size={80}
-                  color="#000"
                   style={{ marginBottom: 24 }}
                   strokeWidth={1}
                 />
