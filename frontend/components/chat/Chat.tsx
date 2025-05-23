@@ -25,6 +25,21 @@ interface ChatInterfaceProps {
   showRedaction: boolean;
 }
 
+const NICE_COLOR_PAIRS = [
+  { replacement: '#E57373', original: '#FFEBEE' }, // red
+  { replacement: '#7986CB', original: '#E8EAF6' }, // indigo
+  { replacement: '#4FC3F7', original: '#E1F5FE' }, // light blue
+  { replacement: '#81C784', original: '#E8F5E9' }, // green
+  { replacement: '#FFF176', original: '#FFFDE7' }, // yellow
+  { replacement: '#FFB74D', original: '#FFF3E0' }, // orange
+  { replacement: '#BA68C8', original: '#F3E5F5' }, // purple
+];
+
+const toTagName = (replacementToken: string) => {
+  const pieces = replacementToken.split("_");
+  return pieces.slice(0, pieces.length - 1).join("_");
+};
+
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
   onSendMessage,
   messages,
@@ -37,6 +52,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   // Options dropdown-related logic
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [editingApiKey, setEditingApiKey] = useState<boolean>(false);
+  const tagNameToColors = useRef<Record<string, { original: string; replacement: string }>>({});
+
+  const tagColors = (tagName: string) => {
+    if (!tagNameToColors.current[tagName]) {
+      const colorIndex = Object.keys(tagNameToColors.current).length % NICE_COLOR_PAIRS.length;
+      tagNameToColors.current[tagName] = NICE_COLOR_PAIRS[colorIndex];
+    }
+    return tagNameToColors.current[tagName];
+  };
 
   const openDropdown = () => {
     setIsDropdownOpen(true);
@@ -147,14 +171,20 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               >
                 { 
                   !showRedaction ? message.content : (
-                    message.redactedContent.map((piece, idx) => (
-                      piece.replacement
-                        ? <span key={idx} className="inline-flex items-center gap-1 bg-red-500/10 p-1 pl-2 rounded-md">
+                    message.redactedContent.map((piece, idx) => {
+                      if (!piece.replacement) {
+                        return piece.original;
+                      }
+                      const tagName = toTagName(piece.replacement);
+                      const { replacement: replColor, original: origColor } = tagColors(tagName);
+                      console.log(tagName, replColor, origColor);
+                      return (
+                        <span key={idx} className={`inline-flex items-center gap-1 p-1 pl-2 rounded-md`} style={{ backgroundColor: origColor }}>
                           <del>{piece.original}</del>
-                          <span className="bg-red-500 px-1 rounded-sm text-white">{piece.replacement}</span>
-                        </span> 
-                        : piece.original
-                    ))
+                          <span className={`px-1 rounded-sm text-white`} style={{ backgroundColor: replColor }}>{piece.replacement}</span>
+                        </span>
+                      );
+                    })
                   )
                 }
               </div>
