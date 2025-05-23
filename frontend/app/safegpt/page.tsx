@@ -4,7 +4,7 @@ import ChatInterface from '@/components/chat/Chat';
 import ChatTitle from '@/components/chat/Title';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import Sidebar, { ChatPreview } from '@/components/chat/Sidebar';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -14,7 +14,7 @@ import useApiKeyStore from '@/hooks/useApiKeyStore';
 
 const SIDEBAR_WIDTH = 250;
 
-export default function Page() {
+function SafeGPTContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedId = searchParams.get('id');
@@ -131,5 +131,13 @@ export default function Page() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <SafeGPTContent />
+    </Suspense>
   );
 }
