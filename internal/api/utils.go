@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/gorilla/schema"
 )
 
 type codedError struct {
@@ -39,6 +40,22 @@ func ParseRequest[T any](r *http.Request) (T, error) {
 		slog.Error("error parsing request body", "error", err)
 		return data, CodedErrorf(http.StatusBadRequest, "unable to parse request body")
 	}
+	return data, nil
+}
+
+func ParseRequestQueryParams[T any](r *http.Request) (T, error) {
+	var data T
+	if err := r.ParseForm(); err != nil {
+		slog.Error("error parsing form", "error", err)
+		return data, CodedErrorf(http.StatusBadRequest, "unable to parse request query params")
+	}
+
+	err := schema.NewDecoder().Decode(&data, r.Form)
+	 if err != nil {
+		slog.Error("error decoding query params", "error", err)
+		return data, CodedErrorf(http.StatusBadRequest, "unable to parse request query params")
+	}
+   
 	return data, nil
 }
 

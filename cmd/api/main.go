@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"ner-backend/cmd"
 	"ner-backend/internal/api"
+	"ner-backend/internal/core"
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/storage"
@@ -22,17 +23,19 @@ import (
 )
 
 type APIConfig struct {
-	DatabaseURL       string `env:"DATABASE_URL,notEmpty,required"`
-	RabbitMQURL       string `env:"RABBITMQ_URL,notEmpty,required"`
-	S3EndpointURL     string `env:"S3_ENDPOINT_URL,notEmpty,required"`
-	S3AccessKeyID     string `env:"INTERNAL_AWS_ACCESS_KEY_ID,notEmpty,required"`
-	S3SecretAccessKey string `env:"INTERNAL_AWS_SECRET_ACCESS_KEY,notEmpty,required"`
-	ModelBucketName   string `env:"MODEL_BUCKET_NAME" envDefault:"ner-models"`
-	QueueNames        string `env:"QUEUE_NAMES" envDefault:"inference_queue,training_queue,shard_data_queue"`
-	WorkerConcurrency int    `env:"CONCURRENCY" envDefault:"1"`
-	APIPort           string `env:"API_PORT" envDefault:"8001"`
-	ChunkTargetBytes  int64  `env:"S3_CHUNK_TARGET_BYTES" envDefault:"10737418240"`
-	HostModelDir      string `env:"HOST_MODEL_DIR" envDefault:"/app/models"`
+	DatabaseURL                 string `env:"DATABASE_URL,notEmpty,required"`
+	RabbitMQURL                 string `env:"RABBITMQ_URL,notEmpty,required"`
+	S3EndpointURL               string `env:"S3_ENDPOINT_URL,notEmpty,required"`
+	S3AccessKeyID               string `env:"INTERNAL_AWS_ACCESS_KEY_ID,notEmpty,required"`
+	S3SecretAccessKey           string `env:"INTERNAL_AWS_SECRET_ACCESS_KEY,notEmpty,required"`
+	ModelBucketName             string `env:"MODEL_BUCKET_NAME" envDefault:"ner-models"`
+	QueueNames                  string `env:"QUEUE_NAMES" envDefault:"inference_queue,training_queue,shard_data_queue"`
+	WorkerConcurrency           int    `env:"CONCURRENCY" envDefault:"1"`
+	APIPort                     string `env:"API_PORT" envDefault:"8001"`
+	ChunkTargetBytes            int64  `env:"S3_CHUNK_TARGET_BYTES" envDefault:"10737418240"`
+	HostModelDir                string `env:"HOST_MODEL_DIR" envDefault:"/app/models"`
+	PythonExecutablePath        string `env:"PYTHON_EXECUTABLE_PATH" envDefault:"python"`
+	PythonModelPluginScriptPath string `env:"PYTHON_MODEL_PLUGIN_SCRIPT_PATH" envDefault:"plugin/plugin-python/plugin.py"`
 }
 
 func main() {
@@ -101,9 +104,18 @@ func main() {
 
 	apiHandler := api.NewBackendService(db, s3Client, publisher, cfg.ChunkTargetBytes)
 
+	loaders := core.NewModelLoaders(cfg.PythonExecutablePath, cfg.PythonModelPluginScriptPath)
+	//Whatever model you want to load, just add it to the loaders map
+	nerModel, err := loaders["presidio"]("")
+	if err != nil {
+		log.Fatalf("could not load NER model: %v", err)
+	}
+	chatHandler := api.NewChatService(db, nerModel)
+
 	// Your existing API routes should be prefixed with /api to avoid conflicts
 	r.Route("/api/v1", func(r chi.Router) {
 		apiHandler.AddRoutes(r)
+		chatHandler.AddRoutes(r)
 	})
 
 	// --- Start HTTP Server ---
@@ -126,6 +138,13 @@ func main() {
 			log.Fatalf("Server forced to shutdown: %v", err)
 		}
 	}()
+
+	if err := chi.Walk(r, func(method, route string, _ http.Handler, _ ...func(http.Handler) http.Handler) error {
+		log.Printf("%s %s\n", method, route)
+		return nil
+	}); err != nil {
+		log.Printf("failed to list routes: %v", err)
+	}
 
 	log.Printf("API server listening on port %s", cfg.APIPort)
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {

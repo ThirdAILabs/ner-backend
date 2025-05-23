@@ -115,7 +115,7 @@ type Report struct {
 	IsUpload       bool
 
 	CreationTime       time.Time
-	CompletedFileCount int `gorm:"default:0"`
+	SucceededFileCount int `gorm:"default:0"`
 	TotalFileCount     int `gorm:"default:0"`
 	FailedFileCount    int `gorm:"default:0"`
 
