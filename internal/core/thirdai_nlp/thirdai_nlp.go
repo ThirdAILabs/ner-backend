@@ -72,7 +72,7 @@ func (m *CnnModel) Predict(text string) ([]types.Entity, error) {
 		for _, pred := range predictions[start:end] {
 			label := C.GoString(pred.label)
 
-			if label == "GENDER" || label == "SEXUAL_ORENTATION" || label == "ETHNICITY" {
+			if label == "GENDER" || label == "SEXUAL_ORIENTATION" || label == "ETHNICITY" {
 				continue
 			}
 
