@@ -26,10 +26,11 @@ import { floor } from 'lodash';
 
 // Calculate progress based on InferenceTaskStatuses
 const calculateProgress = (report: Report | null): number => {
-  if (!report || !report.SucceededFileCount || !report.FailedFileCount || !report.FileCount)
-    return 0;
+  const successfulFiles = report?.SucceededFileCount || 0;
+  const failedFiles = report?.FailedFileCount || 0;
+  const totalFiles = report?.FileCount || 1;
 
-  return floor(((report.SucceededFileCount + report.FailedFileCount) / report.FileCount) * 100);
+  return floor(((successfulFiles + failedFiles) / totalFiles) * 100);
 };
 
 // Get the total number of processed tokens
@@ -357,7 +358,7 @@ function JobDetail() {
 
               {selectedSource === 'local' && (
                 <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 2 }}>
-                  <h3 className="text-lg font-medium mb-1">File Upload</h3>
+                  <h3 className="text-lg font-medium mb-1">Local Files</h3>
                   {/* <p className="text-sm text-gray-600">File Location...</p> */}
                 </Box>
               )}
@@ -449,7 +450,7 @@ function JobDetail() {
             timeTaken={timeTaken}
             succeededFileCount={reportData?.SucceededFileCount || 0}
             failedFileCount={reportData?.FailedFileCount || 0}
-            totalFileCount={reportData?.FileCount || 0}
+            totalFileCount={reportData?.FileCount || 1}
           />
         </TabsContent>
 

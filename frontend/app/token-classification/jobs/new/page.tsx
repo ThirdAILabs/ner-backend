@@ -100,12 +100,14 @@ export default function NewJobPage() {
   const router = useRouter();
 
   // Essential state
-  const [selectedSource, setSelectedSource] = useState<'s3' | 'files'>('files');
+  const [selectedSource, setSelectedSource] = useState<'s3' | 'files' | 'directory'>('files');
+  const [sourceS3Endpoint, setSourceS3Endpoint] = useState('');
+  const [sourceS3Region, setSourceS3Region] = useState('');
   const [sourceS3Bucket, setSourceS3Bucket] = useState('');
   const [sourceS3Prefix, setSourceS3Prefix] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
+  const [existingReportName, setExistingReportName] = useState<string[]>([]);
   //Job Name
   const [jobName, setJobName] = useState('');
 
@@ -141,9 +143,18 @@ export default function NewJobPage() {
 
   // Error/Success messages
   const [error, setError] = useState<string | null>(null);
+  const [s3Error, setS3Error] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   const [patternType, setPatternType] = useState('string');
+
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+
+  const SUPPORTED_TYPES = ['.pdf', '.txt', '.csv', '.html', '.json', '.xml'];
+
+  const isFileSupported = (filename: string) => {
+    return SUPPORTED_TYPES.some((ext) => filename.toLowerCase().endsWith(ext));
+  };
 
   // Fetch models on page load
   useEffect(() => {
@@ -161,6 +172,12 @@ export default function NewJobPage() {
     };
 
     fetchModels();
+
+    const fetchReportNames = async () => {
+      const response = await nerService.listReports();
+      setExistingReportName(response.map((report) => report.ReportName));
+    };
+    fetchReportNames();
   }, []);
 
   // Load tags when a model is selected
@@ -324,32 +341,76 @@ export default function NewJobPage() {
     setDialogError(null);
     setIsCustomTagDialogOpen(false);
   };
-  const areFilesIdentical = (file1: File, file2: File): boolean => {
-    return file1.name === file2.name && file1.size === file2.size;
+
+  const addFiles = (files: File[]) => {
+    const newSelectedFiles = [...selectedFiles];
+
+    files.forEach((newFile) => {
+      const existingIndex = newSelectedFiles.findIndex(
+        (existingFile) => existingFile.name === newFile.name
+      );
+
+      if (existingIndex !== -1) {
+        // Duplicate file so, replace the existing file with the new one
+        newSelectedFiles[existingIndex] = newFile;
+      } else {
+        // Add the new file
+        newSelectedFiles.push(newFile);
+      }
+    });
+
+    setSelectedFiles(newSelectedFiles);
   };
 
-  // Handle file selection
+  // Update file handling to use file/directory input
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
       const fileArray = Array.from(files);
+      const supportedFiles = fileArray.filter((file) => isFileSupported(file.name));
 
-      // Filter out duplicates
-      const newFiles = fileArray.filter((newFile) => {
-        // Check if this file already exists in selectedFiles
-        const isDuplicate = selectedFiles.some((existingFile) =>
-          areFilesIdentical(existingFile, newFile)
-        );
-        return !isDuplicate;
-      });
+      if (supportedFiles.length > 0) {
+        addFiles(supportedFiles);
+      } else {
+        setIsConfirmDialogOpen(true);
+      }
+    }
+    // Reset the input value
+    const input = e.target as HTMLInputElement;
+    input.value = '';
+  };
 
-      setSelectedFiles((prev) => [...prev, ...newFiles]);
-      e.target.value = '';
+  const validateS3Bucket = async () => {
+    if (!sourceS3Bucket || !sourceS3Region) {
+      return;
+    }
+    setS3Error('');
+    const s3Error = await nerService.attemptS3Connection(
+      sourceS3Endpoint,
+      sourceS3Region,
+      sourceS3Bucket,
+      sourceS3Prefix
+    );
+    if (s3Error) {
+      setS3Error(s3Error);
+    } else {
+      setS3Error('');
     }
   };
 
   const removeFile = (index: number) => {
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleCloseDialog = () => {
+    setIsConfirmDialogOpen(false);
+    // Reset the input value
+    const input = document.getElementById(
+      selectedSource === 'directory' ? 'directory-upload' : 'file-upload'
+    ) as HTMLInputElement;
+    if (input) {
+      input.value = '';
+    }
   };
 
   const validateCustomTagName = (name: string): boolean => {
@@ -382,12 +443,20 @@ export default function NewJobPage() {
       return;
     }
 
-    if (selectedSource === 's3' && !sourceS3Bucket) {
-      setError('S3 bucket is required');
+    if (selectedSource === 's3' && !(sourceS3Region && sourceS3Bucket)) {
+      setError('S3 region and bucket are required');
       return;
     }
 
-    if (selectedSource === 'files' && selectedFiles.length === 0) {
+    if (selectedSource === 's3' && s3Error) {
+      setError(s3Error);
+      return;
+    }
+
+    if (
+      (selectedSource === 'files' || selectedSource === 'directory') &&
+      selectedFiles.length === 0
+    ) {
       setError('Please select at least one file');
       return;
     }
@@ -403,8 +472,8 @@ export default function NewJobPage() {
     try {
       let uploadId;
 
-      // Handle file uploads if needed
-      if (selectedSource === 'files') {
+      // Handle file/directory uploads if needed
+      if (selectedSource === 'files' || selectedSource === 'directory') {
         const uploadResponse = await nerService.uploadFiles(selectedFiles);
         uploadId = uploadResponse.Id;
       }
@@ -423,6 +492,8 @@ export default function NewJobPage() {
         CustomTags: customTagsObj,
         ...(selectedSource === 's3'
           ? {
+              S3Endpoint: sourceS3Endpoint,
+              S3Region: sourceS3Region,
               SourceS3Bucket: sourceS3Bucket,
               SourceS3Prefix: sourceS3Prefix || undefined,
             }
@@ -467,6 +538,11 @@ export default function NewJobPage() {
       return false;
     }
 
+    if (existingReportName.includes(name)) {
+      setNameError('Report with this name already exists.');
+      return false;
+    }
+
     if (!/^[A-Za-z0-9_-]+$/.test(name)) {
       setNameError('Report name can only contain letters, numbers, underscores, and hyphens');
       return false;
@@ -481,14 +557,45 @@ export default function NewJobPage() {
     return true;
   };
 
-  const [showTooltip, setShowTooltip] = useState(false);
-  const copyToClipboard = (text: string) => {
+  const [showTooltip, setShowTooltip] = useState<Record<string, boolean>>({});
+  const copyToClipboard = (text: string, tooltipId: string) => {
     navigator.clipboard.writeText(text);
-    setShowTooltip(true);
+    setShowTooltip((prev) => ({ ...prev, [tooltipId]: true }));
     setTimeout(() => {
-      setShowTooltip(false);
+      setShowTooltip((prev) => ({ ...prev, [tooltipId]: false }));
     }, 1000);
   };
+
+  const renderFileName = (file: File) => (
+    <span className="text-sm text-gray-600">
+      {file.name} ({(file.size / 1024).toFixed(1)} KB)
+    </span>
+  );
+
+  const renderFileList = (files: File[]) => (
+    <ul className="space-y-1">
+      {files.map((file, i) => (
+        <li key={i} className="flex items-center justify-between py-1">
+          {renderFileName(file)}
+          <button
+            type="button"
+            onClick={() => removeFile(i)}
+            className="text-red-500 hover:text-red-700 p-1"
+            aria-label="Remove file"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
 
   return (
     <div className="container px-4 py-8 w-3/4">
@@ -550,10 +657,16 @@ export default function NewJobPage() {
             <h2 className="text-2xl font-medium mb-4">Source</h2>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
               <SourceOption
-                title="File Upload"
+                title="Local Files"
                 description="Upload files from your computer"
                 isSelected={selectedSource === 'files'}
                 onClick={() => setSelectedSource('files')}
+              />
+              <SourceOption
+                title="Local Directory"
+                description="Upload an entire directory"
+                isSelected={selectedSource === 'directory'}
+                onClick={() => setSelectedSource('directory')}
               />
               <SourceOption
                 title="S3 Bucket"
@@ -563,110 +676,201 @@ export default function NewJobPage() {
               />
             </div>
 
-            {selectedSource === 's3' ? (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    S3 Bucket Name
-                  </label>
-                  <input
-                    type="text"
-                    value={sourceS3Bucket}
-                    onChange={(e) => setSourceS3Bucket(e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded"
-                    placeholder="my-bucket"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    S3 Prefix (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={sourceS3Prefix}
-                    onChange={(e) => setSourceS3Prefix(e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded"
-                    placeholder="folder/path/"
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="w-full">
-                <input
-                  type="file"
-                  multiple
-                  onChange={handleFileChange}
-                  className="hidden"
-                  id="file-upload"
-                  accept=".pdf, .txt, .csv, .html, .json, .xml"
-                />
-                <label
-                  htmlFor="file-upload"
-                  className="flex items-center justify-center w-full p-4 border-2 border-dashed border-gray-300 rounded-md cursor-pointer hover:border-gray-400"
-                >
-                  <div className="space-y-1 text-center">
-                    <svg
-                      className="mx-auto h-12 w-12 text-gray-400"
-                      stroke="currentColor"
-                      fill="none"
-                      viewBox="0 0 48 48"
-                    >
-                      <path
-                        d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4h-12m-4-12v8m0 0v8a4 4 0 01-4 4h-8m-4-12h8m-8 0v-8m32 0v-8"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    <div className="flex text-sm text-gray-600">
-                      <span className="relative rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
-                        Select files
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-500">Drag and drop files or click to browse</p>
-                  </div>
-                </label>
-
-                {selectedFiles.length > 0 && (
-                  <div className="mt-4">
-                    <h3 className="text-sm font-medium text-gray-700">
-                      Selected Files ({selectedFiles.length})
-                    </h3>
-                    <div className="mt-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2">
-                      <ul className="space-y-1">
-                        {selectedFiles.map((file, i) => (
-                          <li key={i} className="flex items-center justify-between py-1">
-                            <span className="text-sm text-gray-500">
-                              {file.name} ({(file.size / 1024).toFixed(1)} KB)
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => removeFile(i)}
-                              className="text-red-500 hover:text-red-700 p-1"
-                              aria-label="Remove file"
+            {(() => {
+              switch (selectedSource) {
+                case 's3':
+                  return (
+                    <div className="space-y-4">
+                      <div>
+                        <div className="text-sm text-gray-500 mt-1 mb-3">
+                          Your S3 bucket must be public. Private bucket support is available on the
+                          enterprise platform. Reach out to{' '}
+                          <div className="relative inline-block">
+                            <span
+                              className="text-blue-500 underline cursor-pointer hover:text-blue-700"
+                              onClick={() => copyToClipboard('contact@thirdai.com', 's3')}
+                              title="Click to copy email"
                             >
-                              <svg
-                                className="h-4 w-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M6 18L18 6M6 6l12 12"
-                                />
-                              </svg>
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
+                              contact@thirdai.com
+                            </span>
+                            {showTooltip['s3'] && (
+                              <div className="absolute left-1/2 -translate-x-1/2 mt-1 w-max px-2 py-1 text-xs bg-gray-800 text-white rounded shadow-md z-10">
+                                Email Copied
+                              </div>
+                            )}
+                          </div>{' '}
+                          for an enterprise subscription.
+                        </div>
+                        {s3Error && (
+                          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded">
+                            {s3Error}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          S3 Endpoint (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          value={sourceS3Endpoint}
+                          onChange={(e) => setSourceS3Endpoint(e.target.value)}
+                          onBlur={validateS3Bucket}
+                          className="w-full p-2 border border-gray-300 rounded"
+                          placeholder="s3.amazonaws.com"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          S3 Region
+                        </label>
+                        <input
+                          type="text"
+                          value={sourceS3Region}
+                          onChange={(e) => setSourceS3Region(e.target.value)}
+                          onBlur={validateS3Bucket}
+                          className="w-full p-2 border border-gray-300 rounded"
+                          placeholder="us-east-1"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          S3 Bucket Name
+                        </label>
+                        <input
+                          type="text"
+                          value={sourceS3Bucket}
+                          onChange={(e) => setSourceS3Bucket(e.target.value)}
+                          onBlur={validateS3Bucket}
+                          className="w-full p-2 border border-gray-300 rounded"
+                          placeholder="my-bucket"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          S3 Prefix (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          value={sourceS3Prefix}
+                          onChange={(e) => setSourceS3Prefix(e.target.value)}
+                          className="w-full p-2 border border-gray-300 rounded"
+                          placeholder="folder/path/"
+                        />
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            )}
+                  );
+
+                case 'directory':
+                  return (
+                    <div className="w-full">
+                      <input
+                        type="file"
+                        {...({ webkitdirectory: '', directory: '' } as {
+                          webkitdirectory: string;
+                          directory: string;
+                        })}
+                        multiple
+                        onChange={handleFileChange}
+                        className="hidden"
+                        id="directory-upload"
+                        accept=".pdf, .txt, .csv, .html, .json, .xml"
+                      />
+                      <label
+                        htmlFor="directory-upload"
+                        className="flex items-center justify-center w-full p-4 border-2 border-dashed border-gray-300 rounded-md cursor-pointer hover:border-gray-400"
+                      >
+                        <div className="space-y-1 text-center">
+                          <svg
+                            className="mx-auto h-12 w-12 text-gray-400"
+                            stroke="currentColor"
+                            fill="none"
+                            viewBox="0 0 48 48"
+                          >
+                            <path
+                              d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4h-12m-4-12v8m0 0v8a4 4 0 01-4 4h-8m-4-12h8m-8 0v-8m32 0v-8"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                          <div className="flex text-sm text-gray-600">
+                            <span className="relative rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
+                              Select directory
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-500">Click to browse</p>
+                        </div>
+                      </label>
+
+                      {selectedFiles.length > 0 && (
+                        <div className="mt-4">
+                          <h3 className="text-sm font-medium text-gray-700">
+                            Selected Files ({selectedFiles.length})
+                          </h3>
+                          <div className="mt-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2">
+                            {renderFileList(selectedFiles)}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+
+                case 'files':
+                  return (
+                    <div className="w-full">
+                      <input
+                        type="file"
+                        multiple
+                        onChange={handleFileChange}
+                        className="hidden"
+                        id="file-upload"
+                        accept=".pdf, .txt, .csv, .html, .json, .xml"
+                      />
+                      <label
+                        htmlFor="file-upload"
+                        className="flex items-center justify-center w-full p-4 border-2 border-dashed border-gray-300 rounded-md cursor-pointer hover:border-gray-400"
+                      >
+                        <div className="space-y-1 text-center">
+                          <svg
+                            className="mx-auto h-12 w-12 text-gray-400"
+                            stroke="currentColor"
+                            fill="none"
+                            viewBox="0 0 48 48"
+                          >
+                            <path
+                              d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4h-12m-4-12v8m0 0v8a4 4 0 01-4 4h-8m-4-12h8m-8 0v-8m32 0v-8"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                          <div className="flex text-sm text-gray-600">
+                            <span className="relative rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
+                              Select files
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-500">click to browse</p>
+                        </div>
+                      </label>
+
+                      {selectedFiles.length > 0 && (
+                        <div className="mt-4">
+                          <h3 className="text-sm font-medium text-gray-700">
+                            Selected Files ({selectedFiles.length})
+                          </h3>
+                          <div className="mt-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2">
+                            {renderFileList(selectedFiles)}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+
+                default:
+                  return null;
+              }
+            })()}
           </Box>
 
           {/* Model Selection */}
@@ -697,12 +901,12 @@ export default function NewJobPage() {
                       <div className="relative inline-block">
                         <span
                           className="text-blue-500 underline cursor-pointer hover:text-blue-700"
-                          onClick={() => copyToClipboard('contact@thirdai.com')}
+                          onClick={() => copyToClipboard('contact@thirdai.com', 'advanced-model')}
                           title="Click to copy email"
                         >
                           contact@thirdai.com
                         </span>
-                        {showTooltip && (
+                        {showTooltip['advanced-model'] && (
                           <div className="absolute left-1/2 -translate-x-1/2 mt-1 w-max px-2 py-1 text-xs bg-gray-800 text-white rounded shadow-md z-10">
                             Email Copied
                           </div>
@@ -1155,6 +1359,32 @@ export default function NewJobPage() {
             </Button>
           </div>
         </form>
+      )}
+
+      {isConfirmDialogOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-medium mb-4">No Supported Files</h3>
+            <p className="text-sm text-amber-600 mb-4">
+              No supported files found in the selected directory.
+              <br />
+              Only {SUPPORTED_TYPES.join(', ')} files are supported.
+            </p>
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="default"
+                onClick={handleCloseDialog}
+                style={{
+                  backgroundColor: '#1976d2',
+                  color: 'white',
+                }}
+              >
+                OK
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

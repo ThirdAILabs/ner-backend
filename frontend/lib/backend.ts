@@ -66,6 +66,8 @@ interface ObjectPreview {
 interface CreateReportRequest {
   ModelId: string;
   UploadId?: string;
+  S3Endpoint?: string;
+  S3Region?: string;
   SourceS3Bucket?: string;
   SourceS3Prefix?: string;
   Tags: string[];
@@ -76,6 +78,7 @@ interface CreateReportRequest {
 
 export interface InferenceMetrics {
   Completed: number;
+  Failed: number;
   InProgress: number;
   DataProcessedMB: number;
   TokensProcessed: number;
@@ -270,8 +273,8 @@ export const nerService = {
 
   validateGroupDefinition: async (groupQuery: string): Promise<string | null> => {
     try {
-      await axiosInstance.get('/validate-group-definition', {
-        params: { group_query: groupQuery },
+      await axiosInstance.get('/validate/group', {
+        params: { GroupQuery: groupQuery },
       });
       return null;
     } catch (error) {
@@ -279,6 +282,28 @@ export const nerService = {
         return error.response.data;
       }
       return 'An unexpected error occurred';
+    }
+  },
+
+  attemptS3Connection: async (
+    endpoint: string,
+    region: string,
+    bucket: string,
+    prefix: string
+  ): Promise<string | null> => {
+    try {
+      await axiosInstance.get('/validate/s3', {
+        params: {
+          S3Endpoint: endpoint,
+          S3Region: region,
+          SourceS3Bucket: bucket,
+          SourceS3Prefix: prefix,
+        },
+      });
+
+      return null;
+    } catch (error) {
+      return 'Failed to connect to S3 bucket. Please make sure that it is a valid public bucket.';
     }
   },
 };

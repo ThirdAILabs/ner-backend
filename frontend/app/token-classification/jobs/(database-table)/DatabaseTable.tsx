@@ -23,7 +23,6 @@ function joinAdjacentEntities(entities: Entity[]) {
   let prevEntity = entities[0];
 
   for (let i = 1; i < entities.length; i++) {
-    console.log(entities[i]);
     const numSpacesAfterPrevEntity = (prevEntity.RContext || '').match(/^\s*/)?.[0].length || 0;
     if (
       prevEntity.Object === entities[i].Object &&
@@ -85,21 +84,26 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
     Object.fromEntries(tags.map((tag) => [tag.type, true]))
   );
 
+  const toActiveTagList = (filters: Record<string, boolean>): string[] => {
+    return Object.entries(filters)
+      .filter(([_, isActive]) => isActive)
+      .map(([tagType]) => tagType);
+  };
+
   // Load records functions
-  const loadTokenRecords = (newOffset = 0, tagFilter?: string[], limit = TOKENS_LIMIT) => {
+  const loadTokenRecords = (newOffset = 0, tagFilter: string[], limit = TOKENS_LIMIT) => {
     if (isLoadingTokenRecords || (!hasMoreTokens && newOffset > 0)) {
       console.log('Skipping token records load - already loading or no more data');
       return;
     }
 
-    console.log(`Loading token records from offset=${newOffset}, tagFilter:`, tagFilter);
     setIsLoadingTokenRecords(true);
 
     nerService
       .getReportEntities(reportId, {
         offset: newOffset,
         limit: limit,
-        ...(tagFilter && { tags: tagFilter }),
+        tags: tagFilter,
       })
       .then((entities) => {
         console.log(`Loaded ${entities.length} token records from offset ${newOffset}`);
@@ -138,7 +142,6 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
       return;
     }
 
-    console.log(`Loading object records from offset=${newOffset}`);
     setIsLoadingObjectRecords(true);
 
     // Use the API service to fetch objects with pagination
@@ -182,7 +185,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
       // If empty query, reset filters and reload data
       setFilteredObjects([]);
       resetPagination();
-      loadTokenRecords(0);
+      loadTokenRecords(0, toActiveTagList(tagFilters));
       loadObjectRecords(0);
       return;
     }
@@ -200,7 +203,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
         loadObjectRecords(0, result.Objects);
         // For token records, we'll let them load unfiltered first
         // then filter them in the TableContent component
-        loadTokenRecords(0);
+        loadTokenRecords(0, toActiveTagList(tagFilters));
       }
     } catch (error) {
       console.error('Error searching:', error);
@@ -224,44 +227,11 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
     // Force immediate loading of token records
     console.log('Component mounted, loading initial data');
     resetPagination();
-    loadTokenRecords(0);
+    loadTokenRecords(0, toActiveTagList(tagFilters));
     loadObjectRecords(0);
     loadedInitialTokenRecords.current = true;
     loadedInitialObjectRecords.current = true;
   }, []);
-
-  // Update filters when groups/tags change
-  useEffect(() => {
-    setGroupFilters((prev) => {
-      const newFilters = { ...prev };
-      let changed = false;
-
-      groups.forEach((group) => {
-        if (!(group in newFilters)) {
-          newFilters[group] = true;
-          changed = true;
-        }
-      });
-
-      return changed ? newFilters : prev;
-    });
-  }, [groups]);
-
-  useEffect(() => {
-    setTagFilters((prev) => {
-      const newFilters = { ...prev };
-      let changed = false;
-
-      tags.forEach((tag) => {
-        if (!(tag.type in newFilters)) {
-          newFilters[tag.type] = true;
-          changed = true;
-        }
-      });
-
-      return changed ? newFilters : prev;
-    });
-  }, [tags]);
 
   // Scroll handler for infinite loading
   const handleTableScroll = () => {
@@ -277,7 +247,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
         if (viewMode === 'object' && !isLoadingObjectRecords && hasMoreObjects) {
           loadObjectRecords(objectOffset, filteredObjects.length ? filteredObjects : undefined);
         } else if (viewMode === 'classified-token' && !isLoadingTokenRecords && hasMoreTokens) {
-          loadTokenRecords(tokenOffset);
+          loadTokenRecords(tokenOffset, toActiveTagList(tagFilters));
         }
       }
     }
@@ -288,7 +258,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
     if (viewMode === 'object' && !isLoadingObjectRecords && hasMoreObjects) {
       loadObjectRecords(objectOffset, filteredObjects.length ? filteredObjects : undefined);
     } else if (viewMode === 'classified-token' && !isLoadingTokenRecords && hasMoreTokens) {
-      loadTokenRecords(tokenOffset);
+      loadTokenRecords(tokenOffset, toActiveTagList(tagFilters));
     }
   };
 
@@ -301,21 +271,21 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
   };
 
   const handleTagFilterChange = (filterKey: string) => {
-    setTagFilters((prev) => ({
-      ...prev,
-      [filterKey]: !prev[filterKey],
-    }));
+    setTagFilters((prev) => {
+      const newFilters = {
+        ...prev,
+        [filterKey]: !prev[filterKey],
+      };
 
-    let activeTagsList = Object.entries(tagFilters)
-      .filter(([_, isActive]) => isActive)
-      .map(([tagName]) => tagName);
+      const activeTagList = toActiveTagList(newFilters);
 
-    activeTagsList.push(filterKey);
+      setFilteredObjects([]);
+      resetPagination();
+      loadTokenRecords(0, activeTagList);
+      loadObjectRecords(0, activeTagList);
 
-    setFilteredObjects([]);
-    resetPagination();
-    loadTokenRecords(0, activeTagsList, 100);
-    loadObjectRecords(0, activeTagsList, 100);
+      return newFilters;
+    });
   };
 
   const handleSelectAllGroups = () => {
@@ -329,16 +299,17 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
   };
 
   const handleSelectAllTags = () => {
+    const newFilters = Object.fromEntries(tags.map((tag) => [tag.type, true]));
+    setTagFilters(newFilters);
     setFilteredObjects([]);
     resetPagination();
-    loadTokenRecords(0);
+    loadTokenRecords(0, toActiveTagList(newFilters));
     loadObjectRecords(0);
-
-    setTagFilters(Object.fromEntries(tags.map((tag) => [tag.type, true])));
   };
 
   const handleDeselectAllTags = () => {
-    setTagFilters(Object.fromEntries(tags.map((tag) => [tag.type, false])));
+    const newFilters = Object.fromEntries(tags.map((tag) => [tag.type, false]));
+    setTagFilters(newFilters);
   };
 
   // Handle view mode changes
@@ -349,7 +320,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
     if (newMode === 'object' && objectRecords.length === 0) {
       loadObjectRecords(0);
     } else if (newMode === 'classified-token' && tokenRecords.length === 0) {
-      loadTokenRecords(0);
+      loadTokenRecords(0, toActiveTagList(tagFilters));
     }
   };
 
