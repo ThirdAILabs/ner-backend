@@ -139,6 +139,11 @@ export default function Options({
             type="text"
             ref={apiKeyRef}
             value={intermediateApiKey}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                handleSaveApiKey();
+              }
+            }}
             onChange={handleApiKeyChange}
             onBlur={handleBlur}
             placeholder="Your API key here..."

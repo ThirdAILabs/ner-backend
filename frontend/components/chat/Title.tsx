@@ -30,6 +30,16 @@ export default function ChatTitle({ title, setTitle }: ChatTitleProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [inputValue, setInputValue] = useState(title);
 
+  const handleSave = () => {
+    setIsEditing(false);
+    setTitle(inputValue);
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    setInputValue(title);
+  };
+
   useEffect(() => {
     setInputValue(title);
   }, [title]);
@@ -46,20 +56,19 @@ export default function ChatTitle({ title, setTitle }: ChatTitleProps) {
                     type="text"
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleSave();
+                      }
+                    }}
                     className="text-xl font-medium bg-transparent border-none border-b-2 border-gray-300 focus:outline-none focus:border-blue-500 transition-all w-full text-center"
                     style={{ width: `${inputValue.length}ch` }}
                     autoFocus
                   />
                 </div>
                 <SaveAndCancel
-                  onSave={() => {
-                    setIsEditing(false);
-                    setTitle(inputValue);
-                  }}
-                  onCancel={() => {
-                    setIsEditing(false);
-                    setInputValue(title);
-                  }}
+                  onSave={handleSave}
+                  onCancel={handleCancel}
                 />
               </>
             ) : (
