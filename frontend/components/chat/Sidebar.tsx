@@ -20,12 +20,12 @@ function NewChatButton({ onNewChat }: { onNewChat: () => void }) {
     <button
       onClick={onNewChat}
       className="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-[rgb(85,152,229)]/5 transition-colors duration-200 border border-gray-200 group"
-      aria-label="New chat"
+      aria-label="New Chat"
     >
       <div className="w-8 h-8 rounded-full bg-[rgb(85,152,229)] flex items-center justify-center text-white shadow-sm group-hover:bg-[rgb(85,152,229)]/90 group-hover:scale-105 transition-all duration-200">
         <Plus size={18} />
       </div>
-      <span className="text-gray-700">New chat</span>
+      <span className="text-gray-700">New Chat</span>
     </button>
   );
 }

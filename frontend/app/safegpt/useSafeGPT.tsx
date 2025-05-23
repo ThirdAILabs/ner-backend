@@ -77,7 +77,7 @@ export default function useSafeGPT(chatId: string) {
 
   const getChat = async (chatId: string): Promise<Message[]> => {
     if (chatId === NEW_CHAT_ID) {
-      setTitle('New chat');
+      setTitle('New Chat');
       return [];
     }
 
@@ -117,7 +117,7 @@ export default function useSafeGPT(chatId: string) {
       return;
     }
     await nerService.deleteChatSession(selectedId);
-    setPreviews(prevPreviews => prevPreviews.filter(preview => preview.id !== chatId));
+    setPreviews(prevPreviews => prevPreviews.filter(preview => preview.id !== selectedId));
     if (selectedId === chatId) {
       window.location.href = `/safegpt?id=new`;
     }
@@ -216,7 +216,7 @@ export default function useSafeGPT(chatId: string) {
         ? [
             {
               id: NEW_CHAT_ID,
-              title: 'New chat',
+              title: 'New Chat',
             },
           ]
         : []),
