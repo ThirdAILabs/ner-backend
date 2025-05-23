@@ -382,7 +382,6 @@ export const nerService = {
     sessionId: string
   ): Promise<{
     data: Array<{
-      id: string;
       message_type: string;
       content: string;
       timestamp: string;

@@ -162,6 +162,6 @@ type ChatHistory struct {
 	SessionID   uuid.UUID `gorm:"index"`
 	MessageType string    // 'user' or 'ai'
 	Content     string
-	Metadata    datatypes.JSON `gorm:"type:jsonb"` // {"key": "value"}
 	Timestamp   time.Time `gorm:"autoCreateTime"`
+	Metadata    datatypes.JSON `gorm:"type:jsonb"` // {"key": "value"}
 }

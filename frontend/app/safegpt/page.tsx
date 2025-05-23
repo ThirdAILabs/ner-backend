@@ -21,6 +21,7 @@ export default function Page() {
   const { title, updateTitle, previews, messages, sendMessage } = useSafeGPT(selectedId || 'new');
   const [showRedaction, setShowRedaction] = useState<boolean>(false);
   const { apiKey, saveApiKey } = useApiKeyStore();
+  // TODO: Set invalid api key when sendmessage fails (when api key is invalid)
   const [invalidApiKey, setInvalidApiKey] = useState<boolean>(false);
 
   const handleToggleRedaction = () => {
@@ -68,7 +69,10 @@ export default function Page() {
         <div className="w-[calc(100vw-250px)]">
           <ChatInterface
             messages={messages}
-            onSendMessage={(message) => sendMessage(message, apiKey)}
+            onSendMessage={(message) => {
+              sendMessage(message, apiKey)
+              
+            }}
             invalidApiKey={invalidApiKey}
             apiKey={apiKey}
             saveApiKey={saveApiKey}

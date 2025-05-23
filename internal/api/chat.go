@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -160,7 +159,6 @@ func (s *ChatService) GetHistory(r *http.Request) (any, error) {
 	for _, msg := range history {
 		ts := msg.Timestamp.Format("2006-01-02 15:04:05")
 		resp = append(resp, api.ChatHistoryItem{
-			ID:          fmt.Sprint(msg.ID),
 			MessageType: msg.MessageType,
 			Content:     msg.Content,
 			Timestamp:   ts,

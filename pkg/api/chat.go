@@ -37,7 +37,6 @@ type ChatResponse struct {
 }
 
 type ChatHistoryItem struct {
-	ID          string `json:"id"`
 	MessageType string `json:"message_type"` // "user" or "ai"
 	Content     string `json:"content"`
 	Timestamp   string `json:"timestamp"`
