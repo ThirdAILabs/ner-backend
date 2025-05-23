@@ -18,12 +18,10 @@ export default function Page() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedId = searchParams.get('id');
-  const { title, updateTitle, previews, messages, sendMessage } = useSafeGPT(selectedId || 'new');
+  const { title, updateTitle, previews, messages, sendMessage, invalidApiKey } = useSafeGPT(selectedId || 'new');
   const [showRedaction, setShowRedaction] = useState<boolean>(false);
   const { apiKey, saveApiKey } = useApiKeyStore();
-  // TODO: Set invalid api key when sendmessage fails (when api key is invalid)
-  const [invalidApiKey, setInvalidApiKey] = useState<boolean>(false);
-
+  
   const handleToggleRedaction = () => {
     setShowRedaction((prev) => !prev);
   };

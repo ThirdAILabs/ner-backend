@@ -15,10 +15,10 @@ export default function useSafeGPT(chatId: string) {
   const [title, setTitle] = useState('Loading...');
   const [previews, setPreviews] = useState<ChatPreview[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [invalidApiKey, setInvalidApiKey] = useState<boolean>(false);
 
   const getChatPreviews = async (): Promise<ChatPreview[]> => {
     const sessions = await nerService.getChatSessions();
-    console.log(sessions);
     if (sessions.error) {
       alert(sessions.error);
       return [];
@@ -136,5 +136,6 @@ export default function useSafeGPT(chatId: string) {
     updateTitle,
     messages,
     sendMessage,
+    invalidApiKey,
   };
 }
