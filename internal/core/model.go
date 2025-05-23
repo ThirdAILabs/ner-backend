@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"ner-backend/internal/core/bolt"
 	"ner-backend/internal/core/python"
+	"ner-backend/internal/core/thirdai_nlp"
 	"ner-backend/internal/core/types"
 	"ner-backend/pkg/api"
 	"path/filepath"
@@ -48,13 +49,8 @@ func NewModelLoaders(pythonExec, pluginScript string) map[string]ModelLoader {
 			)
 		},
 		"cnn": func(modelDir string) (Model, error) {
-			cfgJSON := fmt.Sprintf(`{"model_path":"%s/cnn_model.pth"}`, modelDir)
-			return python.LoadPythonModel(
-				pythonExec,
-				pluginScript,
-				"python_cnn_ner_model",
-				cfgJSON,
-			)
+			model, err := thirdai_nlp.LoadCnnModel(filepath.Join(modelDir))
+			return model, err
 		},
 		"presidio": func(_ string) (Model, error) {
 			return NewPresidioModel()
