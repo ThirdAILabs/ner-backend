@@ -1,16 +1,16 @@
-import { useEffect, useState } from "react";
-import { nerService } from "@/lib/backend";
+import { useEffect, useState } from 'react';
+import { nerService } from '@/lib/backend';
 
 export default function useApiKeyStore() {
   const [apiKey, setApiKey] = useState<string>('');
-  
+
   const getApiKey = async () => {
     const { apiKey, error } = await nerService.getOpenAIApiKey();
     if (error) {
       alert(error);
-      return "";
+      return '';
     }
-    console.log("API key is", apiKey);
+    console.log('API key is', apiKey);
     return apiKey;
   };
 
@@ -24,8 +24,8 @@ export default function useApiKeyStore() {
   };
 
   useEffect(() => {
-    getApiKey().then(key => {
-      console.log("Setting API key", key);
+    getApiKey().then((key) => {
+      console.log('Setting API key', key);
       setApiKey(key);
     });
   }, []);
@@ -33,5 +33,5 @@ export default function useApiKeyStore() {
   return {
     apiKey,
     saveApiKey,
-  }
+  };
 }

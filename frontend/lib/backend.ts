@@ -313,26 +313,34 @@ export const nerService = {
     }
   },
 
-  getChatSessions: async (): Promise<{ data: { id: string; title: string }[]; error: string | null }> => {
+  getChatSessions: async (): Promise<{
+    data: { id: string; title: string }[];
+    error: string | null;
+  }> => {
     try {
       const { data } = await axiosInstance.get('/chat/sessions');
       return { data: data.sessions, error: null };
     } catch (error) {
-      const errorMsg = axios.isAxiosError(error) && error.response?.data 
-        ? error.response.data 
-        : 'Failed to get chat sessions';
+      const errorMsg =
+        axios.isAxiosError(error) && error.response?.data
+          ? error.response.data
+          : 'Failed to get chat sessions';
       return { data: [], error: errorMsg };
     }
   },
 
-  startChatSession: async (model: string, title: string): Promise<{ data: { session_id: string } | null; error: string | null }> => {
+  startChatSession: async (
+    model: string,
+    title: string
+  ): Promise<{ data: { session_id: string } | null; error: string | null }> => {
     try {
       const { data } = await axiosInstance.post('/chat/sessions', { model, title });
       return { data, error: null };
     } catch (error) {
-      const errorMsg = axios.isAxiosError(error) && error.response?.data
-        ? error.response.data
-        : 'Failed to start chat session';
+      const errorMsg =
+        axios.isAxiosError(error) && error.response?.data
+          ? error.response.data
+          : 'Failed to start chat session';
       return { data: null, error: errorMsg };
     }
   },
@@ -346,26 +354,33 @@ export const nerService = {
     }
   },
 
-  getChatSession: async (sessionId: string): Promise<{ data: { id: string; title: string } | null; error: string | null }> => {
+  getChatSession: async (
+    sessionId: string
+  ): Promise<{ data: { id: string; title: string } | null; error: string | null }> => {
     try {
       const { data } = await axiosInstance.get(`/chat/sessions/${sessionId}`);
       return { data, error: null };
     } catch (error) {
-      const errorMsg = axios.isAxiosError(error) && error.response?.data
-        ? error.response.data
-        : 'Failed to get chat session';
+      const errorMsg =
+        axios.isAxiosError(error) && error.response?.data
+          ? error.response.data
+          : 'Failed to get chat session';
       return { data: null, error: errorMsg };
     }
   },
 
-  renameChatSession: async (sessionId: string, title: string): Promise<{ error: string | null }> => {
+  renameChatSession: async (
+    sessionId: string,
+    title: string
+  ): Promise<{ error: string | null }> => {
     try {
       await axiosInstance.post(`/chat/sessions/${sessionId}/rename`, { title });
       return { error: null };
     } catch (error) {
-      const errorMsg = axios.isAxiosError(error) && error.response?.data
-        ? error.response.data
-        : 'Failed to rename chat session';
+      const errorMsg =
+        axios.isAxiosError(error) && error.response?.data
+          ? error.response.data
+          : 'Failed to rename chat session';
       return { error: errorMsg };
     }
   },
@@ -387,9 +402,10 @@ export const nerService = {
       });
       return { data, error: null };
     } catch (error) {
-      const errorMsg = axios.isAxiosError(error) && error.response?.data
-        ? error.response.data
-        : 'Failed to send chat message';
+      const errorMsg =
+        axios.isAxiosError(error) && error.response?.data
+          ? error.response.data
+          : 'Failed to send chat message';
       return { data: null, error: errorMsg };
     }
   },
@@ -402,23 +418,27 @@ export const nerService = {
     onChunk: (chunk: ChatResponse) => void
   ) => {
     try {
-      const response = await axiosInstance.post(`/chat/sessions/${sessionId}/messages/stream`, {
-        model,
-        api_key: apiKey,
-        message,
-      }, {
-        responseType: 'stream',
-        adapter: 'fetch',
-      });
-  
+      const response = await axiosInstance.post(
+        `/chat/sessions/${sessionId}/messages/stream`,
+        {
+          model,
+          api_key: apiKey,
+          message,
+        },
+        {
+          responseType: 'stream',
+          adapter: 'fetch',
+        }
+      );
+
       const reader = response.data.getReader();
       const decoder = new TextDecoder();
       let chunk: ReadableStreamReadResult<Uint8Array>;
-  
+
       while (!(chunk = await reader.read()).done) {
         const decodedChunk = decoder.decode(chunk.value, { stream: true });
         const lines = decodedChunk.split('\n').filter(Boolean);
-  
+
         for (const line of lines) {
           const parsedData = JSON.parse(line);
           // Handle the parsed data from the stream
@@ -431,13 +451,12 @@ export const nerService = {
       const reader = ((error as AxiosError).response?.data as any).getReader();
       const decoder = new TextDecoder();
       let chunk: ReadableStreamReadResult<Uint8Array>;
-      
+
       while (!(chunk = await reader.read()).done) {
         const decodedChunk = decoder.decode(chunk.value, { stream: true });
         throw new Error(decodedChunk);
       }
     }
-
   },
 
   getChatHistory: async (
@@ -455,17 +474,18 @@ export const nerService = {
       const { data } = await axiosInstance.get(`/chat/sessions/${sessionId}/history`);
       return { data, error: null };
     } catch (error) {
-      const errorMsg = axios.isAxiosError(error) && error.response?.data
-        ? error.response.data
-        : 'Failed to get chat history';
+      const errorMsg =
+        axios.isAxiosError(error) && error.response?.data
+          ? error.response.data
+          : 'Failed to get chat history';
       return { data: [], error: errorMsg };
     }
   },
 
-  getOpenAIApiKey: async (): Promise<{ apiKey: string, error: string | null }> => {
+  getOpenAIApiKey: async (): Promise<{ apiKey: string; error: string | null }> => {
     try {
       const response = await axiosInstance.get('/chat/api-key');
-      console.log("API key", response.data);
+      console.log('API key', response.data);
       return { apiKey: response.data.api_key, error: null };
     } catch (error) {
       return { apiKey: '', error: 'Failed to get OpenAI API key' };

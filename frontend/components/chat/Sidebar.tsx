@@ -30,7 +30,14 @@ function NewChatButton({ onNewChat }: { onNewChat: () => void }) {
   );
 }
 
-export default function Sidebar({ items, onSelect, selectedId, padding, onNewChat, onDelete }: SidebarProps) {
+export default function Sidebar({
+  items,
+  onSelect,
+  selectedId,
+  padding,
+  onNewChat,
+  onDelete,
+}: SidebarProps) {
   return (
     <div className="w-full h-full overflow-y-auto bg-white border-r border-gray-200">
       <div className="p-4">
@@ -47,8 +54,8 @@ export default function Sidebar({ items, onSelect, selectedId, padding, onNewCha
               onClick={() => onSelect(item.id)}
             >
               {item.title}
-              {item.id !== "new" && (
-                <button 
+              {item.id !== 'new' && (
+                <button
                   onClick={(e) => {
                     e.stopPropagation();
                     onDelete(item.id);

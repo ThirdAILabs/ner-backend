@@ -36,8 +36,8 @@ const NICE_COLOR_PAIRS = [
 ];
 
 const toTagName = (replacementToken: string) => {
-  const pieces = replacementToken.split("_");
-  return pieces.slice(0, pieces.length - 1).join("_");
+  const pieces = replacementToken.split('_');
+  return pieces.slice(0, pieces.length - 1).join('_');
 };
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -100,7 +100,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const handleEditApiKey = () => {
     setEditingApiKey(true);
   };
-  
+
   // Chat-related logic
 
   const [inputMessage, setInputMessage] = useState('');
@@ -121,7 +121,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       }
     }
   };
-  
+
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -140,9 +140,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   };
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
+
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => {
@@ -154,7 +154,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     1. Css for llm message should be good.
     2. Correct the "Your messages are end-to-end encrypted and securely stored" message.
      */
-  
+
   return (
     <div className="flex flex-col h-[100%] relative w-[80%] ml-[10%]">
       <div className="flex-1 overflow-y-auto p-4 space-y-4 mb-20">
@@ -187,9 +187,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     <div className="h-2 w-2 bg-gray-300 rounded-full animate-[pulse_1s_ease-in-out_infinite_0.4s]"></div>
                   </div>
                 )}
-                { 
-                  !showRedaction ? message.content : (
-                    message.redactedContent.map((piece, idx) => {
+                {!showRedaction
+                  ? message.content
+                  : message.redactedContent.map((piece, idx) => {
                       if (!piece.replacement) {
                         return piece.original;
                       }
@@ -197,14 +197,21 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                       const { replacement: replColor, original: origColor } = tagColors(tagName);
                       console.log(tagName, replColor, origColor);
                       return (
-                        <span key={idx} className={`inline-flex items-center gap-1 p-1 pl-2 rounded-md`} style={{ backgroundColor: origColor }}>
+                        <span
+                          key={idx}
+                          className={`inline-flex items-center gap-1 p-1 pl-2 rounded-md`}
+                          style={{ backgroundColor: origColor }}
+                        >
                           <del>{piece.original}</del>
-                          <span className={`px-1 rounded-sm text-white`} style={{ backgroundColor: replColor }}>{piece.replacement}</span>
+                          <span
+                            className={`px-1 rounded-sm text-white`}
+                            style={{ backgroundColor: replColor }}
+                          >
+                            {piece.replacement}
+                          </span>
                         </span>
                       );
-                    })
-                  )
-                }
+                    })}
               </div>
             </div>
           ))}

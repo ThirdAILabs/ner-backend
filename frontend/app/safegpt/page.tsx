@@ -21,12 +21,13 @@ function SafeGPTContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedId = searchParams.get('id');
-  const { title, updateTitle, previews, messages, sendMessage, invalidApiKey, deleteChat } = useSafeGPT(selectedId || 'new');
+  const { title, updateTitle, previews, messages, sendMessage, invalidApiKey, deleteChat } =
+    useSafeGPT(selectedId || 'new');
   const [showRedaction, setShowRedaction] = useState<boolean>(false);
   const { apiKey, saveApiKey } = useApiKeyStore();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
-  
+
   const handleToggleRedaction = () => {
     setShowRedaction((prev) => !prev);
   };
@@ -59,10 +60,7 @@ function SafeGPTContent() {
     <div>
       {/* Extends sidebar border over the window frame top padding */}
       <div className="flex h-0 items-end">
-        <div
-          className="h-[20px] border-r border-gray-200"
-          style={{ width: SIDEBAR_WIDTH }}
-        />
+        <div className="h-[20px] border-r border-gray-200" style={{ width: SIDEBAR_WIDTH }} />
       </div>
       <div className="flex flex-row h-[70px] items-center justify-start relative bg-white border-b border-gray-200">
         <div
@@ -146,7 +144,14 @@ function SafeGPTContent() {
 
 function Loading() {
   return (
-    <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" minHeight="100vh" gap={4}>
+    <Box
+      display="flex"
+      flexDirection="column"
+      justifyContent="center"
+      alignItems="center"
+      minHeight="100vh"
+      gap={4}
+    >
       <CircularProgress sx={{ color: 'rgb(85,152,229)' }} />
       <Typography className="text-gray-500" variant="h5" sx={{ fontWeight: 600, mb: 2 }}>
         Securing the environment

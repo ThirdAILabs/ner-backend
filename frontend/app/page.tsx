@@ -96,7 +96,12 @@ export default function Page() {
             <Choice
               title="Scan Files"
               icon={
-                <FileText className="text-[rgb(85,152,229)]" size={80} style={{ marginBottom: 24 }} strokeWidth={1} />
+                <FileText
+                  className="text-[rgb(85,152,229)]"
+                  size={80}
+                  style={{ marginBottom: 24 }}
+                  strokeWidth={1}
+                />
               }
               href="/token-classification/landing"
             />
