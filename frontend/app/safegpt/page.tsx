@@ -57,10 +57,17 @@ function SafeGPTContent() {
 
   return (
     <div>
+      {/* Extends sidebar border over the window frame top padding */}
+      <div className="flex h-0 items-end">
+        <div
+          className="h-[20px] border-r border-gray-200"
+          style={{ width: SIDEBAR_WIDTH }}
+        />
+      </div>
       <div className="flex flex-row h-[70px] items-center justify-start relative bg-white border-b border-gray-200">
         <div
-          className="flex flex-row items-center h-[70px] border-r border-gray-200"
-          style={{ width: SIDEBAR_WIDTH, paddingLeft: '20px' }}
+          className="flex flex-row items-center h-[70px] p-4 border-r border-gray-200"
+          style={{ width: SIDEBAR_WIDTH }}
         >
           <Button variant="outline" size="sm" asChild>
             <Link href={`/`} className="flex items-center">
@@ -75,7 +82,7 @@ function SafeGPTContent() {
           </div>
         </div>
       </div>
-      <div className="flex flex-row h-[calc(100vh-70px)]">
+      <div className="flex flex-row h-[calc(100vh-90px)]">
         <div style={{ width: SIDEBAR_WIDTH }}>
           <Sidebar
             items={previews}

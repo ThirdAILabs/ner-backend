@@ -112,3 +112,8 @@ input[type='search']::-moz-search-cancel-button {
 input[type='search']::-ms-clear {
   display: none;
 }
+
+.titlebar {
+  -webkit-app-region: drag;
+  -webkit-user-select: none;
+}

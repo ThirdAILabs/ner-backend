@@ -18,7 +18,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet"
         />
       </head>
-      <body className="flex min-h-screen w-full flex-col bg-muted/40">
+      <body className="flex min-h-screen w-full flex-col bg-white pt-[20px]">
+        <div className="fixed top-0 left-0 w-full h-[35px] titlebar"/>
         <Providers>
           {children}
           <ErrorPopup autoCloseTime={7000} />

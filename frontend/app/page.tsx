@@ -22,7 +22,7 @@ function Choice({ title, icon, href }: { title: string; icon: React.ReactNode; h
 
 export default function Page() {
   return (
-    <div style={{ width: '75%', minHeight: '100vh', margin: '0 auto' }}>
+    <div style={{ width: '75%', minHeight: 'calc(100vh-20px)', margin: '0 auto' }}>
       <header style={{ width: '100%', padding: '16px', borderBottom: '1px solid #e0e0e0' }}>
         <div
           style={{
