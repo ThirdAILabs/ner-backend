@@ -441,12 +441,9 @@ export const nerService = {
 
         for (const line of lines) {
           const parsedData = JSON.parse(line);
-          // Handle the parsed data from the stream
           onChunk(parsedData);
-          console.log('Received data:', parsedData);
         }
       }
-      console.log('Stream finished');
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.data) {
         const reader = error.response?.data.getReader();
@@ -488,7 +485,6 @@ export const nerService = {
   getOpenAIApiKey: async (): Promise<{ apiKey: string; error: string | null }> => {
     try {
       const response = await axiosInstance.get('/chat/api-key');
-      console.log('API key', response.data);
       return { apiKey: response.data.api_key, error: null };
     } catch (error) {
       return { apiKey: '', error: 'Failed to get OpenAI API key' };
