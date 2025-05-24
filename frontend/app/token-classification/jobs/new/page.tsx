@@ -621,7 +621,7 @@ export default function NewJobPage() {
       ) : (
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Job Name Field */}
-          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
+          <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3 }}>
             <h2 className="text-2xl font-medium mb-4">Report Name</h2>
             <div className="w-full">
               <input
@@ -653,7 +653,7 @@ export default function NewJobPage() {
           </Box>
 
           {/* Source Section */}
-          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
+          <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3 }}>
             <h2 className="text-2xl font-medium mb-4">Source</h2>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
               <SourceOption
@@ -874,7 +874,7 @@ export default function NewJobPage() {
           </Box>
 
           {/* Model Selection */}
-          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
+          <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3 }}>
             <div>
               <h2 className="text-2xl font-medium mb-4">Model</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -989,7 +989,7 @@ export default function NewJobPage() {
           </Box>
 
           {/* Custom Tags Section */}
-          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
+          <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3 }}>
             <h2 className="text-2xl font-medium mb-4">
               Custom Tags
               <span className="text-sm font-normal text-gray-500 ml-2">(Optional)</span>
@@ -1173,7 +1173,7 @@ export default function NewJobPage() {
           </Box>
 
           {/* Groups Section */}
-          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
+          <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3 }}>
             <h2 className="text-2xl font-medium mb-4">
               Groups
               <span className="text-sm font-normal text-gray-500 ml-2">(Optional)</span>
