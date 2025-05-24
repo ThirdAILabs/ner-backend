@@ -13,7 +13,7 @@ import ChatInterface from '@/components/chat/Chat';
 import ChatTitle from '@/components/chat/Title';
 import Sidebar from '@/components/chat/Sidebar';
 import Toggle from '@/components/chat/Toggle';
-import useSafeGPT from './useSafeGPT';
+import useSafeGPT from '@/hooks/useSafeGPT';
 
 const SIDEBAR_WIDTH = 250;
 

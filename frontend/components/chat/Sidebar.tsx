@@ -1,11 +1,6 @@
 import React from 'react';
 import { Plus, Trash } from 'lucide-react';
-import { NEW_CHAT_ID } from '@/app/safegpt/useSafeGPT';
-
-export interface ChatPreview {
-  id: string;
-  title: string;
-}
+import { NEW_CHAT_ID, ChatPreview } from '@/hooks/useSafeGPT';
 
 interface SidebarProps {
   items: ChatPreview[];

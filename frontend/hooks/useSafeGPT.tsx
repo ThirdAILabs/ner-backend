@@ -1,9 +1,24 @@
 'use client';
 
-import { ChatPreview } from '@/components/chat/Sidebar';
 import { useEffect, useState } from 'react';
-import { Message, RedactedContentPiece } from '@/components/chat/Chat';
 import { nerService } from '@/lib/backend';
+
+export interface ChatPreview {
+  id: string;
+  title: string;
+}
+
+export interface RedactedContentPiece {
+  original: string;
+  replacement?: string;
+}
+
+export interface Message {
+  content: string;
+  redactedContent: RedactedContentPiece[];
+  role: 'user' | 'llm';
+}
+
 
 export const NEW_CHAT_ID = 'new';
 

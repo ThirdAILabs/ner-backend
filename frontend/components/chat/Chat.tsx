@@ -2,18 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, MessageSquare } from 'lucide-react';
 import { HiChip } from 'react-icons/hi';
 import useOutsideClick from '@/hooks/useOutsideClick';
+import { Message } from '@/hooks/useSafeGPT';
 import Options from './Options';
-
-export interface RedactedContentPiece {
-  original: string;
-  replacement?: string;
-}
-
-export interface Message {
-  content: string;
-  redactedContent: RedactedContentPiece[];
-  role: 'user' | 'llm';
-}
 
 interface ChatInterfaceProps {
   onSendMessage?: (message: string) => Promise<void>;
