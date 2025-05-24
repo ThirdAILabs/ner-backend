@@ -1,5 +1,5 @@
 import axiosInstance, { showApiErrorEvent } from './axios.config';
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 import qs from 'qs';
 
 // Type definitions for API responses
@@ -448,14 +448,17 @@ export const nerService = {
       }
       console.log('Stream finished');
     } catch (error) {
-      const reader = ((error as AxiosError).response?.data as any).getReader();
-      const decoder = new TextDecoder();
-      let chunk: ReadableStreamReadResult<Uint8Array>;
-
-      while (!(chunk = await reader.read()).done) {
-        const decodedChunk = decoder.decode(chunk.value, { stream: true });
-        throw new Error(decodedChunk);
+      if (axios.isAxiosError(error) && error.response?.data) {
+        const reader = error.response?.data.getReader();
+        const decoder = new TextDecoder();
+        let chunk: ReadableStreamReadResult<Uint8Array>;
+  
+        while (!(chunk = await reader.read()).done) {
+          const decodedChunk = decoder.decode(chunk.value, { stream: true });
+          throw new Error(decodedChunk);
+        }
       }
+      throw new Error('Failed to send chat message for an unknown reason');
     }
   },
 
