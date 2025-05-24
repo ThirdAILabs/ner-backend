@@ -91,6 +91,13 @@ func RestStreamHandler(handler func(r *http.Request) StreamResponse) http.Handle
 	return func(w http.ResponseWriter, r *http.Request) {
 		stream := handler(r)
 
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			slog.Error("response writer does not support flushing")
+			http.Error(w, "streaming not supported", http.StatusInternalServerError)
+			return
+		}
+
 		stream(func(data any, err error) bool {
 			if err != nil {
 				var cerr *codedError
@@ -103,7 +110,7 @@ func RestStreamHandler(handler func(r *http.Request) StreamResponse) http.Handle
 					slog.Error("recieved non coded error from endpoint", "error", err)
 					http.Error(w, err.Error(), http.StatusInternalServerError)
 				}
-				w.(http.Flusher).Flush()
+				flusher.Flush()
 				return true
 			}
 			err = WriteJsonResponse(w, data)
@@ -111,7 +118,7 @@ func RestStreamHandler(handler func(r *http.Request) StreamResponse) http.Handle
 				slog.Error("error writing json response", "error", err)
 				return false
 			}
-			w.(http.Flusher).Flush()
+			flusher.Flush()
 			return true
 		})
 	}
