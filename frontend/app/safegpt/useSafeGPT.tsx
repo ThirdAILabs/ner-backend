@@ -5,14 +5,7 @@ import { useEffect, useState } from 'react';
 import { Message, RedactedContentPiece } from '@/components/chat/Chat';
 import { nerService } from '@/lib/backend';
 
-const NEW_CHAT_ID = 'new';
-
-const strikethrough = (text: string) => {
-  return text
-    .split('')
-    .map((char) => char + '\u0336')
-    .join('');
-};
+export const NEW_CHAT_ID = 'new';
 
 const toRedactedContent = (
   redactedContent: string,

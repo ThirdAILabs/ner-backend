@@ -1,5 +1,6 @@
 import React from 'react';
 import { Plus, Trash } from 'lucide-react';
+import { NEW_CHAT_ID } from '@/app/safegpt/useSafeGPT';
 
 export interface ChatPreview {
   id: string;
@@ -54,7 +55,7 @@ export default function Sidebar({
               onClick={() => onSelect(item.id)}
             >
               {item.title}
-              {item.id !== 'new' && (
+              {item.id !== NEW_CHAT_ID && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
