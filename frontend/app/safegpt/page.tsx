@@ -1,30 +1,75 @@
 'use client';
 
-import ChatInterface from '@/components/chat/Chat';
-import ChatTitle from '@/components/chat/Title';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
-import { useEffect, useState, Suspense } from 'react';
-import { Button } from '@/components/ui/button';
-import Sidebar, { ChatPreview } from '@/components/chat/Sidebar';
 import { useRouter, useSearchParams } from 'next/navigation';
-import useSafeGPT from './useSafeGPT';
-import Toggle from '@/components/chat/Toggle';
-import useApiKeyStore from '@/hooks/useApiKeyStore';
+import { ArrowLeft } from 'lucide-react';
 import { Box, CircularProgress } from '@mui/material';
 import { Typography } from '@mui/material';
+import ChatInterface from '@/components/chat/Chat';
+import ChatTitle from '@/components/chat/Title';
+import { Button } from '@/components/ui/button';
+import Sidebar from '@/components/chat/Sidebar';
+import Toggle from '@/components/chat/Toggle';
+import useApiKeyStore from '@/hooks/useApiKeyStore';
 import { useHealth } from '@/contexts/HealthProvider';
+import useSafeGPT from './useSafeGPT';
 
 const SIDEBAR_WIDTH = 250;
+
+interface DeleteDialogProps {
+  onCancel: () => void;
+  onConfirm: () => void;
+}
+
+function DeleteDialog({ onCancel, onConfirm }: DeleteDialogProps) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <h3 className="text-lg font-medium mb-4">Delete Chat</h3>
+        <p className="text-sm text-gray-600 mb-4">
+          Are you sure you want to delete this chat? This action cannot be undone.
+        </p>
+        <div className="flex justify-end space-x-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            style={{
+              color: 'rgb(85,152,229)',
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="default"
+            onClick={onConfirm}
+            style={{
+              backgroundColor: '#dc2626',
+              color: 'white',
+            }}
+            onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#b91c1c')}
+            onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#dc2626')}
+          >
+            Delete
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function SafeGPTContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedId = searchParams.get('id');
+
+  const { apiKey, saveApiKey } = useApiKeyStore();
   const { title, updateTitle, previews, messages, sendMessage, invalidApiKey, deleteChat } =
     useSafeGPT(selectedId || 'new');
+
   const [showRedaction, setShowRedaction] = useState<boolean>(false);
-  const { apiKey, saveApiKey } = useApiKeyStore();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
 
@@ -104,39 +149,7 @@ function SafeGPTContent() {
       </div>
 
       {isDeleteDialogOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-medium mb-4">Delete Chat</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Are you sure you want to delete this chat? This action cannot be undone.
-            </p>
-            <div className="flex justify-end space-x-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCancelDelete}
-                style={{
-                  color: 'rgb(85,152,229)',
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                variant="default"
-                onClick={handleConfirmDelete}
-                style={{
-                  backgroundColor: '#dc2626',
-                  color: 'white',
-                }}
-                onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#b91c1c')}
-                onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#dc2626')}
-              >
-                Delete
-              </Button>
-            </div>
-          </div>
-        </div>
+        <DeleteDialog onCancel={handleCancelDelete} onConfirm={handleConfirmDelete} />
       )}
     </div>
   );
