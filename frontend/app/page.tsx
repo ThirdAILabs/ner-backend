@@ -1,11 +1,11 @@
 'use client';
 
-import { Box, Typography } from '@mui/material'; // Added CircularProgress
 import * as _ from 'lodash';
 import Image from 'next/image';
+import Link from 'next/link';
+import { Box, Typography } from '@mui/material';
 import { Card, CardTitle } from '@/components/ui/card/index';
 import { FileText, MessageSquare } from 'lucide-react';
-import Link from 'next/link';
 
 function Choice({ title, icon, href }: { title: string; icon: React.ReactNode; href: string }) {
   return (
