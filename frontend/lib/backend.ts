@@ -1,5 +1,5 @@
 import axiosInstance, { showApiErrorEvent } from './axios.config';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import qs from 'qs';
 
 // Type definitions for API responses
@@ -401,31 +401,43 @@ export const nerService = {
     message: string,
     onChunk: (chunk: ChatResponse) => void
   ) => {
-    const response = await axiosInstance.post(`/chat/sessions/${sessionId}/messages/stream`, {
-      model,
-      api_key: apiKey,
-      message,
-    }, {
-      responseType: 'stream',
-      adapter: 'fetch',
-    });
-
-    const reader = response.data.getReader();
-    const decoder = new TextDecoder();
-    let chunk: ReadableStreamReadResult<Uint8Array>;
-
-    while (!(chunk = await reader.read()).done) {
-      const decodedChunk = decoder.decode(chunk.value, { stream: true });
-      const lines = decodedChunk.split('\n').filter(Boolean);
-
-      for (const line of lines) {
-        const parsedData = JSON.parse(line);
-        // Handle the parsed data from the stream
-        onChunk(parsedData);
-        console.log('Received data:', parsedData);
+    try {
+      const response = await axiosInstance.post(`/chat/sessions/${sessionId}/messages/stream`, {
+        model,
+        api_key: apiKey,
+        message,
+      }, {
+        responseType: 'stream',
+        adapter: 'fetch',
+      });
+  
+      const reader = response.data.getReader();
+      const decoder = new TextDecoder();
+      let chunk: ReadableStreamReadResult<Uint8Array>;
+  
+      while (!(chunk = await reader.read()).done) {
+        const decodedChunk = decoder.decode(chunk.value, { stream: true });
+        const lines = decodedChunk.split('\n').filter(Boolean);
+  
+        for (const line of lines) {
+          const parsedData = JSON.parse(line);
+          // Handle the parsed data from the stream
+          onChunk(parsedData);
+          console.log('Received data:', parsedData);
+        }
+      }
+      console.log('Stream finished');
+    } catch (error) {
+      const reader = ((error as AxiosError).response?.data as any).getReader();
+      const decoder = new TextDecoder();
+      let chunk: ReadableStreamReadResult<Uint8Array>;
+      
+      while (!(chunk = await reader.read()).done) {
+        const decodedChunk = decoder.decode(chunk.value, { stream: true });
+        throw new Error(decodedChunk);
       }
     }
-    console.log('Stream finished');
+
   },
 
   getChatHistory: async (
