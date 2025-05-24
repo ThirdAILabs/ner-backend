@@ -12,12 +12,12 @@ import (
 
 // ChatHistory mirrors your database.ChatHistory schema.
 type ChatHistory struct {
-	ID          uint   `gorm:"primaryKey"`
-	SessionID   uuid.UUID `gorm:"index"`
+	ID          uint   			`gorm:"primaryKey"`
+	SessionID   uuid.UUID		`gorm:"index"`
 	MessageType string
 	Content     string
-	Timestamp   time.Time      `gorm:"autoCreateTime"`
-	Metadata    datatypes.JSON `gorm:"type:jsonb"` // {"key":"value"}
+	Timestamp   time.Time      	`gorm:"autoCreateTime"`
+	Metadata    datatypes.JSON 	`gorm:"type:jsonb"` // {"key":"value"}
 }
 
 type ChatSession struct {
