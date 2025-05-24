@@ -12,7 +12,7 @@ import (
 
 // ChatHistory mirrors your database.ChatHistory schema.
 type ChatHistory struct {
-	ID          uint   			`gorm:"primaryKey"`
+	ID          uint            `gorm:"primaryKey"`
 	SessionID   uuid.UUID		`gorm:"index"`
 	MessageType string
 	Content     string
