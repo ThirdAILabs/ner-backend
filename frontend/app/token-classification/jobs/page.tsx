@@ -278,13 +278,12 @@ function JobDetail() {
   useEffect(() => {
     const pollInterval = setInterval(async () => {
       await fetchTags();
-
       const currentProgress = calculateProgress(reportData);
 
       if (currentProgress === 100) {
         clearInterval(pollInterval);
       }
-    }, 1000);
+    }, 5000);
 
     return () => {
       clearInterval(pollInterval);
