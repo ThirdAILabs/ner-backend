@@ -6,13 +6,13 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { Box, CircularProgress } from '@mui/material';
 import { Typography } from '@mui/material';
+import { useHealth } from '@/contexts/HealthProvider';
+import useApiKeyStore from '@/hooks/useApiKeyStore';
+import { Button } from '@/components/ui/button';
 import ChatInterface from '@/components/chat/Chat';
 import ChatTitle from '@/components/chat/Title';
-import { Button } from '@/components/ui/button';
 import Sidebar from '@/components/chat/Sidebar';
 import Toggle from '@/components/chat/Toggle';
-import useApiKeyStore from '@/hooks/useApiKeyStore';
-import { useHealth } from '@/contexts/HealthProvider';
 import useSafeGPT from './useSafeGPT';
 
 const SIDEBAR_WIDTH = 250;
