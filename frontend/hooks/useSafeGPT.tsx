@@ -160,7 +160,6 @@ export default function useSafeGPT(chatId: string) {
 
     try {
       await nerService.sendChatMessageStream(sessionId, 'gpt-4', apiKey, message, (chunk) => {
-        console.log('chunk', chunk.reply);
         if (chunk.tag_map) {
           tagMap = { ...tagMap, ...chunk.tag_map };
         }
@@ -206,7 +205,6 @@ export default function useSafeGPT(chatId: string) {
         errorMessage.includes('Incorrect API key') ||
         errorMessage.includes('missing the OpenAI API key')
       ) {
-        console.log('Invalid API key');
         setMessages(prevMessages);
         setInvalidApiKey(true);
         if (sessionId !== chatId) {
