@@ -85,7 +85,39 @@ func RestHandler(handler func(r *http.Request) (any, error)) http.HandlerFunc {
 	}
 }
 
-func WriteJsonResponse(w http.ResponseWriter, data interface{}) {
+type StreamResponse func(yield func(any, error) bool)
+
+func RestStreamHandler(handler func(r *http.Request) StreamResponse) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		stream := handler(r)
+
+		stream(func(data any, err error) bool {
+			if err != nil {
+				var cerr *codedError
+				if errors.As(err, &cerr) {
+					http.Error(w, err.Error(), cerr.code)
+					if cerr.code == http.StatusInternalServerError {
+						slog.Error("internal server error received in endpoint", "error", err)
+					}
+				} else {
+					slog.Error("recieved non coded error from endpoint", "error", err)
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+				}
+				w.(http.Flusher).Flush()
+				return true
+			}
+			err = WriteJsonResponse(w, data)
+			if err != nil {
+				slog.Error("error writing json response", "error", err)
+				return false
+			}
+			w.(http.Flusher).Flush()
+			return true
+		})
+	}
+}
+
+func WriteJsonResponse(w http.ResponseWriter, data interface{}) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	err := json.NewEncoder(w).Encode(data)
@@ -93,6 +125,7 @@ func WriteJsonResponse(w http.ResponseWriter, data interface{}) {
 		slog.Error("error serializing response body", "error", err)
 		http.Error(w, fmt.Sprintf("error serializing response body: %v", err), http.StatusInternalServerError)
 	}
+	return err
 }
 
 func URLParamUUID(r *http.Request, key string) (uuid.UUID, error) {

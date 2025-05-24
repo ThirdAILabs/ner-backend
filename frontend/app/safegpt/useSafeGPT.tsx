@@ -122,7 +122,7 @@ export default function useSafeGPT(chatId: string) {
       window.location.href = `/safegpt?id=new`;
     }
   };
-
+  
   const sendMessage = async (message: string, apiKey: string): Promise<void> => {
     setInvalidApiKey(false);
 
@@ -144,44 +144,65 @@ export default function useSafeGPT(chatId: string) {
       },
     ]);
 
-    const response = await nerService.sendChatMessage(sessionId, "gpt-4", apiKey, message);
-    
-    if (response.error && (response.error.includes('Incorrect API key') || response.error.includes('missing the OpenAI API key'))) {
-      console.log("Invalid API key");
-      setMessages(prevMessages);
-      setInvalidApiKey(true);
+    let tagMap: Record<string, string> = {};
+    let replyBuilder: string = "";
+
+    try {
+      await nerService.sendChatMessageStream(sessionId, "gpt-4", apiKey, message, (chunk) => {
+        console.log("chunk", chunk.reply);
+        if (chunk.tag_map) {
+          tagMap = {...tagMap, ...chunk.tag_map};
+        }
+
+        if (chunk.input_text) {
+          setMessages([
+            ...prevMessages,
+            {
+              content: unredactContent(chunk.input_text, tagMap),
+              redactedContent: toRedactedContent(chunk.input_text, tagMap),
+              role: 'user',
+            },
+            {
+              content: "",
+              redactedContent: [],
+              role: 'llm',
+            }
+          ])
+          return;
+        }
+
+        // We assume that the input text is always the first message.
+        // Thus, the last message must be the LLM message.
+        if (chunk.reply) {
+          replyBuilder += chunk.reply;
+          setMessages(prev => {
+            const newMessages = [...prev];
+            newMessages[newMessages.length - 1].content = unredactContent(replyBuilder, tagMap);
+            newMessages[newMessages.length - 1].redactedContent = toRedactedContent(replyBuilder, tagMap);
+            return newMessages;
+          })
+        }
+      });
       if (sessionId !== chatId) {
-        deleteChat(sessionId);
+        window.location.href = `/safegpt?id=${sessionId}`;
       }
-      throw new Error(response.error);
-    }
-
-    if (response.error) {
-      setMessages(prevMessages);
-      alert(response.error);
-      if (sessionId !== chatId) {
-        deleteChat(sessionId);
+    } catch (error) {
+      const errorMessage = (error as Error).message;
+      if (errorMessage.includes('Incorrect API key') || errorMessage.includes('missing the OpenAI API key')) {
+        console.log("Invalid API key");
+        setMessages(prevMessages);
+        setInvalidApiKey(true);
+        if (sessionId !== chatId) {
+          deleteChat(sessionId);
+        }
+      } else {
+        setMessages(prevMessages);
+        alert(errorMessage);
+        if (sessionId !== chatId) {
+          deleteChat(sessionId);
+        }
       }
-      throw new Error(response.error);
-    }
-
-    // TODO: Set messages to ...prevMessages, response
-    setMessages([
-      ...prevMessages,
-      {
-        content: message,
-        redactedContent: toRedactedContent(response.data?.input_text || message, response.data?.tag_map || {}),
-        role: 'user',
-      },
-      {
-        content: unredactContent(response.data?.reply || '', response.data?.tag_map || {}),
-        redactedContent: toRedactedContent(response.data?.reply || '', response.data?.tag_map || {}),
-        role: 'llm',
-      },
-    ])
-
-    if (sessionId !== chatId) {
-      window.location.href = `/safegpt?id=${sessionId}`;
+      throw new Error(errorMessage);
     }
   };
 

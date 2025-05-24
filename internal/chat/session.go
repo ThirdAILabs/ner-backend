@@ -137,6 +137,62 @@ func (session *ChatSession) Chat(userInput string) (string, string, map[string]s
 	return redactedText, openaiResp, tagMap, nil
 }
 
+type ChatIterator func(yield func(string, string, map[string]string, error) bool)
+
+func (session *ChatSession) ChatStream(userInput string) ChatIterator {
+	return func(yield func(string, string, map[string]string, error) bool) {
+		session.mu.Lock()
+		defer session.mu.Unlock()
+	
+		redactedText, tagMap, err := session.Redact(userInput)
+		if err != nil {
+			yield("", "", nil, fmt.Errorf("error redacting user input: %v", err))
+			return
+		}
+		
+		// First yield the non-streaming components
+		if !yield(redactedText, "", tagMap, nil) {
+			log.Printf("Failed to yield redacted text and tag map")
+			return
+		}
+		
+		history, err := session.getChatHistory()
+		if err != nil {
+			yield("", "", nil, err)
+			return
+		}
+		
+		context := ""
+		for _, msg := range history {
+			context += fmt.Sprintf("%s: %s\n", msg.MessageType, msg.Content)
+		}
+		context += fmt.Sprintf("User: %s\n", redactedText)
+
+		// Then stream the OpenAI response
+		session.streamOpenAIResponse(context)(func (chunk string, err error) bool {
+			return yield("", chunk, nil, nil)
+		})
+		openaiResp, err := session.getOpenAIResponse(context)
+		if err != nil {
+			yield("", "", nil, err)
+			return
+		}
+		
+		// Only save messages if the whole process was successful.
+		// This gives the illusion of atomicity; a request either succeeds or fails entirely.
+		// We still yield the error so the frontend can process accordingly.
+		if err := session.saveMessage("user", redactedText, tagMap); err != nil {
+			yield("", "", nil, err)
+			return
+		}
+	
+		if err := session.saveMessage("ai", openaiResp, nil); err != nil {
+			yield("", "", nil, err)
+			return
+		}
+	}
+}
+
 func (session *ChatSession) getOpenAIResponse(ctx string) (string, error) {
 	messages := []llms.MessageContent{
 		llms.TextParts(llms.ChatMessageTypeSystem, "You are a helpful assistant."),
@@ -152,6 +208,34 @@ func (session *ChatSession) getOpenAIResponse(ctx string) (string, error) {
 	return resp.Choices[0].Content, nil
 }
 
+func (session *ChatSession) streamOpenAIResponse(ctx string) func(yield func(string, error) bool) {
+	return func(yield func(string, error) bool) {
+		messages := []llms.MessageContent{
+			llms.TextParts(llms.ChatMessageTypeSystem, "You are a helpful assistant."),
+			llms.TextParts(llms.ChatMessageTypeHuman, ctx),
+		}
+
+		var yieldSuccess bool
+		
+		_, err := session.openAIClient.GenerateContent(context.Background(), messages, llms.WithStreamingFunc(func(ctx context.Context, chunk []byte) error {
+			if yieldSuccess = yield(string(chunk), nil); !yieldSuccess {
+				return fmt.Errorf("failed to yield chunk")
+			}
+			return nil
+		}))
+
+		if !yieldSuccess {
+			log.Printf("Failed to yield chunk")
+			return
+		}
+
+		if err != nil {
+			log.Printf("Error calling OpenAI API: %v", err)
+			yieldSuccess = yield("", err)
+		}
+	}
+}
+
 func (session *ChatSession) saveMessage(messageType, content string, metadata map[string]string) error {
 	var metadataJSON datatypes.JSON = nil
 	if metadata != nil {
@@ -161,7 +245,6 @@ func (session *ChatSession) saveMessage(messageType, content string, metadata ma
 		}
 		metadataJSON = datatypes.JSON(b)
 	}
-
 	chatMessage := database.ChatHistory{
 		SessionID:   session.sessionID,
 		MessageType: messageType,

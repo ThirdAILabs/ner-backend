@@ -138,6 +138,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     setInputMessage(e.target.value);
     adjustTextareaHeight(e.target);
   };
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, showRedaction]);
+
   /*
     Todo:-
     1. Css for llm message should be good.
@@ -169,6 +180,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     : 'text-gray-600 text-lg/8 mt-6'
                 } leading-relaxed`}
               >
+                {!message.content && (
+                  <div className="flex gap-1">
+                    <div className="h-2 w-2 bg-gray-300 rounded-full animate-[pulse_1s_ease-in-out_infinite]"></div>
+                    <div className="h-2 w-2 bg-gray-300 rounded-full animate-[pulse_1s_ease-in-out_infinite_0.2s]"></div>
+                    <div className="h-2 w-2 bg-gray-300 rounded-full animate-[pulse_1s_ease-in-out_infinite_0.4s]"></div>
+                  </div>
+                )}
                 { 
                   !showRedaction ? message.content : (
                     message.redactedContent.map((piece, idx) => {
@@ -190,6 +208,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               </div>
             </div>
           ))}
+        <div ref={messagesEndRef} />
       </div>
 
       <div className="absolute bottom-0 left-0 right-0 py-4">

@@ -90,6 +90,12 @@ export interface ThroughputMetrics {
   ThroughputMBPerHour: number;
 }
 
+export interface ChatResponse {
+  input_text: string;
+  reply: string;
+  tag_map: Record<string, string>;
+}
+
 // Add a utility function to handle API errors with custom messages
 const handleApiError = (error: unknown, customMessage?: string): never => {
   console.error('API Error:', error);
@@ -386,6 +392,40 @@ export const nerService = {
         : 'Failed to send chat message';
       return { data: null, error: errorMsg };
     }
+  },
+
+  sendChatMessageStream: async (
+    sessionId: string,
+    model: string,
+    apiKey: string,
+    message: string,
+    onChunk: (chunk: ChatResponse) => void
+  ) => {
+    const response = await axiosInstance.post(`/chat/sessions/${sessionId}/messages/stream`, {
+      model,
+      api_key: apiKey,
+      message,
+    }, {
+      responseType: 'stream',
+      adapter: 'fetch',
+    });
+
+    const reader = response.data.getReader();
+    const decoder = new TextDecoder();
+    let chunk: ReadableStreamReadResult<Uint8Array>;
+
+    while (!(chunk = await reader.read()).done) {
+      const decodedChunk = decoder.decode(chunk.value, { stream: true });
+      const lines = decodedChunk.split('\n').filter(Boolean);
+
+      for (const line of lines) {
+        const parsedData = JSON.parse(line);
+        // Handle the parsed data from the stream
+        onChunk(parsedData);
+        console.log('Received data:', parsedData);
+      }
+    }
+    console.log('Stream finished');
   },
 
   getChatHistory: async (
