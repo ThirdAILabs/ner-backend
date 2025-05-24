@@ -158,7 +158,7 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 		return fmt.Errorf("error getting inference task: %w", err)
 	}
 
-	if task.Report.Stopped {
+	if task.Report.Stopped || task.Report.Deleted {
 		slog.Info("report stopped, skipping inference task", "report_id", reportId, "task_id", payload.TaskId)
 		return nil
 	}
@@ -597,7 +597,7 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 		return fmt.Errorf("error getting shard data task: %w", err)
 	}
 
-	if task.Report.Stopped {
+	if task.Report.Stopped || task.Report.Deleted {
 		slog.Info("report stopped, skipping shard data task", "report_id", reportId)
 		return nil
 	}
