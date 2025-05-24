@@ -510,7 +510,7 @@ func (s *BackendService) DeleteReport(r *http.Request) (any, error) {
 	ctx := r.Context()
 
 	if err := s.db.WithContext(ctx).Transaction(func(txn *gorm.DB) error {
-		result := txn.Model(&database.Report{Id: reportId}).Updates(map[string]bool{"deleted": true, "stopped": true})
+		result := txn.Model(&database.Report{Id: reportId}).Update("deleted", true)
 		if err := result.Error; err != nil {
 			slog.Error("error deleting report", "report_id", reportId, "error", err)
 			return CodedErrorf(http.StatusInternalServerError, "error %d: error deleting report", ErrCodeDB)
