@@ -10,7 +10,6 @@ export default function useApiKeyStore() {
       alert(error);
       return '';
     }
-    console.log('API key is', apiKey);
     return apiKey;
   };
 
@@ -25,7 +24,6 @@ export default function useApiKeyStore() {
 
   useEffect(() => {
     getApiKey().then((key) => {
-      console.log('Setting API key', key);
       setApiKey(key);
     });
   }, []);
