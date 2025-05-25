@@ -5,6 +5,7 @@ import useOutsideClick from '@/hooks/useOutsideClick';
 import { Message } from '@/hooks/useSafeGPT';
 import Options from './Options';
 import Markdown from 'react-markdown';
+import pdfToText from 'react-pdftotext';
 
 interface ChatInterfaceProps {
   onSendMessage?: (message: string) => Promise<void>;
@@ -94,8 +95,39 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   // Chat-related logic
 
+  const [isDragging, setIsDragging] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    const file = e.dataTransfer.files[0];
+    if (file && file.type === 'application/pdf') {
+      try {
+        const text = await pdfToText(file);
+        setInputMessage(prev => prev + (prev ? '\n\n' : '') + text);
+        if (textareaRef.current) {
+          adjustTextareaHeight(textareaRef.current);
+        }
+      } catch (error) {
+        console.error("Failed to extract text from PDF:", error);
+      }
+    } else {
+      alert("Please upload a PDF file");
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -149,7 +181,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
      */
 
   return (
-    <div className="flex flex-col h-[100%] relative w-[80%] ml-[10%]">
+    <div 
+      className="flex flex-col h-[100%] relative w-[80%] ml-[10%]"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {isDragging && (
+        <div className="absolute inset-0 bg-white/90 flex flex-col items-center justify-center z-50  text-gray-500">
+          <h3 className="text-xl font-semibold mb-2">Drop files here</h3>
+          <p className="text-sm text-gray-400">(PDFs only)</p>
+        </div>
+      )}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 mb-20">
         {messages.length === 0 && (
           <div className="h-full flex flex-col items-center justify-center text-gray-500">
