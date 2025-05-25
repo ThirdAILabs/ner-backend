@@ -43,6 +43,8 @@ type Report struct {
 	SucceededFileCount int `json:"SucceededFileCount"`
 	FailedFileCount    int `json:"FailedFileCount"`
 
+	DataProcessed int64 `json:"DataProcessed"`
+
 	Tags       []string          `json:"Tags,omitempty"`
 	CustomTags map[string]string `json:"CustomTags,omitempty"`
 	TagCounts  map[string]uint64 `json:"TagCounts,omitempty"`

@@ -244,6 +244,27 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 		slog.Error("unable to update token_count", "report_id", reportId, "task_id", taskId, "error", err)
 	}
 
+	var dataProcessed int64
+
+	q := proc.db.
+		Model(&database.InferenceTask{}).
+		Select("total_size as dataProcessed").
+		Where("report_id = ? AND task_id = ?", reportId, taskId)
+
+	if err := q.Scan(&dataProcessed).Error; err != nil {
+		slog.Error("error fetching data processed", "err", err)
+	}
+
+	if err := proc.db.
+		Model(&database.Report{}).
+		Where("id = ? ", reportId).
+		UpdateColumn("data_processed",
+			gorm.Expr("data_processed + ?", dataProcessed),
+		).
+		Error; err != nil {
+		slog.Error("unable to update data_processed", "report_id", reportId, "error", err)
+	}
+
 	if workerErr != nil {
 		slog.Error("error running inference task", "report_id", reportId, "task_id", payload.TaskId, "error", workerErr)
 		database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobFailed) // nolint:errcheck

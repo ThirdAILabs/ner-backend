@@ -119,6 +119,8 @@ type Report struct {
 	TotalFileCount     int `gorm:"default:0"`
 	FailedFileCount    int `gorm:"default:0"`
 
+	DataProcessed int64 `gorm:"default:0"`
+
 	Tags       []ReportTag `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
 	CustomTags []CustomTag `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
 

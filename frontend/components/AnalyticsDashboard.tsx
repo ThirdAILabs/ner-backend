@@ -32,6 +32,7 @@ interface AnalyticsDashboardProps {
   succeededFileCount: number;
   failedFileCount: number;
   totalFileCount: number;
+  dataProcessed: number;
 }
 
 const formatFileSize = (bytes: number): string => {
@@ -77,6 +78,7 @@ export function AnalyticsDashboard({
   succeededFileCount,
   failedFileCount,
   totalFileCount,
+  dataProcessed,
 }: AnalyticsDashboardProps) {
   const tokenChartData = tags;
   const filesSucceeded = ((succeededFileCount * 100) / totalFileCount).toFixed(0) || 0;
@@ -134,9 +136,14 @@ export function AnalyticsDashboard({
         <Card className="flex flex-col justify-between">
           <CardContent className="flex flex-col items-center pt-6 h-full">
             <div className="flex-1 flex items-center">
-              <span className="text-4xl font-semibold text-gray-700 text-center">
-                {formatFileSize(tokensProcessed)}
-              </span>
+              <div className="flex flex-col items-center text-gray-700">
+                <span className="text-4xl font-semibold whitespace-nowrap">
+                  {formatFileSize(dataProcessed)}
+                </span>
+                <span className="text-xl font-medium text-gray-500 whitespace-nowrap">
+                  / {formatFileSize(tokensProcessed)}
+                </span>
+              </div>
             </div>
             <h3 className="text-sm text-muted-foreground">Data Processed</h3>
           </CardContent>

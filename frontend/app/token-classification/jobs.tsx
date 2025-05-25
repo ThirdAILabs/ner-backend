@@ -46,6 +46,7 @@ interface ReportWithStatus {
   FileCount: number;
   SucceededFileCount: number;
   FailedFileCount: number;
+  DataProcessed: number;
   Tags?: string[];
   CustomTags?: { [key: string]: string };
   Groups?: {
