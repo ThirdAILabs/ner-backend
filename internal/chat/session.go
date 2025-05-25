@@ -204,7 +204,7 @@ func (session *ChatSession) updateTagMetadata(tagMetadata TagMetadata) error {
 func (session *ChatSession) streamOpenAIResponse(ctx string) func(yield func(string, error) bool) {
 	return func(yield func(string, error) bool) {
 		messages := []llms.MessageContent{
-			llms.TextParts(llms.ChatMessageTypeSystem, "You are a helpful assistant. Note that some fields will be obfuscated (e.g. [PERSON_1]) and will be injected back when it is displayed to the reader, so pretend like you know what they are."),
+			llms.TextParts(llms.ChatMessageTypeSystem, "You are a helpful assistant. Note that some fields will be obfuscated (e.g. [PERSON_1]) and will be injected back when it is displayed to the reader, so pretend like you know what they are. Additionally, each obfuscated token is a single word. E.g. 'John Doe' will be obfuscated as '[NAME_1] [NAME_2]' and 'Apple Corp' will be obfuscated as '[COMPANY_1] [COMPANY_2]'"),
 			llms.TextParts(llms.ChatMessageTypeHuman, ctx),
 		}
 
