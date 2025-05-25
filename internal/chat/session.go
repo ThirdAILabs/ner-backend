@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"log/slog"
 	"ner-backend/internal/core"
 	"ner-backend/internal/database"
 	"sort"
@@ -23,6 +22,14 @@ type TagMetadata struct {
 	TagMap map[string]string 
 	Assigned map[string]string
 	LabelCounts map[string]int
+}
+
+func NewTagMetadata() TagMetadata {
+	return TagMetadata{
+		TagMap: make(map[string]string),
+		Assigned: make(map[string]string),
+		LabelCounts: make(map[string]int),
+	}
 }
 
 type ChatSession struct {
@@ -105,31 +112,26 @@ type ChatIterator func(yield func(string, string, map[string]string, error) bool
 
 func (session *ChatSession) ChatStream(userInput string) ChatIterator {
 	return func(yield func(string, string, map[string]string, error) bool) {
-		slog.Info("1")
 		session.mu.Lock()
 		defer session.mu.Unlock()
 
-		slog.Info("2")
 		tagMetadata, err := session.getTagMetadata()
 		if err != nil {
 			yield("", "", nil, fmt.Errorf("error getting tag metadata: %v", err))
 			return
 		}
 
-		slog.Info("3")
 		redactedText, newTagMetadata, err := session.Redact(userInput, tagMetadata)
 		if err != nil {
 			yield("", "", nil, fmt.Errorf("error redacting user input: %v", err))
 			return
 		}
 
-		slog.Info("4")
 		if err := session.updateTagMetadata(newTagMetadata); err != nil {
 			yield("", "", nil, fmt.Errorf("error updating tag map: %v", err))
 			return
 		}
 
-		slog.Info("5")
 		// First yield the non-streaming components
 		// TODO: Will this the tag map get too big? Should we only yield
 		// the subset of the tag map that is relevant to the current message?
@@ -138,14 +140,12 @@ func (session *ChatSession) ChatStream(userInput string) ChatIterator {
 			return
 		}
 
-		slog.Info("6")
 		history, err := session.getChatHistory()
 		if err != nil {
 			yield("", "", nil, err)
 			return
 		}
 		
-		slog.Info("7")
 		context := ""
 		for _, msg := range history {
 			context += fmt.Sprintf("%s: %s\n", msg.MessageType, msg.Content)
@@ -154,7 +154,6 @@ func (session *ChatSession) ChatStream(userInput string) ChatIterator {
 
 		openaiResp := ""
 
-		slog.Info("8")
 		// Then stream the OpenAI response
 		session.streamOpenAIResponse(context)(func (chunk string, err error) bool {
 			if err != nil {
@@ -164,7 +163,6 @@ func (session *ChatSession) ChatStream(userInput string) ChatIterator {
 			return yield("", chunk, nil, nil)
 		})
 		
-		slog.Info("9")
 		// Only save messages if the whole process was successful.
 		// This gives the illusion of atomicity; a request either succeeds or fails entirely.
 		// We still yield the error so the frontend can process accordingly.
@@ -173,7 +171,6 @@ func (session *ChatSession) ChatStream(userInput string) ChatIterator {
 			return
 		}
 		
-		slog.Info("10")
 		if err := session.saveMessage("ai", openaiResp, nil); err != nil {
 			yield("", "", nil, err)
 			return
@@ -182,35 +179,22 @@ func (session *ChatSession) ChatStream(userInput string) ChatIterator {
 }
 
 func (session *ChatSession) getTagMetadata() (TagMetadata, error) {
-	slog.Info("A")
 	var chatSession database.ChatSession
 	err := session.db.Where("id = ?", session.sessionID).First(&chatSession).Error
 	if err != nil {
 		return TagMetadata{}, err
 	}
-	
-	slog.Info("B")
-	if chatSession.TagMetadata == nil {
-		return TagMetadata{
-			TagMap: make(map[string]string),
-			Assigned: make(map[string]string),
-			LabelCounts: make(map[string]int),
-		}, nil
-	}
 		
-	slog.Info("C")
 	var tagMetadata TagMetadata
 	if err := json.Unmarshal(chatSession.TagMetadata, &tagMetadata); err != nil {
 		return TagMetadata{}, err
 	}
 	
-	slog.Info("D")
 	return tagMetadata, nil
 }
 
 func (session *ChatSession) updateTagMetadata(tagMetadata TagMetadata) error {
 	tagMetadataJSON, err := json.Marshal(tagMetadata)
-	slog.Info("UpdateTagMetadata", "tagMetadata", tagMetadataJSON);
 	if err != nil {
 		return fmt.Errorf("error marshalling tag map: %v", err)
 	}

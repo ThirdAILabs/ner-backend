@@ -73,12 +73,18 @@ func (s *ChatService) StartSession(r *http.Request) (any, error) {
 	if err := s.manager.ValidateModel(req.Model); err != nil {
 		return nil, err
 	}
+
+	tagMetadata := chat.NewTagMetadata()
+	tagMetadataJSON, err := json.Marshal(tagMetadata)
+	if err != nil {
+		return nil, err
+	}
 	
 	sessionID := uuid.New()
 	err = s.db.Create(&database.ChatSession{
 		ID:          sessionID,
 		Title:       req.Title,
-		TagMetadata: nil,
+		TagMetadata: tagMetadataJSON,
 	}).Error;
 	if err != nil {
 		return nil, err
@@ -224,7 +230,6 @@ func (s *ChatService) GetOpenAIApiKey(r *http.Request) (any, error) {
 	// TODO: Store in a more secure way.
 	apiKey := ""
 	if data, err := os.ReadFile("api-key.txt"); err == nil {
-		slog.Info("API key", "apiKey", string(data))
 		apiKey = strings.TrimSpace(string(data));
 	} else {
 		slog.Error("Error reading API key", "error", err)
@@ -238,8 +243,6 @@ func (s *ChatService) SetOpenAIApiKey(r *http.Request) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	slog.Info("Setting API key", "apiKey", req.ApiKey)
 
 	err = os.WriteFile("api-key.txt", []byte(req.ApiKey), 0600)
 	if err != nil {
