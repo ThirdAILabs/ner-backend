@@ -356,7 +356,7 @@ export const nerService = {
 
   getChatSession: async (
     sessionId: string
-  ): Promise<{ data: { id: string; title: string } | null; error: string | null }> => {
+  ): Promise<{ data: { id: string; title: string; tag_map: Record<string, string> } | null; error: string | null }> => {
     try {
       const { data } = await axiosInstance.get(`/chat/sessions/${sessionId}`);
       return { data, error: null };
@@ -445,15 +445,22 @@ export const nerService = {
         }
       }
     } catch (error) {
+      console.log(error);
+      console.log(axios.isAxiosError(error));
+      if (axios.isAxiosError(error)) {
+        console.log(error.response?.data);
+      }
       if (axios.isAxiosError(error) && error.response?.data) {
         const reader = error.response?.data.getReader();
         const decoder = new TextDecoder();
         let chunk: ReadableStreamReadResult<Uint8Array>;
   
         while (!(chunk = await reader.read()).done) {
+          console.log("Hello?")
           const decodedChunk = decoder.decode(chunk.value, { stream: true });
           throw new Error(decodedChunk);
         }
+        console.log("Oh.")
       }
       throw new Error('Failed to send chat message for an unknown reason');
     }

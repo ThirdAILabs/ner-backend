@@ -8,8 +8,9 @@ type StartSessionRequest struct {
 }
 
 type ChatSessionMetadata struct {
-	ID      uuid.UUID 	`json:"id"`
-	Title   string 		`json:"title"`
+	ID      uuid.UUID 	        `json:"id"`
+	Title   string 		        `json:"title"`
+	TagMap  map[string]string   `json:"tag_map"`
 }
 
 type GetSessionsResponse struct {

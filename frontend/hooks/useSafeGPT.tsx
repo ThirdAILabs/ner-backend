@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { nerService } from '@/lib/backend';
 
 export interface ChatPreview {
@@ -70,7 +70,7 @@ export default function useSafeGPT(chatId: string) {
   const [previews, setPreviews] = useState<ChatPreview[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [invalidApiKey, setInvalidApiKey] = useState<boolean>(false);
-
+  
   const getChatPreviews = async (): Promise<ChatPreview[]> => {
     const sessions = await nerService.getChatSessions();
     if (sessions.error) {
@@ -98,7 +98,8 @@ export default function useSafeGPT(chatId: string) {
       return [];
     }
 
-    setTitle(session.data?.title || `Chat ${chatId}`);
+    setTitle(session.data!.title || `Chat ${chatId}`);
+    const tagMap = session.data!.tag_map;
 
     const history = await nerService.getChatHistory(chatId);
 
@@ -107,15 +108,10 @@ export default function useSafeGPT(chatId: string) {
     }
 
     const messages: Message[] = [];
-    let lastTagMap: Record<string, string> = {};
     for (const message of history.data) {
-      if (message.message_type === 'user') {
-        lastTagMap = message.metadata;
-      }
-
       messages.push({
-        content: unredactContent(message.content, lastTagMap),
-        redactedContent: toRedactedContent(message.content, lastTagMap),
+        content: unredactContent(message.content, tagMap),
+        redactedContent: toRedactedContent(message.content, tagMap),
         role: message.message_type === 'user' ? 'user' : 'llm',
       });
     }

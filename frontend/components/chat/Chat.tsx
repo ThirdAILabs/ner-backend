@@ -4,6 +4,7 @@ import { HiChip } from 'react-icons/hi';
 import useOutsideClick from '@/hooks/useOutsideClick';
 import { Message } from '@/hooks/useSafeGPT';
 import Options from './Options';
+import Markdown from 'react-markdown';
 
 interface ChatInterfaceProps {
   onSendMessage?: (message: string) => Promise<void>;
@@ -99,7 +100,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (inputMessage.trim() && onSendMessage) {
-      onSendMessage(inputMessage).catch((error) => {
+      // Replace newlines with two spaces and a newline to get better
+      // markdown formatting.
+      onSendMessage(inputMessage.replaceAll("\n", "  \n")).catch((error) => {
         // Set input message to the last message that was sent
         // if send message fails.
         setInputMessage(inputMessage);
@@ -178,7 +181,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   </div>
                 )}
                 {!showRedaction
-                  ? message.content
+                  ? <Markdown>{message.content}</Markdown>
                   : message.redactedContent.map((piece, idx) => {
                       if (!piece.replacement) {
                         return piece.original;

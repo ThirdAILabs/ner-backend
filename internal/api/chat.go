@@ -1,6 +1,8 @@
 package api
 
 import (
+	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -74,8 +76,9 @@ func (s *ChatService) StartSession(r *http.Request) (any, error) {
 	
 	sessionID := uuid.New()
 	err = s.db.Create(&database.ChatSession{
-		ID:      sessionID,
-		Title:   req.Title,
+		ID:          sessionID,
+		Title:       req.Title,
+		TagMetadata: nil,
 	}).Error;
 	if err != nil {
 		return nil, err
@@ -94,12 +97,19 @@ func (s *ChatService) GetSession(r *http.Request) (any, error) {
 	err = s.db.Where("id = ?", sessionID).First(&session).Error
 	if err != nil {
 		slog.Error("Error getting session", "error", err)
-		return nil, err
+		return nil, fmt.Errorf("error getting session: %v", err)
+	}
+
+	var tagMetadata chat.TagMetadata
+	if err := json.Unmarshal(session.TagMetadata, &tagMetadata); err != nil {
+		slog.Error("Error getting session", "error", err)
+		return nil, fmt.Errorf("error getting session tag metadata: %v", err)
 	}
 
 	return api.ChatSessionMetadata{
 		ID:      session.ID,
 		Title:   session.Title,
+		TagMap:  tagMetadata.TagMap,
 	}, nil
 }
 
