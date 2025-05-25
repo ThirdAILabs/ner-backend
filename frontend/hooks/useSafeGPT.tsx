@@ -60,7 +60,7 @@ const toRedactedContent = (
 const unredactContent = (content: string, tagMap: Record<string, string>) => {
   let unredactedContent = content;
   for (const [replacement, original] of Object.entries(tagMap)) {
-    unredactedContent = unredactedContent.replace(replacement, original);
+    unredactedContent = unredactedContent.replaceAll(replacement, original);
   }
   return unredactedContent;
 };
