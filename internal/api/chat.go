@@ -36,7 +36,6 @@ func (s *ChatService) AddRoutes(r chi.Router) {
 		r.Post("/sessions", RestHandler(s.StartSession))
 		r.Get("/sessions/{session_id}", RestHandler(s.GetSession))
 		r.Post("/sessions/{session_id}/rename", RestHandler(s.RenameSession))
-		r.Post("/sessions/{session_id}/messages", RestHandler(s.SendMessage))
 		r.Post("/sessions/{session_id}/messages/stream", RestStreamHandler(s.SendMessageStream))
 		r.Get("/sessions/{session_id}/history", RestHandler(s.GetHistory))
 		r.Get("/api-key", RestHandler(s.GetOpenAIApiKey))
@@ -120,39 +119,6 @@ func (s *ChatService) RenameSession(r *http.Request) (any, error) {
 	}
 
 	return nil, nil
-}
-
-func (s *ChatService) SendMessage(r *http.Request) (any, error) {
-	sessionID, err := URLParamUUID(r, "session_id")
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := ParseRequest[api.ChatRequest](r)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := s.manager.ValidateModel(req.Model); err != nil {
-		return nil, err
-	}
-
-	engine, err := s.manager.EngineName(req.Model)
-	if err != nil {
-		return nil, err
-	}
-
-	session, err := chat.NewChatSession(s.db, sessionID, engine, req.APIKey, s.model)
-	if err != nil {
-		return nil, err
-	}
-
-	redactedIpText, reply, tagMap, err := session.Chat(req.Message)
-	if err != nil {
-		return nil, err
-	}
-
-	return api.ChatResponse{InputText: redactedIpText, Reply: reply, TagMap: tagMap}, nil
 }
 
 func (s *ChatService) SendMessageStream(r *http.Request) StreamResponse {

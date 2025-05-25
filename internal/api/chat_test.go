@@ -1,12 +1,15 @@
 package api
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"ner-backend/internal/core"
@@ -139,28 +142,58 @@ func TestChatEndpoint(t *testing.T) {
 		Message: "Hello, how are you today? I am Yashwanth and I work at ThirdAI and my email is yash@thirdai.com",
 	}
 	chatBody, _ := json.Marshal(chatPayload)
-	req = httptest.NewRequest(http.MethodPost, "/chat/sessions/"+sessionID+"/messages", bytes.NewReader(chatBody))
+	req = httptest.NewRequest(http.MethodPost, "/chat/sessions/"+sessionID+"/messages/stream", bytes.NewReader(chatBody))
 	req.Header.Set("Content-Type", "application/json")
 
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	assert.Equal(t, http.StatusOK, rec.Code)
 
+	// Read the streaming response
+	reader := bufio.NewReader(rec.Body)
 	var chatResp pkgapi.ChatResponse
-	if err := json.NewDecoder(rec.Body).Decode(&chatResp); err != nil {
-		t.Fatalf("decode chat response: %v", err)
+	var tagMap map[string]string
+	var inputText string
+	var replyBuilder string
+
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			t.Fatalf("read stream: %v", err)
+		}
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+
+		if err := json.Unmarshal([]byte(line), &chatResp); err != nil {
+			t.Fatalf("decode chat response: %v", err)
+		}
+
+		if chatResp.TagMap != nil {
+			tagMap = chatResp.TagMap
+		}
+		if chatResp.InputText != "" {
+			inputText = chatResp.InputText
+		}
+		if chatResp.Reply != "" {
+			replyBuilder += chatResp.Reply
+		}
 	}
 
 	expectedRedacted := "Hello, how are you today? I am Yashwanth and I work at ThirdAI and my email is [EMAIL_1]"
 
-	assert.Equal(t, expectedRedacted, chatResp.InputText)
+	assert.Equal(t, expectedRedacted, inputText)
 
 	assert.Equal(t,
 		map[string]string{"[EMAIL_1]": "yash@thirdai.com"},
-		chatResp.TagMap,
+		tagMap,
 	)
 
-	assert.NotEmpty(t, chatResp.Reply)
+	assert.NotEmpty(t, replyBuilder)
 
 	// Get history
 	req = httptest.NewRequest(http.MethodGet, "/chat/sessions/"+sessionID+"/history", nil)
@@ -189,5 +222,5 @@ func TestChatEndpoint(t *testing.T) {
 
 	aiItem := history[1]
 	assert.Equal(t, "ai", aiItem.MessageType)
-	assert.Equal(t, chatResp.Reply, aiItem.Content)
+	assert.Equal(t, replyBuilder, aiItem.Content)
 }

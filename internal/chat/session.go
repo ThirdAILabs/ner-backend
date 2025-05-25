@@ -99,44 +99,6 @@ func (session *ChatSession) Redact(text string) (string, map[string]string, erro
 	return b.String(), tagMap, nil
 }
 
-func (session *ChatSession) Chat(userInput string) (string, string, map[string]string, error) {
-	session.mu.Lock()
-	defer session.mu.Unlock()
-
-	redactedText, tagMap, err := session.Redact(userInput)
-	if err != nil {
-		return "", "", nil, fmt.Errorf("error redacting user input: %v", err)
-	}
-	
-	history, err := session.getChatHistory()
-	if err != nil {
-		return "", "", nil, err
-	}
-	
-	context := ""
-	for _, msg := range history {
-		context += fmt.Sprintf("%s: %s\n", msg.MessageType, msg.Content)
-	}
-	context += fmt.Sprintf("User: %s\n", redactedText)
-	
-	openaiResp, err := session.getOpenAIResponse(context)
-	if err != nil {
-		return "", "", nil, err
-	}
-	
-	// Only save messages if the whole process was successful.
-	// This gives the illusion of atomicity; a request either succeeds or fails entirely.
-	if err := session.saveMessage("user", redactedText, tagMap); err != nil {
-		return "", "", nil, err
-	}
-
-	if err := session.saveMessage("ai", openaiResp, nil); err != nil {
-		return "", "", nil, err
-	}
-
-	return redactedText, openaiResp, tagMap, nil
-}
-
 type ChatIterator func(yield func(string, string, map[string]string, error) bool)
 
 func (session *ChatSession) ChatStream(userInput string) ChatIterator {
