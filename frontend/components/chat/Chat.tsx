@@ -6,6 +6,7 @@ import { Message } from '@/hooks/useSafeGPT';
 import Options from './Options';
 import Markdown from 'react-markdown';
 import pdfToText from 'react-pdftotext';
+import './markdown.css';
 
 interface ChatInterfaceProps {
   onSendMessage?: (message: string) => Promise<void>;
@@ -224,7 +225,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   </div>
                 )}
                 {!showRedaction
-                  ? <Markdown>{message.content}</Markdown>
+                  ? <div className="markdown-content"><Markdown>{message.content}</Markdown></div>
                   : message.redactedContent.map((piece, idx) => {
                       if (!piece.replacement) {
                         return piece.original;
