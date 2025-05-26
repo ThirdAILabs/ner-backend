@@ -237,7 +237,7 @@ class CNNNERModelSentenceTokenized(nn.Module):
     def finetune(
         self,
         raw_samples: List[Tuple[List[str], List[str]]],
-        epochs: int = 5,
+        epochs: int = 1,
         lr: float = 3e-4,
         batch_size: int = 16,
     ) -> None:

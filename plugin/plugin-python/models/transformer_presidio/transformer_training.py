@@ -67,7 +67,7 @@ def train_transformer(
     model,
     tokenizer,
     samples: List[Sample],
-    epochs: int = 5,
+    epochs: int = 1,
     batch_size: int = 4,
     lr: float = 3e-4,
     max_length: int = 256,
