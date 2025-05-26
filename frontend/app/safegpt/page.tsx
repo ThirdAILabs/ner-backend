@@ -3,7 +3,7 @@
 import { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Box, CircularProgress } from '@mui/material';
 import { Typography } from '@mui/material';
 import { useHealth } from '@/contexts/HealthProvider';
@@ -60,6 +60,23 @@ function DeleteDialog({ onCancel, onConfirm }: DeleteDialogProps) {
   );
 }
 
+function SidebarToggle({ collapsed, onClick }: { collapsed: boolean; onClick: () => void }) {
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className={`absolute ${collapsed ? 'left-10' : 'left-60'} top-[35px] z-10 h-6 w-6 rounded-full border bg-white`}
+      onClick={onClick}
+    >
+      {collapsed ? (
+        <ChevronRight className="h-4 w-4" />
+      ) : (
+        <ChevronLeft className="h-4 w-4" />
+      )}
+    </Button>
+  );
+}
+
 function SafeGPTContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -72,6 +89,7 @@ function SafeGPTContent() {
   const [showRedaction, setShowRedaction] = useState<boolean>(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
 
   const handleToggleRedaction = () => {
     setShowRedaction((prev) => !prev);
@@ -103,16 +121,18 @@ function SafeGPTContent() {
 
   return (
     <div>
-      {/* Extends sidebar border over the window frame top padding */}
       <div className="flex h-0 items-end">
-        <div className="h-[20px] border-r border-gray-200" style={{ width: SIDEBAR_WIDTH }} />
+        <div
+          className="h-[20px] border-r border-gray-200 transition-all duration-300"
+          style={{ width: isSidebarCollapsed ? '0px' : SIDEBAR_WIDTH }}
+        />
       </div>
       <div className="flex flex-row h-[70px] items-center justify-start relative bg-white border-b border-gray-200">
         <div
-          className="flex flex-row items-center h-[70px] p-4 border-r border-gray-200"
-          style={{ width: SIDEBAR_WIDTH }}
+          className="flex flex-row items-center h-[70px] p-4 border-r border-gray-200 transition-all duration-300"
+          style={{ width: isSidebarCollapsed ? '0px' : SIDEBAR_WIDTH }}
         >
-          <Button variant="outline" size="sm" asChild>
+          <Button variant="outline" size="sm" asChild className={isSidebarCollapsed ? 'hidden' : ''}>
             <Link href={`/`} className="flex items-center">
               <ArrowLeft className="mr-1 h-4 w-4" /> Back
             </Link>
@@ -125,8 +145,11 @@ function SafeGPTContent() {
           </div>
         </div>
       </div>
-      <div className="flex flex-row h-[calc(100vh-90px)]">
-        <div style={{ width: SIDEBAR_WIDTH }}>
+      <div className="flex flex-row h-[calc(100vh-90px)] relative">
+        <div
+          className="transition-all duration-300 overflow-hidden"
+          style={{ width: isSidebarCollapsed ? '0px' : SIDEBAR_WIDTH }}
+        >
           <Sidebar
             items={previews}
             onSelect={handleSelectChat}
@@ -136,7 +159,14 @@ function SafeGPTContent() {
             padding={20}
           />
         </div>
-        <div className="w-[calc(100vw-250px)]">
+        <SidebarToggle
+          collapsed={isSidebarCollapsed}
+          onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        />
+        <div
+          className="transition-all duration-300"
+          style={{ width: isSidebarCollapsed ? '100vw' : 'calc(100vw - 250px)' }}
+        >
           <ChatInterface
             messages={messages}
             onSendMessage={(message) => sendMessage(message, apiKey)}
