@@ -223,38 +223,45 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     <div className="h-2 w-2 bg-gray-300 rounded-full animate-[pulse_1s_ease-in-out_infinite_0.4s]"></div>
                   </div>
                 )}
-                {!showRedaction
-                  ? <div className="markdown-content"><Markdown>{message.content}</Markdown></div>
-                  : message.redactedContent.map((piece, idx) => {
-                    if (!piece.replacement) {
-                      return piece.original;
-                    }
-                    const tagName = toTagName(piece.replacement);
-                    const { replacement: replColor, original: origColor } = tagColors(tagName);
-                    console.log(tagName, replColor, origColor);
-                    return (
-                      <span
-                        key={idx}
-                        className={`inline-flex items-center gap-1 p-1 pl-2 rounded-md`}
-                        style={{ backgroundColor: origColor }}
-                      >
-                        <del>{piece.original}</del>
+                {!showRedaction ? (
+                  <div className="markdown-content">
+                    <Markdown>{message.content}</Markdown>
+                  </div>
+                ) : (
+                  <div className="markdown-content">
+                    {message.redactedContent.map((piece, idx) => {
+                      if (!piece.replacement) {
+                        return <Markdown key={idx}>{piece.original}</Markdown>;
+                      }
+                      const tagName = toTagName(piece.replacement);
+                      const { replacement: replColor, original: origColor } = tagColors(tagName);
+                      return (
                         <span
-                          className={`px-1 rounded-sm text-white`}
-                          style={{ backgroundColor: replColor }}
+                          key={idx}
+                          className={`inline-flex items-center gap-1 p-1 pl-2 rounded-md`}
+                          style={{ backgroundColor: origColor }}
                         >
-                          {piece.replacement}
+                          <del>
+                            <Markdown>{piece.original}</Markdown>
+                          </del>
+                          <span
+                            className={`px-1 rounded-sm text-white`}
+                            style={{ backgroundColor: replColor }}
+                          >
+                            {piece.replacement}
+                          </span>
                         </span>
-                      </span>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           ))}
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 py-4 px-[16%]">
+      <div className="absolute bottom-0 left-0 right-0 py-4 px-[14%]">
         <form onSubmit={handleSubmit} className="flex gap-2 relative">
           <textarea
             ref={textareaRef}
