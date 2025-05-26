@@ -254,7 +254,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                         >
                           <del>
                             {piece.original}
-                            // TODO: Fix markdown rendering in redacted mode
+                            {/* TODO: Fix markdown rendering in redacted mode */}
                             {/* <Markdown>{piece.original}</Markdown> */}
                           </del>
                           <span
