@@ -364,8 +364,8 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 				ModelId:    model.Id,
 				UploadId:   uploadID,
 				Tags: []string{"ADDRESS", "CARD_NUMBER", "COMPANY", "CREDIT_SCORE", "DATE",
-					"EMAIL", "ETHNICITY", "GENDER", "ID_NUMBER", "LICENSE_PLATE",
-					"LOCATION", "NAME", "PHONENUMBER", "SERVICE_CODE", "SEXUAL_ORIENTATION",
+					"EMAIL", "ID_NUMBER", "LICENSE_PLATE",
+					"LOCATION", "NAME", "PHONENUMBER", "SERVICE_CODE",
 					"SSN", "URL", "VIN", "O"},
 			})
 
