@@ -118,15 +118,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     if (file && file.type === 'application/pdf') {
       try {
         const text = await pdfToText(file);
-        setInputMessage(prev => prev + (prev ? '\n\n' : '') + text);
+        setInputMessage((prev) => prev + (prev ? '\n\n' : '') + text);
         if (textareaRef.current) {
           adjustTextareaHeight(textareaRef.current);
         }
       } catch (error) {
-        console.error("Failed to extract text from PDF:", error);
+        console.error('Failed to extract text from PDF:', error);
       }
     } else {
-      alert("Please upload a PDF file");
+      alert('Please upload a PDF file');
     }
   };
 
@@ -135,7 +135,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     if (inputMessage.trim() && onSendMessage) {
       // Replace newlines with two spaces and a newline to get better
       // markdown formatting.
-      onSendMessage(inputMessage.replaceAll("\n", "  \n")).catch((error) => {
+      onSendMessage(inputMessage.replaceAll('\n', '  \n')).catch((error) => {
         // Set input message to the last message that was sent
         // if send message fails.
         setInputMessage(inputMessage);
@@ -211,10 +211,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={` rounded-xl p-3 ${message.role === 'user'
-                  ? 'bg-gray-100 text-gray-700 p-6 max-w-[70%]'
-                  : 'text-gray-600 text-lg/8 mt-6'
-                  } leading-relaxed`}
+                className={` rounded-xl p-3 ${
+                  message.role === 'user'
+                    ? 'bg-gray-100 text-gray-700 p-6 max-w-[70%]'
+                    : 'text-gray-600 text-lg/8 mt-6'
+                } leading-relaxed`}
               >
                 {!message.content && (
                   <div className="flex gap-1">
@@ -299,7 +300,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               <div className="absolute bottom-12 right-4 w-[350px]">
                 <Options
                   handleBasicMode={closeDropdownIfNotEditing}
-                  handleAdvancedMode={() => { }}
+                  handleAdvancedMode={() => {}}
                   apiKey={apiKey}
                   invalidApiKey={invalidApiKey}
                   onEditApiKey={handleEditApiKey}

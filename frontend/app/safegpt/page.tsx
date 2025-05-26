@@ -15,7 +15,7 @@ import Sidebar from '@/components/chat/Sidebar';
 import Toggle from '@/components/chat/Toggle';
 import useSafeGPT from '@/hooks/useSafeGPT';
 import Image from 'next/image';
-import { TbLayoutSidebarLeftExpand, TbLayoutSidebarRightExpand } from "react-icons/tb";
+import { TbLayoutSidebarLeftExpand, TbLayoutSidebarRightExpand } from 'react-icons/tb';
 
 const SIDEBAR_WIDTH = 250;
 
@@ -71,11 +71,9 @@ function SidebarToggle({ collapsed, onClick }: { collapsed: boolean; onClick: ()
       onClick={onClick}
     >
       {collapsed ? (
-        <TbLayoutSidebarLeftExpand size={30}
-          className="text-[rgb(85,152,229)]" />
+        <TbLayoutSidebarLeftExpand size={30} className="text-[rgb(85,152,229)]" />
       ) : (
-        <TbLayoutSidebarRightExpand size={30}
-          className="text-[rgb(85,152,229)]" />
+        <TbLayoutSidebarRightExpand size={30} className="text-[rgb(85,152,229)]" />
       )}
     </Button>
   );
@@ -143,25 +141,19 @@ function SafeGPTContent() {
             height={24}
             className="w-auto h-6"
           />
-          <div className='flex flex-row'>
+          <div className="flex flex-row">
             <Link
               href="/"
               className="p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200"
             >
-              <House
-                size={24}
-                className="text-[rgb(85,152,229)]"
-              />
+              <House size={24} className="text-[rgb(85,152,229)]" />
             </Link>
 
             <button
               onClick={handleNewChat}
               className="p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200"
             >
-              <FilePlus
-                size={24}
-                className="text-[rgb(85,152,229)]"
-              />
+              <FilePlus size={24} className="text-[rgb(85,152,229)]" />
             </button>
 
             <SidebarToggle

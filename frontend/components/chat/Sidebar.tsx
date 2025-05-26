@@ -10,13 +10,7 @@ interface SidebarProps {
   onDelete: (id: string) => void;
 }
 
-export default function Sidebar({
-  items,
-  onSelect,
-  selectedId,
-  padding,
-  onDelete,
-}: SidebarProps) {
+export default function Sidebar({ items, onSelect, selectedId, padding, onDelete }: SidebarProps) {
   return (
     <div className="w-full h-full overflow-y-auto bg-white border-r border-gray-200">
       <ul className="flex flex-col">
