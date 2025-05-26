@@ -1,12 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Send, MessageSquare } from 'lucide-react';
+import React, { useState, useRef, useEffect, ChangeEvent } from 'react';
+import { MessageSquare, Paperclip } from 'lucide-react';
 import { HiChip } from 'react-icons/hi';
 import useOutsideClick from '@/hooks/useOutsideClick';
 import { Message } from '@/hooks/useSafeGPT';
 import Options from './Options';
 import Markdown from 'react-markdown';
-import pdfToText from 'react-pdftotext';
 import './markdown.css';
+import extractFileText from './extractFileText';
 
 interface ChatInterfaceProps {
   onSendMessage?: (message: string) => Promise<void>;
@@ -111,21 +111,58 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     setIsDragging(false);
   };
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = async (event: ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files) return;
+
+    let extractedText = '';
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      try {
+        const text = await extractFileText(file);
+        extractedText += (extractedText ? '\n\n' : '') + `[From ${file.name}]:\n` + text;
+      } catch (error) {
+        console.error(`Failed to extract text from ${file.name}:`, error);
+      }
+    }
+
+    if (extractedText) {
+      setInputMessage((prev) => prev + (prev ? '\n\n' : '') + extractedText);
+      if (textareaRef.current) {
+        adjustTextareaHeight(textareaRef.current);
+      }
+    }
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
 
-    const file = e.dataTransfer.files[0];
-    if (file && file.type === 'application/pdf') {
+    const files = e.dataTransfer.files;
+    let extractedText = '';
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
       try {
-        const text = await pdfToText(file);
-        setInputMessage((prev) => prev + (prev ? '\n\n' : '') + text + '\n\n');
-        setJustUploaded(true);
+        const text = await extractFileText(file);
+        extractedText += (extractedText ? '\n\n' : '') + `[From ${file.name}]:\n` + text;
       } catch (error) {
-        console.error('Failed to extract text from PDF:', error);
+        console.error(`Failed to extract text from ${file.name}:`, error);
       }
-    } else {
-      alert('Please upload a PDF file');
+    }
+
+    if (extractedText) {
+      setInputMessage((prev) => prev + (prev ? '\n\n' : '') + extractedText);
+      if (textareaRef.current) {
+        adjustTextareaHeight(textareaRef.current);
+      }
     }
   };
 
@@ -183,12 +220,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   }, [inputMessage, justUploaded]);
 
-  /*
-    Todo:-
-    1. Css for llm message should be good.
-    2. Correct the "Your messages are end-to-end encrypted and securely stored" message.
-     */
-
   return (
     <div
       className="flex flex-col h-[100%] relative w-full"
@@ -197,9 +228,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       onDrop={handleDrop}
     >
       {isDragging && (
-        <div className="absolute inset-0 bg-white/90 flex flex-col items-center justify-center z-50  text-gray-500">
+        <div className="absolute inset-0 bg-white/90 flex flex-col items-center justify-center z-50 text-gray-500">
           <h3 className="text-xl font-semibold mb-2">Drop files here</h3>
-          <p className="text-sm text-gray-400">(PDFs only)</p>
+          <p className="text-sm text-gray-400">(PDF, DOCX, XLSX, PPTX, TXT, CSV)</p>
         </div>
       )}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 mb-20 px-[16%]">
@@ -219,11 +250,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={` rounded-xl p-3 ${
-                  message.role === 'user'
-                    ? 'bg-gray-100 text-gray-700 p-6 max-w-[70%]'
-                    : 'text-gray-600 text-lg/8 mt-6'
-                } leading-relaxed`}
+                className={` rounded-xl p-3 ${message.role === 'user'
+                  ? 'bg-gray-100 text-gray-700 p-6 max-w-[70%]'
+                  : 'text-gray-600 text-lg/8 mt-6'
+                  } leading-relaxed`}
               >
                 {!message.content && (
                   <div className="flex gap-1">
@@ -286,13 +316,25 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             className="flex-1 p-4 pr-[85px] border-[1px] rounded-2xl resize-none min-h-[56px] max-h-[150px] overflow-y-auto"
             disabled={isLoading}
           />
-          <button
-            type="submit"
-            disabled={!inputMessage.trim() || isLoading}
-            className="absolute right-[55px] top-1/2 -translate-y-1/2 p-2 text-[rgb(85,152,229)] hover:text-[rgb(85,152,229)]/90 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Send size={20} />
-          </button>
+          <>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileSelect}
+              multiple
+              accept=".pdf,.docx,.xlsx,.pptx,.txt,.csv"
+              className="hidden"
+            />
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                fileInputRef.current?.click();
+              }}
+              className="absolute right-[55px] top-1/2 -translate-y-1/2 p-2 text-[rgb(85,152,229)] hover:text-[rgb(85,152,229)]/90 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Paperclip />
+            </button>
+          </>
           <div className="relative" ref={dropdownRef}>
             <button
               disabled={isLoading}
@@ -312,7 +354,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               <div className="absolute bottom-12 right-4 w-[350px]">
                 <Options
                   handleBasicMode={closeDropdownIfNotEditing}
-                  handleAdvancedMode={() => {}}
+                  handleAdvancedMode={() => { }}
                   apiKey={apiKey}
                   invalidApiKey={invalidApiKey}
                   onEditApiKey={handleEditApiKey}

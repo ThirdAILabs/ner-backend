@@ -171,7 +171,7 @@ function SafeGPTContent() {
       </div>
       <div className="flex flex-row h-[calc(100vh-70px)] relative">
         <div
-          className="transition-all duration-100 overflow-hidden mt-4"
+          className="transition-all duration-100 overflow-hidden"
           style={{ width: isSidebarCollapsed ? '0px' : SIDEBAR_WIDTH }}
         >
           <Sidebar
