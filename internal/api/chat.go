@@ -231,8 +231,6 @@ func (s *ChatService) GetOpenAIApiKey(r *http.Request) (any, error) {
 	apiKey := ""
 	if data, err := os.ReadFile("api-key.txt"); err == nil {
 		apiKey = strings.TrimSpace(string(data));
-	} else {
-		slog.Error("Error reading API key", "error", err)
 	}
 	return api.ApiKey{ApiKey: apiKey}, nil
 }
