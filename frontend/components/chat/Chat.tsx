@@ -182,8 +182,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
      */
 
   return (
-    <div 
-      className="flex flex-col h-[100%] relative w-[80%] ml-[10%]"
+    <div
+      className="flex flex-col h-[100%] relative w-full"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -194,7 +194,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           <p className="text-sm text-gray-400">(PDFs only)</p>
         </div>
       )}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 mb-20">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 mb-20 px-[16%]">
         {messages.length === 0 && (
           <div className="h-full flex flex-col items-center justify-center text-gray-500">
             <MessageSquare size={48} className="mb-4 text-gray-400" />
@@ -211,11 +211,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={` rounded-xl p-3 ${
-                  message.role === 'user'
-                    ? 'bg-gray-100 text-gray-700 p-6 max-w-[70%]'
-                    : 'text-gray-600 text-lg/8 mt-6'
-                } leading-relaxed`}
+                className={` rounded-xl p-3 ${message.role === 'user'
+                  ? 'bg-gray-100 text-gray-700 p-6 max-w-[70%]'
+                  : 'text-gray-600 text-lg/8 mt-6'
+                  } leading-relaxed`}
               >
                 {!message.content && (
                   <div className="flex gap-1">
@@ -227,35 +226,35 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 {!showRedaction
                   ? <div className="markdown-content"><Markdown>{message.content}</Markdown></div>
                   : message.redactedContent.map((piece, idx) => {
-                      if (!piece.replacement) {
-                        return piece.original;
-                      }
-                      const tagName = toTagName(piece.replacement);
-                      const { replacement: replColor, original: origColor } = tagColors(tagName);
-                      console.log(tagName, replColor, origColor);
-                      return (
+                    if (!piece.replacement) {
+                      return piece.original;
+                    }
+                    const tagName = toTagName(piece.replacement);
+                    const { replacement: replColor, original: origColor } = tagColors(tagName);
+                    console.log(tagName, replColor, origColor);
+                    return (
+                      <span
+                        key={idx}
+                        className={`inline-flex items-center gap-1 p-1 pl-2 rounded-md`}
+                        style={{ backgroundColor: origColor }}
+                      >
+                        <del>{piece.original}</del>
                         <span
-                          key={idx}
-                          className={`inline-flex items-center gap-1 p-1 pl-2 rounded-md`}
-                          style={{ backgroundColor: origColor }}
+                          className={`px-1 rounded-sm text-white`}
+                          style={{ backgroundColor: replColor }}
                         >
-                          <del>{piece.original}</del>
-                          <span
-                            className={`px-1 rounded-sm text-white`}
-                            style={{ backgroundColor: replColor }}
-                          >
-                            {piece.replacement}
-                          </span>
+                          {piece.replacement}
                         </span>
-                      );
-                    })}
+                      </span>
+                    );
+                  })}
               </div>
             </div>
           ))}
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 py-4">
+      <div className="absolute bottom-0 left-0 right-0 py-4 px-[16%]">
         <form onSubmit={handleSubmit} className="flex gap-2 relative">
           <textarea
             ref={textareaRef}
@@ -293,7 +292,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               <div className="absolute bottom-12 right-4 w-[350px]">
                 <Options
                   handleBasicMode={closeDropdownIfNotEditing}
-                  handleAdvancedMode={() => {}}
+                  handleAdvancedMode={() => { }}
                   apiKey={apiKey}
                   invalidApiKey={invalidApiKey}
                   onEditApiKey={handleEditApiKey}
