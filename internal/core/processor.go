@@ -744,15 +744,6 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 		return fmt.Errorf("error finetuning model: %w", err)
 	}
 
-	var tags []string
-	for _, ti := range payload.Tags {
-		tags = append(tags, ti.Name)
-	}
-	if err := database.SetModelTags(ctx, proc.db, payload.ModelId, tags); err != nil {
-		slog.Error("failed to set tags on finetuned model", "model_id", payload.ModelId, "error", err)
-		return err
-	}
-
 	localDir := proc.getModelDir(payload.ModelId)
 	if err := os.MkdirAll(localDir, os.ModePerm); err != nil {
 		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint:errcheck
