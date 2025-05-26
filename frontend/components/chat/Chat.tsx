@@ -113,6 +113,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // TODO: Why is there so much duplicate code here?
   const handleFileSelect = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files) return;
@@ -131,9 +132,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
     if (extractedText) {
       setInputMessage((prev) => prev + (prev ? '\n\n' : '') + extractedText);
-      if (textareaRef.current) {
-        adjustTextareaHeight(textareaRef.current);
-      }
+      setJustUploaded(true);
     }
 
     if (fileInputRef.current) {
@@ -160,9 +159,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
     if (extractedText) {
       setInputMessage((prev) => prev + (prev ? '\n\n' : '') + extractedText);
-      if (textareaRef.current) {
-        adjustTextareaHeight(textareaRef.current);
-      }
+      setJustUploaded(true);
     }
   };
 
@@ -230,7 +227,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       {isDragging && (
         <div className="absolute inset-0 bg-white/90 flex flex-col items-center justify-center z-50 text-gray-500">
           <h3 className="text-xl font-semibold mb-2">Drop files here</h3>
-          <p className="text-sm text-gray-400">(PDF, DOCX, XLSX, PPTX, TXT, CSV)</p>
+          <p className="text-sm text-gray-400">(PDF only)</p>
         </div>
       )}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 mb-20 px-[16%]">
