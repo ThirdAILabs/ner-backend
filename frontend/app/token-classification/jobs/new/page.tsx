@@ -658,13 +658,13 @@ export default function NewJobPage() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
               <SourceOption
                 title="Local Files"
-                description="Upload files from your computer"
+                description="Scan files from your computer"
                 isSelected={selectedSource === 'files'}
                 onClick={() => setSelectedSource('files')}
               />
               <SourceOption
                 title="Local Directory"
-                description="Upload an entire directory"
+                description="Scan an entire directory"
                 isSelected={selectedSource === 'directory'}
                 onClick={() => setSelectedSource('directory')}
               />
