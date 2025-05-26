@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Use our fixed port (16549) for backend communication
-const nerBaseUrl = 'http://localhost:16549/api/v1';
+// Use our fixed port (8001) for backend communication
+const nerBaseUrl = 'http://localhost:8001/api/v1';
 
 const axiosInstance = axios.create({
   baseURL: nerBaseUrl,

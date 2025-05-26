@@ -8,7 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Choose a rare 5-digit port for our application
-export const FIXED_PORT = 16549;
+export const FIXED_PORT = 8001;
 
 /**
  * Checks if the specified port is in use
