@@ -19,7 +19,6 @@ export interface Message {
   role: 'user' | 'llm';
 }
 
-
 export const NEW_CHAT_ID = 'new';
 
 const toRedactedContent = (
@@ -70,7 +69,7 @@ export default function useSafeGPT(chatId: string) {
   const [previews, setPreviews] = useState<ChatPreview[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [invalidApiKey, setInvalidApiKey] = useState<boolean>(false);
-  
+
   const getChatPreviews = async (): Promise<ChatPreview[]> => {
     const sessions = await nerService.getChatSessions();
     if (sessions.error) {

@@ -118,15 +118,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     if (file && file.type === 'application/pdf') {
       try {
         const text = await pdfToText(file);
-        setInputMessage(prev => prev + (prev ? '\n\n' : '') + text);
+        setInputMessage((prev) => prev + (prev ? '\n\n' : '') + text);
         if (textareaRef.current) {
           adjustTextareaHeight(textareaRef.current);
         }
       } catch (error) {
-        console.error("Failed to extract text from PDF:", error);
+        console.error('Failed to extract text from PDF:', error);
       }
     } else {
-      alert("Please upload a PDF file");
+      alert('Please upload a PDF file');
     }
   };
 
@@ -135,7 +135,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     if (inputMessage.trim() && onSendMessage) {
       // Replace newlines with two spaces and a newline to get better
       // markdown formatting.
-      onSendMessage(inputMessage.replaceAll("\n", "  \n")).catch((error) => {
+      onSendMessage(inputMessage.replaceAll('\n', '  \n')).catch((error) => {
         // Set input message to the last message that was sent
         // if send message fails.
         setInputMessage(inputMessage);
@@ -182,8 +182,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
      */
 
   return (
-    <div 
-      className="flex flex-col h-[100%] relative w-[80%] ml-[10%]"
+    <div
+      className="flex flex-col h-[100%] relative w-full"
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -194,7 +194,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           <p className="text-sm text-gray-400">(PDFs only)</p>
         </div>
       )}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 mb-20">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 mb-20 px-[16%]">
         {messages.length === 0 && (
           <div className="h-full flex flex-col items-center justify-center text-gray-500">
             <MessageSquare size={48} className="mb-4 text-gray-400" />
@@ -224,22 +224,27 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     <div className="h-2 w-2 bg-gray-300 rounded-full animate-[pulse_1s_ease-in-out_infinite_0.4s]"></div>
                   </div>
                 )}
-                {!showRedaction
-                  ? <div className="markdown-content"><Markdown>{message.content}</Markdown></div>
-                  : message.redactedContent.map((piece, idx) => {
+                {!showRedaction ? (
+                  <div className="markdown-content">
+                    <Markdown>{message.content}</Markdown>
+                  </div>
+                ) : (
+                  <div className="markdown-content">
+                    {message.redactedContent.map((piece, idx) => {
                       if (!piece.replacement) {
-                        return piece.original;
+                        return <Markdown key={idx}>{piece.original}</Markdown>;
                       }
                       const tagName = toTagName(piece.replacement);
                       const { replacement: replColor, original: origColor } = tagColors(tagName);
-                      console.log(tagName, replColor, origColor);
                       return (
                         <span
                           key={idx}
                           className={`inline-flex items-center gap-1 p-1 pl-2 rounded-md`}
                           style={{ backgroundColor: origColor }}
                         >
-                          <del>{piece.original}</del>
+                          <del>
+                            <Markdown>{piece.original}</Markdown>
+                          </del>
                           <span
                             className={`px-1 rounded-sm text-white`}
                             style={{ backgroundColor: replColor }}
@@ -249,13 +254,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                         </span>
                       );
                     })}
+                  </div>
+                )}
               </div>
             </div>
           ))}
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 py-4">
+      <div className="absolute bottom-0 left-0 right-0 py-4 px-[14%]">
         <form onSubmit={handleSubmit} className="flex gap-2 relative">
           <textarea
             ref={textareaRef}

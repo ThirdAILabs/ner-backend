@@ -3,7 +3,7 @@
 import { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import { ChevronLeft, ChevronRight, House, FilePlus } from 'lucide-react';
 import { Box, CircularProgress } from '@mui/material';
 import { Typography } from '@mui/material';
 import { useHealth } from '@/contexts/HealthProvider';
@@ -14,6 +14,8 @@ import ChatTitle from '@/components/chat/Title';
 import Sidebar from '@/components/chat/Sidebar';
 import Toggle from '@/components/chat/Toggle';
 import useSafeGPT from '@/hooks/useSafeGPT';
+import Image from 'next/image';
+import { TbLayoutSidebarLeftExpand, TbLayoutSidebarRightExpand } from 'react-icons/tb';
 
 const SIDEBAR_WIDTH = 250;
 
@@ -60,6 +62,23 @@ function DeleteDialog({ onCancel, onConfirm }: DeleteDialogProps) {
   );
 }
 
+function SidebarToggle({ collapsed, onClick }: { collapsed: boolean; onClick: () => void }) {
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      // className={`bg-[rgb(85,152,229)] text-white rounded-full`}
+      onClick={onClick}
+    >
+      {collapsed ? (
+        <TbLayoutSidebarLeftExpand size={30} className="text-[rgb(85,152,229)]" />
+      ) : (
+        <TbLayoutSidebarRightExpand size={30} className="text-[rgb(85,152,229)]" />
+      )}
+    </Button>
+  );
+}
+
 function SafeGPTContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -72,6 +91,7 @@ function SafeGPTContent() {
   const [showRedaction, setShowRedaction] = useState<boolean>(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
 
   const handleToggleRedaction = () => {
     setShowRedaction((prev) => !prev);
@@ -103,40 +123,69 @@ function SafeGPTContent() {
 
   return (
     <div>
-      {/* Extends sidebar border over the window frame top padding */}
       <div className="flex h-0 items-end">
-        <div className="h-[20px] border-r border-gray-200" style={{ width: SIDEBAR_WIDTH }} />
-      </div>
-      <div className="flex flex-row h-[70px] items-center justify-start relative bg-white border-b border-gray-200">
         <div
-          className="flex flex-row items-center h-[70px] p-4 border-r border-gray-200"
+          className="h-[20px] border-r border-gray-200 transition-all duration-100"
+          style={{ width: isSidebarCollapsed ? '0px' : SIDEBAR_WIDTH }}
+        />
+      </div>
+      <div className="flex flex-row h-[40px] items-center justify-start relative bg-white">
+        <div
+          className={`flex flex-row gap-16 items-center p-4 py-3 ${!isSidebarCollapsed && 'border-r'} border-gray-200 transition-all duration-100`}
           style={{ width: SIDEBAR_WIDTH }}
         >
-          <Button variant="outline" size="sm" asChild>
-            <Link href={`/`} className="flex items-center">
-              <ArrowLeft className="mr-1 h-4 w-4" /> Back
+          <Image
+            src="/thirdai-logo.png"
+            alt="ThirdAI Logo"
+            width={24}
+            height={24}
+            className="w-auto h-6"
+          />
+          <div className="flex flex-row">
+            <Link
+              href="/"
+              className="p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+            >
+              <House size={24} className="text-[rgb(85,152,229)]" />
             </Link>
-          </Button>
+
+            <button
+              onClick={handleNewChat}
+              className="p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+            >
+              <FilePlus size={24} className="text-[rgb(85,152,229)]" />
+            </button>
+
+            <SidebarToggle
+              collapsed={isSidebarCollapsed}
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            />
+          </div>
         </div>
-        <div className="flex-1 flex justify-center items-center">
+        <div className="flex-1 flex justify-center items-center mt-[-16px]">
           <ChatTitle title={title} setTitle={updateTitle} />
           <div className="absolute right-[20px]">
             <Toggle checked={showRedaction} onChange={handleToggleRedaction} />
           </div>
         </div>
       </div>
-      <div className="flex flex-row h-[calc(100vh-90px)]">
-        <div style={{ width: SIDEBAR_WIDTH }}>
+      <div className="flex flex-row h-[calc(100vh-60px)] relative">
+        <div
+          className="transition-all duration-100 overflow-hidden mt-4"
+          style={{ width: isSidebarCollapsed ? '0px' : SIDEBAR_WIDTH }}
+        >
           <Sidebar
             items={previews}
             onSelect={handleSelectChat}
             selectedId={selectedId || undefined}
-            onNewChat={handleNewChat}
             onDelete={handleDeleteChat}
             padding={20}
           />
         </div>
-        <div className="w-[calc(100vw-250px)]">
+        <div
+          className="transition-all duration-100"
+          style={{ width: isSidebarCollapsed ? '100vw' : 'calc(100vw - 250px)' }}
+        >
           <ChatInterface
             messages={messages}
             onSendMessage={(message) => sendMessage(message, apiKey)}

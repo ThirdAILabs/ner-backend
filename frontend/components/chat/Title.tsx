@@ -61,7 +61,7 @@ export default function ChatTitle({ title, setTitle }: ChatTitleProps) {
                         handleSave();
                       }
                     }}
-                    className="text-xl font-medium bg-transparent border-none border-b-2 border-gray-300 focus:outline-none focus:border-blue-500 transition-all w-full text-center"
+                    className="text-lg font-medium bg-transparent border-none border-b-2 border-gray-300 focus:outline-none focus:border-blue-500 transition-all w-full text-center"
                     style={{ width: `${inputValue.length}ch` }}
                     autoFocus
                   />
@@ -72,7 +72,7 @@ export default function ChatTitle({ title, setTitle }: ChatTitleProps) {
               <>
                 {/* This div is the same width as the edit button to center the title */}
                 <div className="w-[16px] text-transparent">.</div>
-                <span className="text-xl font-medium" onClick={() => setIsEditing(true)}>
+                <span className="text-lg font-medium" onClick={() => setIsEditing(true)}>
                   {title}
                 </span>
                 <EditButton onClick={() => setIsEditing(true)} />
