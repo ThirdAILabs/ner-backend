@@ -98,6 +98,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   const [isDragging, setIsDragging] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
+  const [justUploaded, setJustUploaded] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -118,10 +119,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     if (file && file.type === 'application/pdf') {
       try {
         const text = await pdfToText(file);
-        setInputMessage((prev) => prev + (prev ? '\n\n' : '') + text);
-        if (textareaRef.current) {
-          adjustTextareaHeight(textareaRef.current);
-        }
+        setInputMessage((prev) => prev + (prev ? '\n\n' : '') + text + '\n\n');
+        setJustUploaded(true);
       } catch (error) {
         console.error('Failed to extract text from PDF:', error);
       }
@@ -162,7 +161,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInputMessage(e.target.value);
-    adjustTextareaHeight(e.target);
   };
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -174,6 +172,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   useEffect(() => {
     scrollToBottom();
   }, [messages, showRedaction]);
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      adjustTextareaHeight(textareaRef.current);
+      if (justUploaded) {
+        textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
+        setJustUploaded(false);
+      }
+    }
+  }, [inputMessage, justUploaded]);
 
   /*
     Todo:-
@@ -232,7 +240,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   <div className="markdown-content">
                     {message.redactedContent.map((piece, idx) => {
                       if (!piece.replacement) {
-                        return <Markdown key={idx}>{piece.original}</Markdown>;
+                        return piece.original;
+                        // TODO: Fix markdown rendering in redacted mode
+                        // return <Markdown key={idx}>{piece.original}</Markdown>;
                       }
                       const tagName = toTagName(piece.replacement);
                       const { replacement: replColor, original: origColor } = tagColors(tagName);
@@ -243,7 +253,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                           style={{ backgroundColor: origColor }}
                         >
                           <del>
-                            <Markdown>{piece.original}</Markdown>
+                            {piece.original}
+                            {/* TODO: Fix markdown rendering in redacted mode */}
+                            {/* <Markdown>{piece.original}</Markdown> */}
                           </del>
                           <span
                             className={`px-1 rounded-sm text-white`}
