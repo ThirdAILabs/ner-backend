@@ -66,10 +66,7 @@ export default function ChatTitle({ title, setTitle }: ChatTitleProps) {
                     autoFocus
                   />
                 </div>
-                <SaveAndCancel
-                  onSave={handleSave}
-                  onCancel={handleCancel}
-                />
+                <SaveAndCancel onSave={handleSave} onCancel={handleCancel} />
               </>
             ) : (
               <>

@@ -18,6 +18,20 @@ import (
 	"gorm.io/gorm"
 )
 
+type TagMetadata struct {
+	TagMap map[string]string 
+	Assigned map[string]string
+	LabelCounts map[string]int
+}
+
+func NewTagMetadata() TagMetadata {
+	return TagMetadata{
+		TagMap: make(map[string]string),
+		Assigned: make(map[string]string),
+		LabelCounts: make(map[string]int),
+	}
+}
+
 type ChatSession struct {
 	mu           sync.Mutex
 	db           *gorm.DB
@@ -53,10 +67,10 @@ func NewChatSession(db *gorm.DB, sessionID uuid.UUID, model, apiKey string, ner 
 	}, nil
 }
 
-func (session *ChatSession) Redact(text string) (string, map[string]string, error) {
+func (session *ChatSession) Redact(text string, tagMetadata TagMetadata) (string, TagMetadata, error) {
 	entities, err := session.ner.Predict(text)
 	if err != nil {
-		return "", nil, fmt.Errorf("error predicting entities: %w", err)
+		return "", TagMetadata{}, fmt.Errorf("error predicting entities: %w", err)
 	}
 
 	sort.Slice(entities, func(i, j int) bool {
@@ -68,11 +82,6 @@ func (session *ChatSession) Redact(text string) (string, map[string]string, erro
 
 	var b strings.Builder
 	cursor := 0
-	tagMap := make(map[string]string)
-
-	labelCounts := make(map[string]int)
-
-	assigned := make(map[string]string)
 
 	for _, ent := range entities {
 
@@ -83,12 +92,12 @@ func (session *ChatSession) Redact(text string) (string, map[string]string, erro
 		b.WriteString(text[cursor:ent.Start])
 
 		key := fmt.Sprintf("%s_%s", ent.Text, ent.Label)
-		userTag, ok := assigned[key]
+		userTag, ok := tagMetadata.Assigned[key]
 		if !ok {
-			labelCounts[ent.Label]++
-			userTag = fmt.Sprintf("[%s_%d]", ent.Label, labelCounts[ent.Label])
-			assigned[key] = userTag
-			tagMap[userTag] = ent.Text
+			tagMetadata.LabelCounts[ent.Label]++
+			userTag = fmt.Sprintf("[%s_%d]", ent.Label, tagMetadata.LabelCounts[ent.Label])
+			tagMetadata.Assigned[key] = userTag
+			tagMetadata.TagMap[userTag] = ent.Text
 		}
 
 		b.WriteString(userTag)
@@ -96,60 +105,128 @@ func (session *ChatSession) Redact(text string) (string, map[string]string, erro
 	}
 
 	b.WriteString(text[cursor:])
-	return b.String(), tagMap, nil
+	return b.String(), tagMetadata, nil
 }
 
-func (session *ChatSession) Chat(userInput string) (string, string, map[string]string, error) {
-	session.mu.Lock()
-	defer session.mu.Unlock()
+type ChatIterator func(yield func(string, string, map[string]string, error) bool)
 
-	redactedText, tagMap, err := session.Redact(userInput)
-	if err != nil {
-		return "", "", nil, fmt.Errorf("error redacting user input: %v", err)
-	}
-	
-	history, err := session.getChatHistory()
-	if err != nil {
-		return "", "", nil, err
-	}
-	
-	context := ""
-	for _, msg := range history {
-		context += fmt.Sprintf("%s: %s\n", msg.MessageType, msg.Content)
-	}
-	context += fmt.Sprintf("User: %s\n", redactedText)
-	
-	openaiResp, err := session.getOpenAIResponse(context)
-	if err != nil {
-		return "", "", nil, err
-	}
-	
-	// Only save messages if the whole process was successful.
-	// This gives the illusion of atomicity; a request either succeeds or fails entirely.
-	if err := session.saveMessage("user", redactedText, tagMap); err != nil {
-		return "", "", nil, err
-	}
+func (session *ChatSession) ChatStream(userInput string) ChatIterator {
+	return func(yield func(string, string, map[string]string, error) bool) {
+		session.mu.Lock()
+		defer session.mu.Unlock()
 
-	if err := session.saveMessage("ai", openaiResp, nil); err != nil {
-		return "", "", nil, err
-	}
+		tagMetadata, err := session.getTagMetadata()
+		if err != nil {
+			yield("", "", nil, fmt.Errorf("error getting tag metadata: %v", err))
+			return
+		}
 
-	return redactedText, openaiResp, tagMap, nil
+		redactedText, newTagMetadata, err := session.Redact(userInput, tagMetadata)
+		if err != nil {
+			yield("", "", nil, fmt.Errorf("error redacting user input: %v", err))
+			return
+		}
+
+		if err := session.updateTagMetadata(newTagMetadata); err != nil {
+			yield("", "", nil, fmt.Errorf("error updating tag map: %v", err))
+			return
+		}
+
+		// First yield the non-streaming components
+		// TODO: Will this the tag map get too big? Should we only yield
+		// the subset of the tag map that is relevant to the current message?
+		if !yield(redactedText, "", newTagMetadata.TagMap, nil) {
+			log.Printf("Failed to yield redacted text and tag map")
+			return
+		}
+
+		history, err := session.getChatHistory()
+		if err != nil {
+			yield("", "", nil, err)
+			return
+		}
+		
+		context := ""
+		for _, msg := range history {
+			context += fmt.Sprintf("%s: %s\n", msg.MessageType, msg.Content)
+		}
+		context += fmt.Sprintf("User: %s\n", redactedText)
+
+		openaiResp := ""
+
+		// Then stream the OpenAI response
+		session.streamOpenAIResponse(context)(func (chunk string, err error) bool {
+			if err != nil {
+				return yield("", "", nil, err)
+			}
+			openaiResp += chunk
+			return yield("", chunk, nil, nil)
+		})
+		
+		// Only save messages if the whole process was successful.
+		// This gives the illusion of atomicity; a request either succeeds or fails entirely.
+		// We still yield the error so the frontend can process accordingly.
+		if err := session.saveMessage("user", redactedText, nil); err != nil {
+			yield("", "", nil, err)
+			return
+		}
+		
+		if err := session.saveMessage("ai", openaiResp, nil); err != nil {
+			yield("", "", nil, err)
+			return
+		}
+	}
 }
 
-func (session *ChatSession) getOpenAIResponse(ctx string) (string, error) {
-	messages := []llms.MessageContent{
-		llms.TextParts(llms.ChatMessageTypeSystem, "You are a helpful assistant."),
-		llms.TextParts(llms.ChatMessageTypeHuman, ctx),
-	}
-
-	resp, err := session.openAIClient.GenerateContent(context.Background(), messages)
+func (session *ChatSession) getTagMetadata() (TagMetadata, error) {
+	var chatSession database.ChatSession
+	err := session.db.Where("id = ?", session.sessionID).First(&chatSession).Error
 	if err != nil {
-		log.Printf("Error calling OpenAI API: %v", err)
-		return "", err
+		return TagMetadata{}, err
 	}
+		
+	var tagMetadata TagMetadata
+	if err := json.Unmarshal(chatSession.TagMetadata, &tagMetadata); err != nil {
+		return TagMetadata{}, err
+	}
+	
+	return tagMetadata, nil
+}
 
-	return resp.Choices[0].Content, nil
+func (session *ChatSession) updateTagMetadata(tagMetadata TagMetadata) error {
+	tagMetadataJSON, err := json.Marshal(tagMetadata)
+	if err != nil {
+		return fmt.Errorf("error marshalling tag map: %v", err)
+	}
+	return session.db.Model(&database.ChatSession{}).Where("id = ?", session.sessionID).Update("tag_metadata", tagMetadataJSON).Error
+}
+
+func (session *ChatSession) streamOpenAIResponse(ctx string) func(yield func(string, error) bool) {
+	return func(yield func(string, error) bool) {
+		messages := []llms.MessageContent{
+			llms.TextParts(llms.ChatMessageTypeSystem, "You are a helpful assistant. Note that some fields will be obfuscated (e.g. [PERSON_1]) and will be injected back when it is displayed to the reader, so pretend like you know what they are. Additionally, each obfuscated token is a single word. E.g. 'John Doe' will be obfuscated as '[NAME_1] [NAME_2]' and 'Apple Corp' will be obfuscated as '[COMPANY_1] [COMPANY_2]'. You do not have to obfuscate your responses."),
+			llms.TextParts(llms.ChatMessageTypeHuman, ctx),
+		}
+
+		var yieldSuccess bool
+		
+		_, err := session.openAIClient.GenerateContent(context.Background(), messages, llms.WithStreamingFunc(func(ctx context.Context, chunk []byte) error {
+			if yieldSuccess = yield(string(chunk), nil); !yieldSuccess {
+				return fmt.Errorf("failed to yield chunk")
+			}
+			return nil
+		}))
+
+		if !yieldSuccess {
+			log.Printf("Failed to yield chunk")
+			return
+		}
+
+		if err != nil {
+			log.Printf("Error calling OpenAI API: %v", err)
+			yieldSuccess = yield("", err)
+		}
+	}
 }
 
 func (session *ChatSession) saveMessage(messageType, content string, metadata map[string]string) error {
@@ -161,7 +238,6 @@ func (session *ChatSession) saveMessage(messageType, content string, metadata ma
 		}
 		metadataJSON = datatypes.JSON(b)
 	}
-
 	chatMessage := database.ChatHistory{
 		SessionID:   session.sessionID,
 		MessageType: messageType,

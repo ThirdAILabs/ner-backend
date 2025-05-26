@@ -112,7 +112,6 @@ func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publish
 
 	loaders := core.NewModelLoaders("python", "plugin/plugin-python/plugin.py")
 	//Whatever model you want to load, just add it to the loaders map
-	// TODO: Change to UDT.
 	nerModel, err := loaders["cnn"](modelDir)
 	if err != nil {
 		log.Fatalf("could not load NER model: %v", err)

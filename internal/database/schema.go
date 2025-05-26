@@ -153,15 +153,16 @@ type ReportError struct {
 }
 
 type ChatSession struct {
-	ID        uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
-	Title     string    `gorm:"not null" json:"title"`
+	ID          uuid.UUID         `gorm:"type:uuid;primaryKey"`
+	Title       string            `gorm:"not null"`
+	TagMetadata datatypes.JSON    `gorm:"type:jsonb"`
 }
 
 type ChatHistory struct {
-	ID        	uint      `gorm:"primary_key"`
-	SessionID   uuid.UUID `gorm:"index"`
-	MessageType string    // 'user' or 'ai'
+	ID          uint            `gorm:"primary_key"`
+	SessionID   uuid.UUID       `gorm:"index"`
+	MessageType string          // 'user' or 'ai'
 	Content     string
-	Timestamp   time.Time `gorm:"autoCreateTime"`
-	Metadata    datatypes.JSON `gorm:"type:jsonb"` // {"key": "value"}
+	Timestamp   time.Time       `gorm:"autoCreateTime"`
+	Metadata    datatypes.JSON  `gorm:"type:jsonb"` // {"key": "value"}
 }

@@ -376,7 +376,7 @@ func (s *BackendService) GetInferenceTime(ctx context.Context, reportId uuid.UUI
 	query := s.db.WithContext(ctx).
 		Model(&database.InferenceTask{}).
 		Select("MIN(start_time) AS min_start, MAX(completion_time) AS max_end").
-		Where("report_id = ? AND start_time IS NOT NULL AND completion_time IS NOT NULL", reportId)
+		Where("report_id = ? AND start_time IS NOT NULL", reportId)
 
 	var startingTime time.Time
 

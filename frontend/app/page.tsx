@@ -1,11 +1,11 @@
 'use client';
 
-import { Box, Typography } from '@mui/material'; // Added CircularProgress
 import * as _ from 'lodash';
 import Image from 'next/image';
+import Link from 'next/link';
+import { Box, Typography } from '@mui/material';
 import { Card, CardTitle } from '@/components/ui/card/index';
 import { FileText, MessageSquare } from 'lucide-react';
-import Link from 'next/link';
 
 function Choice({ title, icon, href }: { title: string; icon: React.ReactNode; href: string }) {
   return (
@@ -22,7 +22,7 @@ function Choice({ title, icon, href }: { title: string; icon: React.ReactNode; h
 
 export default function Page() {
   return (
-    <div style={{ width: '75%', minHeight: '100vh', margin: '0 auto' }}>
+    <div style={{ width: '75%', minHeight: 'calc(100vh-20px)', margin: '0 auto' }}>
       <header style={{ width: '100%', padding: '16px', borderBottom: '1px solid #e0e0e0' }}>
         <div
           style={{
@@ -96,7 +96,12 @@ export default function Page() {
             <Choice
               title="Scan Files"
               icon={
-                <FileText className="text-[rgb(85,152,229)]" size={80} style={{ marginBottom: 24 }} strokeWidth={1} />
+                <FileText
+                  className="text-[rgb(85,152,229)]"
+                  size={80}
+                  style={{ marginBottom: 24 }}
+                  strokeWidth={1}
+                />
               }
               href="/token-classification/landing"
             />

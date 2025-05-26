@@ -56,14 +56,11 @@ const Dashboard = () => {
   }
 
   return (
-    // <Card sx={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)', bgcolor: 'grey.100' }}></Card>
     <Box
+      className="bg-muted/60"
       sx={{
         padding: '24px',
         boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        // backgroundColor: '#F5F7FA',
-        bgcolor: 'grey.100',
-        // minHeight: 'calc(100vh - 112px)'
       }}
     >
       <div className="space-y-6">

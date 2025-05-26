@@ -1,32 +1,78 @@
 'use client';
 
-import ChatInterface from '@/components/chat/Chat';
-import ChatTitle from '@/components/chat/Title';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
-import { useEffect, useState, Suspense } from 'react';
-import { Button } from '@/components/ui/button';
-import Sidebar, { ChatPreview } from '@/components/chat/Sidebar';
 import { useRouter, useSearchParams } from 'next/navigation';
-import useSafeGPT from './useSafeGPT';
-import Toggle from '@/components/chat/Toggle';
-import useApiKeyStore from '@/hooks/useApiKeyStore';
+import { ArrowLeft } from 'lucide-react';
 import { Box, CircularProgress } from '@mui/material';
 import { Typography } from '@mui/material';
 import { useHealth } from '@/contexts/HealthProvider';
+import useApiKeyStore from '@/hooks/useApiKeyStore';
+import { Button } from '@/components/ui/button';
+import ChatInterface from '@/components/chat/Chat';
+import ChatTitle from '@/components/chat/Title';
+import Sidebar from '@/components/chat/Sidebar';
+import Toggle from '@/components/chat/Toggle';
+import useSafeGPT from '@/hooks/useSafeGPT';
 
 const SIDEBAR_WIDTH = 250;
+
+interface DeleteDialogProps {
+  onCancel: () => void;
+  onConfirm: () => void;
+}
+
+function DeleteDialog({ onCancel, onConfirm }: DeleteDialogProps) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <h3 className="text-lg font-medium mb-4">Delete Chat</h3>
+        <p className="text-sm text-gray-600 mb-4">
+          Are you sure you want to delete this chat? This action cannot be undone.
+        </p>
+        <div className="flex justify-end space-x-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            style={{
+              color: 'rgb(85,152,229)',
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="default"
+            onClick={onConfirm}
+            style={{
+              backgroundColor: '#dc2626',
+              color: 'white',
+            }}
+            onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#b91c1c')}
+            onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#dc2626')}
+          >
+            Delete
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function SafeGPTContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedId = searchParams.get('id');
-  const { title, updateTitle, previews, messages, sendMessage, invalidApiKey, deleteChat } = useSafeGPT(selectedId || 'new');
-  const [showRedaction, setShowRedaction] = useState<boolean>(false);
+
   const { apiKey, saveApiKey } = useApiKeyStore();
+  const { title, updateTitle, previews, messages, sendMessage, invalidApiKey, deleteChat } =
+    useSafeGPT(selectedId || 'new');
+
+  const [showRedaction, setShowRedaction] = useState<boolean>(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
-  
+
   const handleToggleRedaction = () => {
     setShowRedaction((prev) => !prev);
   };
@@ -57,10 +103,14 @@ function SafeGPTContent() {
 
   return (
     <div>
+      {/* Extends sidebar border over the window frame top padding */}
+      <div className="flex h-0 items-end">
+        <div className="h-[20px] border-r border-gray-200" style={{ width: SIDEBAR_WIDTH }} />
+      </div>
       <div className="flex flex-row h-[70px] items-center justify-start relative bg-white border-b border-gray-200">
         <div
-          className="flex flex-row items-center h-[70px] border-r border-gray-200"
-          style={{ width: SIDEBAR_WIDTH, paddingLeft: '20px' }}
+          className="flex flex-row items-center h-[70px] p-4 border-r border-gray-200"
+          style={{ width: SIDEBAR_WIDTH }}
         >
           <Button variant="outline" size="sm" asChild>
             <Link href={`/`} className="flex items-center">
@@ -75,7 +125,7 @@ function SafeGPTContent() {
           </div>
         </div>
       </div>
-      <div className="flex flex-row h-[calc(100vh-70px)]">
+      <div className="flex flex-row h-[calc(100vh-90px)]">
         <div style={{ width: SIDEBAR_WIDTH }}>
           <Sidebar
             items={previews}
@@ -99,39 +149,7 @@ function SafeGPTContent() {
       </div>
 
       {isDeleteDialogOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-medium mb-4">Delete Chat</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Are you sure you want to delete this chat? This action cannot be undone.
-            </p>
-            <div className="flex justify-end space-x-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCancelDelete}
-                style={{
-                  color: 'rgb(85,152,229)',
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                variant="default"
-                onClick={handleConfirmDelete}
-                style={{
-                  backgroundColor: '#dc2626',
-                  color: 'white',
-                }}
-                onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#b91c1c')}
-                onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#dc2626')}
-              >
-                Delete
-              </Button>
-            </div>
-          </div>
-        </div>
+        <DeleteDialog onCancel={handleCancelDelete} onConfirm={handleConfirmDelete} />
       )}
     </div>
   );
@@ -139,7 +157,14 @@ function SafeGPTContent() {
 
 function Loading() {
   return (
-    <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" minHeight="100vh" gap={4}>
+    <Box
+      display="flex"
+      flexDirection="column"
+      justifyContent="center"
+      alignItems="center"
+      minHeight="100vh"
+      gap={4}
+    >
       <CircularProgress sx={{ color: 'rgb(85,152,229)' }} />
       <Typography className="text-gray-500" variant="h5" sx={{ fontWeight: 600, mb: 2 }}>
         Securing the environment

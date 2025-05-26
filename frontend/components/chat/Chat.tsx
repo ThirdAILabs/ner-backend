@@ -2,18 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, MessageSquare } from 'lucide-react';
 import { HiChip } from 'react-icons/hi';
 import useOutsideClick from '@/hooks/useOutsideClick';
+import { Message } from '@/hooks/useSafeGPT';
 import Options from './Options';
-
-export interface RedactedContentPiece {
-  original: string;
-  replacement?: string;
-}
-
-export interface Message {
-  content: string;
-  redactedContent: RedactedContentPiece[];
-  role: 'user' | 'llm';
-}
+import Markdown from 'react-markdown';
+import pdfToText from 'react-pdftotext';
+import './markdown.css';
 
 interface ChatInterfaceProps {
   onSendMessage?: (message: string) => Promise<void>;
@@ -36,8 +29,8 @@ const NICE_COLOR_PAIRS = [
 ];
 
 const toTagName = (replacementToken: string) => {
-  const pieces = replacementToken.split("_");
-  return pieces.slice(0, pieces.length - 1).join("_");
+  const pieces = replacementToken.split('_');
+  return pieces.slice(0, pieces.length - 1).join('_');
 };
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -100,16 +93,49 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const handleEditApiKey = () => {
     setEditingApiKey(true);
   };
-  
+
   // Chat-related logic
 
+  const [isDragging, setIsDragging] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    const file = e.dataTransfer.files[0];
+    if (file && file.type === 'application/pdf') {
+      try {
+        const text = await pdfToText(file);
+        setInputMessage(prev => prev + (prev ? '\n\n' : '') + text);
+        if (textareaRef.current) {
+          adjustTextareaHeight(textareaRef.current);
+        }
+      } catch (error) {
+        console.error("Failed to extract text from PDF:", error);
+      }
+    } else {
+      alert("Please upload a PDF file");
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (inputMessage.trim() && onSendMessage) {
-      onSendMessage(inputMessage).catch((error) => {
+      // Replace newlines with two spaces and a newline to get better
+      // markdown formatting.
+      onSendMessage(inputMessage.replaceAll("\n", "  \n")).catch((error) => {
         // Set input message to the last message that was sent
         // if send message fails.
         setInputMessage(inputMessage);
@@ -121,7 +147,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       }
     }
   };
-  
+
   const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -138,14 +164,36 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     setInputMessage(e.target.value);
     adjustTextareaHeight(e.target);
   };
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, showRedaction]);
+
   /*
     Todo:-
     1. Css for llm message should be good.
     2. Correct the "Your messages are end-to-end encrypted and securely stored" message.
      */
-  
+
   return (
-    <div className="flex flex-col h-[100%] relative w-[80%] ml-[10%]">
+    <div 
+      className="flex flex-col h-[100%] relative w-[80%] ml-[10%]"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {isDragging && (
+        <div className="absolute inset-0 bg-white/90 flex flex-col items-center justify-center z-50  text-gray-500">
+          <h3 className="text-xl font-semibold mb-2">Drop files here</h3>
+          <p className="text-sm text-gray-400">(PDFs only)</p>
+        </div>
+      )}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 mb-20">
         {messages.length === 0 && (
           <div className="h-full flex flex-col items-center justify-center text-gray-500">
@@ -169,9 +217,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     : 'text-gray-600 text-lg/8 mt-6'
                 } leading-relaxed`}
               >
-                { 
-                  !showRedaction ? message.content : (
-                    message.redactedContent.map((piece, idx) => {
+                {!message.content && (
+                  <div className="flex gap-1">
+                    <div className="h-2 w-2 bg-gray-300 rounded-full animate-[pulse_1s_ease-in-out_infinite]"></div>
+                    <div className="h-2 w-2 bg-gray-300 rounded-full animate-[pulse_1s_ease-in-out_infinite_0.2s]"></div>
+                    <div className="h-2 w-2 bg-gray-300 rounded-full animate-[pulse_1s_ease-in-out_infinite_0.4s]"></div>
+                  </div>
+                )}
+                {!showRedaction
+                  ? <div className="markdown-content"><Markdown>{message.content}</Markdown></div>
+                  : message.redactedContent.map((piece, idx) => {
                       if (!piece.replacement) {
                         return piece.original;
                       }
@@ -179,17 +234,25 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                       const { replacement: replColor, original: origColor } = tagColors(tagName);
                       console.log(tagName, replColor, origColor);
                       return (
-                        <span key={idx} className={`inline-flex items-center gap-1 p-1 pl-2 rounded-md`} style={{ backgroundColor: origColor }}>
+                        <span
+                          key={idx}
+                          className={`inline-flex items-center gap-1 p-1 pl-2 rounded-md`}
+                          style={{ backgroundColor: origColor }}
+                        >
                           <del>{piece.original}</del>
-                          <span className={`px-1 rounded-sm text-white`} style={{ backgroundColor: replColor }}>{piece.replacement}</span>
+                          <span
+                            className={`px-1 rounded-sm text-white`}
+                            style={{ backgroundColor: replColor }}
+                          >
+                            {piece.replacement}
+                          </span>
                         </span>
                       );
-                    })
-                  )
-                }
+                    })}
               </div>
             </div>
           ))}
+        <div ref={messagesEndRef} />
       </div>
 
       <div className="absolute bottom-0 left-0 right-0 py-4">
