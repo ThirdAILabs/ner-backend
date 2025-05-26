@@ -452,6 +452,10 @@ func (proc *TaskProcessor) createObjectPreview(
 		length = len(previewText)
 	)
 	for _, e := range spans {
+		if _, exists := ExcludedTags[e.Label]; exists {
+			continue
+		}
+
 		if e.Start > cursor {
 			tokens = append(tokens, previewText[cursor:e.Start])
 			tags = append(tags, "O")
