@@ -81,6 +81,7 @@ func TestObjectInference(t *testing.T) {
 
 	totalTokens, allEntities, groups, tagCount, customTagCount, err := inferenceJobProcessor.runInferenceOnObject(
 		reportId,
+		0,
 		chunks,
 		model,
 		map[string]struct{}{"phone": {}, "email": {}},

@@ -210,7 +210,7 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 		return err
 	}
 
-	totalTokens, errorCount, workerErr := proc.runInferenceOnBucket(ctx, task.ReportId, storage, task.Report.Model.Id, task.Report.Model.Type, tags, customTags, groupToQuery, task.Report.SourceS3Bucket, s3Objects)
+	totalTokens, errorCount, workerErr := proc.runInferenceOnBucket(ctx, taskId, task.ReportId, storage, task.Report.Model.Id, task.Report.Model.Type, tags, customTags, groupToQuery, task.Report.SourceS3Bucket, s3Objects)
 
 	if delta := len(s3Objects) - errorCount; delta > 0 {
 		if err := proc.db.
@@ -292,6 +292,7 @@ type objectChunkStream struct {
 
 func (proc *TaskProcessor) runInferenceOnBucket(
 	ctx context.Context,
+	taskId int,
 	reportId uuid.UUID,
 	storage storage.Provider,
 	modelId uuid.UUID,
@@ -355,7 +356,7 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 			continue
 		}
 
-		tokens, entities, groups, objTagCount, objCustomTagCount, err := proc.runInferenceOnObject(reportId, object.chunks, model, tags, customTagsRe, groupToFilter, object.object)
+		tokens, entities, groups, objTagCount, objCustomTagCount, err := proc.runInferenceOnObject(reportId, taskId, object.chunks, model, tags, customTagsRe, groupToFilter, object.object)
 		if err != nil {
 			slog.Error("error processing object", "object", object, "error", err)
 			objectErrorCnt++
@@ -488,6 +489,7 @@ func (proc *TaskProcessor) createObjectPreview(
 
 func (proc *TaskProcessor) runInferenceOnObject(
 	reportId uuid.UUID,
+	taskId int,
 	chunks <-chan ParsedChunk,
 	model Model,
 	tags map[string]struct{},
@@ -496,6 +498,7 @@ func (proc *TaskProcessor) runInferenceOnObject(
 	object string) (
 	int64, []database.ObjectEntity, []database.ObjectGroup, map[string]uint64, map[string]uint64, error) {
 	var tokens int64
+	var totalSize int64
 
 	labelToEntities := make(map[string][]types.Entity)
 
@@ -510,10 +513,12 @@ func (proc *TaskProcessor) runInferenceOnObject(
 			return 0, nil, nil, nil, nil, fmt.Errorf("error parsing document: %w", chunk.Error)
 		}
 
+		totalSize += chunk.RawSize
+
 		start := time.Now()
 		chunkEntities, err := model.Predict(chunk.Text)
 		duration := time.Since(start)
-		sizeMB := float64(len(chunk.Text)) / float64(bytesPerMB)
+		sizeMB := float64(chunk.RawSize) / float64(bytesPerMB)
 		slog.Info("processed chunk",
 			"chunk_size_mb", fmt.Sprintf("%.2f", sizeMB),
 			"duration", duration,
@@ -594,6 +599,13 @@ func (proc *TaskProcessor) runInferenceOnObject(
 				RContext: entity.RContext,
 			})
 		}
+	}
+
+	if err := proc.db.Model(&database.InferenceTask{}).
+		Where("report_id = ? AND task_id = ?", reportId, taskId). // Adjust this with the actual task logic
+		Update("completed_size", gorm.Expr("completed_size + ?", totalSize)).Error; err != nil {
+		slog.Error("could not update completed size in InferenceTask", "error", err)
+		return 0, nil, nil, nil, nil, err
 	}
 
 	return tokens, allEntities, groups, tagCount, customTagCount, nil
