@@ -114,26 +114,21 @@ export default function Jobs() {
       }
     };
 
-    let stopPolling = false;
+    let pollInterval: NodeJS.Timeout;
 
-    const startPolling = async () => {
-      const poll = async () => {
-        if (stopPolling) return;
+    const poll = async () => {
+      const isComplete = await pollStatus();
 
-        const isComplete = await pollStatus();
-
-        if (!isComplete && !stopPolling) {
-          setTimeout(poll, 5000);
-        }
-      };
-
-      poll();
+      if (isComplete) {
+        clearInterval(pollInterval);
+      }
     };
 
-    startPolling();
+    poll();
+    pollInterval = setInterval(poll, 5000);
 
     return () => {
-      stopPolling = true; // Stop polling on cleanup
+      clearInterval(pollInterval);
     };
   };
 
