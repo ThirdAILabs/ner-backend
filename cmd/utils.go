@@ -283,13 +283,13 @@ func InitializeOnnxModel(
 	}
 
 	// upload the .onnx file
-	onnxPath := filepath.Join(modelDir, "model.onnx")
+	onnxPath := filepath.Join(modelDir, "model.onnx.enc")
 	f, err := os.Open(onnxPath)
 	if err != nil {
 		return fmt.Errorf("open onnx file %q: %w", onnxPath, err)
 	}
 	defer f.Close()
-	if err := s3.PutObject(ctx, bucket, filepath.Join(modelId.String(), "model.onnx"), f); err != nil {
+	if err := s3.PutObject(ctx, bucket, filepath.Join(modelId.String(), "model.onnx.enc"), f); err != nil {
 		return fmt.Errorf("upload onnx to s3: %w", err)
 	}
 

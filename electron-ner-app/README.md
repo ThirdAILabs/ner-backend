@@ -79,14 +79,16 @@ This Electron app now has the Go backend integrated. Here's how to run it:
 
 1. Make sure you have the Go backend built:
    ```
-   cd ..
-   go build -o main
-   cd electron-ner-app
+   cd cmd/local/
+   go clean -cache
+   CGO_LDFLAGS="-L$(pwd)" go build -o main
+   cp main ../../
+   cd ../../electron-ner-app
    ```
 
 2. Start the integrated app:
    ```
-   npm run dev
+   MODEL_PATH=/share/pratik/onnx_model  npm run dev
    ```
    This will:
    - Copy the Go backend to the `bin` directory
@@ -99,7 +101,7 @@ This Electron app now has the Go backend integrated. Here's how to run it:
 To build a macOS DMG with integrated backend:
 
 ```
-npm run build-dmg
+MODEL_PATH=/share/pratik/onnx_model npm run build
 ```
 
 This will:

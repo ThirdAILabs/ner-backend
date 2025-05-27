@@ -187,7 +187,7 @@ function getBackendPath() {
 function getDefaultModelPath() {
   const binPath = getBinPath();
   if (!binPath) return null;
-  return path.join(binPath, 'model');
+  return path.join(binPath, 'onnx_model');
 }
 
 export async function startBackend() {

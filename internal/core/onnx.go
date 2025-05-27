@@ -1,8 +1,12 @@
 package core
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -22,7 +26,6 @@ var idx2tag = []string{
 	"SEXUAL_ORIENTATION", "SSN", "URL", "VIN",
 }
 
-// loadCRF loads transition probabilities from a JSON file.
 func loadCRF(path string) ([][]float32, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -35,7 +38,6 @@ func loadCRF(path string) ([][]float32, error) {
 	return mat, nil
 }
 
-// viterbi decodes the most likely tag sequence.
 func viterbi(emissions [][]float32, transitions [][]float32, seqLen int) []int {
 	N := len(transitions)
 	dp := make([][]float32, seqLen)
@@ -62,7 +64,6 @@ func viterbi(emissions [][]float32, transitions [][]float32, seqLen int) []int {
 			bp[t][j] = maxPrev
 		}
 	}
-	// backtrack
 	seq := make([]int, seqLen)
 	bestTag := 0
 	bestScore := float32(-1e9)
@@ -79,7 +80,6 @@ func viterbi(emissions [][]float32, transitions [][]float32, seqLen int) []int {
 	return seq
 }
 
-// manualWordIDs maps each subword offset to a word index.
 func manualWordIDs(text string, offsets []tokenizers.Offset) []int {
 	wordIDs := make([]int, len(offsets))
 	cur, lastEnd := -1, -1
@@ -98,7 +98,6 @@ func manualWordIDs(text string, offsets []tokenizers.Offset) []int {
 	return wordIDs
 }
 
-// aggregatePredictions reduces subword tags to word-level tags.
 func aggregatePredictions(tags []string, lens []int) []string {
 	a := make([]string, len(lens))
 	ptr := 0
@@ -116,67 +115,103 @@ func aggregatePredictions(tags []string, lens []int) []string {
 	return a
 }
 
-// OnnxModel wraps a DynamicAdvancedSession for ONNX inference.
 type OnnxModel struct {
 	session     *ort.DynamicAdvancedSession
 	tokenizer   *tokenizers.Tokenizer
 	transitions [][]float32
 }
 
-// LoadOnnxModel initializes the ONNX runtime, tokenizer, and session.
+func decryptModel(encPath, keyB64 string) ([]byte, error) {
+	key, err := base64.StdEncoding.DecodeString(keyB64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid MODEL_KEY: %w", err)
+	}
+	if len(key) != 32 {
+		return nil, fmt.Errorf("MODEL_KEY must be 32 bytes")
+	}
+
+	ct, err := ioutil.ReadFile(encPath)
+	if err != nil {
+		return nil, fmt.Errorf("read encrypted model: %w", err)
+	}
+	if len(ct) < 12 {
+		return nil, fmt.Errorf("ciphertext too short")
+	}
+	nonce, ciphertext := ct[:12], ct[12:]
+
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+	pt, err := gcm.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		return nil, fmt.Errorf("AES-GCM decrypt failed: %w", err)
+	}
+	return pt, nil
+}
+
 func LoadOnnxModel(modelDir string) (Model, error) {
-	onnxPath := filepath.Join(modelDir, "model.onnx")
+	encPath := filepath.Join(modelDir, "model.onnx.enc")
 	crfPath := filepath.Join(modelDir, "transitions.json")
-	// load CRF transitions
+
+	// decrypt the onnx bytes into memory
+	keyB64 := "UuTl+ZEVxcUCJoXIDkePg49vS/GYjHa+Fd96kp8vG5E="
+	if keyB64 == "" {
+		return nil, fmt.Errorf("MODEL_KEY not set")
+	}
+	onnxBytes, err := decryptModel(encPath, keyB64)
+	if err != nil {
+		return nil, fmt.Errorf("decrypt model: %w", err)
+	}
+
 	trans, err := loadCRF(crfPath)
 	if err != nil {
 		return nil, fmt.Errorf("CRF load error: %w", err)
 	}
-	// tokenizer
+
 	tk, err := tokenizers.FromPretrained("Qwen/Qwen2.5-0.5B")
 	if err != nil {
 		return nil, fmt.Errorf("tokenizer load: %w", err)
 	}
-	//TODO: Pass the variable, rather than using from environment variable
-	dylib := os.Getenv("ONNX_RUNTIME_DYLIB")
 
-	// 2) fallback to a hard-coded .app install path, if nothing provided
+	dylib := os.Getenv("ONNX_RUNTIME_DYLIB")
 	if dylib == "" {
 		exe, err := os.Executable()
 		if err != nil {
 			log.Fatalf("cannot locate executable: %v", err)
 		}
-		// e.g. /Applications/PocketShield.app/.../bin/main
 		contents := filepath.Dir(filepath.Dir(filepath.Dir(exe)))
 		dylib = filepath.Join(contents, "Frameworks", "libonnxruntime.dylib")
 	}
-
-	// Tell ONNX Runtime exactly which .dylib to load:
 	ort.SetSharedLibraryPath(dylib)
-
 	if err := ort.InitializeEnvironment(); err != nil {
 		log.Fatalf("failed to init ONNX Runtime: %v", err)
 	}
-
 	log.Printf("✔️  Loaded ONNX Runtime from %s", dylib)
 
-	// dynamic session
-	sess, err := ort.NewDynamicAdvancedSession(
-		onnxPath,
+	session, err := ort.NewDynamicAdvancedSessionWithONNXData(
+		onnxBytes,
 		[]string{"input_ids"},
 		[]string{"emissions"},
 		nil,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("create session error: %w", err)
+		return nil, fmt.Errorf("failed to create in-memory session: %w", err)
 	}
-	return &OnnxModel{session: sess, tokenizer: tk, transitions: trans}, nil
+
+	return &OnnxModel{
+		session:     session,
+		tokenizer:   tk,
+		transitions: trans,
+	}, nil
 }
 
-// Predict runs tokenization, ONNX inference, Viterbi decoding, and aggregation.
 func (m *OnnxModel) Predict(text string) ([]types.Entity, error) {
 	enc := m.tokenizer.EncodeWithOptions(text, false, tokenizers.WithReturnAllAttributes())
-	// input tensor
 	ids := make([]int64, len(enc.IDs))
 	for i, v := range enc.IDs {
 		ids[i] = int64(v)
@@ -187,24 +222,20 @@ func (m *OnnxModel) Predict(text string) ([]types.Entity, error) {
 		return nil, err
 	}
 	defer inT.Destroy()
-	// output tensor
 	outT, err := ort.NewEmptyTensor[float32](ort.NewShape(B, L, N))
 	if err != nil {
 		return nil, err
 	}
 	defer outT.Destroy()
-	// run
 	if err := m.session.Run([]ort.Value{inT}, []ort.Value{outT}); err != nil {
 		return nil, fmt.Errorf("session run error: %w", err)
 	}
-	// reshape emissions
 	flat := outT.GetData()
 	seq := make([][]float32, L)
 	for t := int64(0); t < L; t++ {
 		start := t * N
 		seq[t] = flat[start : start+N]
 	}
-	// decode
 	tagsIdx := viterbi(seq, m.transitions, int(L))
 	subTags := make([]string, len(tagsIdx))
 	for i, j := range tagsIdx {
@@ -214,7 +245,6 @@ func (m *OnnxModel) Predict(text string) ([]types.Entity, error) {
 			subTags[i] = "O"
 		}
 	}
-	// aggregate
 	offsets := enc.Offsets
 	wordIDs := manualWordIDs(text, offsets)
 	maxW := 0
@@ -239,14 +269,11 @@ func (m *OnnxModel) Predict(text string) ([]types.Entity, error) {
 		}
 	}
 
-	// 2) for each wordID, compute span and tag
 	var ents []types.Entity
 	for wid, offs := range groups {
 		if len(offs) == 0 {
-			// no real subwords for this group—skip
 			continue
 		}
-		// offsets are in-order, so:
 		start := int(offs[0][0])
 		end := int(offs[len(offs)-1][1])
 		tag := wordTags[wid]
@@ -260,17 +287,14 @@ func (m *OnnxModel) Predict(text string) ([]types.Entity, error) {
 	return ents, nil
 }
 
-// Finetune not supported.
 func (m *OnnxModel) Finetune(_ string, _ []api.TagInfo, _ []api.Sample) error {
 	return fmt.Errorf("finetune not supported for ONNX")
 }
 
-// Save not supported.
 func (m *OnnxModel) Save(path string) error {
 	return fmt.Errorf("save not supported for ONNX")
 }
 
-// Release frees the session, tokenizer, and environment.
 func (m *OnnxModel) Release() {
 	m.session.Destroy()
 	m.tokenizer.Close()
