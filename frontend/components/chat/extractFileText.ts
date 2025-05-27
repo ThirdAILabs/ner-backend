@@ -1,7 +1,7 @@
 import pdfToText from 'react-pdftotext';
 import { pdfjs } from 'react-pdf';
 
-// Set worker source to use local file
+// Set worker source to use local file. See gotchas.md, "pdfjs-dist fixed to 4.8.69"
 pdfjs.GlobalWorkerOptions.workerSrc = require('pdfjs-dist/build/pdf.worker.mjs');
 
 export default async function extractFileText(file?: File) {
