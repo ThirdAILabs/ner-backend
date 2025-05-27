@@ -21,6 +21,23 @@ export interface Message {
 
 export const NEW_CHAT_ID = 'new';
 
+/**
+ * Converts a string with redacted tokens into an array of spans of
+ * RedactedContentPiece objects, which represent redacted and unredacted
+ * spans of text for easier downstream rendering.
+ *
+ * For example, if the input is "Hello [NAME_1] and [NAME_2]!", and the tagMap is
+ * { "[NAME_1]": "John", "[NAME_2]": "Jane" }, the output will be:
+ * [
+ *   { original: "Hello " },
+ *   { original: "John", replacement: "[NAME_1]" },
+ *   { original: " and " },
+ *   { original: "Jane", replacement: "[NAME_2]" },
+ * ]
+ * @param redactedContent A string that contains 0 or more redacted tokens of the form [TAG_NAME_1], [TAG_NAME_2], etc.
+ * @param tagMap A map of redacted tokens to their original values.
+ * @returns An array of redacted content pieces.
+ */
 const toRedactedContent = (
   redactedContent: string,
   tagMap: Record<string, string>
@@ -129,9 +146,10 @@ export default function useSafeGPT(chatId: string) {
     }
   };
 
-  const sendMessage = async (message: string, apiKey: string): Promise<void> => {
+  const sendMessage = async (message: string, apiKey: string) => {
     setInvalidApiKey(false);
 
+    // If the chat is new, create a new chat session.
     let sessionId = chatId;
     if (chatId === NEW_CHAT_ID) {
       const { data } = await nerService.startChatSession('gpt-4', title);
@@ -140,6 +158,9 @@ export default function useSafeGPT(chatId: string) {
       }
     }
 
+    // Save the current state of messages to restore if the request fails.
+    // This creates an illusion of atomicity - the operation either succeeds completely
+    // or fails without side effects by rolling back to the previous state.
     const prevMessages = messages;
     setMessages([
       ...prevMessages,
@@ -167,6 +188,12 @@ export default function useSafeGPT(chatId: string) {
               redactedContent: toRedactedContent(chunk.input_text, tagMap),
               role: 'user',
             },
+            // Add a placeholder message for the LLM response so we don't have to
+            // conditionally add it to the messages array when we receive the first chunk
+            // of the LLM response. It also reflects the fact that we're actively
+            // waiting for the LLM response, allowing us to show a loading state.
+            // This will not result in partial messages because we always rollback if the
+            // transaction fails.
             {
               content: '',
               redactedContent: [],
@@ -192,14 +219,11 @@ export default function useSafeGPT(chatId: string) {
         }
       });
       if (sessionId !== chatId) {
-        window.location.href = `/safegpt?id=${sessionId}`;
+        return sessionId;
       }
     } catch (error) {
       const errorMessage = (error as Error).message;
-      if (
-        errorMessage.includes('Incorrect API key') ||
-        errorMessage.includes('missing the OpenAI API key')
-      ) {
+      if (errorMessage.toLowerCase().includes("api key")) {
         setMessages(prevMessages);
         setInvalidApiKey(true);
         if (sessionId !== chatId) {
@@ -207,22 +231,20 @@ export default function useSafeGPT(chatId: string) {
         }
       } else {
         setMessages(prevMessages);
-        alert(errorMessage);
         if (sessionId !== chatId) {
           deleteChat(sessionId);
         }
       }
       throw new Error(errorMessage);
     }
+    return null;
   };
 
   const updateTitle = async (newTitle: string) => {
     let sessionId = chatId;
     if (chatId === NEW_CHAT_ID) {
       const { data } = await nerService.startChatSession('gpt-4', newTitle);
-      if (data?.session_id) {
-        sessionId = data.session_id;
-      }
+      sessionId = data!.session_id;
     }
     await nerService.renameChatSession(sessionId, newTitle);
     setTitle(newTitle);
@@ -233,13 +255,15 @@ export default function useSafeGPT(chatId: string) {
     );
 
     if (sessionId !== chatId) {
-      window.location.href = `/safegpt?id=${sessionId}`;
+      return sessionId;
     }
+
+    return null;
   };
 
   useEffect(() => {
     getChatPreviews().then(setPreviews);
-  }, []);
+  }, [chatId]);
 
   useEffect(() => {
     getChat(chatId).then(setMessages);

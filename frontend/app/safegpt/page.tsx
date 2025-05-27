@@ -107,6 +107,31 @@ function SafeGPTContent() {
     router.push(`/safegpt?id=new`);
   };
 
+  const handleSendMessage = async (message: string) => {
+    try {
+      const newSessionId = await sendMessage(message, apiKey);
+      if (newSessionId) {
+        router.push(`/safegpt?id=${newSessionId}`);
+      }
+    } catch (error) {
+      if (!(error as Error).message.toLowerCase().includes("api key")) {
+        alert(error);
+      }
+      throw error;
+    }
+  };
+
+  const handleUpdateTitle = async (newTitle: string) => {
+    try {
+      const newSessionId = await updateTitle(newTitle);
+      if (newSessionId) {
+        router.push(`/safegpt?id=${newSessionId}`);
+      }
+    } catch (error) {
+      alert(error);
+    }
+  };
+
   const handleDeleteChat = (id: string) => {
     setChatToDelete(id);
     setIsDeleteDialogOpen(true);
@@ -169,7 +194,7 @@ function SafeGPTContent() {
           />
         </div>
         <div className="flex-1 flex justify-center items-center mt-[-16px]">
-          <ChatTitle title={title} setTitle={updateTitle} />
+          <ChatTitle title={title} setTitle={handleUpdateTitle} />
           <div className="absolute right-[20px]">
             <Toggle checked={showRedaction} onChange={handleToggleRedaction} />
           </div>
@@ -194,7 +219,7 @@ function SafeGPTContent() {
         >
           <ChatInterface
             messages={messages}
-            onSendMessage={(message) => sendMessage(message, apiKey)}
+            onSendMessage={handleSendMessage}
             invalidApiKey={invalidApiKey}
             apiKey={apiKey}
             saveApiKey={saveApiKey}

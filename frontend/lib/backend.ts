@@ -396,52 +396,34 @@ export const nerService = {
     message: string,
     onChunk: (chunk: ChatResponse) => void
   ) => {
-    try {
-      const response = await axiosInstance.post(
-        `/chat/sessions/${sessionId}/messages/stream`,
-        {
-          model,
-          api_key: apiKey,
-          message,
-        },
-        {
-          responseType: 'stream',
-          adapter: 'fetch',
-        }
-      );
-
-      const reader = response.data.getReader();
-      const decoder = new TextDecoder();
-      let chunk: ReadableStreamReadResult<Uint8Array>;
-
-      while (!(chunk = await reader.read()).done) {
-        const decodedChunk = decoder.decode(chunk.value, { stream: true });
-        const lines = decodedChunk.split('\n').filter(Boolean);
-
-        for (const line of lines) {
-          const parsedData = JSON.parse(line);
-          onChunk(parsedData);
-        }
+    const response = await axiosInstance.post(
+      `/chat/sessions/${sessionId}/messages/stream`,
+      {
+        model,
+        api_key: apiKey,
+        message,
+      },
+      {
+        responseType: 'stream',
+        adapter: 'fetch',
       }
-    } catch (error) {
-      console.log(error);
-      console.log(axios.isAxiosError(error));
-      if (axios.isAxiosError(error)) {
-        console.log(error.response?.data);
-      }
-      if (axios.isAxiosError(error) && error.response?.data) {
-        const reader = error.response?.data.getReader();
-        const decoder = new TextDecoder();
-        let chunk: ReadableStreamReadResult<Uint8Array>;
+    );
 
-        while (!(chunk = await reader.read()).done) {
-          console.log('Hello?');
-          const decodedChunk = decoder.decode(chunk.value, { stream: true });
-          throw new Error(decodedChunk);
+    const reader = response.data.getReader();
+    const decoder = new TextDecoder();
+    let chunk: ReadableStreamReadResult<Uint8Array>;
+
+    while (!(chunk = await reader.read()).done) {
+      const decodedChunk = decoder.decode(chunk.value, { stream: true });
+      const lines = decodedChunk.split('\n').filter(Boolean);
+
+      for (const line of lines) {
+        const parsedData = JSON.parse(line);
+        if (parsedData.code !== 200) {
+          throw new Error(parsedData.error);
         }
-        console.log('Oh.');
+        onChunk(parsedData.data);
       }
-      throw new Error('Failed to send chat message for an unknown reason');
     }
   },
 
