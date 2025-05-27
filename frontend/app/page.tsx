@@ -3,9 +3,11 @@
 import * as _ from 'lodash';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useEffect } from 'react';
 import { Box, Typography } from '@mui/material';
 import { Card, CardTitle } from '@/components/ui/card/index';
 import { FileText, MessageSquare } from 'lucide-react';
+import useTelemetry from '@/hooks/useTelemetry';
 
 function Choice({
   title,
@@ -36,6 +38,17 @@ function Choice({
 }
 
 export default function Page() {
+  const recordEvent = useTelemetry();
+
+  // Record initial page load
+  useEffect(() => {
+    recordEvent({
+      UserAction: 'view',
+      UIComponent: 'Page Load',
+      UI: 'Home Page'
+    });
+  }, []);
+
   return (
     <div style={{ width: '75%', minHeight: 'calc(100vh-20px)', margin: '0 auto' }}>
       <header style={{ width: '100%', padding: '16px', borderBottom: '1px solid #e0e0e0' }}>
