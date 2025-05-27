@@ -8,16 +8,6 @@ import Markdown from 'react-markdown';
 import './markdown.css';
 import extractFileText from './extractFileText';
 
-interface ChatInterfaceProps {
-  onSendMessage?: (message: string) => Promise<void>;
-  messages: Message[];
-  isLoading?: boolean;
-  invalidApiKey: boolean;
-  apiKey: string;
-  saveApiKey: (key: string) => void;
-  showRedaction: boolean;
-}
-
 const NICE_COLOR_PAIRS = [
   { replacement: '#E57373', original: '#FFEBEE' }, // red
   { replacement: '#7986CB', original: '#E8EAF6' }, // indigo
@@ -32,6 +22,16 @@ const toTagName = (replacementToken: string) => {
   const pieces = replacementToken.split('_');
   return pieces.slice(0, pieces.length - 1).join('_');
 };
+
+interface ChatInterfaceProps {
+  onSendMessage?: (message: string) => Promise<void>;
+  messages: Message[];
+  isLoading?: boolean;
+  invalidApiKey: boolean;
+  apiKey: string;
+  saveApiKey: (key: string) => void;
+  showRedaction: boolean;
+}
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
   onSendMessage,
