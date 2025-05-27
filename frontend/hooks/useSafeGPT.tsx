@@ -223,7 +223,7 @@ export default function useSafeGPT(chatId: string) {
       }
     } catch (error) {
       const errorMessage = (error as Error).message;
-      if (errorMessage.toLowerCase().includes("api key")) {
+      if (errorMessage.toLowerCase().includes('api key')) {
         setMessages(prevMessages);
         setInvalidApiKey(true);
         if (sessionId !== chatId) {
