@@ -249,3 +249,11 @@ func (s *ChatService) SetOpenAIApiKey(r *http.Request) (any, error) {
 
 	return nil, nil
 }
+
+func (s *ChatService) DeleteOpenAIApiKey(r *http.Request) (any, error) {
+	err := os.Remove("api-key.txt")
+	if err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
