@@ -8,16 +8,6 @@ import Markdown from 'react-markdown';
 import './markdown.css';
 import extractFileText from './extractFileText';
 
-interface ChatInterfaceProps {
-  onSendMessage?: (message: string) => Promise<void>;
-  messages: Message[];
-  isLoading?: boolean;
-  invalidApiKey: boolean;
-  apiKey: string;
-  saveApiKey: (key: string) => void;
-  showRedaction: boolean;
-}
-
 const NICE_COLOR_PAIRS = [
   { replacement: '#E57373', original: '#FFEBEE' }, // red
   { replacement: '#7986CB', original: '#E8EAF6' }, // indigo
@@ -32,6 +22,16 @@ const toTagName = (replacementToken: string) => {
   const pieces = replacementToken.split('_');
   return pieces.slice(0, pieces.length - 1).join('_');
 };
+
+interface ChatInterfaceProps {
+  onSendMessage?: (message: string) => Promise<void>;
+  messages: Message[];
+  isLoading?: boolean;
+  invalidApiKey: boolean;
+  apiKey: string;
+  saveApiKey: (key: string) => void;
+  showRedaction: boolean;
+}
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
   onSendMessage,
@@ -247,10 +247,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={` rounded-xl p-3 ${message.role === 'user'
-                  ? 'bg-gray-100 text-gray-700 p-6 max-w-[70%]'
-                  : 'text-gray-600 text-lg/8 mt-6'
-                  } leading-relaxed`}
+                className={` rounded-xl p-3 ${
+                  message.role === 'user'
+                    ? 'bg-gray-100 text-gray-700 p-6 max-w-[70%]'
+                    : 'text-gray-600 text-lg/8 mt-6'
+                } leading-relaxed`}
               >
                 {!message.content && (
                   <div className="flex gap-1">
@@ -351,7 +352,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               <div className="absolute bottom-12 right-4 w-[350px]">
                 <Options
                   handleBasicMode={closeDropdownIfNotEditing}
-                  handleAdvancedMode={() => { }}
+                  handleAdvancedMode={() => {}}
                   apiKey={apiKey}
                   invalidApiKey={invalidApiKey}
                   onEditApiKey={handleEditApiKey}
