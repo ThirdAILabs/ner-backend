@@ -351,7 +351,7 @@ export default function Jobs() {
             </Typography>
           </Box>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            {`Files: ${succeededFileCount}/${fileCount} Succeeded, ${failedFileCount}/${fileCount} Failed`}
+            {`Files: ${succeededFileCount}/${fileCount} Processed, ${failedFileCount}/${fileCount} Failed`}
           </Typography>
         </Box>
       );

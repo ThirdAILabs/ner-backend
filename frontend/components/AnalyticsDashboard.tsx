@@ -122,7 +122,7 @@ export function AnalyticsDashboard({
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center space-y-0">
                 <span className="text-xl font-bold text-gray-700">{progress}%</span>
-                <span className="text-xs  text-gray-400">{filesSucceeded}% succeeded</span>
+                <span className="text-xs  text-gray-400">{filesSucceeded}% processed</span>
                 <span className="text-xs  text-gray-400">{filesFailed}% failed</span>
               </div>
             </div>
