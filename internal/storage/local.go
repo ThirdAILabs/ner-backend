@@ -82,6 +82,11 @@ func (p *LocalProvider) DownloadDir(ctx context.Context, bucket, prefix, dest st
 
 func (p *LocalProvider) UploadDir(ctx context.Context, bucket, prefix, src string) error {
 	if err := os.CopyFS(p.fullpath(bucket, prefix), os.DirFS(src)); err != nil {
+		// TODO: instead of printing a warning, add a param to overwrite existing files
+		if os.IsExist(err) {
+			fmt.Printf("Warning: Some files already exist in bucket %s/%s\n", bucket, prefix)
+			return nil
+		}
 		return fmt.Errorf("failed to copy directory from %s to %s/%s: %w", src, bucket, prefix, err)
 	}
 	return nil
