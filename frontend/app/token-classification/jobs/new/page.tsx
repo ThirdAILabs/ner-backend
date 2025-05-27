@@ -508,7 +508,7 @@ export default function NewJobPage() {
 
       // Redirect after success
       setTimeout(() => {
-        router.push(`/token-classification/jobs?jobId=${response.ReportId}`);
+        router.push(`/?tab=jobs`);
       }, 2000);
     } catch (err: unknown) {
       let errorMessage = 'An unexpected error occurred';
@@ -616,7 +616,7 @@ export default function NewJobPage() {
 
       {success ? (
         <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-6">
-          Job created successfully! Redirecting...
+          Scanning in progress! Redirecting to Reports Dashboard...
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-8">
