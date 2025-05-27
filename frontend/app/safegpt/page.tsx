@@ -115,7 +115,7 @@ function SafeGPTContent() {
       }
     } catch (error) {
       if (!(error as Error).message.toLowerCase().includes("api key")) {
-        alert(error);
+        alert("Failed to send message to GPT. Please make sure your API key is correct and you are connected to the internet then try again.");
       }
       throw error;
     }
