@@ -69,6 +69,16 @@ const formatTime = (time: number): string => {
   return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
 };
 
+const timeTakenToTextSize = (timeTaken: string) => {
+  if (timeTaken.length > 8) {
+    return 'text-2xl';
+  }
+  if (timeTaken.length > 6) {
+    return 'text-3xl';
+  }
+  return 'text-4xl';
+};
+
 export function AnalyticsDashboard({
   progress,
   tokensProcessed,
@@ -81,6 +91,8 @@ export function AnalyticsDashboard({
   const tokenChartData = tags;
   const filesSucceeded = ((succeededFileCount * 100) / totalFileCount).toFixed(0) || 0;
   const filesFailed = ((failedFileCount * 100) / totalFileCount).toFixed(0) || 0;
+
+  const formattedTime = formatTime(timeTaken);
 
   return (
     <div className="space-y-6 w-full">
@@ -143,28 +155,20 @@ export function AnalyticsDashboard({
         </Card>
 
         {/* Time Taken */}
-        {timeTaken !== null && timeTaken > 0 && (
-          <Card className="flex flex-col justify-between">
-            <CardContent className="flex flex-col items-center pt-6 h-full">
-              <div className="flex-1 flex items-center">
-                <span
-                  className={`text-4xl font-semibold text-gray-700 text-center ${
-                    timeTaken == null
-                      ? 'text-2xl'
-                      : timeTaken > 100
-                        ? 'text-2xl'
-                        : timeTaken > 10
-                          ? 'text-3xl'
-                          : 'text-4xl'
-                  }`}
-                >
-                  {formatTime(timeTaken)}
-                </span>
-              </div>
-              <h3 className="text-sm text-muted-foreground">Time Taken</h3>
-            </CardContent>
-          </Card>
-        )}
+        <Card className="flex flex-col justify-between">
+          <CardContent className="flex flex-col items-center pt-6 h-full">
+            <div className="flex-1 flex items-center">
+              <span
+                className={`font-semibold text-gray-700 text-center ${timeTakenToTextSize(
+                  formattedTime
+                )}`}
+              >
+                {formattedTime}
+              </span>
+            </div>
+            <h3 className="text-sm text-muted-foreground">Time Taken</h3>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Token Distribution Chart */}

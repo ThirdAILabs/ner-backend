@@ -114,13 +114,18 @@ export default function Jobs() {
       }
     };
 
-    const pollInterval = setInterval(async () => {
+    let pollInterval: NodeJS.Timeout;
+
+    const poll = async () => {
       const isComplete = await pollStatus();
 
       if (isComplete) {
         clearInterval(pollInterval);
       }
-    }, 5000);
+    };
+
+    poll();
+    pollInterval = setInterval(poll, 5000);
 
     return () => {
       clearInterval(pollInterval);
