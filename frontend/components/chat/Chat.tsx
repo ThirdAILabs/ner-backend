@@ -42,8 +42,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   saveApiKey,
   showRedaction,
 }) => {
-  // Options dropdown-related logic
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  // Options menu-related logic
+  const [isOptionsOpen, setIsOptionsOpen] = useState(false);
   const [editingApiKey, setEditingApiKey] = useState<boolean>(false);
   const tagNameToColors = useRef<Record<string, { original: string; replacement: string }>>({});
 
@@ -55,39 +55,39 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     return tagNameToColors.current[tagName];
   };
 
-  const openDropdown = () => {
-    setIsDropdownOpen(true);
+  const openOptions = () => {
+    setIsOptionsOpen(true);
   };
 
-  const closeDropdown = () => {
-    setIsDropdownOpen(false);
+  const closeOptions = () => {
+    setIsOptionsOpen(false);
     setEditingApiKey(false);
   };
 
-  const closeDropdownIfNotEditing = () => {
+  const closeOptionsIfNotEditing = () => {
     if (!editingApiKey) {
-      setIsDropdownOpen(false);
+      setIsOptionsOpen(false);
     }
   };
 
-  const dropdownRef = useOutsideClick(() => {
-    closeDropdownIfNotEditing();
+  const optionsRef = useOutsideClick(() => {
+    closeOptionsIfNotEditing();
   });
 
   useEffect(() => {
     if (invalidApiKey) {
-      openDropdown();
+      openOptions();
       setEditingApiKey(true);
     }
   }, [invalidApiKey]);
 
   const handleSaveApiKey = (key: string) => {
     saveApiKey(key);
-    closeDropdown();
+    closeOptions();
   };
 
   const handleCancelApiKey = () => {
-    closeDropdown();
+    closeOptions();
   };
 
   const handleEditApiKey = () => {
@@ -230,9 +230,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           <p className="text-sm text-gray-400">(PDF only)</p>
         </div>
       )}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 mb-20 px-[16%]">
+      <div className="flex-1 overflow-y-auto space-y-4 mb-20 p-4 px-[16%]">
         {messages.length === 0 && (
-          <div className="h-full flex flex-col items-center justify-center text-gray-500">
+          <div className="h-[calc(100%-2rem)] flex flex-col items-center justify-center text-gray-500">
             <MessageSquare size={48} className="mb-4 text-gray-400" />
             <h3 className="text-xl font-semibold mb-2">Welcome to Secure Chat</h3>
             <p className="text-sm text-gray-400">
@@ -333,25 +333,25 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               <Paperclip />
             </button>
           </>
-          <div className="relative" ref={dropdownRef}>
+          <div className="relative" ref={optionsRef}>
             <button
               disabled={isLoading}
               onClick={(e) => {
                 e.preventDefault();
-                if (isDropdownOpen) {
-                  closeDropdownIfNotEditing();
+                if (isOptionsOpen) {
+                  closeOptionsIfNotEditing();
                 } else {
-                  openDropdown();
+                  openOptions();
                 }
               }}
               className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-[rgb(85,152,229)] hover:text-[rgb(85,152,229)]/90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <HiChip size={22} />
             </button>
-            {isDropdownOpen && (
+            {isOptionsOpen && (
               <div className="absolute bottom-12 right-4 w-[350px]">
                 <Options
-                  handleBasicMode={closeDropdownIfNotEditing}
+                  handleBasicMode={closeOptionsIfNotEditing}
                   handleAdvancedMode={() => {}}
                   apiKey={apiKey}
                   invalidApiKey={invalidApiKey}

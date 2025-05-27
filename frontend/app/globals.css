@@ -113,6 +113,11 @@ input[type='search']::-ms-clear {
   display: none;
 }
 
+/**
+ * This class is for the title bar region of the electron app
+ * It enables the user to drag the title bar to move the app
+ * window and disables text selection on the title bar.
+ */
 .titlebar {
   -webkit-app-region: drag;
   -webkit-user-select: none;

@@ -389,31 +389,6 @@ export const nerService = {
     }
   },
 
-  sendChatMessage: async (
-    sessionId: string,
-    model: string,
-    apiKey: string,
-    message: string
-  ): Promise<{
-    data: { input_text: string; reply: string; tag_map: Record<string, string> } | null;
-    error: string | null;
-  }> => {
-    try {
-      const { data } = await axiosInstance.post(`/chat/sessions/${sessionId}/messages`, {
-        model,
-        api_key: apiKey,
-        message,
-      });
-      return { data, error: null };
-    } catch (error) {
-      const errorMsg =
-        axios.isAxiosError(error) && error.response?.data
-          ? error.response.data
-          : 'Failed to send chat message';
-      return { data: null, error: errorMsg };
-    }
-  },
-
   sendChatMessageStream: async (
     sessionId: string,
     model: string,

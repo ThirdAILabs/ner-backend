@@ -214,13 +214,35 @@ func TestChatEndpoint(t *testing.T) {
 	assert.Equal(t, "user", userItem.MessageType)
 	assert.Equal(t, expectedRedacted, userItem.Content)
 
-	userMeta, ok := userItem.Metadata.(map[string]interface{})
-	if !ok {
-		t.Fatalf("expected user metadata to be map[string]interface{}, got %T", userItem.Metadata)
-	}
-	assert.Equal(t, "yash@thirdai.com", userMeta["[EMAIL_1]"])
+	req = httptest.NewRequest(http.MethodGet, "/chat/sessions/"+sessionID, nil)
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
 
+	// Get the session again to check that the tag map has been updated
+	if err := json.NewDecoder(rec.Body).Decode(&sessionResp); err != nil {
+		t.Fatalf("decode get-session response: %v", err)
+	}
+	assert.Equal(t, "yash@thirdai.com", sessionResp.TagMap["[EMAIL_1]"])
+	
 	aiItem := history[1]
 	assert.Equal(t, "ai", aiItem.MessageType)
 	assert.Equal(t, replyBuilder, aiItem.Content)
+
+	// Clean up
+	req = httptest.NewRequest(http.MethodDelete, "/chat/api-key", nil)
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	// Test that the api key is deleted
+	req = httptest.NewRequest(http.MethodGet, "/chat/api-key", nil)
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	if err := json.NewDecoder(rec.Body).Decode(&getKeyResp); err != nil {
+		t.Fatalf("decode get-api-key response: %v", err)
+	}
+	assert.Equal(t, "", getKeyResp.ApiKey)
 }
