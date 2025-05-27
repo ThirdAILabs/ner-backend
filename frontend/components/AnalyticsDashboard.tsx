@@ -69,14 +69,11 @@ const formatTime = (time: number): string => {
   return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
 };
 
-const timeTakenToTextSize = (timeTaken: number) => {
-  if (timeTaken === null) {
+const timeTakenToTextSize = (timeTaken: string) => {
+  if (timeTaken.length > 8) {
     return 'text-2xl';
   }
-  if (timeTaken >= 100) {
-    return 'text-2xl';
-  }
-  if (timeTaken >= 10) {
+  if (timeTaken.length > 6) {
     return 'text-3xl';
   }
   return 'text-4xl';
@@ -94,6 +91,8 @@ export function AnalyticsDashboard({
   const tokenChartData = tags;
   const filesSucceeded = ((succeededFileCount * 100) / totalFileCount).toFixed(0) || 0;
   const filesFailed = ((failedFileCount * 100) / totalFileCount).toFixed(0) || 0;
+
+  const formattedTime = formatTime(timeTaken);
 
   return (
     <div className="space-y-6 w-full">
@@ -161,10 +160,10 @@ export function AnalyticsDashboard({
             <div className="flex-1 flex items-center">
               <span
                 className={`font-semibold text-gray-700 text-center ${timeTakenToTextSize(
-                  timeTaken
+                  formattedTime
                 )}`}
               >
-                {formatTime(timeTaken)}
+                {formattedTime}
               </span>
             </div>
             <h3 className="text-sm text-muted-foreground">Time Taken</h3>
