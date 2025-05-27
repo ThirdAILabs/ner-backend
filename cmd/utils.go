@@ -103,7 +103,6 @@ func initializeModel(
 
 	if result.RowsAffected == 0 && model.Status == database.ModelTrained {
 		slog.Info("model already exists, skipping initialization", "model_id", model.Id)
-		return nil
 	}
 
 	if result.RowsAffected > 0 {

@@ -29,11 +29,12 @@ import (
 )
 
 type Config struct {
-	Root      string `env:"ROOT" envDefault:"./pocket-shield"`
-	Port      int    `env:"PORT" envDefault:"3001"`
-	License   string `env:"LICENSE_KEY" envDefault:""`
-	ModelDir  string `env:"MODEL_DIR" envDefault:""`
-	ModelType string `env:"MODEL_TYPE" envDefault:"cnn_model"`
+	Root       string `env:"ROOT" envDefault:"./pocket-shield"`
+	AppDataDir string `env:"APP_DATA_DIR" envDefault:"./pocket-shield"`
+	Port       int    `env:"PORT" envDefault:"3001"`
+	License    string `env:"LICENSE_KEY" envDefault:""`
+	ModelDir   string `env:"MODEL_DIR" envDefault:""`
+	ModelType  string `env:"MODEL_TYPE" envDefault:"cnn_model"`
 }
 
 const (
@@ -150,9 +151,9 @@ func main() {
 
 	log.SetOutput(io.MultiWriter(f, os.Stderr))
 
-	slog.Info("starting backend", "root", cfg.Root, "port", cfg.Port)
+	slog.Info("starting backend", "root", cfg.Root, "port", cfg.Port, "app_data_dir", cfg.AppDataDir)
 
-	db := createDatabase(cfg.Root)
+	db := createDatabase(cfg.AppDataDir)
 
 	storage, err := storage.NewLocalProvider(filepath.Join(cfg.Root, "storage"))
 	if err != nil {

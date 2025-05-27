@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { app } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -217,6 +218,9 @@ export async function startBackend() {
 
   log.debug(`All backend output → ${backendLogPath}`)
 
+  const appDataDir = app.getPath('userData');
+  console.log(`Application data directory: ${appDataDir}`);
+
   // Get the plugin executable path
   const pluginPath = path.join(backendDir, 'plugin', 'plugin');
 
@@ -230,6 +234,7 @@ export async function startBackend() {
         MODEL_DIR: getBinPath(),
         MODEL_TYPE: 'cnn_model', // TODO: gotta make this configurable
         PLUGIN_SERVER: pluginPath,
+        APP_DATA_DIR: appDataDir,
       },
       stdio:  ['ignore', outFd, errFd]
     }
