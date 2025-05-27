@@ -153,15 +153,21 @@ func (session *ChatSession) ChatStream(userInput string) ChatIterator {
 		context += fmt.Sprintf("User: %s\n", redactedText)
 
 		openaiResp := ""
+		var openaiErr error
 
 		// Then stream the OpenAI response
 		session.streamOpenAIResponse(context)(func (chunk string, err error) bool {
 			if err != nil {
+				openaiErr = err
 				return yield("", "", nil, err)
 			}
 			openaiResp += chunk
 			return yield("", chunk, nil, nil)
 		})
+
+		if openaiErr != nil {
+			return
+		}
 		
 		// Only save messages if the whole process was successful.
 		// This gives the illusion of atomicity; a request either succeeds or fails entirely.
@@ -217,14 +223,14 @@ func (session *ChatSession) streamOpenAIResponse(ctx string) func(yield func(str
 			return nil
 		}))
 
-		if !yieldSuccess {
-			log.Printf("Failed to yield chunk")
-			return
-		}
-
 		if err != nil {
 			log.Printf("Error calling OpenAI API: %v", err)
 			yieldSuccess = yield("", err)
+		}
+
+		if !yieldSuccess {
+			log.Printf("Failed to yield chunk")
+			return
 		}
 	}
 }
