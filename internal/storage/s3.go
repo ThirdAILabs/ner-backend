@@ -317,13 +317,19 @@ func (s *S3Provider) IterObjects(ctx context.Context, bucket, prefix string) Obj
 	}
 }
 
-func (s *S3Provider) ValidateAccess(ctx context.Context, bucket string) error {
-	_, err := s.client.HeadBucket(ctx, &s3.HeadBucketInput{
+func (s *S3Provider) ValidateAccess(ctx context.Context, bucket, prefix string) error {
+	if _, err := s.client.HeadBucket(ctx, &s3.HeadBucketInput{
 		Bucket: aws.String(bucket),
-	})
-
-	if err != nil {
+	}); err != nil {
 		return fmt.Errorf("failed to verify access to s3://%s: %w", bucket, err)
 	}
+
+	if _, err := s.client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
+		Bucket: aws.String(bucket),
+		Prefix: aws.String(prefix),
+	}); err != nil {
+		return fmt.Errorf("failed to verify objects in s3://%s/%s: %w", bucket, prefix, err)
+	}
+
 	return nil
 }

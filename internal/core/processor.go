@@ -362,19 +362,11 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 			continue
 		}
 
-		for _, entity := range entities {
-			if err := proc.db.Create(&entity).Error; err != nil {
-				slog.Error("error saving entities to database", "object", object.object, entity, "error", err)
-				objectErrorCnt++
-				continue
-			}
+		if err := proc.db.CreateInBatches(&entities, 100).Error; err != nil {
+			slog.Error("error saving entities to database", "object", object.object, "error", err)
+			objectErrorCnt++
+			continue
 		}
-
-		// if err := proc.db.CreateInBatches(&entities, 100).Error; err != nil {
-		// 	slog.Error("error saving entities to database", "object", object.object, "error", err)
-		// 	objectErrorCnt++
-		// 	continue
-		// }
 
 		if err := proc.db.CreateInBatches(groups, 100).Error; err != nil {
 			slog.Error("error saving groups to database", "object", object.object, "error", err)

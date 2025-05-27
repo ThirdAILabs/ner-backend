@@ -968,7 +968,7 @@ func validateS3Access(endpoint string, region string, bucket string, prefix stri
 	}
 
 	ctx := context.Background()
-	return s3Client.ValidateAccess(ctx, bucket)
+	return s3Client.ValidateAccess(ctx, bucket, prefix)
 }
 
 func (s *BackendService) ValidateS3Access(r *http.Request) (any, error) {
