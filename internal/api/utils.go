@@ -81,7 +81,7 @@ func RestHandler(handler func(r *http.Request) (any, error)) http.HandlerFunc {
 			res = struct{}{}
 		}
 
-		WriteJsonResponse(w, res)
+		_ = WriteJsonResponse(w, res)
 	}
 }
 
