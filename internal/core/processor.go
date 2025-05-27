@@ -38,6 +38,12 @@ type TaskProcessor struct {
 
 const bytesPerMB = 1024 * 1024
 
+var ExcludedTags = map[string]struct{}{
+	"GENDER":             {},
+	"SEXUAL_ORIENTATION": {},
+	"ETHNICITY":          {},
+}
+
 func NewTaskProcessor(db *gorm.DB, storage storage.Provider, publisher messaging.Publisher, reciever messaging.Reciever, licenseVerifier licensing.LicenseVerifier, localModelDir string, modelBucket string, modelLoaders map[string]ModelLoader) *TaskProcessor {
 	return &TaskProcessor{
 		db:            db,
@@ -446,6 +452,10 @@ func (proc *TaskProcessor) createObjectPreview(
 		length = len(previewText)
 	)
 	for _, e := range spans {
+		if _, exists := ExcludedTags[e.Label]; exists {
+			continue
+		}
+
 		if e.Start > cursor {
 			tokens = append(tokens, previewText[cursor:e.Start])
 			tags = append(tags, "O")
@@ -513,6 +523,9 @@ func (proc *TaskProcessor) runInferenceOnObject(
 		}
 
 		for _, entity := range chunkEntities {
+			if _, exists := ExcludedTags[entity.Label]; exists {
+				continue
+			}
 			if _, ok := tags[entity.Label]; ok {
 				entity.Start += chunk.Offset
 				entity.End += chunk.Offset
