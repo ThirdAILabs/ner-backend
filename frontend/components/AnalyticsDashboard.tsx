@@ -69,6 +69,19 @@ const formatTime = (time: number): string => {
   return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
 };
 
+const timeTakenToTextSize = (timeTaken: number) => {
+  if (timeTaken === null) {
+    return 'text-2xl';
+  }
+  if (timeTaken >= 100) {
+    return 'text-2xl';
+  }
+  if (timeTaken >= 10) {
+    return 'text-3xl';
+  }
+  return 'text-4xl';
+};
+
 export function AnalyticsDashboard({
   progress,
   tokensProcessed,
@@ -147,15 +160,9 @@ export function AnalyticsDashboard({
           <CardContent className="flex flex-col items-center pt-6 h-full">
             <div className="flex-1 flex items-center">
               <span
-                className={`text-4xl font-semibold text-gray-700 text-center ${
-                  timeTaken == null
-                    ? 'text-2xl'
-                    : timeTaken > 100
-                      ? 'text-2xl'
-                      : timeTaken > 10
-                        ? 'text-3xl'
-                        : 'text-4xl'
-                }`}
+                className={`font-semibold text-gray-700 text-center ${timeTakenToTextSize(
+                  timeTaken
+                )}`}
               >
                 {formatTime(timeTaken)}
               </span>
