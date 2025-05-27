@@ -7,7 +7,17 @@ import { Box, Typography } from '@mui/material';
 import { Card, CardTitle } from '@/components/ui/card/index';
 import { FileText, MessageSquare } from 'lucide-react';
 
-function Choice({ title, subtitle, icon, href }: { title: string; subtitle: string, icon: React.ReactNode; href: string }) {
+function Choice({
+  title,
+  subtitle,
+  icon,
+  href,
+}: {
+  title: string;
+  subtitle: string;
+  icon: React.ReactNode;
+  href: string;
+}) {
   return (
     <Link href={href}>
       <Card className="w-[300px] h-[250px] flex justify-center items-center hover:scale-105 transition-transform duration-200 hover:shadow-lg cursor-pointer">
