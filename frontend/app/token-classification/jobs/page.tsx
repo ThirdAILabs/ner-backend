@@ -276,14 +276,19 @@ function JobDetail() {
   };
 
   useEffect(() => {
-    const pollInterval = setInterval(async () => {
+    let pollInterval: NodeJS.Timeout;
+
+    const poll = async () => {
       await fetchTags();
       const currentProgress = calculateProgress(reportData);
 
       if (currentProgress === 100) {
         clearInterval(pollInterval);
       }
-    }, 5000);
+    };
+
+    poll();
+    pollInterval = setInterval(poll, 5000);
 
     return () => {
       clearInterval(pollInterval);
