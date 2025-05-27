@@ -7,13 +7,18 @@ import { Box, Typography } from '@mui/material';
 import { Card, CardTitle } from '@/components/ui/card/index';
 import { FileText, MessageSquare } from 'lucide-react';
 
-function Choice({ title, icon, href }: { title: string; icon: React.ReactNode; href: string }) {
+function Choice({ title, subtitle, icon, href }: { title: string; subtitle: string, icon: React.ReactNode; href: string }) {
   return (
     <Link href={href}>
       <Card className="w-[300px] h-[250px] flex justify-center items-center hover:scale-105 transition-transform duration-200 hover:shadow-lg cursor-pointer">
         <Box>
-          {icon}
+          {/* {icon}
+          <CardTitle className="text-center text-gray-500">{title}</CardTitle> */}
+          <div className="flex justify-center mt-4">{icon}</div>
           <CardTitle className="text-center text-gray-500">{title}</CardTitle>
+          <Typography variant="subtitle2" className="text-center text-gray-400 pt-3">
+            {subtitle}
+          </Typography>
         </Box>
       </Card>
     </Link>
@@ -95,6 +100,7 @@ export default function Page() {
           >
             <Choice
               title="Scan Files"
+              subtitle="Completely Airgapped"
               icon={
                 <FileText
                   className="text-[rgb(85,152,229)]"
@@ -107,6 +113,7 @@ export default function Page() {
             />
             <Choice
               title="SafeGPT"
+              subtitle="With Local LLM Guardrails"
               icon={
                 <MessageSquare
                   className="text-[rgb(85,152,229)]"
