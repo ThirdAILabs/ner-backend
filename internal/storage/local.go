@@ -134,6 +134,6 @@ func (p *LocalProvider) IterObjects(ctx context.Context, bucket, dir string) Obj
 	}
 }
 
-func (p *LocalProvider) ValidateAccess(ctx context.Context, bucket, prefix string) error {
+func (p *LocalProvider) ValidateAccess(ctx context.Context, bucket string) error {
 	return nil
 }

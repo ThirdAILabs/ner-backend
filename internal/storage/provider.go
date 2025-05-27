@@ -29,5 +29,5 @@ type Provider interface {
 
 	IterObjects(ctx context.Context, bucket, prefix string) ObjectIterator
 
-	ValidateAccess(ctx context.Context, bucket, prefix string) error
+	ValidateAccess(ctx context.Context, bucket string) error
 }
