@@ -187,7 +187,7 @@ function getBackendPath() {
 function getDefaultModelPath() {
   const binPath = getBinPath();
   if (!binPath) return null;
-  return path.join(binPath, 'udt_complete.model');
+  return path.join(binPath, 'model');
 }
 
 export async function startBackend() {
@@ -217,6 +217,11 @@ export async function startBackend() {
 
   log.debug(`All backend output → ${backendLogPath}`)
 
+  const frameworksDir = path.join(
+    process.resourcesPath || __dirname,
+    '..', // up to Resources
+    'Frameworks');
+
   const proc = spawn(
     backendPath,
     [], {
@@ -225,6 +230,9 @@ export async function startBackend() {
         ...process.env,
         PORT:       FIXED_PORT.toString(),
         MODEL_PATH: getDefaultModelPath(),
+        ONNX_RUNTIME_DYLIB: frameworksDir
+        ? path.join(frameworksDir, 'libonnxruntime.dylib')
+        : '',
       },
       stdio:  ['ignore', outFd, errFd]
     }

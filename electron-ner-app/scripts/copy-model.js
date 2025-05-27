@@ -29,15 +29,31 @@ if (!fs.existsSync(modelPath)) {
   process.exit(1);
 }
 
-// Copy the model file to bin directory
-const modelFileName = path.basename(modelPath);
-const targetModelPath = path.join(binDir, modelFileName);
+// Copy all files from the model folder to the bin directory
+const modelFolderName = path.basename(modelPath);
+const targetModelFolderPath = path.join(binDir, modelFolderName);
 
 try {
-  console.log(`Copying model from ${modelPath} to ${targetModelPath}`);
-  fs.copyFileSync(modelPath, targetModelPath);
-  console.log('Model copied successfully!');
+  console.log(`Copying model folder from ${modelPath} to ${targetModelFolderPath}`);
+  
+  // Ensure target folder exists
+  if (!fs.existsSync(targetModelFolderPath)) {
+    fs.mkdirSync(targetModelFolderPath, { recursive: true });
+  }
+
+  // Read all files in the model folder
+  const files = fs.readdirSync(modelPath);
+  files.forEach(file => {
+    const sourceFilePath = path.join(modelPath, file);
+    const targetFilePath = path.join(targetModelFolderPath, file);
+
+    // Copy each file
+    fs.copyFileSync(sourceFilePath, targetFilePath);
+    console.log(`Copied ${file} to ${targetFilePath}`);
+  });
+
+  console.log('Model folder copied successfully!');
 } catch (error) {
-  console.error('Failed to copy model:', error.message);
+  console.error('Failed to copy model folder:', error.message);
   process.exit(1);
 }

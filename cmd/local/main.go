@@ -32,7 +32,7 @@ type Config struct {
 	Root          string `env:"ROOT" envDefault:"./pocket-shield"`
 	Port          int    `env:"PORT" envDefault:"3001"`
 	License       string `env:"LICENSE_KEY" envDefault:""`
-	BoltModelPath string `env:"MODEL_PATH" envDefault:""`
+	OnnxModelPath string `env:"MODEL_PATH" envDefault:""`
 }
 
 const (
@@ -149,9 +149,9 @@ func main() {
 		log.Fatalf("Worker: Failed to create storage client: %v", err)
 	}
 
-	if cfg.BoltModelPath != "" {
-		if err := cmd.InitializeBoltModel(db, storage, modelBucket, "basic", cfg.BoltModelPath); err != nil {
-			log.Fatalf("Failed to initialize basic model: %v", err)
+	if cfg.OnnxModelPath != "" {
+		if err := cmd.InitializeOnnxModel(db, storage, modelBucket, "advanced", cfg.OnnxModelPath); err != nil {
+			log.Fatalf("failed to init ONNX model: %v", err)
 		}
 	} else {
 		cmd.InitializePresidioModel(db)
