@@ -356,7 +356,7 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 			continue
 		}
 
-		tokens, entities, groups, objTagCount, objCustomTagCount, err := proc.runInferenceOnObject(reportId, taskId, object.chunks, model, tags, customTagsRe, groupToFilter, object.object)
+		tokens, totalSize, entities, groups, objTagCount, objCustomTagCount, err := proc.runInferenceOnObject(reportId, object.chunks, model, tags, customTagsRe, groupToFilter, object.object)
 		if err != nil {
 			slog.Error("error processing object", "object", object, "error", err)
 			objectErrorCnt++
@@ -388,6 +388,13 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 		}
 
 		totalTokens += tokens
+
+		if err := proc.db.Model(&database.InferenceTask{}).
+			Where("report_id = ? AND task_id = ?", reportId, taskId). // Adjust this with the actual task logic
+			Update("completed_size", gorm.Expr("completed_size + ?", totalSize)).Error; err != nil {
+			slog.Error("could not update completed size in InferenceTask", "error", err)
+			return totalTokens, objectErrorCnt, err
+		}
 	}
 
 	if objectErrorCnt > 0 {
@@ -489,14 +496,13 @@ func (proc *TaskProcessor) createObjectPreview(
 
 func (proc *TaskProcessor) runInferenceOnObject(
 	reportId uuid.UUID,
-	taskId int,
 	chunks <-chan ParsedChunk,
 	model Model,
 	tags map[string]struct{},
 	customTags map[string]*regexp.Regexp,
 	groupFilter map[uuid.UUID]Filter,
 	object string) (
-	int64, []database.ObjectEntity, []database.ObjectGroup, map[string]uint64, map[string]uint64, error) {
+	int64, int64, []database.ObjectEntity, []database.ObjectGroup, map[string]uint64, map[string]uint64, error) {
 	var tokens int64
 	var totalSize int64
 
@@ -510,7 +516,7 @@ func (proc *TaskProcessor) runInferenceOnObject(
 
 	for chunk := range chunks {
 		if chunk.Error != nil {
-			return 0, nil, nil, nil, nil, fmt.Errorf("error parsing document: %w", chunk.Error)
+			return 0, 0, nil, nil, nil, nil, fmt.Errorf("error parsing document: %w", chunk.Error)
 		}
 
 		totalSize += chunk.RawSize
@@ -524,7 +530,7 @@ func (proc *TaskProcessor) runInferenceOnObject(
 			"duration", duration,
 		)
 		if err != nil {
-			return 0, nil, nil, nil, nil, fmt.Errorf("error running model inference: %w", err)
+			return 0, 0, nil, nil, nil, nil, fmt.Errorf("error running model inference: %w", err)
 		}
 
 		for _, entity := range chunkEntities {
@@ -601,14 +607,7 @@ func (proc *TaskProcessor) runInferenceOnObject(
 		}
 	}
 
-	if err := proc.db.Model(&database.InferenceTask{}).
-		Where("report_id = ? AND task_id = ?", reportId, taskId). // Adjust this with the actual task logic
-		Update("completed_size", gorm.Expr("completed_size + ?", totalSize)).Error; err != nil {
-		slog.Error("could not update completed size in InferenceTask", "error", err)
-		return 0, nil, nil, nil, nil, err
-	}
-
-	return tokens, allEntities, groups, tagCount, customTagCount, nil
+	return tokens, totalSize, allEntities, groups, tagCount, customTagCount, nil
 }
 
 func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload messaging.ShardDataPayload) error {
