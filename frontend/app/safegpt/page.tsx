@@ -67,8 +67,8 @@ function SidebarToggle({ collapsed, onClick }: { collapsed: boolean; onClick: ()
     <Button
       variant="ghost"
       size="icon"
-      className={`absolute ${!collapsed ? 'left-56' : 'left-42'
-        } top-4 transform -translate-y-1/2 translate-x-1/2 rounded-full border border-gray-200 bg-white hover:bg-gray-50 transition-colors z-20 w-7 h-7 p-0`}
+      className={`absolute ${!collapsed ? 'left-56' : 'left-[90px]'
+        } top-[19px] transform -translate-y-1/2 translate-x-1/2 rounded-full border border-gray-200 bg-white hover:bg-gray-50 transition-colors z-20 w-7 h-7 p-0`}
       onClick={onClick}
     >
       {!collapsed ?
