@@ -344,17 +344,33 @@ export const nerService = {
     message: string,
     onChunk: (chunk: ChatResponse) => void
   ) => {
-    const response = await axiosInstance.post(
-      `/chat/sessions/${sessionId}/messages`,
-      {
-        Model: model,
-        Message: message,
-      },
-      {
-        responseType: 'stream',
-        adapter: 'fetch',
+    let response;
+    try {
+      response = await axiosInstance.post(
+        `/chat/sessions/${sessionId}/messages`,
+        {
+          Model: model,
+          Message: message,
+        },
+        {
+          responseType: 'stream',
+          adapter: 'fetch',
+        }
+      );
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.data) {
+        const reader = error.response.data.getReader();
+        const decoder = new TextDecoder();
+        let text = '';
+        while (true) {
+          const {done, value} = await reader.read();
+          if (done) break;
+          text += decoder.decode(value);
+        }
+        throw new Error(text);
       }
-    );
+      throw error;
+    }
 
     const reader = response.data.getReader();
     const decoder = new TextDecoder();
