@@ -12,9 +12,6 @@ EMAIL_REGEX = re.compile(
 
 
 def is_valid_phone(number: str) -> bool:
-    """
-    Returns True if `number` has at least 7 digits and fully matches PHONE_REGEX.
-    """
     digits = re.sub(r"\D", "", number)
     if len(digits) < 7 or len(digits) > 15:
         return False
@@ -22,9 +19,6 @@ def is_valid_phone(number: str) -> bool:
 
 
 def is_luhn_valid(number: str) -> bool:
-    """
-    Standard Luhn check for a string of digits.
-    """
     digits = [int(d) for d in number]
     checksum = 0
     parity = len(digits) % 2
@@ -38,9 +32,6 @@ def is_luhn_valid(number: str) -> bool:
 
 
 def is_valid_card(number: str) -> bool:
-    """
-    Returns True if `number` has 12–19 digits and passes Luhn.
-    """
     digits = re.sub(r"\D", "", number)
     if not (12 <= len(digits) <= 19):
         return False
@@ -50,13 +41,8 @@ def is_valid_card(number: str) -> bool:
 def is_valid_credit_score(
     score: str, full_text: str, char_start: int, char_end: int
 ) -> bool:
-    """
-    Validates a 2–3 digit credit score if 'credit' and 'score' appear
-    within 20 characters before or after the span.
-    """
     if not CREDIT_SCORE_REGEX.fullmatch(score):
         return False
-    # extract context window
     before = full_text[max(0, char_start - 20) : char_start].lower()
     after = full_text[char_end : char_end + 20].lower()
     context = before + after
@@ -70,10 +56,6 @@ def is_valid_email(email: str) -> bool:
 def group_consecutive_indices(
     tags: List[str], spans: List[Tuple[int, int]], label: str
 ) -> List[Tuple[int, int]]:
-    """
-    Merge consecutive token indices where `tags[i] == label` and spans are contiguous.
-    Returns list of (start_idx, end_idx) for each group.
-    """
     groups: List[Tuple[int, int]] = []
     i, n = 0, len(tags)
     while i < n:
