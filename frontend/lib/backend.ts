@@ -368,10 +368,10 @@ export const nerService = {
 
       for (const line of lines) {
         const parsedData = JSON.parse(line);
-        if (parsedData.code !== 200) {
-          throw new Error(parsedData.error);
+        if (parsedData.Code !== 200) {
+          throw new Error(parsedData.Error);
         }
-        onChunk(parsedData.data);
+        onChunk(parsedData.Data);
       }
     }
   },
