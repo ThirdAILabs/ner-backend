@@ -244,6 +244,8 @@ function JobDetail() {
 
       setReportData(report as Report);
 
+      setDataProcessedFromReport(reportData);
+
       setTimeTaken((report.TotalInferenceTimeSeconds || 0) + (report.ShardDataTimeSeconds || 0));
 
       // Set selectedSource based on IsUpload field
@@ -285,10 +287,6 @@ function JobDetail() {
       setIsLoading(false);
     }
   };
-
-  useEffect(() => {
-    setDataProcessedFromReport(reportData);
-  }, [reportData]);
 
   useEffect(() => {
     let pollInterval: NodeJS.Timeout;

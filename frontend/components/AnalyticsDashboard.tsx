@@ -140,7 +140,7 @@ export function AnalyticsDashboard({
                 <span className="text-xs  text-gray-400">{filesFailed}% failed</span>
               </div>
             </div>
-            <h3 className="mt-auto text-sm text-muted-foreground">Progress</h3>
+            <h3 className="mt-auto text-sm text-muted-foreground">File Progress</h3>
           </CardContent>
         </Card>
 
