@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, ChangeEvent } from 'react';
 import { MessageSquare, Paperclip } from 'lucide-react';
 import { HiChip } from 'react-icons/hi';
 import useOutsideClick from '@/hooks/useOutsideClick';
-import { Message } from '@/hooks/useSafeGPT';
+import { Message, RedactedContentPiece } from '@/hooks/useSafeGPT';
 import Options from './Options';
 import Markdown from 'react-markdown';
 import './markdown.css';
@@ -18,10 +18,49 @@ const NICE_COLOR_PAIRS = [
   { replacement: '#BA68C8', original: '#F3E5F5' }, // purple
 ];
 
+const TAG_COLORS: Record<string, { replacement: string; original: string }> = {};
+
 const toTagName = (replacementToken: string) => {
   const pieces = replacementToken.split('_');
   return pieces.slice(0, pieces.length - 1).join('_');
 };
+
+const getTagColors = (tagName: string) => {
+  if (!TAG_COLORS[tagName]) {
+    const colorIndex = Object.keys(TAG_COLORS).length % NICE_COLOR_PAIRS.length;
+    TAG_COLORS[tagName] = NICE_COLOR_PAIRS[colorIndex];
+  }
+  return TAG_COLORS[tagName];
+};
+
+function RedactedMessage({ redactedContent }: { redactedContent: RedactedContentPiece[] }) {
+  // TODO: Fix markdown rendering in redacted mode
+  return (
+    <div>
+      {redactedContent.map((piece, idx) => {
+        if (!piece.replacement) {
+          return piece.original;
+        }
+
+        const tagName = toTagName(piece.replacement);
+        const { replacement: replColor, original: origColor } = getTagColors(tagName);
+
+        return (
+          <span
+            key={idx}
+            className={`inline-flex items-center gap-1 p-1 pl-2 rounded-md`}
+            style={{ backgroundColor: origColor }}
+          >
+            <del>{piece.original}</del>
+            <span className={`px-1 rounded-sm text-white`} style={{ backgroundColor: replColor }}>
+              {piece.replacement}
+            </span>
+          </span>
+        );
+      })}
+    </div>
+  );
+}
 
 interface ChatInterfaceProps {
   onSendMessage?: (message: string) => Promise<void>;
@@ -45,15 +84,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   // Options menu-related logic
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
   const [editingApiKey, setEditingApiKey] = useState<boolean>(false);
-  const tagNameToColors = useRef<Record<string, { original: string; replacement: string }>>({});
-
-  const tagColors = (tagName: string) => {
-    if (!tagNameToColors.current[tagName]) {
-      const colorIndex = Object.keys(tagNameToColors.current).length % NICE_COLOR_PAIRS.length;
-      tagNameToColors.current[tagName] = NICE_COLOR_PAIRS[colorIndex];
-    }
-    return tagNameToColors.current[tagName];
-  };
 
   const openOptions = () => {
     setIsOptionsOpen(true);
@@ -265,36 +295,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     <Markdown>{message.content}</Markdown>
                   </div>
                 ) : (
-                  <div className="markdown-content">
-                    {message.redactedContent.map((piece, idx) => {
-                      if (!piece.replacement) {
-                        return piece.original;
-                        // TODO: Fix markdown rendering in redacted mode
-                        // return <Markdown key={idx}>{piece.original}</Markdown>;
-                      }
-                      const tagName = toTagName(piece.replacement);
-                      const { replacement: replColor, original: origColor } = tagColors(tagName);
-                      return (
-                        <span
-                          key={idx}
-                          className={`inline-flex items-center gap-1 p-1 pl-2 rounded-md`}
-                          style={{ backgroundColor: origColor }}
-                        >
-                          <del>
-                            {piece.original}
-                            {/* TODO: Fix markdown rendering in redacted mode */}
-                            {/* <Markdown>{piece.original}</Markdown> */}
-                          </del>
-                          <span
-                            className={`px-1 rounded-sm text-white`}
-                            style={{ backgroundColor: replColor }}
-                          >
-                            {piece.replacement}
-                          </span>
-                        </span>
-                      );
-                    })}
-                  </div>
+                  <RedactedMessage redactedContent={message.redactedContent} />
                 )}
               </div>
             </div>
