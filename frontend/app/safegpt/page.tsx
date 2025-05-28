@@ -14,8 +14,6 @@ import ChatTitle from '@/components/chat/Title';
 import Sidebar from '@/components/chat/Sidebar';
 import Toggle from '@/components/chat/Toggle';
 import useSafeGPT from '@/hooks/useSafeGPT';
-import Image from 'next/image';
-import { TbLayoutSidebarLeftExpand, TbLayoutSidebarRightExpand } from 'react-icons/tb';
 
 const SIDEBAR_WIDTH = 250;
 
@@ -108,29 +106,16 @@ function SafeGPTContent() {
   };
 
   const handleSendMessage = async (message: string) => {
-    try {
-      const newSessionId = await sendMessage(message, apiKey);
-      if (newSessionId) {
-        router.push(`/safegpt?id=${newSessionId}`);
-      }
-    } catch (error) {
-      if (!(error as Error).message.toLowerCase().includes('api key')) {
-        alert(
-          'Failed to send message to GPT. Please make sure your API key is correct and you are connected to the internet then try again.'
-        );
-      }
-      throw error;
+    const newSessionId = await sendMessage(message, apiKey);
+    if (newSessionId) {
+      router.push(`/safegpt?id=${newSessionId}`);
     }
   };
 
   const handleUpdateTitle = async (newTitle: string) => {
-    try {
-      const newSessionId = await updateTitle(newTitle);
-      if (newSessionId) {
-        router.push(`/safegpt?id=${newSessionId}`);
-      }
-    } catch (error) {
-      alert(error);
+    const newSessionId = await updateTitle(newTitle);
+    if (newSessionId) {
+      router.push(`/safegpt?id=${newSessionId}`);
     }
   };
 

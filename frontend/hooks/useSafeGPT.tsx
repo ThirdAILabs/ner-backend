@@ -81,11 +81,26 @@ const unredactContent = (content: string, tagMap: Record<string, string>) => {
   return unredactedContent;
 };
 
+/**
+ * While backend.ts is responsible for handling the raw API calls and type definitions,
+ * this hook manages the higher-level chat functionality - maintaining UI state,
+ * coordinating message flows, and providing a clean interface for components to
+ * interact with the chat system.
+ * @param chatId The ID of the current chat session
+ */
 export default function useSafeGPT(chatId: string) {
   const [title, setTitle] = useState('Loading...');
   const [previews, setPreviews] = useState<ChatPreview[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [invalidApiKey, setInvalidApiKey] = useState<boolean>(false);
+
+  useEffect(() => {
+    getChatPreviews().then(setPreviews);
+  }, [chatId]);
+
+  useEffect(() => {
+    getChat(chatId).then(setMessages);
+  }, [chatId]);
 
   const getChatPreviews = async (): Promise<ChatPreview[]> => {
     try {
@@ -221,6 +236,10 @@ export default function useSafeGPT(chatId: string) {
     } catch (error) {
       if ((error as Error).message.toLowerCase().includes('api key')) {
         setInvalidApiKey(true);
+      } else {
+        alert(
+          'Failed to send message to GPT. Please make sure your API key is correct and you are connected to the internet then try again.'
+        );
       }
 
       setMessages(prevMessages);
@@ -261,14 +280,6 @@ export default function useSafeGPT(chatId: string) {
 
     return null;
   };
-
-  useEffect(() => {
-    getChatPreviews().then(setPreviews);
-  }, [chatId]);
-
-  useEffect(() => {
-    getChat(chatId).then(setMessages);
-  }, [chatId]);
 
   return {
     previews: [
