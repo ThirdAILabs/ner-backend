@@ -42,6 +42,7 @@ var ExcludedTags = map[string]struct{}{
 	"GENDER":             {},
 	"SEXUAL_ORIENTATION": {},
 	"ETHNICITY":          {},
+	"SERVICE_CODE":       {},
 }
 
 func NewTaskProcessor(db *gorm.DB, storage storage.Provider, publisher messaging.Publisher, reciever messaging.Reciever, licenseVerifier licensing.LicenseVerifier, localModelDir string, modelBucket string, modelLoaders map[string]ModelLoader) *TaskProcessor {
