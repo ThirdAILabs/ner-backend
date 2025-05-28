@@ -38,7 +38,7 @@ func (s *ChatService) AddRoutes(r chi.Router) {
 		r.Post("/sessions", RestHandler(s.StartSession))
 		r.Get("/sessions/{session_id}", RestHandler(s.GetSession))
 		r.Post("/sessions/{session_id}/rename", RestHandler(s.RenameSession))
-		r.Post("/sessions/{session_id}/messages/stream", RestStreamHandler(s.SendMessageStream))
+		r.Post("/sessions/{session_id}/messages", RestStreamHandler(s.SendMessageStream))
 		r.Get("/sessions/{session_id}/history", RestHandler(s.GetHistory))
 		r.Get("/api-key", RestHandler(s.GetOpenAIApiKey))
 		r.Post("/api-key", RestHandler(s.SetOpenAIApiKey))

@@ -346,7 +346,7 @@ export const nerService = {
     onChunk: (chunk: ChatResponse) => void
   ) => {
     const response = await axiosInstance.post(
-      `/chat/sessions/${sessionId}/messages/stream`,
+      `/chat/sessions/${sessionId}/messages`,
       {
         model,
         api_key: apiKey,
