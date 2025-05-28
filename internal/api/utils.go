@@ -88,9 +88,9 @@ func RestHandler(handler func(r *http.Request) (any, error)) http.HandlerFunc {
 type StreamResponse func(yield func(any, error) bool)
 
 type StreamMessage struct {
-	Data    interface{} `json:"data,omitempty"`
-	Error   string      `json:"error,omitempty"`
-	Code    int         `json:"code,omitempty"`
+	Data    interface{}
+	Error   string
+	Code    int
 }
 
 func RestStreamHandler(handler func(r *http.Request) StreamResponse) http.HandlerFunc {
