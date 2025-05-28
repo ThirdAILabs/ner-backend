@@ -24,8 +24,9 @@ type Group struct {
 }
 
 type TaskStatusCategory struct {
-	TotalTasks int
-	TotalSize  int
+	TotalTasks    int
+	TotalSize     int
+	CompletedSize int
 }
 
 type Report struct {

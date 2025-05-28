@@ -1,4 +1,4 @@
-package versions
+package migration_0
 
 import (
 	"database/sql"
@@ -147,7 +147,7 @@ type ObjectPreview struct {
 	TokenTags datatypes.JSON `gorm:"type:jsonb;not null"` // [{"token":"…","tag":"…"},…]
 }
 
-func Migration0(db *gorm.DB) error {
+func Migration(db *gorm.DB) error {
 	err := db.AutoMigrate(
 		&Model{}, &ModelTag{}, &Report{}, &ReportTag{}, &CustomTag{}, &ShardDataTask{}, &InferenceTask{}, &Group{}, &ObjectGroup{}, &ObjectEntity{}, &ReportError{}, &ObjectPreview{},
 	)
