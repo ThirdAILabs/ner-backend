@@ -1,4 +1,4 @@
-package versions
+package migration_1
 
 import (
 	"fmt"
@@ -6,7 +6,11 @@ import (
 	"gorm.io/gorm"
 )
 
-func Migration1(db *gorm.DB) error {
+type InferenceTask struct {
+	CompletedSize int64 `gorm:"default:0"`
+}
+
+func Migration(db *gorm.DB) error {
 	if err := db.Migrator().AddColumn(&InferenceTask{}, "CompletedSize"); err != nil {
 		return fmt.Errorf("error adding CompletedSize column: %w", err)
 	}
@@ -20,7 +24,7 @@ func Migration1(db *gorm.DB) error {
 	return nil
 }
 
-func RollbackMigration1(db *gorm.DB) error {
+func Rollback(db *gorm.DB) error {
 	if err := db.Migrator().DropColumn(&InferenceTask{}, "CompletedSize"); err != nil {
 		return fmt.Errorf("error dropping CompletedSize column: %w", err)
 	}
