@@ -4,6 +4,7 @@ import (
 	"log"
 	"ner-backend/internal/database/versions/migration_0"
 	"ner-backend/internal/database/versions/migration_1"
+	"ner-backend/internal/database/versions/migration_2"
 
 	"github.com/go-gormigrate/gormigrate/v2"
 	"gorm.io/gorm"
@@ -22,8 +23,8 @@ func GetMigrator(db *gorm.DB) *gormigrate.Gormigrate {
 		},
 		{
 			ID:       "2",
-			Migrate:  versions.Migration2,
-			Rollback: versions.RollbackMigration2,
+			Migrate:  migration_2.Migration,
+			Rollback: migration_2.Rollback,
 		},
 	})
 
