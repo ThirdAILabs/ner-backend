@@ -448,12 +448,6 @@ export default function Jobs() {
             }}>
               Reports
             </Typography>
-            <Typography variant="body2" sx={{
-              color: 'text.secondary',
-              mt: 0.5
-            }}>
-              Manage and track your NER analysis reports
-            </Typography>
           </Box>
           <Link href={`/token-classification/jobs/new`} passHref>
             <Button
@@ -643,23 +637,6 @@ export default function Jobs() {
                       }}>
                         No reports found
                       </Typography>
-                      <Link href="/token-classification/jobs/new" passHref>
-                        <Button
-                          variant="outlined"
-                          startIcon={<Plus size={16} />}
-                          sx={{
-                            borderColor: '#e2e8f0',
-                            color: '#475569',
-                            '&:hover': {
-                              borderColor: '#cbd5e1',
-                              bgcolor: '#f8fafc',
-                            },
-                            textTransform: 'none',
-                          }}
-                        >
-                          Create new report
-                        </Button>
-                      </Link>
                     </Box>
                   </TableCell>
                 </TableRow>

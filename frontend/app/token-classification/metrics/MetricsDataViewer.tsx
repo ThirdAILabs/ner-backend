@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Box, Grid, Card, CardContent, Typography, CircularProgress } from '@mui/material';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, LabelList } from 'recharts';
+import { Box, Card, CardContent, Typography, CircularProgress } from '@mui/material';
 import { nerService, InferenceMetrics, ThroughputMetrics } from '@/lib/backend';
 
 interface MetricsDataViewerProps {
@@ -67,15 +66,15 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-        <CircularProgress />
+        <CircularProgress size={24} />
       </Box>
     );
   }
 
   if (error) {
     return (
-      <Box sx={{ p: 2 }}>
-        <Typography color="error">{error}</Typography>
+      <Box sx={{ p: 3 }}>
+        <Typography sx={{ color: 'error.main', fontSize: '0.875rem' }}>{error}</Typography>
       </Box>
     );
   }
@@ -85,94 +84,249 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
   }
 
   return (
-    <>
-      <div className="space-y-6 w-full">
-        <div className="grid grid-cols-5 gap-4">
-          {/* In-Progress Tasks */}
-          <Card className="flex flex-col justify-between">
-            <CardContent className="flex flex-col items-center justify-center flex-1 pt-6">
-              <div className="relative h-32 w-32">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-2xl font-bold text-gray-700">{infMetrics.InProgress}</span>
-                </div>
-              </div>
-              <h3 className="mt-auto text-center text-sm text-muted-foreground">
-                In-Progress Reports
-              </h3>
-            </CardContent>
-          </Card>
+    <Box sx={{ p: 3 }}>
+      <Box sx={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(5, 1fr)',
+        gap: 3
+      }}>
+        {/* In-Progress Tasks */}
+        <Card sx={{
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          bgcolor: 'white',
+          borderRadius: '12px',
+          transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+          '&:hover': {
+            transform: 'translateY(-2px)',
+            boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+          }
+        }}>
+          <CardContent sx={{
+            p: 3,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100%',
+            '&:last-child': { pb: 3 }
+          }}>
+            <Box sx={{
+              height: '128px',
+              width: '128px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              mb: 2
+            }}>
+              <Typography sx={{
+                fontSize: '2rem',
+                fontWeight: 600,
+                color: '#1e293b'
+              }}>
+                {infMetrics.InProgress}
+              </Typography>
+            </Box>
+            <Typography sx={{
+              fontSize: '0.875rem',
+              color: '#64748b',
+              fontWeight: 500
+            }}>
+              In-Progress Reports
+            </Typography>
+          </CardContent>
+        </Card>
 
-          {/* Completed Tasks */}
-          <Card className="flex flex-col justify-between">
-            <CardContent className="flex flex-col items-center justify-center flex-1 pt-6">
-              <div className="relative h-32 w-32">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-2xl font-bold text-gray-700">
-                    {infMetrics.Completed + infMetrics.Failed}
-                  </span>
-                </div>
-              </div>
-              <h3 className="mt-auto text-center text-sm text-muted-foreground">
-                Completed Reports
-              </h3>
-            </CardContent>
-          </Card>
+        {/* Completed Tasks */}
+        <Card sx={{
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          bgcolor: 'white',
+          borderRadius: '12px',
+          transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+          '&:hover': {
+            transform: 'translateY(-2px)',
+            boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+          }
+        }}>
+          <CardContent sx={{
+            p: 3,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100%',
+            '&:last-child': { pb: 3 }
+          }}>
+            <Box sx={{
+              height: '128px',
+              width: '128px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              mb: 2
+            }}>
+              <Typography sx={{
+                fontSize: '2rem',
+                fontWeight: 600,
+                color: '#1e293b'
+              }}>
+                {infMetrics.Completed + infMetrics.Failed}
+              </Typography>
+            </Box>
+            <Typography sx={{
+              fontSize: '0.875rem',
+              color: '#64748b',
+              fontWeight: 500
+            }}>
+              Completed Reports
+            </Typography>
+          </CardContent>
+        </Card>
 
-          {/* Throughput */}
-          <Card className="flex flex-col justify-between">
-            <CardContent className="flex flex-col items-center justify-center flex-1 pt-6">
-              <div className="relative h-32 w-32">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span
-                    className={`font-bold text-gray-700 text-center ${
-                      tpMetrics?.ThroughputMBPerHour &&
-                      (tpMetrics?.ThroughputMBPerHour > 1000
-                        ? 'text-xl'
-                        : tpMetrics?.ThroughputMBPerHour > 100
-                          ? 'text-2xl'
-                          : 'text-3xl')
-                    }`}
-                  >
-                    {tpMetrics?.ThroughputMBPerHour == null
-                      ? '-'
-                      : `${tpMetrics?.ThroughputMBPerHour.toFixed(2).toLocaleString()} MB/Hour`}
-                  </span>
-                </div>
-              </div>
-              <h3 className="mt-auto text-sm text-muted-foreground">Throughput</h3>
-            </CardContent>
-          </Card>
+        {/* Throughput */}
+        <Card sx={{
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          bgcolor: 'white',
+          borderRadius: '12px',
+          transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+          '&:hover': {
+            transform: 'translateY(-2px)',
+            boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+          }
+        }}>
+          <CardContent sx={{
+            p: 3,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100%',
+            '&:last-child': { pb: 3 }
+          }}>
+            <Box sx={{
+              height: '128px',
+              width: '128px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              mb: 2
+            }}>
+              <Typography sx={{
+                fontSize: (theme) => tpMetrics?.ThroughputMBPerHour > 1000 ? '1.5rem' :
+                  tpMetrics?.ThroughputMBPerHour > 100 ? '1.75rem' : '2rem',
+                fontWeight: 600,
+                color: '#1e293b',
+                textAlign: 'center'
+              }}>
+                {tpMetrics?.ThroughputMBPerHour == null
+                  ? '-'
+                  : `${tpMetrics?.ThroughputMBPerHour.toFixed(2).toLocaleString()} MB/Hour`}
+              </Typography>
+            </Box>
+            <Typography sx={{
+              fontSize: '0.875rem',
+              color: '#64748b',
+              fontWeight: 500
+            }}>
+              Throughput
+            </Typography>
+          </CardContent>
+        </Card>
 
-          {/* Data Processed */}
-          <Card className="flex flex-col justify-between">
-            <CardContent className="flex flex-col items-center justify-center flex-1 pt-6">
-              <div className="relative h-32 w-32">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-2xl text-center font-bold text-gray-700">
-                    {infMetrics.DataProcessedMB.toFixed(2).toLocaleString()} MB
-                  </span>
-                </div>
-              </div>
-              <h3 className="mt-auto text-center text-sm text-muted-foreground">Data Processed</h3>
-            </CardContent>
-          </Card>
+        {/* Data Processed */}
+        <Card sx={{
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          bgcolor: 'white',
+          borderRadius: '12px',
+          transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+          '&:hover': {
+            transform: 'translateY(-2px)',
+            boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+          }
+        }}>
+          <CardContent sx={{
+            p: 3,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100%',
+            '&:last-child': { pb: 3 }
+          }}>
+            <Box sx={{
+              height: '128px',
+              width: '128px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              mb: 2
+            }}>
+              <Typography sx={{
+                fontSize: '2rem',
+                fontWeight: 600,
+                color: '#1e293b',
+                textAlign: 'center'
+              }}>
+                {infMetrics.DataProcessedMB.toFixed(2).toLocaleString()} MB
+              </Typography>
+            </Box>
+            <Typography sx={{
+              fontSize: '0.875rem',
+              color: '#64748b',
+              fontWeight: 500
+            }}>
+              Data Processed
+            </Typography>
+          </CardContent>
+        </Card>
 
-          {/* Tokens Processed */}
-          <Card className="flex flex-col justify-between">
-            <CardContent className="flex flex-col items-center justify-center flex-1 pt-6">
-              <div className="relative h-32 w-32">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-2xl text-center font-bold text-gray-700">
-                    {infMetrics.TokensProcessed.toLocaleString()}
-                  </span>
-                </div>
-              </div>
-              <h3 className="mt-auto text-sm text-muted-foreground">Tokens Processed</h3>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </>
+        {/* Tokens Processed */}
+        <Card sx={{
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          bgcolor: 'white',
+          borderRadius: '12px',
+          transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+          '&:hover': {
+            transform: 'translateY(-2px)',
+            boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+          }
+        }}>
+          <CardContent sx={{
+            p: 3,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100%',
+            '&:last-child': { pb: 3 }
+          }}>
+            <Box sx={{
+              height: '128px',
+              width: '128px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              mb: 2
+            }}>
+              <Typography sx={{
+                fontSize: '2rem',
+                fontWeight: 600,
+                color: '#1e293b',
+                textAlign: 'center'
+              }}>
+                {infMetrics.TokensProcessed.toLocaleString()}
+              </Typography>
+            </Box>
+            <Typography sx={{
+              fontSize: '0.875rem',
+              color: '#64748b',
+              fontWeight: 500
+            }}>
+              Tokens Processed
+            </Typography>
+          </CardContent>
+        </Card>
+      </Box>
+    </Box>
   );
 };
 
