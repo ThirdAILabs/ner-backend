@@ -240,12 +240,14 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
             >
               <Typography
                 sx={{
-                  fontSize: (theme) =>
-                    tpMetrics?.ThroughputMBPerHour > 1000
+                  fontSize: (theme) => {
+                    const throughput = tpMetrics?.ThroughputMBPerHour ?? 0;
+                    return throughput > 1000
                       ? '1.5rem'
-                      : tpMetrics?.ThroughputMBPerHour > 100
+                      : throughput > 100
                         ? '1.75rem'
-                        : '2rem',
+                        : '2rem';
+                  },
                   fontWeight: 600,
                   color: '#1e293b',
                   textAlign: 'center',
