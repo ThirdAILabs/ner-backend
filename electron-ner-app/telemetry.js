@@ -2,8 +2,9 @@ import { Client } from 'pg';
 
 // PostgreSQL client for telemetry
 let pgClient = null;
+let isConnected = false;
 
-// Initialize PostgreSQL connection
+// Initialize PostgreSQL connection (silent failure)
 export async function initTelemetry() {
   try {
     pgClient = new Client({
@@ -13,22 +14,41 @@ export async function initTelemetry() {
       user: process.env.POSTGRES_USER || 'telemetry_writer',
       password: process.env.POSTGRES_PASSWORD || 'kLKDPmv21w93oam!93',
       ssl: {
-        rejectUnauthorized: false, // For AWS RDS
+        rejectUnauthorized: false,
       },
+      connectionTimeoutMillis: 5000, // Shorter timeout for offline scenarios
+      query_timeout: 3000,
+    });
+
+    // Add error handlers to prevent uncaught exceptions
+    pgClient.on('error', (err) => {
+      console.log('Telemetry database error (silent):', err.message);
+      isConnected = false;
+      pgClient = null;
+    });
+
+    pgClient.on('end', () => {
+      console.log('Telemetry database connection ended');
+      isConnected = false;
+      pgClient = null;
     });
 
     await pgClient.connect();
+    isConnected = true;
     console.log('Telemetry PostgreSQL connected successfully');
   } catch (error) {
-    console.error('Failed to connect to telemetry database:', error);
+    // Silent failure - just log to console
+    console.log('Telemetry unavailable (offline or connection failed):', error.message);
     pgClient = null;
+    isConnected = false;
   }
 }
 
-// Insert telemetry event
+// Insert telemetry event (silent failure)
 export async function insertTelemetryEvent(data) {
-  if (!pgClient) {
-    console.warn('Telemetry database not connected');
+  // Quick check if we're not connected
+  if (!pgClient || !isConnected) {
+    console.log('Telemetry event skipped (no connection)');
     return;
   }
 
@@ -44,21 +64,44 @@ export async function insertTelemetryEvent(data) {
       data.user_machine,
       JSON.stringify(data.event)
     ]);
+    
+    console.log('Telemetry event recorded');
   } catch (error) {
-    console.error('Error inserting telemetry event:', error);
+    // Silent failure - just log to console
+    console.log('Telemetry event failed (silent):', error.message);
+    
+    // Mark as disconnected if it's a connection error
+    if (error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT' || error.code === 'ENOTFOUND') {
+      isConnected = false;
+      pgClient = null;
+    }
   }
 }
 
-// Close telemetry connection
+// Close telemetry connection (silent)
 export async function closeTelemetry() {
   if (pgClient) {
     try {
       await pgClient.end();
       console.log('Telemetry database connection closed');
     } catch (error) {
-      console.error('Error closing telemetry connection:', error);
+      console.log('Error closing telemetry connection (silent):', error.message);
+    } finally {
+      pgClient = null;
+      isConnected = false;
     }
   }
 }
 
-// ES modules exports are handled by individual export statements above 
+// Optional: Add a function to check if telemetry is available
+export function isTelemetryAvailable() {
+  return isConnected && pgClient !== null;
+}
+
+// Optional: Retry connection function (call this periodically if needed)
+export async function retryTelemetryConnection() {
+  if (!isConnected) {
+    console.log('Attempting to reconnect telemetry...');
+    await initTelemetry();
+  }
+}
