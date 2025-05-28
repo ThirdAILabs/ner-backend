@@ -24,6 +24,8 @@ import { nerService } from '@/lib/backend';
 import { IconButton, Tooltip } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useHealth } from '@/contexts/HealthProvider';
+import { alpha } from '@mui/material/styles';
+
 // Import the TaskStatusCategory from backend.ts
 interface TaskStatusCategory {
   TotalTasks: number;
@@ -422,39 +424,56 @@ export default function Jobs() {
   };
 
   return (
-    <Card sx={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-      <CardContent className="bg-muted/60" sx={{ p: 3 }}>
+    <Card
+      sx={{
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        bgcolor: 'white',
+        borderRadius: '12px',
+        mx: 'auto',
+        maxWidth: '1400px',
+      }}
+    >
+      <CardContent sx={{ p: 4 }}>
         <Box
           sx={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            mb: 3,
+            mb: 4,
           }}
         >
-          <Typography variant="h6" sx={{ fontWeight: 500, fontSize: '1.25rem' }}>
-            Reports
-          </Typography>
+          <Box>
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 600,
+                fontSize: '1.5rem',
+                color: '#111827',
+              }}
+            >
+              Reports
+            </Typography>
+          </Box>
           <Link href={`/token-classification/jobs/new`} passHref>
             <Button
               variant="contained"
               color="primary"
+              startIcon={<Plus size={20} />}
               sx={{
-                bgcolor: '#1976d2',
+                bgcolor: '#2563eb',
                 '&:hover': {
-                  bgcolor: '#1565c0',
+                  bgcolor: '#1d4ed8',
                 },
                 textTransform: 'none',
                 fontWeight: 500,
-                width: 48,
-                height: 48,
-                minWidth: 0,
-                padding: 0,
-                borderRadius: '50%',
+                px: 3,
+                py: 1.5,
+                borderRadius: '8px',
+                boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
               }}
               disabled={!healthStatus}
             >
-              <Plus size={24} />
+              New Report
             </Button>
           </Link>
         </Box>
@@ -463,21 +482,66 @@ export default function Jobs() {
           component={Paper}
           sx={{
             boxShadow: 'none',
-            border: '1px solid rgba(0, 0, 0, 0.12)',
-            borderRadius: '0.375rem',
-            overflow: 'hidden',
-            // width: '80%',
-            // margin: '0 auto',
+            border: '1px solid',
+            borderColor: 'grey.200',
+            borderRadius: '12px',
+            bgcolor: 'white',
+            '& .MuiTableCell-root': {
+              borderBottom: '1px solid',
+              borderColor: 'grey.200',
+              py: 2.5,
+            },
           }}
         >
           <Table>
             <TableHead>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 600, width: '20%' }}>Name</TableCell>
-                <TableCell sx={{ fontWeight: 600, width: '15%' }}>Model</TableCell>
-                <TableCell sx={{ fontWeight: 600, width: '35%' }}>Progress</TableCell>
-                <TableCell sx={{ fontWeight: 600, width: '20%' }}>Created At</TableCell>
-                <TableCell sx={{ fontWeight: 600, width: '10%' }}>Actions</TableCell>
+              <TableRow sx={{ bgcolor: '#f8fafc' }}>
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    color: '#475569',
+                    fontSize: '0.875rem',
+                  }}
+                >
+                  Name
+                </TableCell>
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    color: '#475569',
+                    fontSize: '0.875rem',
+                  }}
+                >
+                  Model
+                </TableCell>
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    color: '#475569',
+                    fontSize: '0.875rem',
+                  }}
+                >
+                  Progress
+                </TableCell>
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    color: '#475569',
+                    fontSize: '0.875rem',
+                  }}
+                >
+                  Created At
+                </TableCell>
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    color: '#475569',
+                    fontSize: '0.875rem',
+                    width: '120px',
+                  }}
+                >
+                  Actions
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -486,40 +550,86 @@ export default function Jobs() {
                   <TableRow
                     key={report.Id}
                     sx={{
-                      bgcolor: index % 2 === 0 ? 'white' : '#f9fafb',
+                      bgcolor: 'white',
+                      '&:hover': {
+                        bgcolor: alpha('#60a5fa', 0.04),
+                      },
+                      transition: 'background-color 0.2s',
                     }}
                   >
-                    <TableCell>{report.ReportName}</TableCell>
-                    <TableCell>{report.Model.Name}</TableCell>
+                    <TableCell>
+                      <Typography
+                        sx={{
+                          fontWeight: 500,
+                          color: '#1e293b',
+                        }}
+                      >
+                        {report.ReportName}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Box
+                        sx={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          px: 2,
+                          py: 0.5,
+                          bgcolor: '#f1f5f9',
+                          borderRadius: '16px',
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            fontSize: '0.875rem',
+                            color: '#475569',
+                          }}
+                        >
+                          {report.Model.Name}
+                        </Typography>
+                      </Box>
+                    </TableCell>
                     <TableCell>{getStatusDisplay(report)}</TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                        <Typography variant="body2">
+                        <Typography variant="body2" sx={{ color: '#1e293b' }}>
                           {format(new Date(report.CreationTime), 'MMMM d, yyyy')}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography variant="caption" sx={{ color: '#64748b' }}>
                           {format(new Date(report.CreationTime), 'h:mm a')}
                         </Typography>
                       </Box>
                     </TableCell>
                     <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                        }}
+                      >
                         <Link
                           href={`/token-classification/jobs?jobId=${report.Id}`}
                           style={{
-                            color: '#1976d2',
                             textDecoration: 'none',
                           }}
                         >
-                          <Typography
+                          <Button
+                            variant="outlined"
+                            size="small"
                             sx={{
+                              borderColor: '#e2e8f0',
+                              color: '#475569',
                               '&:hover': {
-                                textDecoration: 'underline',
+                                borderColor: '#cbd5e1',
+                                bgcolor: '#f8fafc',
                               },
+                              textTransform: 'none',
+                              minWidth: 0,
+                              px: 2,
                             }}
                           >
                             View
-                          </Typography>
+                          </Button>
                         </Link>
                         <Tooltip title="Delete report">
                           <IconButton
@@ -528,7 +638,7 @@ export default function Jobs() {
                             sx={{
                               color: '#dc2626',
                               '&:hover': {
-                                bgcolor: 'rgba(220, 38, 38, 0.04)',
+                                bgcolor: alpha('#dc2626', 0.04),
                               },
                             }}
                           >
@@ -544,12 +654,27 @@ export default function Jobs() {
                   <TableCell
                     colSpan={5}
                     sx={{
+                      py: 8,
                       textAlign: 'center',
-                      py: 2,
-                      color: 'text.secondary',
                     }}
                   >
-                    No reports found. Create a new report to get started.
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 2,
+                      }}
+                    >
+                      <Typography
+                        sx={{
+                          color: '#475569',
+                          fontSize: '0.875rem',
+                        }}
+                      >
+                        No reports found
+                      </Typography>
+                    </Box>
                   </TableCell>
                 </TableRow>
               )}

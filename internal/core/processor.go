@@ -42,6 +42,7 @@ var ExcludedTags = map[string]struct{}{
 	"GENDER":             {},
 	"SEXUAL_ORIENTATION": {},
 	"ETHNICITY":          {},
+	"SERVICE_CODE":       {},
 }
 
 func NewTaskProcessor(db *gorm.DB, storage storage.Provider, publisher messaging.Publisher, reciever messaging.Reciever, licenseVerifier licensing.LicenseVerifier, localModelDir string, modelBucket string, modelLoaders map[string]ModelLoader) *TaskProcessor {
@@ -350,38 +351,38 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 
 	for object := range queue {
 		if object.err != nil {
-			slog.Error("error getting object stream", "bucket", bucket, "object", object, "error", err)
+			slog.Error("error getting object stream", "bucket", bucket, "object", object.object, "error", err)
 			objectErrorCnt++
 			continue
 		}
 
 		tokens, entities, groups, objTagCount, objCustomTagCount, err := proc.runInferenceOnObject(reportId, object.chunks, model, tags, customTagsRe, groupToFilter, object.object)
 		if err != nil {
-			slog.Error("error processing object", "object", object, "error", err)
+			slog.Error("error processing object", "object", object.object, "error", err)
 			objectErrorCnt++
 			continue
 		}
 
 		if err := proc.db.CreateInBatches(&entities, 100).Error; err != nil {
-			slog.Error("error saving entities to database", "object", object, "error", err)
+			slog.Error("error saving entities to database", "object", object.object, "error", err)
 			objectErrorCnt++
 			continue
 		}
 
 		if err := proc.db.CreateInBatches(groups, 100).Error; err != nil {
-			slog.Error("error saving groups to database", "object", object, "error", err)
+			slog.Error("error saving groups to database", "object", object.object, "error", err)
 			objectErrorCnt++
 			continue
 		}
 
 		if err := proc.updateInferenceTagCount(reportId, objTagCount, false); err != nil {
-			slog.Error("error updating tag count", "object", object, "error", err)
+			slog.Error("error updating tag count", "object", object.object, "error", err)
 			objectErrorCnt++
 			continue
 		}
 
 		if err := proc.updateInferenceTagCount(reportId, objCustomTagCount, true); err != nil {
-			slog.Error("error updating custom tag count", "object", object, "error", err)
+			slog.Error("error updating custom tag count", "object", object.object, "error", err)
 			objectErrorCnt++
 			continue
 		}

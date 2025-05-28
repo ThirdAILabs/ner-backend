@@ -6,17 +6,15 @@ import {
   Typography,
   CircularProgress,
   FormControl,
-  InputLabel,
   Select,
   MenuItem,
-  SelectChangeEvent
+  SelectChangeEvent,
+  Card,
+  CardContent,
 } from '@mui/material';
 import { useSearchParams } from 'next/navigation';
 import { nerService } from '@/lib/backend';
 import MetricsDataViewer from './metrics/MetricsDataViewer';
-import TrainingResults from './metrics/TrainingResults';
-import ExamplesVisualizer from './metrics/ExamplesVisualizer';
-import ModelUpdate from './metrics/ModelUpdate';
 import { useHealth } from '@/contexts/HealthProvider';
 import useTelemetry from '@/hooks/useTelemetry';
 
@@ -37,16 +35,16 @@ const Dashboard = () => {
 
   // Models for the dropdown
   const [days, setDays] = useState<number>(7);
-  const handleDaysChange = (e: SelectChangeEvent<number>) => {
-    const newDays = Number(e.target.value);
-    setDays(newDays);
-    recordEvent({
-      UserAction: 'select',
-      UIComponent: 'Days Filter',
-      UI: 'Usage Stats Dashboard Page',
-      data: { days: newDays }
-    });
-  };
+  // const handleDaysChange = (e: SelectChangeEvent<number>) => {
+  //   const newDays = Number(e.target.value);
+  //   setDays(newDays);
+  //   recordEvent({
+  //     UserAction: 'select',
+  //     UIComponent: 'Days Filter',
+  //     UI: 'Usage Stats Dashboard Page',
+  //     data: { days: newDays }
+  //   });
+  // };
   const [models, setModels] = useState<Model[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>('');
   const handleModelChange = (e: SelectChangeEvent<string>) => {
@@ -86,33 +84,86 @@ const Dashboard = () => {
   }
 
   return (
-    <Box
-      className="bg-muted/60"
+    <Card
       sx={{
-        padding: '24px',
         boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        bgcolor: 'white',
+        borderRadius: '12px',
+        mx: 'auto',
+        maxWidth: '1400px',
       }}
     >
-      <div className="space-y-6">
-        {/* <TrainingResults />
-        <ExamplesVisualizer />
-        <ModelUpdate 
-          username="user"
-          modelName={deploymentId as string}
-          deploymentUrl={`/api/token-classification?deploymentId=${deploymentId}`}
-          modelId={`user/${deploymentId}`}
-        /> */}
-        <Box mb={3} sx={{ display: 'flex', gap: 4, alignItems: 'flex-start' }}>
-          {/* Days */}
+      <CardContent sx={{ p: 4 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mb: 4,
+          }}
+        >
+          <Typography
+            variant="h5"
+            sx={{
+              fontWeight: 600,
+              fontSize: '1.5rem',
+              color: '#111827',
+            }}
+          >
+            Metrics Dashboard
+          </Typography>
+        </Box>
+
+        <Box
+          sx={{
+            display: 'flex',
+            gap: 4,
+            alignItems: 'flex-start',
+            mb: 4,
+            '& .MuiFormControl-root': {
+              bgcolor: 'white',
+              borderRadius: '8px',
+              '& .MuiSelect-select': {
+                py: 1.5,
+              },
+            },
+          }}
+        >
+          {/* Days Filter */}
           <Box>
-            <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
+            <Typography
+              variant="subtitle2"
+              gutterBottom
+              sx={{
+                fontWeight: 600,
+                color: '#475569',
+                mb: 1,
+              }}
+            >
               Days
             </Typography>
-            <FormControl size="small" sx={{ minWidth: 120 }}>
+            <FormControl
+              size="small"
+              sx={{
+                minWidth: 120,
+                '& .MuiOutlinedInput-root': {
+                  borderColor: 'grey.200',
+                  '&:hover': {
+                    borderColor: 'grey.300',
+                  },
+                },
+              }}
+            >
               <Select
                 value={days}
-                onChange={handleDaysChange}
+                onChange={(e) => setDays(Number(e.target.value))}
                 displayEmpty
+                sx={{
+                  bgcolor: '#f8fafc',
+                  '&:hover': {
+                    bgcolor: '#f1f5f9',
+                  },
+                }}
               >
                 <MenuItem value={1}>1 day</MenuItem>
                 <MenuItem value={7}>7 days</MenuItem>
@@ -123,10 +174,29 @@ const Dashboard = () => {
 
           {/* Model Filter */}
           <Box flex={1} sx={{ maxWidth: 300 }}>
-            <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
+            <Typography
+              variant="subtitle2"
+              gutterBottom
+              sx={{
+                fontWeight: 600,
+                color: '#475569',
+                mb: 1,
+              }}
+            >
               Model
             </Typography>
-            <FormControl size="small" fullWidth>
+            <FormControl
+              size="small"
+              fullWidth
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderColor: 'grey.200',
+                  '&:hover': {
+                    borderColor: 'grey.300',
+                  },
+                },
+              }}
+            >
               <Select
                 value={selectedModel}
                 displayEmpty
@@ -136,6 +206,12 @@ const Dashboard = () => {
                     ? 'All Models'
                     : models.find(m => m.Id === val)?.Name || val
                 }
+                sx={{
+                  bgcolor: '#f8fafc',
+                  '&:hover': {
+                    bgcolor: '#f1f5f9',
+                  },
+                }}
               >
                 <MenuItem value="">
                   <em>All Models</em>
@@ -150,10 +226,20 @@ const Dashboard = () => {
           </Box>
         </Box>
 
-        {/* Your new metrics viewer */}
-        <MetricsDataViewer modelId={selectedModel || undefined} days={days} />
-      </div>
-    </Box>
+        {/* Metrics Viewer */}
+        <Box
+          sx={{
+            bgcolor: 'white',
+            borderRadius: '12px',
+            border: '1px solid',
+            borderColor: 'grey.200',
+            overflow: 'hidden',
+          }}
+        >
+          <MetricsDataViewer modelId={selectedModel || undefined} days={days} />
+        </Box>
+      </CardContent>
+    </Card>
   );
 };
 
