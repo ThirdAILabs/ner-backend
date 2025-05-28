@@ -142,7 +142,7 @@ func TestChatEndpoint(t *testing.T) {
 		Message: "Hello, how are you today? I am Yashwanth and I work at ThirdAI and my email is yash@thirdai.com",
 	}
 	chatBody, _ := json.Marshal(chatPayload)
-	req = httptest.NewRequest(http.MethodPost, "/chat/sessions/"+sessionID+"/messages/stream", bytes.NewReader(chatBody))
+	req = httptest.NewRequest(http.MethodPost, "/chat/sessions/"+sessionID+"/messages", bytes.NewReader(chatBody))
 	req.Header.Set("Content-Type", "application/json")
 
 	rec = httptest.NewRecorder()

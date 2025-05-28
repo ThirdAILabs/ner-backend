@@ -314,79 +314,29 @@ export const nerService = {
     }
   },
 
-  getChatSessions: async (): Promise<{
-    data: { id: string; title: string }[];
-    error: string | null;
-  }> => {
-    try {
-      const { data } = await axiosInstance.get('/chat/sessions');
-      return { data: data.sessions, error: null };
-    } catch (error) {
-      const errorMsg =
-        axios.isAxiosError(error) && error.response?.data
-          ? error.response.data
-          : 'Failed to get chat sessions';
-      return { data: [], error: errorMsg };
-    }
+  getChatSessions: async (): Promise<{ id: string; title: string }[]> => {
+    const { data } = await axiosInstance.get('/chat/sessions');
+    return data.sessions;
   },
 
-  startChatSession: async (
-    model: string,
-    title: string
-  ): Promise<{ data: { session_id: string } | null; error: string | null }> => {
-    try {
-      const { data } = await axiosInstance.post('/chat/sessions', { model, title });
-      return { data, error: null };
-    } catch (error) {
-      const errorMsg =
-        axios.isAxiosError(error) && error.response?.data
-          ? error.response.data
-          : 'Failed to start chat session';
-      return { data: null, error: errorMsg };
-    }
+  startChatSession: async (model: string, title: string): Promise<string> => {
+    const { data } = await axiosInstance.post('/chat/sessions', { model, title });
+    return data.session_id;
   },
 
-  deleteChatSession: async (sessionId: string): Promise<{ error: string | null }> => {
-    try {
-      await axiosInstance.delete(`/chat/sessions/${sessionId}`);
-      return { error: null };
-    } catch (error) {
-      return { error: 'Failed to delete chat session' };
-    }
+  deleteChatSession: async (sessionId: string): Promise<void> => {
+    await axiosInstance.delete(`/chat/sessions/${sessionId}`);
   },
 
   getChatSession: async (
     sessionId: string
-  ): Promise<{
-    data: { id: string; title: string; tag_map: Record<string, string> } | null;
-    error: string | null;
-  }> => {
-    try {
-      const { data } = await axiosInstance.get(`/chat/sessions/${sessionId}`);
-      return { data, error: null };
-    } catch (error) {
-      const errorMsg =
-        axios.isAxiosError(error) && error.response?.data
-          ? error.response.data
-          : 'Failed to get chat session';
-      return { data: null, error: errorMsg };
-    }
+  ): Promise<{ id: string; title: string; tag_map: Record<string, string> }> => {
+    const { data } = await axiosInstance.get(`/chat/sessions/${sessionId}`);
+    return data;
   },
 
-  renameChatSession: async (
-    sessionId: string,
-    title: string
-  ): Promise<{ error: string | null }> => {
-    try {
-      await axiosInstance.post(`/chat/sessions/${sessionId}/rename`, { title });
-      return { error: null };
-    } catch (error) {
-      const errorMsg =
-        axios.isAxiosError(error) && error.response?.data
-          ? error.response.data
-          : 'Failed to rename chat session';
-      return { error: errorMsg };
-    }
+  renameChatSession: async (sessionId: string, title: string): Promise<void> => {
+    await axiosInstance.post(`/chat/sessions/${sessionId}/rename`, { title });
   },
 
   sendChatMessageStream: async (
@@ -397,7 +347,7 @@ export const nerService = {
     onChunk: (chunk: ChatResponse) => void
   ) => {
     const response = await axiosInstance.post(
-      `/chat/sessions/${sessionId}/messages/stream`,
+      `/chat/sessions/${sessionId}/messages`,
       {
         model,
         api_key: apiKey,
@@ -429,42 +379,24 @@ export const nerService = {
 
   getChatHistory: async (
     sessionId: string
-  ): Promise<{
-    data: Array<{
+  ): Promise<
+    {
       message_type: string;
       content: string;
       timestamp: string;
       metadata?: any;
-    }>;
-    error: string | null;
-  }> => {
-    try {
-      const { data } = await axiosInstance.get(`/chat/sessions/${sessionId}/history`);
-      return { data, error: null };
-    } catch (error) {
-      const errorMsg =
-        axios.isAxiosError(error) && error.response?.data
-          ? error.response.data
-          : 'Failed to get chat history';
-      return { data: [], error: errorMsg };
-    }
+    }[]
+  > => {
+    const { data } = await axiosInstance.get(`/chat/sessions/${sessionId}/history`);
+    return data || [];
   },
 
-  getOpenAIApiKey: async (): Promise<{ apiKey: string; error: string | null }> => {
-    try {
-      const response = await axiosInstance.get('/chat/api-key');
-      return { apiKey: response.data.api_key, error: null };
-    } catch (error) {
-      return { apiKey: '', error: 'Failed to get OpenAI API key' };
-    }
+  getOpenAIApiKey: async (): Promise<string> => {
+    const response = await axiosInstance.get('/chat/api-key');
+    return response.data.api_key;
   },
 
-  setOpenAIApiKey: async (apiKey: string): Promise<string | null> => {
-    try {
-      await axiosInstance.post('/chat/api-key', { api_key: apiKey });
-      return null;
-    } catch (error) {
-      return 'Failed to set OpenAI API key';
-    }
+  setOpenAIApiKey: async (apiKey: string): Promise<void> => {
+    await axiosInstance.post('/chat/api-key', { api_key: apiKey });
   },
 };

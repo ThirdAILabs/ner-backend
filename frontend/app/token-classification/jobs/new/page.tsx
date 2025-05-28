@@ -508,7 +508,7 @@ export default function NewJobPage() {
 
       // Redirect after success
       setTimeout(() => {
-        router.push(`/?tab=jobs`);
+        router.push(`/token-classification/landing?tab=jobs`);
       }, 2000);
     } catch (err: unknown) {
       let errorMessage = 'An unexpected error occurred';

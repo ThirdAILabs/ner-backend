@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { nerService } from '@/lib/backend';
+import { ChatResponse, nerService } from '@/lib/backend';
 
 export interface ChatPreview {
   id: string;
@@ -81,25 +81,40 @@ const unredactContent = (content: string, tagMap: Record<string, string>) => {
   return unredactedContent;
 };
 
+/**
+ * While backend.ts is responsible for handling the raw API calls and type definitions,
+ * this hook manages the higher-level chat functionality - maintaining UI state,
+ * coordinating message flows, and providing a clean interface for components to
+ * interact with the chat system.
+ * @param chatId The ID of the current chat session
+ */
 export default function useSafeGPT(chatId: string) {
   const [title, setTitle] = useState('Loading...');
   const [previews, setPreviews] = useState<ChatPreview[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [invalidApiKey, setInvalidApiKey] = useState<boolean>(false);
 
+  useEffect(() => {
+    getChatPreviews().then(setPreviews);
+  }, [chatId]);
+
+  useEffect(() => {
+    getChat(chatId).then(setMessages);
+  }, [chatId]);
+
   const getChatPreviews = async (): Promise<ChatPreview[]> => {
-    const sessions = await nerService.getChatSessions();
-    if (sessions.error) {
-      alert(sessions.error);
+    try {
+      const sessions = await nerService.getChatSessions();
+      return sessions
+        .map((session) => ({
+          id: session.id,
+          title: session.title,
+        }))
+        .reverse(); // reverse to show most recent chats first TODO this should be handled by backend and based on last modified not last created.
+    } catch (error) {
+      alert('Failed to get chat sessions. Please try again.');
       return [];
     }
-
-    return sessions.data
-      .map((session) => ({
-        id: session.id,
-        title: session.title,
-      }))
-      .reverse(); // reverse to show most recent chats first TODO this should be handled by backend and based on last modified not last created.
   };
 
   const getChat = async (chatId: string): Promise<Message[]> => {
@@ -108,23 +123,27 @@ export default function useSafeGPT(chatId: string) {
       return [];
     }
 
-    const session = await nerService.getChatSession(chatId);
-    if (session.error) {
-      alert(session.error);
+    let session;
+    try {
+      session = await nerService.getChatSession(chatId);
+    } catch (error) {
+      alert('Failed to get chat. Please try again.');
       return [];
     }
 
-    setTitle(session.data!.title || `Chat ${chatId}`);
-    const tagMap = session.data!.tag_map;
+    setTitle(session.title || `Chat ${chatId}`);
+    const tagMap = session.tag_map;
 
-    const history = await nerService.getChatHistory(chatId);
-
-    if (!history.data) {
+    let history;
+    try {
+      history = await nerService.getChatHistory(chatId);
+    } catch (error) {
+      alert('Failed to get chat history. Please try again.');
       return [];
     }
 
     const messages: Message[] = [];
-    for (const message of history.data) {
+    for (const message of history) {
       messages.push({
         content: unredactContent(message.content, tagMap),
         redactedContent: toRedactedContent(message.content, tagMap),
@@ -141,9 +160,6 @@ export default function useSafeGPT(chatId: string) {
     }
     await nerService.deleteChatSession(selectedId);
     setPreviews((prevPreviews) => prevPreviews.filter((preview) => preview.id !== selectedId));
-    if (selectedId === chatId) {
-      window.location.href = `/safegpt?id=new`;
-    }
   };
 
   const sendMessage = async (message: string, apiKey: string) => {
@@ -152,10 +168,7 @@ export default function useSafeGPT(chatId: string) {
     // If the chat is new, create a new chat session.
     let sessionId = chatId;
     if (chatId === NEW_CHAT_ID) {
-      const { data } = await nerService.startChatSession('gpt-4', title);
-      if (data?.session_id) {
-        sessionId = data.session_id;
-      }
+      sessionId = await nerService.startChatSession('gpt-4', title);
     }
 
     // Save the current state of messages to restore if the request fails.
@@ -174,85 +187,67 @@ export default function useSafeGPT(chatId: string) {
     let tagMap: Record<string, string> = {};
     let replyBuilder: string = '';
 
+    const handleChunk = (chunk: ChatResponse) => {
+      if (chunk.tag_map) {
+        tagMap = { ...tagMap, ...chunk.tag_map };
+      }
+
+      if (chunk.input_text) {
+        setMessages([
+          ...prevMessages,
+          {
+            content: unredactContent(chunk.input_text, tagMap),
+            redactedContent: toRedactedContent(chunk.input_text, tagMap),
+            role: 'user',
+          },
+          // Add a placeholder message for the LLM response so we don't have to
+          // conditionally add it to the messages array when we receive the first chunk
+          // of the LLM response. It also reflects the fact that we're actively
+          // waiting for the LLM response, allowing us to show a loading state.
+          // This will not result in partial messages because we always rollback if the
+          // transaction fails.
+          {
+            content: '',
+            redactedContent: [],
+            role: 'llm',
+          },
+        ]);
+        return;
+      }
+
+      // We assume that the input text is always the first message.
+      // Thus, the last message must be the LLM message.
+      if (chunk.reply) {
+        replyBuilder += chunk.reply;
+        setMessages((prev) => {
+          const newMessages = [...prev];
+          newMessages[newMessages.length - 1].content = unredactContent(replyBuilder, tagMap);
+          newMessages[newMessages.length - 1].redactedContent = toRedactedContent(
+            replyBuilder,
+            tagMap
+          );
+          return newMessages;
+        });
+      }
+    };
+
     try {
-      await nerService.sendChatMessageStream(sessionId, 'gpt-4', apiKey, message, (chunk) => {
-        if (chunk.tag_map) {
-          tagMap = { ...tagMap, ...chunk.tag_map };
-        }
-
-        if (chunk.input_text) {
-          setMessages([
-            ...prevMessages,
-            {
-              content: unredactContent(chunk.input_text, tagMap),
-              redactedContent: toRedactedContent(chunk.input_text, tagMap),
-              role: 'user',
-            },
-            // Add a placeholder message for the LLM response so we don't have to
-            // conditionally add it to the messages array when we receive the first chunk
-            // of the LLM response. It also reflects the fact that we're actively
-            // waiting for the LLM response, allowing us to show a loading state.
-            // This will not result in partial messages because we always rollback if the
-            // transaction fails.
-            {
-              content: '',
-              redactedContent: [],
-              role: 'llm',
-            },
-          ]);
-          return;
-        }
-
-        // We assume that the input text is always the first message.
-        // Thus, the last message must be the LLM message.
-        if (chunk.reply) {
-          replyBuilder += chunk.reply;
-          setMessages((prev) => {
-            const newMessages = [...prev];
-            newMessages[newMessages.length - 1].content = unredactContent(replyBuilder, tagMap);
-            newMessages[newMessages.length - 1].redactedContent = toRedactedContent(
-              replyBuilder,
-              tagMap
-            );
-            return newMessages;
-          });
-        }
-      });
-      if (sessionId !== chatId) {
-        return sessionId;
-      }
+      await nerService.sendChatMessageStream(sessionId, 'gpt-4', apiKey, message, handleChunk);
     } catch (error) {
-      const errorMessage = (error as Error).message;
-      if (errorMessage.toLowerCase().includes("api key")) {
-        setMessages(prevMessages);
+      if ((error as Error).message.toLowerCase().includes('api key')) {
         setInvalidApiKey(true);
-        if (sessionId !== chatId) {
-          deleteChat(sessionId);
-        }
       } else {
-        setMessages(prevMessages);
-        if (sessionId !== chatId) {
-          deleteChat(sessionId);
-        }
+        alert(
+          'Failed to send message to GPT. Please make sure your API key is correct and you are connected to the internet then try again.'
+        );
       }
-      throw new Error(errorMessage);
-    }
-    return null;
-  };
 
-  const updateTitle = async (newTitle: string) => {
-    let sessionId = chatId;
-    if (chatId === NEW_CHAT_ID) {
-      const { data } = await nerService.startChatSession('gpt-4', newTitle);
-      sessionId = data!.session_id;
+      setMessages(prevMessages);
+      if (sessionId !== chatId) {
+        deleteChat(sessionId);
+      }
+      throw error;
     }
-    await nerService.renameChatSession(sessionId, newTitle);
-    setTitle(newTitle);
-    setPreviews((prevPreviews) =>
-      prevPreviews.map((preview) =>
-        preview.id === chatId ? { ...preview, title: newTitle } : preview
-      )
-    );
 
     if (sessionId !== chatId) {
       return sessionId;
@@ -261,13 +256,30 @@ export default function useSafeGPT(chatId: string) {
     return null;
   };
 
-  useEffect(() => {
-    getChatPreviews().then(setPreviews);
-  }, [chatId]);
+  const updateTitle = async (newTitle: string) => {
+    let sessionId = chatId;
+    if (chatId === NEW_CHAT_ID) {
+      sessionId = await nerService.startChatSession('gpt-4', newTitle);
+    }
 
-  useEffect(() => {
-    getChat(chatId).then(setMessages);
-  }, [chatId]);
+    try {
+      await nerService.renameChatSession(sessionId, newTitle);
+      setTitle(newTitle);
+      setPreviews((prevPreviews) =>
+        prevPreviews.map((preview) =>
+          preview.id === chatId ? { ...preview, title: newTitle } : preview
+        )
+      );
+
+      if (sessionId !== chatId) {
+        return sessionId;
+      }
+    } catch (error) {
+      alert('Failed to update chat title. Please try again.');
+    }
+
+    return null;
+  };
 
   return {
     previews: [

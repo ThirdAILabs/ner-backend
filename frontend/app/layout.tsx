@@ -26,7 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           but I couldn't get the styling right.
         */}
         <div className="fixed top-0 left-0 w-full h-[30px] titlebar" />
-        
+
         <Providers>
           {children}
           <ErrorPopup autoCloseTime={7000} />

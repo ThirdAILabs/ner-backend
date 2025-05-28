@@ -4,28 +4,26 @@ import { nerService } from '@/lib/backend';
 export default function useApiKeyStore() {
   const [apiKey, setApiKey] = useState<string>('');
 
-  const getApiKey = async () => {
-    const { apiKey, error } = await nerService.getOpenAIApiKey();
-    if (error) {
-      alert(error);
-      return '';
-    }
-    return apiKey;
-  };
-
   const saveApiKey = async (key: string) => {
-    const error = await nerService.setOpenAIApiKey(key);
-    if (error) {
-      alert(error);
+    try {
+      await nerService.setOpenAIApiKey(key);
+    } catch (error) {
+      alert('Failed to set OpenAI API key. Please try again.');
       return;
     }
+
     setApiKey(key);
   };
 
   useEffect(() => {
-    getApiKey().then((key) => {
-      setApiKey(key);
-    });
+    nerService
+      .getOpenAIApiKey()
+      .then((key) => {
+        setApiKey(key);
+      })
+      .catch((error) => {
+        alert('Failed to get OpenAI API key. Please try again.');
+      });
   }, []);
 
   return {
