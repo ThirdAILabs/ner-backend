@@ -20,7 +20,7 @@ func GetMigrator(db *gorm.DB) *gormigrate.Gormigrate {
 			Rollback: versions.RollbackMigration1,
 		},
 		{
-			ID:       "1",
+			ID:       "2",
 			Migrate:  versions.Migration2,
 			Rollback: versions.RollbackMigration2,
 		},
