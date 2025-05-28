@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Card, CardContent, Typography, CircularProgress } from '@mui/material';
 import { nerService, InferenceMetrics, ThroughputMetrics } from '@/lib/backend';
+import { formatFileSize, formatNumber } from '@/lib/utils';
 
 interface MetricsDataViewerProps {
   modelId?: string;
@@ -15,6 +16,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
   const [infSeries, setInfSeries] = useState<{ day: number; dataMB: number; tokens: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [throughput, setThroughput] = useState<string | null>('-');
 
   useEffect(() => {
     let mounted = true;
@@ -33,6 +35,9 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
           const tp = await nerService.getThroughputMetrics(modelId);
           if (!mounted) return;
           setTpMetrics(tp);
+          setThroughput(
+            tp.ThroughputMBPerHour !== undefined ? formatFileSize(tp.ThroughputMBPerHour, true) : '-'
+          );
         } else {
           setTpMetrics(null);
         }
@@ -138,6 +143,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
             </Box>
             <Typography
               sx={{
+                textAlign: 'center',
                 fontSize: '0.875rem',
                 color: '#64748b',
                 fontWeight: 500,
@@ -194,6 +200,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
             </Box>
             <Typography
               sx={{
+                textAlign: 'center',
                 fontSize: '0.875rem',
                 color: '#64748b',
                 fontWeight: 500,
@@ -241,23 +248,24 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
               <Typography
                 sx={{
                   fontSize: (theme) =>
-                    tpMetrics?.ThroughputMBPerHour > 1000
-                      ? '1.5rem'
-                      : tpMetrics?.ThroughputMBPerHour > 100
-                        ? '1.75rem'
-                        : '2rem',
+                    throughput && throughput.length > 7
+                      ? '1.25rem'
+                      : throughput && throughput.length > 5
+                        ? '1.5rem'
+                        : throughput && throughput.length > 3
+                          ? '1.75rem'
+                          : '2rem',
                   fontWeight: 600,
                   color: '#1e293b',
                   textAlign: 'center',
                 }}
               >
-                {tpMetrics?.ThroughputMBPerHour == null
-                  ? '-'
-                  : `${tpMetrics?.ThroughputMBPerHour.toFixed(2).toLocaleString()} MB/Hour`}
+                {throughput === '-' ? '-' : `${throughput}/Hour`}
               </Typography>
             </Box>
             <Typography
               sx={{
+                textAlign: 'center',
                 fontSize: '0.875rem',
                 color: '#64748b',
                 fontWeight: 500,
@@ -304,17 +312,18 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
             >
               <Typography
                 sx={{
+                  textAlign: 'center',
                   fontSize: '2rem',
                   fontWeight: 600,
                   color: '#1e293b',
-                  textAlign: 'center',
                 }}
               >
-                {infMetrics.DataProcessedMB.toFixed(2).toLocaleString()} MB
+                {formatFileSize(infMetrics.DataProcessedMB * 1024 * 1024)}
               </Typography>
             </Box>
             <Typography
               sx={{
+                textAlign: 'center',
                 fontSize: '0.875rem',
                 color: '#64748b',
                 fontWeight: 500,
@@ -367,11 +376,12 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
                   textAlign: 'center',
                 }}
               >
-                {infMetrics.TokensProcessed.toLocaleString()}
+                {formatNumber(infMetrics.TokensProcessed)}
               </Typography>
             </Box>
             <Typography
               sx={{
+                textAlign: 'center',
                 fontSize: '0.875rem',
                 color: '#64748b',
                 fontWeight: 500,

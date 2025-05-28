@@ -598,7 +598,7 @@ export default function NewJobPage() {
   );
 
   return (
-    <div className="container px-4 py-8 w-3/4">
+    <div className="container px-4 py-8" style={{ width: '90%' }}>
       {/* Title and Back Button */}
       <div className="flex items-center justify-between mb-6">
         <Button variant="outline" size="sm" asChild>
