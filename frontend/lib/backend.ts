@@ -315,13 +315,10 @@ export const nerService = {
 
   getChatSessions: async (): Promise<{ id: string; title: string }[]> => {
     const { data } = await axiosInstance.get('/chat/sessions');
-    return data.sessions
+    return data.sessions;
   },
 
-  startChatSession: async (
-    model: string,
-    title: string
-  ): Promise<string> => {
+  startChatSession: async (model: string, title: string): Promise<string> => {
     const { data } = await axiosInstance.post('/chat/sessions', { model, title });
     return data.session_id;
   },
@@ -337,10 +334,7 @@ export const nerService = {
     return data;
   },
 
-  renameChatSession: async (
-    sessionId: string,
-    title: string
-  ): Promise<void> => {
+  renameChatSession: async (sessionId: string, title: string): Promise<void> => {
     await axiosInstance.post(`/chat/sessions/${sessionId}/rename`, { title });
   },
 
@@ -384,12 +378,14 @@ export const nerService = {
 
   getChatHistory: async (
     sessionId: string
-  ): Promise<{
-    message_type: string;
-    content: string;
-    timestamp: string;
-    metadata?: any;
-  }[]> => {
+  ): Promise<
+    {
+      message_type: string;
+      content: string;
+      timestamp: string;
+      metadata?: any;
+    }[]
+  > => {
     const { data } = await axiosInstance.get(`/chat/sessions/${sessionId}/history`);
     return data || [];
   },

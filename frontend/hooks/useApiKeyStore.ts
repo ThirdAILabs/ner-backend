@@ -8,7 +8,7 @@ export default function useApiKeyStore() {
     try {
       await nerService.setOpenAIApiKey(key);
     } catch (error) {
-      alert("Failed to set OpenAI API key. Please try again.");
+      alert('Failed to set OpenAI API key. Please try again.');
       return;
     }
 
@@ -16,11 +16,14 @@ export default function useApiKeyStore() {
   };
 
   useEffect(() => {
-    nerService.getOpenAIApiKey().then((key) => {
-      setApiKey(key);
-    }).catch((error) => {
-      alert("Failed to get OpenAI API key. Please try again.");
-    });
+    nerService
+      .getOpenAIApiKey()
+      .then((key) => {
+        setApiKey(key);
+      })
+      .catch((error) => {
+        alert('Failed to get OpenAI API key. Please try again.');
+      });
   }, []);
 
   return {

@@ -97,7 +97,7 @@ export default function useSafeGPT(chatId: string) {
         }))
         .reverse(); // reverse to show most recent chats first TODO this should be handled by backend and based on last modified not last created.
     } catch (error) {
-      alert("Failed to get chat sessions. Please try again.");
+      alert('Failed to get chat sessions. Please try again.');
       return [];
     }
   };
@@ -112,10 +112,10 @@ export default function useSafeGPT(chatId: string) {
     try {
       session = await nerService.getChatSession(chatId);
     } catch (error) {
-      alert("Failed to get chat. Please try again.");
+      alert('Failed to get chat. Please try again.');
       return [];
     }
-      
+
     setTitle(session.title || `Chat ${chatId}`);
     const tagMap = session.tag_map;
 
@@ -123,10 +123,10 @@ export default function useSafeGPT(chatId: string) {
     try {
       history = await nerService.getChatHistory(chatId);
     } catch (error) {
-      alert("Failed to get chat history. Please try again.");
+      alert('Failed to get chat history. Please try again.');
       return [];
     }
-  
+
     const messages: Message[] = [];
     for (const message of history) {
       messages.push({
@@ -214,7 +214,7 @@ export default function useSafeGPT(chatId: string) {
           return newMessages;
         });
       }
-    }
+    };
 
     try {
       await nerService.sendChatMessageStream(sessionId, 'gpt-4', apiKey, message, handleChunk);
@@ -229,7 +229,7 @@ export default function useSafeGPT(chatId: string) {
       }
       throw error;
     }
-    
+
     if (sessionId !== chatId) {
       return sessionId;
     }
@@ -251,13 +251,12 @@ export default function useSafeGPT(chatId: string) {
           preview.id === chatId ? { ...preview, title: newTitle } : preview
         )
       );
-  
+
       if (sessionId !== chatId) {
         return sessionId;
       }
-      
     } catch (error) {
-      alert("Failed to update chat title. Please try again.");
+      alert('Failed to update chat title. Please try again.');
     }
 
     return null;
