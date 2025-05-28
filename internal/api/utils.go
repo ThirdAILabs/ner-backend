@@ -93,9 +93,23 @@ type StreamMessage struct {
 	Code    int
 }
 
-func RestStreamHandler(handler func(r *http.Request) StreamResponse) http.HandlerFunc {
+func RestStreamHandler(handler func(r *http.Request) (StreamResponse, error)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		stream := handler(r)
+		stream, err := handler(r)
+		if err != nil {
+			var cerr *codedError
+			if errors.As(err, &cerr) {
+				http.Error(w, err.Error(), cerr.code)
+				if cerr.code == http.StatusInternalServerError {
+					slog.Error("internal server error received in endpoint", "error", err)
+				}
+			} else {
+				slog.Error("recieved non coded error from endpoint", "error", err)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+
+			}
+			return
+		}
 
 		flusher, ok := w.(http.Flusher)
 		if !ok {

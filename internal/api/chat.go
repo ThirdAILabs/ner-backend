@@ -136,45 +136,45 @@ func (s *ChatService) RenameSession(r *http.Request) (any, error) {
 	return nil, nil
 }
 
-func (s *ChatService) SendMessageStream(r *http.Request) StreamResponse {
-	return func(yield func(any, error) bool) {
-		sessionID, err := URLParamUUID(r, "session_id")
-		if err != nil {
-			yield(nil, err)
-			return
-		}
+func (s *ChatService) SendMessageStream(r *http.Request) (StreamResponse, error) {
+	sessionID, err := URLParamUUID(r, "session_id")
+	if err != nil {
+		return nil, err
+	}
 
-		req, err := ParseRequest[api.ChatRequest](r)
-		if err != nil {
-			yield(nil, err)
-			return
-		}
+	req, err := ParseRequest[api.ChatRequest](r)
+	if err != nil {
+		return nil, err
+	}
 
-		if err := s.manager.ValidateModel(req.Model); err != nil {
-			yield(nil, err)
-			return
-		}
+	if err := s.manager.ValidateModel(req.Model); err != nil {
+		return nil, err
+	}
 
-		engine, err := s.manager.EngineName(req.Model)
-		if err != nil {
-			yield(nil, err)
-			return
-		}
+	engine, err := s.manager.EngineName(req.Model)
+	if err != nil {
+		return nil, err
+	}
 
-		session, err := chat.NewChatSession(s.db, sessionID, engine, req.APIKey, s.model)
-		if err != nil {
-			yield(nil, err)
-			return
-		}
+	apiKey := s.getOpenAIApiKey()
+	session, err := chat.NewChatSession(s.db, sessionID, engine, apiKey, s.model)
+	if err != nil {
+		return nil, err
+	}
 
+	stream := func(yield func(any, error) bool) {
 		for item, err := range session.ChatStream(req.Message) {
 			if err != nil {
 				yield(nil, err)
 				return
 			}
-			yield(api.ChatResponse{InputText: item.RedactedText, Reply: item.Reply, TagMap: item.TagMap}, nil)
+			if !yield(api.ChatResponse{InputText: item.RedactedText, Reply: item.Reply, TagMap: item.TagMap}, nil) {
+				break
+			}
 		}
 	}
+
+	return stream, nil
 }
 
 func (s *ChatService) GetHistory(r *http.Request) (any, error) {
@@ -225,13 +225,17 @@ func (s *ChatService) DeleteSession(r *http.Request) (any, error) {
 	return nil, nil
 }
 
-func (s *ChatService) GetOpenAIApiKey(r *http.Request) (any, error) {
+func (s *ChatService) getOpenAIApiKey() string {
 	// TODO: Store in a more secure way.
 	apiKey := ""
 	if data, err := os.ReadFile("api-key.txt"); err == nil {
 		apiKey = strings.TrimSpace(string(data));
 	}
-	return api.ApiKey{ApiKey: apiKey}, nil
+	return apiKey
+}
+
+func (s *ChatService) GetOpenAIApiKey(r *http.Request) (any, error) {
+	return api.ApiKey{ApiKey: s.getOpenAIApiKey()}, nil
 }
 
 func (s *ChatService) SetOpenAIApiKey(r *http.Request) (any, error) {
