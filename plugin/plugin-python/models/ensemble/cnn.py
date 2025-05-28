@@ -10,6 +10,7 @@ from .postprocess.postprocess_rules import (
     is_valid_card,
     is_valid_credit_score,
     group_consecutive_indices,
+    is_valid_email,
 )
 
 
@@ -75,6 +76,15 @@ class CnnNerExtractor(Model):
                     s, e = spans[start_idx][0], spans[end_idx][1]
                     snippet = orig[s:e]
                     if not is_valid_card(snippet):
+                        for j in range(start_idx, end_idx + 1):
+                            tags[j] = "O"
+
+                for start_idx, end_idx in group_consecutive_indices(
+                    tags, spans, "EMAIL"
+                ):
+                    s, e = spans[start_idx][0], spans[end_idx][1]
+                    snippet = orig[s:e]
+                    if not is_valid_email(snippet):
                         for j in range(start_idx, end_idx + 1):
                             tags[j] = "O"
 

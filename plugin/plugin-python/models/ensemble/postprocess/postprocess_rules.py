@@ -6,6 +6,9 @@ PHONE_REGEX = re.compile(
 )
 CARD_REGEX = re.compile(r"[\d\s\-]{12,19}")
 CREDIT_SCORE_REGEX = re.compile(r"\b\d{2,3}\b")
+EMAIL_REGEX = re.compile(
+    r"(([!#$%&'*+\-/=?^_`{|}~\w]|([!#$%&'*+\-/=?^_`{|}~\w][!#$%&'*+\-/=?^_`{|}~\.\w]*[!#$%&'*+\-/=?^_`{|}~\w]))@\w+([-.]\w+)*\.\w+([-.]\w+)*)"
+)
 
 
 def is_valid_phone(number: str) -> bool:
@@ -58,6 +61,10 @@ def is_valid_credit_score(
     after = full_text[char_end : char_end + 20].lower()
     context = before + after
     return "credit" in context and "score" in context
+
+
+def is_valid_email(email: str) -> bool:
+    return bool(EMAIL_REGEX.fullmatch(email))
 
 
 def group_consecutive_indices(
