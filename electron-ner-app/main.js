@@ -1,9 +1,11 @@
-import { app, BrowserWindow, dialog } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import serve from 'electron-serve';
 import { startBackend } from './scripts/start-backend.js';
+import { initTelemetry, insertTelemetryEvent, closeTelemetry } from './telemetry.js';
+import { initializeUserId, getCurrentUserId } from './userIdManager.js';
 import log from 'electron-log';
 import electronUpdater from 'electron-updater';
 
@@ -12,6 +14,8 @@ const { autoUpdater } = electronUpdater;
 // Get __dirname equivalent in ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const pendingUpdateFile = path.join(app.getPath('userData'), 'pending-update.json');
 
 const appServe = app.isPackaged ? serve({
   directory: path.join(__dirname, "frontend-dist")
@@ -169,11 +173,39 @@ autoUpdater.on('download-progress', (progressObj) => {
   log_message = log_message + ' - Downloaded ' + Math.round(progressObj.percent) + '%';
   console.log(log_message);
 });
-autoUpdater.on('update-downloaded', () => {
-  dialog.showMessageBox({ title: 'Install updates', message: 'Updates downloaded, application will be quit for update...' })
-    .then(() => {
-      autoUpdater.quitAndInstall();
-    });
+autoUpdater.on('update-downloaded', async (info) => {
+  const result = await dialog.showMessageBox(mainWindow, {
+    type: 'question',
+    buttons: [
+      'Restart Now',      // response = 0
+      'Install on Quit',  // response = 1
+      'Remind Me Later'   // response = 2
+    ],
+    defaultId: 0,
+    cancelId: 2,
+    title: 'Update Available',
+    message: `Version ${info.version} is ready to install.`,
+    detail: 
+      'Would you like to restart now to apply the update,\n' +
+      'install it the next time you close the application,\n' +
+      'or be reminded later?'
+  });
+
+  if (result.response === 0) {
+    autoUpdater.quitAndInstall();
+  } else if (result.response === 1) {
+    // Do nothing — since autoInstallOnAppQuit = true by default,
+    // the update will be applied next time the user quits the app.
+  } else {
+    // “Remind Me Later” — disable auto-install on quit so it won’t sneak in
+    autoUpdater.autoInstallOnAppQuit = false;
+
+    try {
+      fs.writeFileSync(pendingUpdateFile, JSON.stringify({ version: info.version }), 'utf-8');
+    } catch (e) {
+      console.error('Failed to save pending-update file', e);
+    }
+  }
 });
 
 // Allow update checks in dev for testing when DEBUG_UPDATER is true
@@ -184,8 +216,25 @@ if (process.env.DEBUG_UPDATER === 'true') {
   console.log('Monkey-patched app.isPackaged to true for DEBUG_UPDATER');
 }
 
+// Set up telemetry IPC handler
+ipcMain.handle('telemetry', async (event, data) => {
+  await insertTelemetryEvent(data);
+});
+
+// Set up user ID IPC handler
+ipcMain.handle('get-user-id', async () => {
+  return getCurrentUserId();
+});
+
 // This method will be called when Electron has finished initialization
 app.whenReady().then(async () => {
+  // Initialize user ID first
+  await initializeUserId();
+  
+  // Initialize telemetry
+  await initTelemetry();
+  
+  // Always start the backend first, regardless of dev/prod mode
   try {
     await ensureBackendStarted();
   } catch (err) {
@@ -194,6 +243,32 @@ app.whenReady().then(async () => {
   }
 
   createWindow();
+
+  if (fs.existsSync(pendingUpdateFile)) {
+    try {
+      const { version: pendingVersion } = JSON.parse(
+        fs.readFileSync(pendingUpdateFile, 'utf-8')
+      );
+      const reminder = await dialog.showMessageBox(mainWindow, {
+        type: 'question',
+        buttons: ['Install Now', 'Later'],
+        defaultId: 0,
+        cancelId: 1,
+        title: 'Update Ready',
+        message: `Version ${pendingVersion} is waiting to install.`,
+        detail: 'Would you like to install it now?'
+      });
+
+      if (reminder.response === 0) {
+        autoUpdater.quitAndInstall();
+      }
+    } catch (e) {
+      console.error('Error handling pending-update file', e);
+    } finally {
+      // remove it so we don’t keep asking for the same version
+      try { fs.unlinkSync(pendingUpdateFile); } catch (_) {}
+    }
+  }
   
   // Check for updates on launch (in production or when DEBUG_UPDATER is set)
   if (!isDev || process.env.DEBUG_UPDATER === 'true') {
@@ -225,10 +300,13 @@ app.on('will-quit', () => {
 });
 
 // Handle app quit
-app.on('quit', () => {
+app.on('quit', async () => {
   console.log('App is quitting, ensuring backend is cleaned up...');
   if (backendProcess && backendProcess.kill) {
     console.log('Sending SIGTERM to backend process...');
     backendProcess.kill('SIGTERM');
   }
+  
+  // Close telemetry connection
+  await closeTelemetry();
 }); 

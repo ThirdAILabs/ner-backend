@@ -2,19 +2,20 @@ services:
   # --- Services Needed by BOTH Head & Workers (using profiles) ---
   rabbitmq:
     image: rabbitmq:3.11-management
-    profiles: ["head"] # Explicitly part of both profiles
+    profiles: [ "head" ] # Explicitly part of both profiles
     ports:
       - "5672:5672" # AMQP port
       - "15672:15672" # Management UI port
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
     environment:
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:-user}
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASS:-password}
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "rabbitmqctl", "status"]
+      test: [ "CMD", "rabbitmqctl", "status" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -22,7 +23,7 @@ services:
   # --- Services ONLY for the "Head" Node ---
   postgres:
     image: postgres:15
-    profiles: ["head"] # <<< Only starts when '--profile head' is used
+    profiles: [ "head" ] # <<< Only starts when '--profile head' is used
     environment:
       - POSTGRES_DB=${POSTGRES_DB:-ner-backend}
       - POSTGRES_USER=${POSTGRES_USER:-user}
@@ -35,18 +36,14 @@ services:
     networks:
       - app-network
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "pg_isready -U ${POSTGRES_USER:-user} -d ${POSTGRES_DB:-ner-backend}",
-        ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d ${POSTGRES_DB:-ner-backend}" ]
       interval: 5s
       timeout: 5s
       retries: 5
 
   minio:
     image: quay.io/minio/minio:latest
-    profiles: ["head"] # <<< Only starts when '--profile head' is used
+    profiles: [ "head" ] # <<< Only starts when '--profile head' is used
     command: server /data --console-address ":9090"
     ports:
       - "9000:9000" # S3 API port
@@ -59,7 +56,7 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
       interval: 5s
       timeout: 1s
       retries: 5
@@ -70,11 +67,11 @@ services:
     build:
       context: . # Build from current directory using Dockerfile
       dockerfile: Dockerfile
-    profiles: ["head"]
-    command: ["--head"] # Tells entrypoint.sh to run /app/api
+    profiles: [ "head" ]
+    command: [ "--head" ] # Tells entrypoint.sh to run /app/api
     ports:
       - "${API_PORT:-8001}:8001" # Expose API port
-      - "${FRONTEND_PORT:-3000}:3000" # Expose API port
+      - "${FRONTEND_PORT:-3001}:3000" # Expose API port
     environment:
       - DATABASE_URL=${DATABASE_URL:-postgresql://user:password@postgres:5432/ner-backend?sslmode=disable}
       - RABBITMQ_URL=${RABBITMQ_URL:-amqp://user:password@rabbitmq:5672/}
@@ -84,7 +81,7 @@ services:
     volumes:
       # - .:/app # Mount code for development (requires Go toolchain in container or local build)
       - /etc/localtime:/etc/localtime:ro
-      - ${MODEL_HOST_PATH:-/share/ner/models}:/app/models:ro # Mount models directory (read-only)
+      - ${MODEL_HOST_PATH:-/Users/kartiksarangmath/Documents/thirdai/ner-backend/models}:/app/models:ro # Mount models directory (read-only)
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -100,8 +97,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    profiles: ["worker"]
-    command: ["--worker"] # Tells entrypoint.sh to run /app/worker
+    profiles: [ "worker" ]
+    command: [ "--worker" ] # Tells entrypoint.sh to run /app/worker
     environment:
       - DATABASE_URL=${DATABASE_URL:-postgresql://user:password@postgres:5432/ner-backend?sslmode=disable}
       - RABBITMQ_URL=${RABBITMQ_URL:-amqp://user:password@rabbitmq:5672/}
@@ -110,9 +107,11 @@ services:
       - INTERNAL_AWS_SECRET_ACCESS_KEY=${INTERNAL_AWS_SECRET_ACCESS_KEY:-YOURSECRETKEY}
       - PYTHON_EXECUTABLE_PATH=${PYTHON_EXECUTABLE_PATH:-python}
       - PYTHON_MODEL_PLUGIN_SCRIPT_PATH=${PYTHON_MODEL_PLUGIN_SCRIPT_PATH:-plugin/plugin-python/plugin.py}
+      - PLUGIN_SERVER=/app/plugin/dist/plugin/plugin
     volumes:
       # - .:/app # Mount code for development (optional)
       - /etc/localtime:/etc/localtime:ro
+      - ./plugin/plugin-python/dist:/app/plugin/dist:ro  # Mount the plugin directory
     deploy:
       # Allows scaling using 'docker compose up --scale worker=N'
       replicas: 1 # Default number of worker instances
@@ -124,6 +123,7 @@ volumes:
   rabbitmq_data:
   postgres_data:
   minio_data:
+
 
 networks:
   # Define custom network for service discovery by service name

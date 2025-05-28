@@ -164,6 +164,15 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 		return nil, err
 	}
 
+	var tags []string
+	for _, ti := range req.Tags {
+		tags = append(tags, ti.Name)
+	}
+	if err := database.SetModelTags(ctx, s.db, model.Id, tags); err != nil {
+		slog.Error("failed to set tags on finetuned model", "model_id", model.Id, "error", err)
+		return nil, err
+	}
+
 	if err := s.publisher.PublishFinetuneTask(ctx, messaging.FinetuneTaskPayload{
 		ModelId:     model.Id,
 		BaseModelId: model.BaseModelId.UUID,

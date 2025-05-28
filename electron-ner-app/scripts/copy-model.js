@@ -11,9 +11,15 @@ const projectRoot = path.join(__dirname, '..');
 const binDir = path.join(projectRoot, 'bin');
 
 // Get model path from environment variable
-const modelPath = process.env.MODEL_PATH;
+const modelPath = process.env.MODEL_DIR;
 if (!modelPath) {
-  console.error('MODEL_PATH environment variable is not set');
+  console.error('MODEL_DIR environment variable is not set');
+  process.exit(1);
+}
+
+const modelType = process.env.MODEL_TYPE;
+if (!modelType) {
+  console.error('MODEL_TYPE environment variable is not set');
   process.exit(1);
 }
 
@@ -23,21 +29,31 @@ if (!fs.existsSync(binDir)) {
   fs.mkdirSync(binDir, { recursive: true });
 }
 
-// Check if model file exists
+// Check if model path exists
 if (!fs.existsSync(modelPath)) {
-  console.error('Model file not found at:', modelPath);
+  console.error('Model path not found at:', modelPath);
   process.exit(1);
 }
 
-// Copy the model file to bin directory
-const modelFileName = path.basename(modelPath);
-const targetModelPath = path.join(binDir, modelFileName);
-
+// Copy only the specific model type directory
 try {
-  console.log(`Copying model from ${modelPath} to ${targetModelPath}`);
-  fs.copyFileSync(modelPath, targetModelPath);
-  console.log('Model copied successfully!');
+  const modelTypeDir = path.join(modelPath, modelType);
+  const targetModelDir = path.join(binDir, modelType);
+
+  if (!fs.existsSync(modelTypeDir)) {
+    console.error(`Model type directory not found at: ${modelTypeDir}`);
+    process.exit(1);
+  }
+
+  console.log(`Copying ${modelType} model from ${modelTypeDir} to ${targetModelDir}`);
+  fs.cpSync(modelTypeDir, targetModelDir, { 
+    recursive: true, 
+    force: true,
+    dereference: false,
+    preserveTimestamps: true
+  });
+  console.log(`${modelType} model directory copied successfully!`);
 } catch (error) {
-  console.error('Failed to copy model:', error.message);
+  console.error('Failed to copy model files:', error.message);
   process.exit(1);
 }

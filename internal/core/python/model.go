@@ -2,11 +2,14 @@ package python
 
 import (
 	"fmt"
+	"log/slog"
+	"math/rand/v2"
 	"ner-backend/internal/core/types"
 	"ner-backend/internal/core/utils"
 	"ner-backend/pkg/api"
 	"ner-backend/plugin/proto"
 	"ner-backend/plugin/shared"
+	"os"
 	"os/exec"
 
 	"github.com/hashicorp/go-plugin"
@@ -20,15 +23,20 @@ type PythonModel struct {
 }
 
 func LoadPythonModel(PythonExecutable, PluginScript, PluginModelName, KwargsJSON string) (*PythonModel, error) {
+	var cmd *exec.Cmd
+
+	// If PLUGIN_SERVER env var is set, use the PyInstaller executable
+	if pluginServer := os.Getenv("PLUGIN_SERVER"); pluginServer != "" {
+		cmd = exec.Command(pluginServer, "--model-name", PluginModelName, "--model-config", KwargsJSON)
+	} else {
+		// Fallback to using Python interpreter + script for development
+		cmd = exec.Command(PythonExecutable, PluginScript, "--model-name", PluginModelName, "--model-config", KwargsJSON)
+	}
+
 	client := plugin.NewClient(&plugin.ClientConfig{
 		HandshakeConfig: shared.Handshake,
 		Plugins:         shared.PluginMap,
-		Cmd: exec.Command(
-			PythonExecutable,
-			PluginScript,
-			"--model-name", PluginModelName,
-			"--model-config", KwargsJSON,
-		),
+		Cmd:             cmd,
 		AllowedProtocols: []plugin.Protocol{
 			plugin.ProtocolNetRPC, plugin.ProtocolGRPC},
 	})
@@ -68,46 +76,53 @@ func (ner *PythonModel) Finetune(prompt string, tags []api.TagInfo, samples []ap
 			Examples:    t.Examples,
 		}
 	}
+	for epoch := 0; epoch < 5; epoch++ {
+		slog.Info("finetuning epoch", "epoch", epoch)
 
-	type chunk struct {
-		samples []*proto.Sample
-		size    int
-	}
-	var curr chunk
+		// shuffle samples each epoch
+		rand.Shuffle(len(samples), func(i, j int) {
+			samples[i], samples[j] = samples[j], samples[i]
+		})
+		type chunk struct {
+			samples []*proto.Sample
+			size    int
+		}
+		var curr chunk
 
-	flush := func() error {
-		if len(curr.samples) == 0 {
-			return nil
-		}
-		if err := ner.model.Finetune(prompt, protoTags, curr.samples); err != nil {
-			return fmt.Errorf("finetune chunk error: %w", err)
-		}
-		curr.samples = nil
-		curr.size = 0
-		return nil
-	}
-	for _, s := range samples {
-		p := &proto.Sample{
-			Tokens: s.Tokens,
-			Labels: s.Labels,
-		}
-		est := 0
-		for _, tok := range p.Tokens {
-			est += len(tok)
-		}
-		for _, lab := range p.Labels {
-			est += len(lab)
-		}
-		if curr.size+est > maxPayload {
-			if err := flush(); err != nil {
+		flush := func() error {
+			if len(curr.samples) == 0 {
+				return nil
+			}
+			if err := ner.model.Finetune(prompt, protoTags, curr.samples); err != nil {
 				return fmt.Errorf("finetune chunk error: %w", err)
 			}
+			curr.samples = nil
+			curr.size = 0
+			return nil
 		}
-		curr.samples = append(curr.samples, p)
-		curr.size += est
-	}
-	if err := flush(); err != nil {
-		return fmt.Errorf("final finetune chunk error: %w", err)
+		for _, s := range samples {
+			p := &proto.Sample{
+				Tokens: s.Tokens,
+				Labels: s.Labels,
+			}
+			est := 0
+			for _, tok := range p.Tokens {
+				est += len(tok)
+			}
+			for _, lab := range p.Labels {
+				est += len(lab)
+			}
+			if curr.size+est > maxPayload {
+				if err := flush(); err != nil {
+					return fmt.Errorf("finetune chunk error: %w", err)
+				}
+			}
+			curr.samples = append(curr.samples, p)
+			curr.size += est
+		}
+		if err := flush(); err != nil {
+			return fmt.Errorf("final finetune chunk error: %w", err)
+		}
 	}
 	return nil
 }

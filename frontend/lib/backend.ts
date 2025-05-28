@@ -97,7 +97,7 @@ export interface ChatResponse {
 }
 
 // Add a utility function to handle API errors with custom messages
-const handleApiError = (error: unknown, customMessage?: string): never => {
+const handleApiError = (error: unknown, customMessage?: string, displayErrorEvent: boolean = true): never => {
   console.error('API Error:', error);
 
   // Extract the error message
@@ -112,7 +112,7 @@ const handleApiError = (error: unknown, customMessage?: string): never => {
   }
 
   // Show the error message (use custom message if provided)
-  if (typeof window !== 'undefined') {
+  if (typeof window !== 'undefined' && displayErrorEvent) {
     showApiErrorEvent(customMessage || errorMessage, status);
   }
 
@@ -121,12 +121,13 @@ const handleApiError = (error: unknown, customMessage?: string): never => {
 
 export const nerService = {
   checkHealth: async () => {
-    try {
-      const response = await axiosInstance.get('/health');
-      return response;
-    } catch (error) {
-      return handleApiError(error, 'Failed to connect to the backend service');
-    }
+    return axiosInstance.get('/health');
+    // try {
+    //   const response = await axiosInstance.get('/health');
+    //   return response;
+    // } catch (error) {
+    //   return handleApiError(error, 'Failed to connect to the backend service', false);
+    // }
   },
 
   listModels: async (): Promise<Model[]> => {

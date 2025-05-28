@@ -37,11 +37,13 @@ axiosInstance.interceptors.response.use(
     const errorMessage =
       error.response?.data?.message || error.message || 'An unexpected error occurred';
     const errorStatus = error.response?.status || 500;
+    console.error('actual reponse status:', error.response?.status);
+    console.error('API Error:', errorMessage, 'Status:', errorStatus);
 
     // Dispatch custom error event
-    if (typeof window !== 'undefined') {
-      showApiErrorEvent(errorMessage, errorStatus);
-    }
+    // if (typeof window !== 'undefined') {
+    //   showApiErrorEvent(errorMessage, errorStatus);
+    // }
 
     return Promise.reject(error);
   }

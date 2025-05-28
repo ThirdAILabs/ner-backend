@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { app } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -217,6 +218,28 @@ export async function startBackend() {
 
   log.debug(`All backend output → ${backendLogPath}`)
 
+  // Track whether file descriptors have been closed
+  let descriptorsClosed = false;
+  
+  // Safely close file descriptors if they haven't been closed yet
+  const safeCloseDescriptors = () => {
+    if (!descriptorsClosed) {
+      try {
+        fs.closeSync(outFd);
+        fs.closeSync(errFd);
+        descriptorsClosed = true;
+      } catch (err) {
+        log.error('Error closing file descriptors:', err);
+      }
+    }
+  };
+
+  const appDataDir = app.getPath('userData');
+  console.log(`Application data directory: ${appDataDir}`);
+
+  // Get the plugin executable path
+  const pluginPath = path.join(backendDir, 'plugin', 'plugin');
+
   const proc = spawn(
     backendPath,
     [], {
@@ -224,7 +247,10 @@ export async function startBackend() {
       env:    {
         ...process.env,
         PORT:       FIXED_PORT.toString(),
-        MODEL_PATH: getDefaultModelPath(),
+        MODEL_DIR: getBinPath(),
+        MODEL_TYPE: 'cnn_model', // TODO: gotta make this configurable
+        PLUGIN_SERVER: pluginPath,
+        APP_DATA_DIR: appDataDir,
       },
       stdio:  ['ignore', outFd, errFd]
     }
@@ -232,21 +258,22 @@ export async function startBackend() {
 
   proc.on('error', err => {
     log.error('Backend spawn error:', err)
+    safeCloseDescriptors();
   })
+
   proc.on('exit', (code, signal) => {
     log.debug(`Backend exit — code: ${code}, signal: ${signal}`)
-    fs.closeSync(outFd)
-    fs.closeSync(errFd)
+    safeCloseDescriptors();
   })
 
   proc.on('close', code => {
     log.debug(`Backend stdio closed, code ${code}`)
     if (code !== 0 && code !== null) {
       log.error(`Backend crashed (code ${code}), exiting host process`)
+      safeCloseDescriptors();
       process.exit(code)
     }
-    fs.closeSync(outFd)
-    fs.closeSync(errFd)
+    safeCloseDescriptors();
   })
 
   process.on('SIGINT', () => {
@@ -267,4 +294,4 @@ export async function startBackend() {
 // Start the backend if this script is called directly
 if (import.meta.url === import.meta.main) {
   startBackend();
-} 
+}
