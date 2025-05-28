@@ -107,7 +107,7 @@ export default function NewJobPage() {
   const [sourceS3Prefix, setSourceS3Prefix] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
+  const [existingReportName, setExistingReportName] = useState<string[]>([]);
   //Job Name
   const [jobName, setJobName] = useState('');
 
@@ -172,6 +172,12 @@ export default function NewJobPage() {
     };
 
     fetchModels();
+
+    const fetchReportNames = async () => {
+      const response = await nerService.listReports();
+      setExistingReportName(response.map((report) => report.ReportName));
+    };
+    fetchReportNames();
   }, []);
 
   // Load tags when a model is selected
@@ -502,7 +508,7 @@ export default function NewJobPage() {
 
       // Redirect after success
       setTimeout(() => {
-        router.push(`/token-classification/jobs?jobId=${response.ReportId}`);
+        router.push(`/?tab=jobs`);
       }, 2000);
     } catch (err: unknown) {
       let errorMessage = 'An unexpected error occurred';
@@ -529,6 +535,11 @@ export default function NewJobPage() {
   const validateJobName = (name: string): boolean => {
     if (!name) {
       setNameError('Report name is required');
+      return false;
+    }
+
+    if (existingReportName.includes(name)) {
+      setNameError('Report with this name already exists.');
       return false;
     }
 
@@ -605,7 +616,7 @@ export default function NewJobPage() {
 
       {success ? (
         <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-6">
-          Job created successfully! Redirecting...
+          Scanning in progress! Redirecting to Reports Dashboard...
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-8">

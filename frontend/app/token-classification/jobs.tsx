@@ -116,13 +116,18 @@ export default function Jobs() {
       }
     };
 
-    const pollInterval = setInterval(async () => {
+    let pollInterval: NodeJS.Timeout;
+
+    const poll = async () => {
       const isComplete = await pollStatus();
 
       if (isComplete) {
         clearInterval(pollInterval);
       }
-    }, 1000);
+    };
+
+    poll();
+    pollInterval = setInterval(poll, 5000);
 
     return () => {
       clearInterval(pollInterval);
@@ -353,7 +358,7 @@ export default function Jobs() {
             </Typography>
           </Box>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            {`Files: ${succeededFileCount}/${fileCount} Succeeded, ${failedFileCount}/${fileCount} Failed`}
+            {`Files: ${succeededFileCount}/${fileCount} Processed, ${failedFileCount}/${fileCount} Failed`}
           </Typography>
         </Box>
       );
