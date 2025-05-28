@@ -127,7 +127,6 @@ func RestStreamHandler(handler func(r *http.Request) StreamResponse) http.Handle
 					slog.Error("received non coded error from endpoint", "error", err)
 				}
 			} else {
-				slog.Info("data", "data", data)
 				msg = StreamMessage{
 					Data: data,
 					Code: http.StatusOK,
