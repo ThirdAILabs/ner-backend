@@ -11,13 +11,13 @@ type InferenceTask struct {
 }
 
 func Migration(db *gorm.DB) error {
-	if err := db.Migrator().AddColumn(&InferenceTask{}, "CompletedSize"); err != nil {
+	if err := db.Migrator().AddColumn(&InferenceTask{}, "completed_size"); err != nil {
 		return fmt.Errorf("error adding CompletedSize column: %w", err)
 	}
 
 	if err := db.Model(&InferenceTask{}).
-		Where("CompletedSize IS NULL").
-		Update("CompletedSize", 0).Error; err != nil {
+		Where("completed_size IS NULL").
+		Update("completed_size", 0).Error; err != nil {
 		return fmt.Errorf("error setting default value for CompletedSize: %w", err)
 	}
 
