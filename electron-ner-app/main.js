@@ -14,6 +14,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const pendingUpdateFile = path.join(app.getPath('userData'), 'pending-update.json');
+const installedUpdateFile = path.join(app.getPath('userData'), 'update-installed.json');
 
 const appServe = app.isPackaged ? serve({
   directory: path.join(__dirname, "frontend-dist")
@@ -145,6 +146,8 @@ Please try running the install script from the terminal.`);
   return backendProcess;
 }
 
+let updateHandled = false;
+
 // Ensure logger is set up for auto-updater
 autoUpdater.logger = log;
 autoUpdater.logger.transports.file.level = 'info';
@@ -170,24 +173,28 @@ autoUpdater.on('download-progress', (progressObj) => {
   console.log(log_message);
 });
 autoUpdater.on('update-downloaded', async (info) => {
+  if (updateHandled) return;
+  updateHandled = true;
+
   const result = await dialog.showMessageBox(mainWindow, {
     type: 'question',
     buttons: [
-      'Restart Now',      // response = 0
+      'Install & Restart Now',      // response = 0
       'Install on Quit',  // response = 1
       'Remind Me Later'   // response = 2
     ],
     defaultId: 0,
     cancelId: 2,
     title: 'Update Available',
-    message: `Version ${info.version} is ready to install.`,
-    detail: 
-      'Would you like to restart now to apply the update,\n' +
-      'install it the next time you close the application,\n' +
-      'or be reminded later?'
+    message: `Version ${info.version} is ready to install`,
   });
 
   if (result.response === 0) {
+    try {
+      fs.writeFileSync(installedUpdateFile, JSON.stringify({ version: info.version }), 'utf-8');
+    } catch (e) {
+      console.error('Failed to write update-installed file', e);
+    }
     autoUpdater.quitAndInstall();
   } else if (result.response === 1) {
     // Do nothing — since autoInstallOnAppQuit = true by default,
@@ -223,23 +230,44 @@ app.whenReady().then(async () => {
 
   createWindow();
 
+  const currentVersion = app.getVersion();
+
+  if (fs.existsSync(installedUpdateFile)) {
+    try {
+      const data = fs.readFileSync(installedUpdateFile, 'utf-8');
+      const { version: installedVersion } = JSON.parse(data);
+  
+      if (installedVersion === currentVersion) {
+        console.log(`Skipping update prompt — version ${installedVersion} already installed.`);
+        fs.unlinkSync(installedUpdateFile);
+        updateHandled = true;          
+      }
+    } catch (err) {
+      console.warn('Failed to read or parse installed update file:', err);
+      try { fs.unlinkSync(installedUpdateFile); } catch (_) {}
+    }
+  }
+  
+
   if (fs.existsSync(pendingUpdateFile)) {
     try {
       const { version: pendingVersion } = JSON.parse(
         fs.readFileSync(pendingUpdateFile, 'utf-8')
       );
-      const reminder = await dialog.showMessageBox(mainWindow, {
-        type: 'question',
-        buttons: ['Install Now', 'Later'],
-        defaultId: 0,
-        cancelId: 1,
-        title: 'Update Ready',
-        message: `Version ${pendingVersion} is waiting to install.`,
-        detail: 'Would you like to install it now?'
-      });
+      if (pendingVersion && pendingVersion !== currentVersion) {
+        const reminder = await dialog.showMessageBox(mainWindow, {
+          type: 'question',
+          buttons: ['Install Now', 'Later'],
+          defaultId: 0,
+          cancelId: 1,
+          title: 'Update Ready',
+          message: `Version ${pendingVersion} is waiting to install.`,
+          detail: 'Would you like to install it now?'
+        });
 
-      if (reminder.response === 0) {
-        autoUpdater.quitAndInstall();
+        if (reminder.response === 0) {
+          autoUpdater.quitAndInstall();
+        }
       }
     } catch (e) {
       console.error('Error handling pending-update file', e);
@@ -248,9 +276,11 @@ app.whenReady().then(async () => {
       try { fs.unlinkSync(pendingUpdateFile); } catch (_) {}
     }
   }
+
+  const skipUpdateCheck = fs.existsSync(pendingUpdateFile);
   
   // Check for updates on launch (in production or when DEBUG_UPDATER is set)
-  if (!isDev || process.env.DEBUG_UPDATER === 'true') {
+  if (!skipUpdateCheck && (!isDev || process.env.DEBUG_UPDATER === 'true')) {
     console.log(`Checking for updates (isDev=${isDev}), current version: ${app.getVersion()}`);
     autoUpdater.checkForUpdatesAndNotify()
       .then((result) => console.log('checkForUpdatesAndNotify result:', result))
