@@ -35,16 +35,16 @@ const Dashboard = () => {
 
   // Models for the dropdown
   const [days, setDays] = useState<number>(7);
-  // const handleDaysChange = (e: SelectChangeEvent<number>) => {
-  //   const newDays = Number(e.target.value);
-  //   setDays(newDays);
-  //   recordEvent({
-  //     UserAction: 'select',
-  //     UIComponent: 'Days Filter',
-  //     UI: 'Usage Stats Dashboard Page',
-  //     data: { days: newDays }
-  //   });
-  // };
+  const handleDaysChange = (e: SelectChangeEvent<number>) => {
+    const newDays = Number(e.target.value);
+    setDays(newDays);
+    recordEvent({
+      UserAction: 'select',
+      UIComponent: 'Days Filter',
+      UI: 'Usage Stats Dashboard Page',
+      data: { days: newDays }
+    });
+  };
   const [models, setModels] = useState<Model[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>('');
   const handleModelChange = (e: SelectChangeEvent<string>) => {
@@ -156,7 +156,7 @@ const Dashboard = () => {
             >
               <Select
                 value={days}
-                onChange={(e) => setDays(Number(e.target.value))}
+                onChange={handleDaysChange}
                 displayEmpty
                 sx={{
                   bgcolor: '#f8fafc',
