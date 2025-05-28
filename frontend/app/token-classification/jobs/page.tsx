@@ -225,6 +225,17 @@ function JobDetail() {
   const [reportData, setReportData] = useState<Report | null>(null);
   const [customTags, setCustomTags] = useState<CustomTag[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [dataProcessed, setDataProcessed] = useState<number | null>(null);
+
+  function setDataProcessedFromReport(report: Report | null) {
+    if (report) {
+      setDataProcessed(
+        (report.InferenceTaskStatuses?.COMPLETED?.CompletedSize || 0) +
+          (report.InferenceTaskStatuses?.FAILED?.CompletedSize || 0) +
+          (report.InferenceTaskStatuses?.RUNNING?.CompletedSize || 0)
+      );
+    }
+  }
 
   const fetchTags = async () => {
     setIsLoading(true);
@@ -232,6 +243,8 @@ function JobDetail() {
       const report = await nerService.getReport(reportId);
 
       setReportData(report as Report);
+
+      setDataProcessedFromReport(reportData);
 
       setTimeTaken((report.TotalInferenceTimeSeconds || 0) + (report.ShardDataTimeSeconds || 0));
 
@@ -276,15 +289,19 @@ function JobDetail() {
   };
 
   useEffect(() => {
-    const pollInterval = setInterval(async () => {
-      await fetchTags();
+    let pollInterval: NodeJS.Timeout;
 
+    const poll = async () => {
+      await fetchTags();
       const currentProgress = calculateProgress(reportData);
 
       if (currentProgress === 100) {
         clearInterval(pollInterval);
       }
-    }, 1000);
+    };
+
+    poll();
+    pollInterval = setInterval(poll, 5000);
 
     return () => {
       clearInterval(pollInterval);
@@ -451,6 +468,7 @@ function JobDetail() {
             succeededFileCount={reportData?.SucceededFileCount || 0}
             failedFileCount={reportData?.FailedFileCount || 0}
             totalFileCount={reportData?.FileCount || 1}
+            dataProcessed={dataProcessed || 0}
           />
         </TabsContent>
 

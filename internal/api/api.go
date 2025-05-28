@@ -164,6 +164,15 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 		return nil, err
 	}
 
+	var tags []string
+	for _, ti := range req.Tags {
+		tags = append(tags, ti.Name)
+	}
+	if err := database.SetModelTags(ctx, s.db, model.Id, tags); err != nil {
+		slog.Error("failed to set tags on finetuned model", "model_id", model.Id, "error", err)
+		return nil, err
+	}
+
 	if err := s.publisher.PublishFinetuneTask(ctx, messaging.FinetuneTaskPayload{
 		ModelId:     model.Id,
 		BaseModelId: model.BaseModelId.UUID,
@@ -376,7 +385,9 @@ func (s *BackendService) GetInferenceTime(ctx context.Context, reportId uuid.UUI
 	query := s.db.WithContext(ctx).
 		Model(&database.InferenceTask{}).
 		Select("MIN(start_time) AS min_start, MAX(completion_time) AS max_end").
-		Where("report_id = ? AND start_time IS NOT NULL AND completion_time IS NOT NULL", reportId)
+		Where("report_id = ? AND start_time IS NOT NULL", reportId)
+
+	var startingTime time.Time
 
 	switch dbType {
 	case "sqlite", "sqlite3":
@@ -401,9 +412,14 @@ func (s *BackendService) GetInferenceTime(ctx context.Context, reportId uuid.UUI
 			slog.Error("error parsing max_end", "raw", infBounds.MaxEnd, "err", err)
 		}
 
+		if !startTime.IsZero() {
+			startingTime = startTime
+		}
+
 		if !startTime.IsZero() && !endTime.IsZero() {
 			return endTime.Sub(startTime).Seconds()
 		}
+
 	case "postgres":
 		var infBounds struct {
 			MinStart sql.NullTime `gorm:"column:min_start"`
@@ -414,10 +430,19 @@ func (s *BackendService) GetInferenceTime(ctx context.Context, reportId uuid.UUI
 			slog.Error("error fetching time bounds", "err", err)
 		}
 
+		if infBounds.MinStart.Valid {
+			startingTime = infBounds.MinStart.Time
+		}
+
 		if infBounds.MinStart.Valid && infBounds.MaxEnd.Valid {
 			return infBounds.MaxEnd.Time.Sub(infBounds.MinStart.Time).Seconds()
 		}
 	}
+
+	if !startingTime.IsZero() {
+		return time.Now().UTC().Sub(startingTime).Seconds()
+	}
+
 	return 0
 }
 
@@ -443,16 +468,17 @@ func (s *BackendService) GetReport(r *http.Request) (any, error) {
 	}
 
 	type taskStatusCategory struct {
-		Status string
-		Count  int
-		Total  int
+		Status    string
+		Count     int
+		Total     int
+		Completed int
 	}
 
 	var statusCategories []taskStatusCategory
 
 	if err := s.db.WithContext(ctx).Model(&database.InferenceTask{}).
 		Where("report_id = ?", reportId).
-		Select("status, COUNT(*) as count, sum(total_size) as total").
+		Select("status, COUNT(*) as count, sum(total_size) as total, SUM(completed_size) as completed").
 		Group("status").
 		Find(&statusCategories).Error; err != nil {
 		slog.Error("error getting inference task statuses", "report_id", reportId, "error", err)
@@ -463,8 +489,9 @@ func (s *BackendService) GetReport(r *http.Request) (any, error) {
 	apiReport.InferenceTaskStatuses = make(map[string]api.TaskStatusCategory)
 	for _, category := range statusCategories {
 		apiReport.InferenceTaskStatuses[category.Status] = api.TaskStatusCategory{
-			TotalTasks: category.Count,
-			TotalSize:  category.Total,
+			TotalTasks:    category.Count,
+			TotalSize:     category.Total,
+			CompletedSize: category.Completed,
 		}
 	}
 
