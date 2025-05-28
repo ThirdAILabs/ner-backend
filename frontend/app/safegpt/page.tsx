@@ -143,6 +143,10 @@ function SafeGPTContent() {
     await deleteChat(chatToDelete!);
     setIsDeleteDialogOpen(false);
     setChatToDelete(null);
+
+    if (selectedId === chatToDelete) {
+      router.push(`/safegpt?id=new`);
+    }
   };
 
   const handleCancelDelete = () => {
