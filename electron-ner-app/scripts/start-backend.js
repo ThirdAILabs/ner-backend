@@ -285,17 +285,17 @@ export async function startBackend() {
     proc.kill('SIGTERM')
   })
 
-  await new Promise(r => setTimeout(r, 1000))
+  await new Promise(r => setTimeout(r, 500))
 
-  const cnnModelPath = path.join(getBinPath(), 'cnn_model');
-  try {
-    if (fs.existsSync(cnnModelPath)) {
-      fs.rmSync(cnnModelPath, { recursive: true, force: true });
-      log.debug('Successfully removed cnn_model directory');
-    }
-  } catch (err) {
-    log.error('Error removing cnn_model directory:', err);
-  }
+  // const cnnModelPath = path.join(getBinPath(), 'cnn_model');
+  // try {
+  //   if (fs.existsSync(cnnModelPath)) {
+  //     fs.rmSync(cnnModelPath, { recursive: true, force: true });
+  //     log.debug('Successfully removed cnn_model directory');
+  //   }
+  // } catch (err) {
+  //   log.error('Error removing cnn_model directory:', err);
+  // }
 
   return { process: proc, kill: sig => proc.kill(sig) }
 }
