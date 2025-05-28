@@ -107,8 +107,8 @@ export default function useSafeGPT(chatId: string) {
       const sessions = await nerService.getChatSessions();
       return sessions
         .map((session) => ({
-          id: session.id,
-          title: session.title,
+          id: session.ID,
+          title: session.Title,
         }))
         .reverse(); // reverse to show most recent chats first TODO this should be handled by backend and based on last modified not last created.
     } catch (error) {
@@ -131,8 +131,8 @@ export default function useSafeGPT(chatId: string) {
       return [];
     }
 
-    setTitle(session.title || `Chat ${chatId}`);
-    const tagMap = session.tag_map;
+    setTitle(session.Title || `Chat ${chatId}`);
+    const tagMap = session.TagMap;
 
     let history;
     try {
@@ -145,9 +145,9 @@ export default function useSafeGPT(chatId: string) {
     const messages: Message[] = [];
     for (const message of history) {
       messages.push({
-        content: unredactContent(message.content, tagMap),
-        redactedContent: toRedactedContent(message.content, tagMap),
-        role: message.message_type === 'user' ? 'user' : 'llm',
+        content: unredactContent(message.Content, tagMap),
+        redactedContent: toRedactedContent(message.Content, tagMap),
+        role: message.MessageType === 'user' ? 'user' : 'llm',
       });
     }
 
@@ -188,16 +188,16 @@ export default function useSafeGPT(chatId: string) {
     let replyBuilder: string = '';
 
     const handleChunk = (chunk: ChatResponse) => {
-      if (chunk.tag_map) {
-        tagMap = { ...tagMap, ...chunk.tag_map };
+      if (chunk.TagMap) {
+        tagMap = { ...tagMap, ...chunk.TagMap };
       }
 
-      if (chunk.input_text) {
+      if (chunk.InputText) {
         setMessages([
           ...prevMessages,
           {
-            content: unredactContent(chunk.input_text, tagMap),
-            redactedContent: toRedactedContent(chunk.input_text, tagMap),
+            content: unredactContent(chunk.InputText, tagMap),
+            redactedContent: toRedactedContent(chunk.InputText, tagMap),
             role: 'user',
           },
           // Add a placeholder message for the LLM response so we don't have to
@@ -217,8 +217,8 @@ export default function useSafeGPT(chatId: string) {
 
       // We assume that the input text is always the first message.
       // Thus, the last message must be the LLM message.
-      if (chunk.reply) {
-        replyBuilder += chunk.reply;
+      if (chunk.Reply) {
+        replyBuilder += chunk.Reply;
         setMessages((prev) => {
           const newMessages = [...prev];
           newMessages[newMessages.length - 1].content = unredactContent(replyBuilder, tagMap);

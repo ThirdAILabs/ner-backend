@@ -91,9 +91,9 @@ export interface ThroughputMetrics {
 }
 
 export interface ChatResponse {
-  input_text: string;
-  reply: string;
-  tag_map: Record<string, string>;
+  InputText: string;
+  Reply: string;
+  TagMap: Record<string, string>;
 }
 
 // Add a utility function to handle API errors with custom messages
@@ -313,14 +313,14 @@ export const nerService = {
     }
   },
 
-  getChatSessions: async (): Promise<{ id: string; title: string }[]> => {
+  getChatSessions: async (): Promise<{ ID: string; Title: string; TagMap: Record<string, string> }[]> => {
     const { data } = await axiosInstance.get('/chat/sessions');
-    return data.sessions;
+    return data.Sessions;
   },
 
   startChatSession: async (model: string, title: string): Promise<string> => {
-    const { data } = await axiosInstance.post('/chat/sessions', { model, title });
-    return data.session_id;
+    const { data } = await axiosInstance.post('/chat/sessions', { Model: model, Title: title });
+    return data.SessionID;
   },
 
   deleteChatSession: async (sessionId: string): Promise<void> => {
@@ -329,13 +329,13 @@ export const nerService = {
 
   getChatSession: async (
     sessionId: string
-  ): Promise<{ id: string; title: string; tag_map: Record<string, string> }> => {
+  ): Promise<{ ID: string; Title: string; TagMap: Record<string, string> }> => {
     const { data } = await axiosInstance.get(`/chat/sessions/${sessionId}`);
     return data;
   },
 
   renameChatSession: async (sessionId: string, title: string): Promise<void> => {
-    await axiosInstance.post(`/chat/sessions/${sessionId}/rename`, { title });
+    await axiosInstance.post(`/chat/sessions/${sessionId}/rename`, { Title: title });
   },
 
   sendChatMessageStream: async (
@@ -348,9 +348,9 @@ export const nerService = {
     const response = await axiosInstance.post(
       `/chat/sessions/${sessionId}/messages`,
       {
-        model,
-        api_key: apiKey,
-        message,
+        Model: model,
+        APIKey: apiKey,
+        Message: message,
       },
       {
         responseType: 'stream',
@@ -380,10 +380,10 @@ export const nerService = {
     sessionId: string
   ): Promise<
     {
-      message_type: string;
-      content: string;
-      timestamp: string;
-      metadata?: any;
+      MessageType: string;
+      Content: string;
+      Timestamp: string;
+      Metadata?: any;
     }[]
   > => {
     const { data } = await axiosInstance.get(`/chat/sessions/${sessionId}/history`);
@@ -392,10 +392,10 @@ export const nerService = {
 
   getOpenAIApiKey: async (): Promise<string> => {
     const response = await axiosInstance.get('/chat/api-key');
-    return response.data.api_key;
+    return response.data.ApiKey;
   },
 
   setOpenAIApiKey: async (apiKey: string): Promise<void> => {
-    await axiosInstance.post('/chat/api-key', { api_key: apiKey });
+    await axiosInstance.post('/chat/api-key', { ApiKey: apiKey });
   },
 };
