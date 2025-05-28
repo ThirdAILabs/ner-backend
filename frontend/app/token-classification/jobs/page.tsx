@@ -309,7 +309,7 @@ function JobDetail() {
   }, [reportId, reportData?.SucceededFileCount]);
 
   return (
-    <div className="container px-4 py-8 w-3/4 mx-auto">
+    <div className="container px-4 py-8 mx-auto" style={{ width: '90%' }}>
       {/* Header with Back Button and Title */}
       <div className="flex items-center justify-between mb-6">
         <Button variant="outline" size="sm" asChild>

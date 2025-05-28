@@ -13,6 +13,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import _ from 'lodash';
 
+import { formatFileSize, formatNumber } from '@/lib/utils';
+
 interface ClusterSpecs {
   cpus: number;
   vendorId: string;
@@ -34,27 +36,6 @@ interface AnalyticsDashboardProps {
   totalFileCount: number;
   dataProcessed: number;
 }
-
-const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return '0 Bytes';
-
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
-
-// Format number for token counts
-const formatNumber = (num: number): string => {
-  if (num >= 1000000) {
-    return `${(num / 1000000).toFixed(2)}M`;
-  }
-  if (num >= 1000) {
-    return `${(num / 1000).toFixed(1)}K`;
-  }
-  return num.toString();
-};
 
 const formatTime = (time: number): string => {
   if (time < 60) return `${time.toFixed(2)}s`;

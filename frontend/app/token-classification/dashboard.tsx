@@ -107,7 +107,7 @@ const Dashboard = () => {
             sx={{
               fontWeight: 600,
               fontSize: '1.5rem',
-              color: '#111827',
+              color: '#4a5568',
             }}
           >
             Metrics Dashboard
@@ -216,7 +216,7 @@ const Dashboard = () => {
                 </MenuItem>
                 {models.map((m) => (
                   <MenuItem key={m.Id} value={m.Id}>
-                    {m.Name}
+                    {m.Name.charAt(0).toUpperCase() + m.Name.slice(1)}
                   </MenuItem>
                 ))}
               </Select>
