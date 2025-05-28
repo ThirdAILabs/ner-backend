@@ -45,7 +45,7 @@ export default function Page() {
     recordEvent({
       UserAction: 'view',
       UIComponent: 'Page Load',
-      UI: 'Home Page'
+      UI: 'Home Page',
     });
   }, []);
 

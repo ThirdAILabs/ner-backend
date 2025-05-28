@@ -9,7 +9,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  SelectChangeEvent
+  SelectChangeEvent,
 } from '@mui/material';
 import { useSearchParams } from 'next/navigation';
 import { nerService } from '@/lib/backend';
@@ -26,7 +26,7 @@ const Dashboard = () => {
     recordEvent({
       UserAction: 'view',
       UIComponent: 'Usage Stats Dashboard Page',
-      UI: 'Token Classification Page'
+      UI: 'Token Classification Page',
     });
   }, []);
   const { healthStatus } = useHealth();
@@ -44,7 +44,7 @@ const Dashboard = () => {
       UserAction: 'select',
       UIComponent: 'Days Filter',
       UI: 'Usage Stats Dashboard Page',
-      data: { days: newDays }
+      data: { days: newDays },
     });
   };
   const [models, setModels] = useState<Model[]>([]);
@@ -56,7 +56,7 @@ const Dashboard = () => {
       UserAction: 'select',
       UIComponent: 'Model Filter',
       UI: 'Usage Stats Dashboard Page',
-      data: { model }
+      data: { model },
     });
   };
 
@@ -109,11 +109,7 @@ const Dashboard = () => {
               Days
             </Typography>
             <FormControl size="small" sx={{ minWidth: 120 }}>
-              <Select
-                value={days}
-                onChange={handleDaysChange}
-                displayEmpty
-              >
+              <Select value={days} onChange={handleDaysChange} displayEmpty>
                 <MenuItem value={1}>1 day</MenuItem>
                 <MenuItem value={7}>7 days</MenuItem>
                 <MenuItem value={30}>30 days</MenuItem>
@@ -131,10 +127,8 @@ const Dashboard = () => {
                 value={selectedModel}
                 displayEmpty
                 onChange={handleModelChange}
-                renderValue={val =>
-                  val === ''
-                    ? 'All Models'
-                    : models.find(m => m.Id === val)?.Name || val
+                renderValue={(val) =>
+                  val === '' ? 'All Models' : models.find((m) => m.Id === val)?.Name || val
                 }
               >
                 <MenuItem value="">

@@ -28,10 +28,7 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!username || !timestamp || !user_machine || !event) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
     const client = await pool.connect();
@@ -40,29 +37,18 @@ export async function POST(request: NextRequest) {
         INSERT INTO telemetry_events (username, timestamp, user_machine, event)
         VALUES ($1, $2, $3, $4)
       `;
-      
-      await client.query(query, [
-        username,
-        timestamp,
-        user_machine,
-        JSON.stringify(event)
-      ]);
+
+      await client.query(query, [username, timestamp, user_machine, JSON.stringify(event)]);
 
       return NextResponse.json({ success: true }, { status: 201 });
     } catch (error) {
       console.error('Error inserting telemetry event:', error);
-      return NextResponse.json(
-        { error: 'Failed to insert telemetry event' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to insert telemetry event' }, { status: 500 });
     } finally {
       client.release();
     }
   } catch (error) {
     console.error('Error processing telemetry request:', error);
-    return NextResponse.json(
-      { error: 'Invalid request body' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
-} 
+}

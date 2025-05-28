@@ -97,7 +97,11 @@ export interface ChatResponse {
 }
 
 // Add a utility function to handle API errors with custom messages
-const handleApiError = (error: unknown, customMessage?: string, displayErrorEvent: boolean = true): never => {
+const handleApiError = (
+  error: unknown,
+  customMessage?: string,
+  displayErrorEvent: boolean = true
+): never => {
   console.error('API Error:', error);
 
   // Extract the error message
