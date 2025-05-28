@@ -6,9 +6,14 @@ PHONE_REGEX = re.compile(
 )
 CARD_REGEX = re.compile(r"[\d\s\-]{12,19}")
 CREDIT_SCORE_REGEX = re.compile(r"\b\d{2,3}\b")
-EMAIL_REGEX = re.compile(
-    r"(([!#$%&'*+\-/=?^_`{|}~\w]|([!#$%&'*+\-/=?^_`{|}~\w][!#$%&'*+\-/=?^_`{|}~\.\w]*[!#$%&'*+\-/=?^_`{|}~\w]))@\w+([-.]\w+)*\.\w+([-.]\w+)*)"
-)
+SSN_REGEX = re.compile(r"(?:\d{3}([\- .])\d{2}\1\d{4}|\d{3}\d{2}\d{4})")
+
+
+def is_valid_ssn(ssn: str) -> bool:
+    digits = re.sub(r"\D", "", ssn)
+    if len(digits) != 9:
+        return False
+    return bool(SSN_REGEX.fullmatch(ssn))
 
 
 def is_valid_phone(number: str) -> bool:
@@ -50,11 +55,25 @@ def is_valid_credit_score(
 
 
 def is_valid_email(email: str) -> bool:
-    return bool(EMAIL_REGEX.fullmatch(email))
+    if email.count("@") != 1:
+        return False
+    local, domain = email.split("@")
+    if len(local) < 2 or len(domain) < 2:
+        return False
+    dom = domain.lower()
+    # localhost
+    if dom == "localhost":
+        return True
+    if "." in domain:
+        return True
+    return False
 
 
 def group_consecutive_indices(
-    tags: List[str], spans: List[Tuple[int, int]], label: str
+    tags: List[str],
+    spans: List[Tuple[int, int]],
+    label: str,
+    is_single_string: bool = False,
 ) -> List[Tuple[int, int]]:
     groups: List[Tuple[int, int]] = []
     i, n = 0, len(tags)
@@ -67,6 +86,7 @@ def group_consecutive_indices(
                 and (
                     spans[i + 1][0] == spans[i][1] or spans[i + 1][0] == spans[i][1] + 1
                 )
+                and (not is_single_string)
             ):
                 i += 1
             groups.append((start, i))
