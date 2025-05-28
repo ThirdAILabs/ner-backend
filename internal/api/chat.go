@@ -101,8 +101,7 @@ func (s *ChatService) GetSession(r *http.Request) (any, error) {
 	}
 
 	var session database.ChatSession
-	err = s.db.Where("id = ?", sessionID).First(&session).Error
-	if err != nil {
+	if err := s.db.First(&session, "id = ?", sessionID).Error; err != nil {
 		slog.Error("Error getting session", "error", err)
 		return nil, fmt.Errorf("error getting session: %v", err)
 	}
@@ -130,8 +129,7 @@ func (s *ChatService) RenameSession(r *http.Request) (any, error) {
 		return nil, err
 	}
 
-	err = s.db.Model(&database.ChatSession{}).Where("id = ?", sessionID).Update("title", req.Title).Error
-	if err != nil {
+	if err := s.db.Model(&database.ChatSession{ID: sessionID}).Update("title", req.Title).Error; err != nil {
 		return nil, err
 	}
 
@@ -169,12 +167,13 @@ func (s *ChatService) SendMessageStream(r *http.Request) StreamResponse {
 			return
 		}
 
-		session.ChatStream(req.Message)(func (redactedIpText string, reply string, tagMap map[string]string, err error) bool {
+		for item, err := range session.ChatStream(req.Message) {
 			if err != nil {
-				return yield(nil, err)
+				yield(nil, err)
+				return
 			}
-			return yield(api.ChatResponse{InputText: redactedIpText, Reply: reply, TagMap: tagMap}, nil)
-		})
+			yield(api.ChatResponse{InputText: item.RedactedText, Reply: item.Reply, TagMap: item.TagMap}, nil)
+		}
 	}
 }
 
@@ -196,11 +195,10 @@ func (s *ChatService) GetHistory(r *http.Request) (any, error) {
 
 	var resp []api.ChatHistoryItem
 	for _, msg := range history {
-		ts := msg.Timestamp.Format("2006-01-02 15:04:05")
 		resp = append(resp, api.ChatHistoryItem{
 			MessageType: msg.MessageType,
 			Content:     msg.Content,
-			Timestamp:   ts,
+			Timestamp:   msg.Timestamp,
 			Metadata:    msg.Metadata,
 		})
 	}

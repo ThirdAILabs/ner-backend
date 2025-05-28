@@ -107,7 +107,7 @@ func RestStreamHandler(handler func(r *http.Request) StreamResponse) http.Handle
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
-		stream(func(data any, err error) bool {
+		for data, err := range stream {
 			var msg StreamMessage
 			if err != nil {
 				var cerr *codedError
@@ -135,13 +135,11 @@ func RestStreamHandler(handler func(r *http.Request) StreamResponse) http.Handle
 
 			if writeErr := json.NewEncoder(w).Encode(msg); writeErr != nil {
 				slog.Error("error writing json response", "error", writeErr)
-				return false
+				return
 			}
 			
 			flusher.Flush()
-
-			return true
-		})
+		}
 	}
 }
 
