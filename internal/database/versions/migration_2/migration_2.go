@@ -1,5 +1,4 @@
-// versions/migration_1.go
-package versions
+package migration_2
 
 import (
 	"fmt"
@@ -26,14 +25,14 @@ type ChatSession struct {
 	TagMetadata   datatypes.JSON    `gorm:"type:jsonb"`
 }
 
-func Migration2(db *gorm.DB) error {
+func Migration(db *gorm.DB) error {
 	if err := db.AutoMigrate(&ChatHistory{}, &ChatSession{}); err != nil {
 		return fmt.Errorf("Migration1 failed: %w", err)
 	}
 	return nil
 }
 
-func RollbackMigration2(db *gorm.DB) error {
+func Rollback(db *gorm.DB) error {
 	if err := db.Migrator().DropTable(&ChatHistory{}, &ChatSession{}); err != nil {
 		return fmt.Errorf("Rollback1 failed: %w", err)
 	}
