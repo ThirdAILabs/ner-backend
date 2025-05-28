@@ -151,7 +151,7 @@ func TestChatEndpoint(t *testing.T) {
 
 	// Read the streaming response
 	reader := bufio.NewReader(rec.Body)
-	var chatResp pkgapi.ChatResponse
+	var streamResp StreamMessage
 	var tagMap map[string]string
 	var inputText string
 	var replyBuilder string
@@ -169,8 +169,27 @@ func TestChatEndpoint(t *testing.T) {
 			continue
 		}
 
-		if err := json.Unmarshal([]byte(line), &chatResp); err != nil {
+		// Parse response.data as a ChatResponse
+		var chatResp pkgapi.ChatResponse
+		if err := json.Unmarshal([]byte(line), &streamResp); err != nil {
 			t.Fatalf("decode chat response: %v", err)
+		}
+		
+		if streamResp.Error != "" {
+			t.Fatalf("stream response error: %s", streamResp.Error)
+		}
+		
+		if streamResp.Data == nil {
+			t.Fatalf("stream response data is nil") 
+		}
+
+		jsonData, err := json.Marshal(streamResp.Data)
+		if err != nil {
+			t.Fatalf("marshal stream data: %v", err)
+		}
+
+		if err := json.Unmarshal(jsonData, &chatResp); err != nil {
+			t.Fatalf("unmarshal chat response: %v", err)
 		}
 
 		if chatResp.TagMap != nil {
