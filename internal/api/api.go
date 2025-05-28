@@ -468,16 +468,17 @@ func (s *BackendService) GetReport(r *http.Request) (any, error) {
 	}
 
 	type taskStatusCategory struct {
-		Status string
-		Count  int
-		Total  int
+		Status    string
+		Count     int
+		Total     int
+		Completed int
 	}
 
 	var statusCategories []taskStatusCategory
 
 	if err := s.db.WithContext(ctx).Model(&database.InferenceTask{}).
 		Where("report_id = ?", reportId).
-		Select("status, COUNT(*) as count, sum(total_size) as total").
+		Select("status, COUNT(*) as count, sum(total_size) as total, SUM(completed_size) as completed").
 		Group("status").
 		Find(&statusCategories).Error; err != nil {
 		slog.Error("error getting inference task statuses", "report_id", reportId, "error", err)
@@ -488,8 +489,9 @@ func (s *BackendService) GetReport(r *http.Request) (any, error) {
 	apiReport.InferenceTaskStatuses = make(map[string]api.TaskStatusCategory)
 	for _, category := range statusCategories {
 		apiReport.InferenceTaskStatuses[category.Status] = api.TaskStatusCategory{
-			TotalTasks: category.Count,
-			TotalSize:  category.Total,
+			TotalTasks:    category.Count,
+			TotalSize:     category.Total,
+			CompletedSize: category.Completed,
 		}
 	}
 

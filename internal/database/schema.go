@@ -108,9 +108,10 @@ type InferenceTask struct {
 	StartTime      sql.NullTime
 	CompletionTime sql.NullTime
 
-	SourceS3Keys string
-	TotalSize    int64
-	TokenCount   int64 `gorm:"not null;default:0"`
+	SourceS3Keys  string
+	TotalSize     int64
+	CompletedSize int64 `gorm:"default:0"`
+	TokenCount    int64 `gorm:"not null;default:0"`
 }
 
 type Group struct {
