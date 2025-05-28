@@ -1,13 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  CircularProgress
-} from '@mui/material';
+import { Box, Card, CardContent, Typography, CircularProgress } from '@mui/material';
 import { nerService, InferenceMetrics, ThroughputMetrics } from '@/lib/backend';
 
 interface MetricsDataViewerProps {
@@ -15,15 +9,10 @@ interface MetricsDataViewerProps {
   days: number;
 }
 
-const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
-  modelId,
-  days
-}) => {
+const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) => {
   const [infMetrics, setInfMetrics] = useState<InferenceMetrics | null>(null);
   const [tpMetrics, setTpMetrics] = useState<ThroughputMetrics | null>(null);
-  const [infSeries, setInfSeries] = useState<
-    { day: number; dataMB: number; tokens: number }[]
-  >([]);
+  const [infSeries, setInfSeries] = useState<{ day: number; dataMB: number; tokens: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -85,9 +74,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
   if (error) {
     return (
       <Box sx={{ p: 3 }}>
-        <Typography sx={{ color: 'error.main', fontSize: '0.875rem' }}>
-          {error}
-        </Typography>
+        <Typography sx={{ color: 'error.main', fontSize: '0.875rem' }}>{error}</Typography>
       </Box>
     );
   }
@@ -102,7 +89,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
         sx={{
           display: 'grid',
           gridTemplateColumns: 'repeat(5, 1fr)',
-          gap: 3
+          gap: 3,
         }}
       >
         {/* In-Progress Tasks */}
@@ -111,12 +98,11 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
             boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
             bgcolor: 'white',
             borderRadius: '12px',
-            transition:
-              'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+            transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
             '&:hover': {
               transform: 'translateY(-2px)',
-              boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-            }
+              boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+            },
           }}
         >
           <CardContent
@@ -127,7 +113,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
               alignItems: 'center',
               justifyContent: 'center',
               height: '100%',
-              '&:last-child': { pb: 3 }
+              '&:last-child': { pb: 3 },
             }}
           >
             <Box
@@ -137,14 +123,14 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                mb: 2
+                mb: 2,
               }}
             >
               <Typography
                 sx={{
                   fontSize: '2rem',
                   fontWeight: 600,
-                  color: '#1e293b'
+                  color: '#1e293b',
                 }}
               >
                 {infMetrics.InProgress}
@@ -154,7 +140,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
               sx={{
                 fontSize: '0.875rem',
                 color: '#64748b',
-                fontWeight: 500
+                fontWeight: 500,
               }}
             >
               In-Progress Reports
@@ -168,12 +154,11 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
             boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
             bgcolor: 'white',
             borderRadius: '12px',
-            transition:
-              'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+            transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
             '&:hover': {
               transform: 'translateY(-2px)',
-              boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-            }
+              boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+            },
           }}
         >
           <CardContent
@@ -184,7 +169,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
               alignItems: 'center',
               justifyContent: 'center',
               height: '100%',
-              '&:last-child': { pb: 3 }
+              '&:last-child': { pb: 3 },
             }}
           >
             <Box
@@ -194,14 +179,14 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                mb: 2
+                mb: 2,
               }}
             >
               <Typography
                 sx={{
                   fontSize: '2rem',
                   fontWeight: 600,
-                  color: '#1e293b'
+                  color: '#1e293b',
                 }}
               >
                 {infMetrics.Completed + infMetrics.Failed}
@@ -211,7 +196,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
               sx={{
                 fontSize: '0.875rem',
                 color: '#64748b',
-                fontWeight: 500
+                fontWeight: 500,
               }}
             >
               Completed Reports
@@ -225,12 +210,11 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
             boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
             bgcolor: 'white',
             borderRadius: '12px',
-            transition:
-              'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+            transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
             '&:hover': {
               transform: 'translateY(-2px)',
-              boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-            }
+              boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+            },
           }}
         >
           <CardContent
@@ -241,7 +225,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
               alignItems: 'center',
               justifyContent: 'center',
               height: '100%',
-              '&:last-child': { pb: 3 }
+              '&:last-child': { pb: 3 },
             }}
           >
             <Box
@@ -251,22 +235,18 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                mb: 2
+                mb: 2,
               }}
             >
               <Typography
                 sx={{
                   fontSize: (theme) => {
                     const throughput = tpMetrics?.ThroughputMBPerHour ?? 0;
-                    return throughput > 1000
-                      ? '1.5rem'
-                      : throughput > 100
-                        ? '1.75rem'
-                        : '2rem';
+                    return throughput > 1000 ? '1.5rem' : throughput > 100 ? '1.75rem' : '2rem';
                   },
                   fontWeight: 600,
                   color: '#1e293b',
-                  textAlign: 'center'
+                  textAlign: 'center',
                 }}
               >
                 {tpMetrics?.ThroughputMBPerHour == null
@@ -278,7 +258,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
               sx={{
                 fontSize: '0.875rem',
                 color: '#64748b',
-                fontWeight: 500
+                fontWeight: 500,
               }}
             >
               Throughput
@@ -292,12 +272,11 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
             boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
             bgcolor: 'white',
             borderRadius: '12px',
-            transition:
-              'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+            transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
             '&:hover': {
               transform: 'translateY(-2px)',
-              boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-            }
+              boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+            },
           }}
         >
           <CardContent
@@ -308,7 +287,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
               alignItems: 'center',
               justifyContent: 'center',
               height: '100%',
-              '&:last-child': { pb: 3 }
+              '&:last-child': { pb: 3 },
             }}
           >
             <Box
@@ -318,7 +297,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                mb: 2
+                mb: 2,
               }}
             >
               <Typography
@@ -326,7 +305,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
                   fontSize: '2rem',
                   fontWeight: 600,
                   color: '#1e293b',
-                  textAlign: 'center'
+                  textAlign: 'center',
                 }}
               >
                 {infMetrics.DataProcessedMB.toFixed(2).toLocaleString()} MB
@@ -336,7 +315,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
               sx={{
                 fontSize: '0.875rem',
                 color: '#64748b',
-                fontWeight: 500
+                fontWeight: 500,
               }}
             >
               Data Processed
@@ -350,12 +329,11 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
             boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
             bgcolor: 'white',
             borderRadius: '12px',
-            transition:
-              'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+            transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
             '&:hover': {
               transform: 'translateY(-2px)',
-              boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-            }
+              boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+            },
           }}
         >
           <CardContent
@@ -366,7 +344,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
               alignItems: 'center',
               justifyContent: 'center',
               height: '100%',
-              '&:last-child': { pb: 3 }
+              '&:last-child': { pb: 3 },
             }}
           >
             <Box
@@ -376,7 +354,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                mb: 2
+                mb: 2,
               }}
             >
               <Typography
@@ -384,7 +362,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
                   fontSize: '2rem',
                   fontWeight: 600,
                   color: '#1e293b',
-                  textAlign: 'center'
+                  textAlign: 'center',
                 }}
               >
                 {infMetrics.TokensProcessed.toLocaleString()}
@@ -394,7 +372,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
               sx={{
                 fontSize: '0.875rem',
                 color: '#64748b',
-                fontWeight: 500
+                fontWeight: 500,
               }}
             >
               Tokens Processed
