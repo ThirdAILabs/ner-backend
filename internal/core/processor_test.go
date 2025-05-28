@@ -79,7 +79,7 @@ func TestObjectInference(t *testing.T) {
 	}
 	close(chunks)
 
-	totalTokens, _, allEntities, groups, tagCount, customTagCount, err := inferenceJobProcessor.runInferenceOnObject(
+	result, err := inferenceJobProcessor.runInferenceOnObject(
 		reportId,
 		chunks,
 		model,
@@ -93,25 +93,25 @@ func TestObjectInference(t *testing.T) {
 	phone, email, special := "012-345-6789", "test@email.com", "a1b2c3"
 	phoneStart, emailStart, specialStart := strings.Index(testDoc, phone), strings.Index(testDoc, email), strings.Index(testDoc, special)
 
-	assert.ElementsMatch(t, allEntities, []database.ObjectEntity{
+	assert.ElementsMatch(t, result.Entities, []database.ObjectEntity{
 		{ReportId: reportId, Object: object, Label: "phone", Text: phone, Start: phoneStart, End: phoneStart + len(phone), LContext: testDoc[phoneStart-20 : phoneStart], RContext: testDoc[phoneStart+len(phone) : phoneStart+len(phone)+20]},
 		{ReportId: reportId, Object: object, Label: "email", Text: email, Start: emailStart, End: emailStart + len(email), LContext: testDoc[emailStart-20 : emailStart], RContext: testDoc[emailStart+len(email) : emailStart+len(email)+20]},
 		{ReportId: reportId, Object: object, Label: "special_token", Text: special, Start: specialStart, End: specialStart + len(special), LContext: testDoc[specialStart-20 : specialStart], RContext: testDoc[specialStart+len(special):]},
 	})
 
-	assert.ElementsMatch(t, groups, []database.ObjectGroup{
+	assert.ElementsMatch(t, result.Groups, []database.ObjectGroup{
 		{ReportId: reportId, GroupId: groupId1, Object: object},
 	})
 
-	assert.Equal(t, tagCount, map[string]uint64{
+	assert.Equal(t, result.TagCount, map[string]uint64{
 		"phone": 1,
 		"email": 1,
-	}, fmt.Sprintf("Expected: %v, got: %v", map[string]uint64{"phone": 1, "email": 1}, tagCount))
+	}, fmt.Sprintf("Expected: %v, got: %v", map[string]uint64{"phone": 1, "email": 1}, result.TagCount))
 
-	assert.Equal(t, customTagCount, map[string]uint64{
+	assert.Equal(t, result.CustomTagCount, map[string]uint64{
 		"special_token": 1,
-	}, fmt.Sprintf("Expected: %v, got: %v", map[string]uint64{"special_token": 1}, customTagCount))
+	}, fmt.Sprintf("Expected: %v, got: %v", map[string]uint64{"special_token": 1}, result.CustomTagCount))
 
 	expected := int64(len(strings.Fields(testDoc)))
-	assert.Equal(t, expected, totalTokens, "totalTokens should match the number of whitespace-separated tokens in testDoc")
+	assert.Equal(t, expected, result.TotalTokens, "totalTokens should match the number of whitespace-separated tokens in testDoc")
 }
