@@ -31,7 +31,6 @@ type RenameSessionRequest struct {
 
 type ChatRequest struct {
 	Model   string
-	APIKey  string
 	Message string
 }
 

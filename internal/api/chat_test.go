@@ -144,7 +144,6 @@ func renameSession(t *testing.T, router chi.Router, sessionID string, title stri
 func sendMessage(t *testing.T, router chi.Router, sessionID string, message string, apiKey string) (redactedMessage string, reply string, tagMap map[string]string) {
 	chatPayload := pkgapi.ChatRequest{
 		Model:   "gpt-3",
-		APIKey:  apiKey,
 		Message: message,
 	}
 	chatBody, _ := json.Marshal(chatPayload)
@@ -306,6 +305,9 @@ func TestChatEndpoint(t *testing.T) {
 	t.Run("TestSendMessage", func(t *testing.T) {
 		apiKey := os.Getenv("OPENAI_API_KEY")
 		
+		setOpenAIAPIKey(t, router, apiKey)
+		defer deleteOpenAIAPIKey(t, router)
+
 		sessionID := startSession(t, router, "Test Session")
 		defer deleteSession(t, router, sessionID)
 		assert.NotEmpty(t, sessionID)
@@ -325,6 +327,9 @@ func TestChatEndpoint(t *testing.T) {
 	t.Run("TestSendMessage_UpdatesHistory", func(t *testing.T) {
 		apiKey := os.Getenv("OPENAI_API_KEY")
 		
+		setOpenAIAPIKey(t, router, apiKey)
+		defer deleteOpenAIAPIKey(t, router)
+
 		sessionID := startSession(t, router, "Test Session")
 		defer deleteSession(t, router, sessionID)
 		assert.NotEmpty(t, sessionID)
@@ -342,6 +347,9 @@ func TestChatEndpoint(t *testing.T) {
 
 	t.Run("TestSendMessage_UpdatesSession", func(t *testing.T) {
 		apiKey := os.Getenv("OPENAI_API_KEY")
+
+		setOpenAIAPIKey(t, router, apiKey)
+		defer deleteOpenAIAPIKey(t, router)
 		
 		sessionID := startSession(t, router, "Test Session")
 		defer deleteSession(t, router, sessionID)

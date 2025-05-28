@@ -3,8 +3,10 @@ package chat
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
+	"log/slog"
 	"ner-backend/internal/core"
 	"ner-backend/internal/database"
 	"sort"
@@ -17,6 +19,8 @@ import (
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
+
+var ErrStopStream = errors.New("stop stream")
 
 type TagMetadata struct {
 	TagMap map[string]string 
@@ -214,23 +218,15 @@ func (session *ChatSession) streamOpenAIResponse(ctx string) func(yield func(str
 			llms.TextParts(llms.ChatMessageTypeHuman, ctx),
 		}
 
-		var yieldSuccess bool
-		
 		_, err := session.openAIClient.GenerateContent(context.Background(), messages, llms.WithStreamingFunc(func(ctx context.Context, chunk []byte) error {
-			if yieldSuccess = yield(string(chunk), nil); !yieldSuccess {
-				return fmt.Errorf("failed to yield chunk")
+			if !yield(string(chunk), nil) {
+				return ErrStopStream
 			}
 			return nil
 		}))
-
-		if err != nil {
-			log.Printf("Error calling OpenAI API: %v", err)
-			yieldSuccess = yield("", err)
-		}
-
-		if !yieldSuccess {
-			log.Printf("Failed to yield chunk")
-			return
+		if err != nil && !errors.Is(err, ErrStopStream) {  // this might not be needed, but it might pass the error returned from the streaming func back here
+			slog.Error("error during openai generation", "error", err)
+			yield("", err) // return doesn't matter since there are no more yield calls 
 		}
 	}
 }
