@@ -225,6 +225,17 @@ function JobDetail() {
   const [reportData, setReportData] = useState<Report | null>(null);
   const [customTags, setCustomTags] = useState<CustomTag[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [dataProcessed, setDataProcessed] = useState<number | null>(null);
+
+  function setDataProcessedFromReport(report: Report | null) {
+    if (report) {
+      setDataProcessed(
+        (report.InferenceTaskStatuses?.COMPLETED?.CompletedSize || 0) +
+          (report.InferenceTaskStatuses?.FAILED?.CompletedSize || 0) +
+          (report.InferenceTaskStatuses?.RUNNING?.CompletedSize || 0)
+      );
+    }
+  }
 
   const fetchTags = async () => {
     setIsLoading(true);
@@ -276,9 +287,15 @@ function JobDetail() {
   };
 
   useEffect(() => {
+    setDataProcessedFromReport(reportData);
+  }, [reportData]);
+
+  useEffect(() => {
     const pollInterval = setInterval(async () => {
       await fetchTags();
       const currentProgress = calculateProgress(reportData);
+
+      setDataProcessedFromReport(reportData);
 
       if (currentProgress === 100) {
         clearInterval(pollInterval);
@@ -450,6 +467,7 @@ function JobDetail() {
             succeededFileCount={reportData?.SucceededFileCount || 0}
             failedFileCount={reportData?.FailedFileCount || 0}
             totalFileCount={reportData?.FileCount || 1}
+            dataProcessed={dataProcessed || 0}
           />
         </TabsContent>
 
