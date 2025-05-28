@@ -341,7 +341,6 @@ export const nerService = {
   sendChatMessageStream: async (
     sessionId: string,
     model: string,
-    apiKey: string,
     message: string,
     onChunk: (chunk: ChatResponse) => void
   ) => {
@@ -349,7 +348,6 @@ export const nerService = {
       `/chat/sessions/${sessionId}/messages`,
       {
         Model: model,
-        APIKey: apiKey,
         Message: message,
       },
       {

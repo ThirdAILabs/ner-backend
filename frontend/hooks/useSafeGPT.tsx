@@ -162,7 +162,7 @@ export default function useSafeGPT(chatId: string) {
     setPreviews((prevPreviews) => prevPreviews.filter((preview) => preview.id !== selectedId));
   };
 
-  const sendMessage = async (message: string, apiKey: string) => {
+  const sendMessage = async (message: string) => {
     setInvalidApiKey(false);
 
     // If the chat is new, create a new chat session.
@@ -232,7 +232,7 @@ export default function useSafeGPT(chatId: string) {
     };
 
     try {
-      await nerService.sendChatMessageStream(sessionId, 'gpt-4', apiKey, message, handleChunk);
+      await nerService.sendChatMessageStream(sessionId, 'gpt-4', message, handleChunk);
     } catch (error) {
       if ((error as Error).message.toLowerCase().includes('api key')) {
         setInvalidApiKey(true);

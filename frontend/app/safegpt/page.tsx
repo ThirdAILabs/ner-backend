@@ -106,7 +106,7 @@ function SafeGPTContent() {
   };
 
   const handleSendMessage = async (message: string) => {
-    const newSessionId = await sendMessage(message, apiKey);
+    const newSessionId = await sendMessage(message);
     if (newSessionId) {
       router.push(`/safegpt?id=${newSessionId}`);
     }
