@@ -45,7 +45,7 @@ type ChatHistoryItem struct {
 	MessageType string
 	Content     string
 	Timestamp   time.Time
-	Metadata    any        `json:"omitempty"` // Optional metadata field
+	Metadata    any
 }
 
 type ApiKey struct {
