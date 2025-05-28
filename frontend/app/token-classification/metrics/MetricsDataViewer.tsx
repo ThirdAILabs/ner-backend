@@ -36,7 +36,9 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
           if (!mounted) return;
           setTpMetrics(tp);
           setThroughput(
-            tp.ThroughputMBPerHour !== undefined ? formatFileSize(tp.ThroughputMBPerHour, true) : '-'
+            tp.ThroughputMBPerHour !== undefined
+              ? formatFileSize(tp.ThroughputMBPerHour, true)
+              : '-'
           );
         } else {
           setTpMetrics(null);
@@ -135,7 +137,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
                 sx={{
                   fontSize: '2rem',
                   fontWeight: 600,
-                  color: '#1e293b',
+                  color: '#4a5568',
                 }}
               >
                 {infMetrics.InProgress}
@@ -192,7 +194,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
                 sx={{
                   fontSize: '2rem',
                   fontWeight: 600,
-                  color: '#1e293b',
+                  color: '#4a5568',
                 }}
               >
                 {infMetrics.Completed + infMetrics.Failed}
@@ -256,7 +258,8 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
                           ? '1.75rem'
                           : '2rem',
                   fontWeight: 600,
-                  color: '#1e293b',
+                  color: '#4a5568',
+
                   textAlign: 'center',
                 }}
               >
@@ -315,7 +318,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
                   textAlign: 'center',
                   fontSize: '2rem',
                   fontWeight: 600,
-                  color: '#1e293b',
+                  color: '#4a5568',
                 }}
               >
                 {formatFileSize(infMetrics.DataProcessedMB * 1024 * 1024)}
@@ -372,7 +375,8 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
                 sx={{
                   fontSize: '2rem',
                   fontWeight: 600,
-                  color: '#1e293b',
+                  color: '#4a5568',
+
                   textAlign: 'center',
                 }}
               >
