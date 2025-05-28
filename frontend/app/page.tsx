@@ -6,6 +6,7 @@ import { Tabs, Tab, Box, CircularProgress, Typography, Link as MuiLink } from '@
 import * as _ from 'lodash';
 import { useParams, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
+import useTelemetry from '@/hooks/useTelemetry';
 
 // Import our implemented components
 // import Interact from './interact';
@@ -71,6 +72,16 @@ function PageContents() {
   const [trainReport, setTrainReport] = useState<TrainReportData>(emptyReport);
   const [isLoadingReport, setIsLoadingReport] = useState(false);
   const [reportError, setReportError] = useState('');
+  const recordEvent = useTelemetry();
+
+  // Record initial page load
+  useEffect(() => {
+    recordEvent({
+      UserAction: 'view',
+      UIComponent: 'Page Load',
+      UI: 'Token Classification Page',
+    });
+  }, []);
 
   // Update tabValue if searchParams change after initial load (e.g., browser back/forward)
   useEffect(() => {
@@ -79,6 +90,19 @@ function PageContents() {
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: string) => {
     setTabValue(newValue);
+    if (newValue === 'monitoring') {
+      recordEvent({
+        UserAction: 'click',
+        UIComponent: 'Usage Stats Tab',
+        UI: 'Token Classification Page',
+      });
+    } else if (newValue === 'jobs') {
+      recordEvent({
+        UserAction: 'click',
+        UIComponent: 'Reports Dashboard Tab',
+        UI: 'Token Classification Page',
+      });
+    }
   };
 
   useEffect(() => {
