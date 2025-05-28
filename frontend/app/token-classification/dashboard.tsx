@@ -54,13 +54,15 @@ const Dashboard = () => {
   }
 
   return (
-    <Card sx={{
-      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-      bgcolor: 'white',
-      borderRadius: '12px',
-      mx: 'auto',
-      maxWidth: '1400px'
-    }}>
+    <Card
+      sx={{
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        bgcolor: 'white',
+        borderRadius: '12px',
+        mx: 'auto',
+        maxWidth: '1400px',
+      }}
+    >
       <CardContent sx={{ p: 4 }}>
         <Box
           sx={{
@@ -70,28 +72,33 @@ const Dashboard = () => {
             mb: 4,
           }}
         >
-          <Typography variant="h5" sx={{
-            fontWeight: 600,
-            fontSize: '1.5rem',
-            color: '#111827'
-          }}>
+          <Typography
+            variant="h5"
+            sx={{
+              fontWeight: 600,
+              fontSize: '1.5rem',
+              color: '#111827',
+            }}
+          >
             Metrics Dashboard
           </Typography>
         </Box>
 
-        <Box sx={{
-          display: 'flex',
-          gap: 4,
-          alignItems: 'flex-start',
-          mb: 4,
-          '& .MuiFormControl-root': {
-            bgcolor: 'white',
-            borderRadius: '8px',
-            '& .MuiSelect-select': {
-              py: 1.5,
-            }
-          }
-        }}>
+        <Box
+          sx={{
+            display: 'flex',
+            gap: 4,
+            alignItems: 'flex-start',
+            mb: 4,
+            '& .MuiFormControl-root': {
+              bgcolor: 'white',
+              borderRadius: '8px',
+              '& .MuiSelect-select': {
+                py: 1.5,
+              },
+            },
+          }}
+        >
           {/* Days Filter */}
           <Box>
             <Typography
@@ -100,7 +107,7 @@ const Dashboard = () => {
               sx={{
                 fontWeight: 600,
                 color: '#475569',
-                mb: 1
+                mb: 1,
               }}
             >
               Days
@@ -113,8 +120,8 @@ const Dashboard = () => {
                   borderColor: 'grey.200',
                   '&:hover': {
                     borderColor: 'grey.300',
-                  }
-                }
+                  },
+                },
               }}
             >
               <Select
@@ -125,7 +132,7 @@ const Dashboard = () => {
                   bgcolor: '#f8fafc',
                   '&:hover': {
                     bgcolor: '#f1f5f9',
-                  }
+                  },
                 }}
               >
                 <MenuItem value={1}>1 day</MenuItem>
@@ -143,7 +150,7 @@ const Dashboard = () => {
               sx={{
                 fontWeight: 600,
                 color: '#475569',
-                mb: 1
+                mb: 1,
               }}
             >
               Model
@@ -156,8 +163,8 @@ const Dashboard = () => {
                   borderColor: 'grey.200',
                   '&:hover': {
                     borderColor: 'grey.300',
-                  }
-                }
+                  },
+                },
               }}
             >
               <Select
@@ -171,7 +178,7 @@ const Dashboard = () => {
                   bgcolor: '#f8fafc',
                   '&:hover': {
                     bgcolor: '#f1f5f9',
-                  }
+                  },
                 }}
               >
                 <MenuItem value="">
@@ -188,13 +195,15 @@ const Dashboard = () => {
         </Box>
 
         {/* Metrics Viewer */}
-        <Box sx={{
-          bgcolor: 'white',
-          borderRadius: '12px',
-          border: '1px solid',
-          borderColor: 'grey.200',
-          overflow: 'hidden'
-        }}>
+        <Box
+          sx={{
+            bgcolor: 'white',
+            borderRadius: '12px',
+            border: '1px solid',
+            borderColor: 'grey.200',
+            overflow: 'hidden',
+          }}
+        >
           <MetricsDataViewer modelId={selectedModel || undefined} days={days} />
         </Box>
       </CardContent>

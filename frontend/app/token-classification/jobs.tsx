@@ -90,14 +90,14 @@ export default function Jobs() {
           prev.map((r) =>
             r.Id === report.Id
               ? {
-                ...r,
-                SucceededFileCount: detailedReport.SucceededFileCount,
-                detailedStatus: {
-                  ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
-                  InferenceTaskStatuses: detailedReport.InferenceTaskStatuses,
-                },
-                isLoadingStatus: false,
-              }
+                  ...r,
+                  SucceededFileCount: detailedReport.SucceededFileCount,
+                  detailedStatus: {
+                    ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
+                    InferenceTaskStatuses: detailedReport.InferenceTaskStatuses,
+                  },
+                  isLoadingStatus: false,
+                }
               : r
           )
         );
@@ -157,7 +157,7 @@ export default function Jobs() {
       }
     };
     if (healthStatus) fetchReports();
-    return () => { };
+    return () => {};
   }, [healthStatus]);
 
   if (loading) {
@@ -424,13 +424,15 @@ export default function Jobs() {
   };
 
   return (
-    <Card sx={{
-      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-      bgcolor: 'white',
-      borderRadius: '12px',
-      mx: 'auto',
-      maxWidth: '1400px'
-    }}>
+    <Card
+      sx={{
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        bgcolor: 'white',
+        borderRadius: '12px',
+        mx: 'auto',
+        maxWidth: '1400px',
+      }}
+    >
       <CardContent sx={{ p: 4 }}>
         <Box
           sx={{
@@ -441,11 +443,14 @@ export default function Jobs() {
           }}
         >
           <Box>
-            <Typography variant="h5" sx={{
-              fontWeight: 600,
-              fontSize: '1.5rem',
-              color: '#111827'
-            }}>
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 600,
+                fontSize: '1.5rem',
+                color: '#111827',
+              }}
+            >
               Reports
             </Typography>
           </Box>
@@ -491,32 +496,52 @@ export default function Jobs() {
           <Table>
             <TableHead>
               <TableRow sx={{ bgcolor: '#f8fafc' }}>
-                <TableCell sx={{
-                  fontWeight: 600,
-                  color: '#475569',
-                  fontSize: '0.875rem'
-                }}>Name</TableCell>
-                <TableCell sx={{
-                  fontWeight: 600,
-                  color: '#475569',
-                  fontSize: '0.875rem'
-                }}>Model</TableCell>
-                <TableCell sx={{
-                  fontWeight: 600,
-                  color: '#475569',
-                  fontSize: '0.875rem'
-                }}>Progress</TableCell>
-                <TableCell sx={{
-                  fontWeight: 600,
-                  color: '#475569',
-                  fontSize: '0.875rem'
-                }}>Created At</TableCell>
-                <TableCell sx={{
-                  fontWeight: 600,
-                  color: '#475569',
-                  fontSize: '0.875rem',
-                  width: '120px'
-                }}>Actions</TableCell>
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    color: '#475569',
+                    fontSize: '0.875rem',
+                  }}
+                >
+                  Name
+                </TableCell>
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    color: '#475569',
+                    fontSize: '0.875rem',
+                  }}
+                >
+                  Model
+                </TableCell>
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    color: '#475569',
+                    fontSize: '0.875rem',
+                  }}
+                >
+                  Progress
+                </TableCell>
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    color: '#475569',
+                    fontSize: '0.875rem',
+                  }}
+                >
+                  Created At
+                </TableCell>
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    color: '#475569',
+                    fontSize: '0.875rem',
+                    width: '120px',
+                  }}
+                >
+                  Actions
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -533,26 +558,32 @@ export default function Jobs() {
                     }}
                   >
                     <TableCell>
-                      <Typography sx={{
-                        fontWeight: 500,
-                        color: '#1e293b'
-                      }}>
+                      <Typography
+                        sx={{
+                          fontWeight: 500,
+                          color: '#1e293b',
+                        }}
+                      >
                         {report.ReportName}
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Box sx={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        px: 2,
-                        py: 0.5,
-                        bgcolor: '#f1f5f9',
-                        borderRadius: '16px',
-                      }}>
-                        <Typography sx={{
-                          fontSize: '0.875rem',
-                          color: '#475569'
-                        }}>
+                      <Box
+                        sx={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          px: 2,
+                          py: 0.5,
+                          bgcolor: '#f1f5f9',
+                          borderRadius: '16px',
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            fontSize: '0.875rem',
+                            color: '#475569',
+                          }}
+                        >
                           {report.Model.Name}
                         </Typography>
                       </Box>
@@ -569,11 +600,13 @@ export default function Jobs() {
                       </Box>
                     </TableCell>
                     <TableCell>
-                      <Box sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1
-                      }}>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                        }}
+                      >
                         <Link
                           href={`/token-classification/jobs?jobId=${report.Id}`}
                           style={{
@@ -625,16 +658,20 @@ export default function Jobs() {
                       textAlign: 'center',
                     }}
                   >
-                    <Box sx={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: 2
-                    }}>
-                      <Typography sx={{
-                        color: '#475569',
-                        fontSize: '0.875rem'
-                      }}>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 2,
+                      }}
+                    >
+                      <Typography
+                        sx={{
+                          color: '#475569',
+                          fontSize: '0.875rem',
+                        }}
+                      >
                         No reports found
                       </Typography>
                     </Box>
