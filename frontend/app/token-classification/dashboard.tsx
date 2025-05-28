@@ -8,7 +8,7 @@ import {
   FormControl,
   Select,
   MenuItem,
-  SelectChangeEvent
+  SelectChangeEvent,
   Card,
   CardContent,
 } from '@mui/material';
@@ -24,7 +24,7 @@ const Dashboard = () => {
     recordEvent({
       UserAction: 'view',
       UIComponent: 'Usage Stats Dashboard Page',
-      UI: 'Token Classification Page'
+      UI: 'Token Classification Page',
     });
   }, []);
   const { healthStatus } = useHealth();
@@ -42,7 +42,7 @@ const Dashboard = () => {
       UserAction: 'select',
       UIComponent: 'Days Filter',
       UI: 'Usage Stats Dashboard Page',
-      data: { days: newDays }
+      data: { days: newDays },
     });
   };
   const [models, setModels] = useState<Model[]>([]);
@@ -54,7 +54,7 @@ const Dashboard = () => {
       UserAction: 'select',
       UIComponent: 'Model Filter',
       UI: 'Usage Stats Dashboard Page',
-      data: { model }
+      data: { model },
     });
   };
 
@@ -201,10 +201,8 @@ const Dashboard = () => {
                 value={selectedModel}
                 displayEmpty
                 onChange={handleModelChange}
-                renderValue={val =>
-                  val === ''
-                    ? 'All Models'
-                    : models.find(m => m.Id === val)?.Name || val
+                renderValue={(val) =>
+                  val === '' ? 'All Models' : models.find((m) => m.Id === val)?.Name || val
                 }
                 sx={{
                   bgcolor: '#f8fafc',

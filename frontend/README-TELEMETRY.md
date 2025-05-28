@@ -22,13 +22,13 @@ The telemetry data is stored in the `telemetry_events` table:
 
 ```sql
 Table "public.telemetry_events"
-    Column    |           Type           | Nullable |                   Default                    
+    Column    |           Type           | Nullable |                   Default
 --------------+--------------------------+----------+----------------------------------------------
  id           | integer                  | not null | nextval('telemetry_events_id_seq'::regclass)
- username     | text                     | not null | 
- timestamp    | timestamp with time zone | not null | 
- user_machine | text                     | not null | 
- event        | jsonb                    | not null | 
+ username     | text                     | not null |
+ timestamp    | timestamp with time zone | not null |
+ user_machine | text                     | not null |
+ event        | jsonb                    | not null |
 ```
 
 ## Security
@@ -74,4 +74,4 @@ To test the PostgreSQL connection, you can use:
 psql 'postgresql://telemetry_writer:PASSWORD@pocketllm-shield.cjhmqzlwgr5q.us-east-1.rds.amazonaws.com:5432/postgres?sslmode=require'
 ```
 
-Replace `PASSWORD` with the actual `telemetry_writer` password. 
+Replace `PASSWORD` with the actual `telemetry_writer` password.

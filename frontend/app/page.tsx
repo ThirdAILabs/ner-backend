@@ -79,7 +79,7 @@ function PageContents() {
     recordEvent({
       UserAction: 'view',
       UIComponent: 'Page Load',
-      UI: 'Token Classification Page'
+      UI: 'Token Classification Page',
     });
   }, []);
 
@@ -94,13 +94,13 @@ function PageContents() {
       recordEvent({
         UserAction: 'click',
         UIComponent: 'Usage Stats Tab',
-        UI: 'Token Classification Page'
+        UI: 'Token Classification Page',
       });
     } else if (newValue === 'jobs') {
       recordEvent({
         UserAction: 'click',
         UIComponent: 'Reports Dashboard Tab',
-        UI: 'Token Classification Page'
+        UI: 'Token Classification Page',
       });
     }
   };
