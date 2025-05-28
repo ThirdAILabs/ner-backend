@@ -90,6 +90,12 @@ export interface ThroughputMetrics {
   ThroughputMBPerHour: number;
 }
 
+export interface ChatResponse {
+  input_text: string;
+  reply: string;
+  tag_map: Record<string, string>;
+}
+
 // Add a utility function to handle API errors with custom messages
 const handleApiError = (error: unknown, customMessage?: string): never => {
   console.error('API Error:', error);
@@ -305,5 +311,91 @@ export const nerService = {
     } catch (error) {
       return 'Failed to connect to S3 bucket. Please make sure that it is a valid public bucket.';
     }
+  },
+
+  getChatSessions: async (): Promise<{ id: string; title: string }[]> => {
+    const { data } = await axiosInstance.get('/chat/sessions');
+    return data.sessions;
+  },
+
+  startChatSession: async (model: string, title: string): Promise<string> => {
+    const { data } = await axiosInstance.post('/chat/sessions', { model, title });
+    return data.session_id;
+  },
+
+  deleteChatSession: async (sessionId: string): Promise<void> => {
+    await axiosInstance.delete(`/chat/sessions/${sessionId}`);
+  },
+
+  getChatSession: async (
+    sessionId: string
+  ): Promise<{ id: string; title: string; tag_map: Record<string, string> }> => {
+    const { data } = await axiosInstance.get(`/chat/sessions/${sessionId}`);
+    return data;
+  },
+
+  renameChatSession: async (sessionId: string, title: string): Promise<void> => {
+    await axiosInstance.post(`/chat/sessions/${sessionId}/rename`, { title });
+  },
+
+  sendChatMessageStream: async (
+    sessionId: string,
+    model: string,
+    apiKey: string,
+    message: string,
+    onChunk: (chunk: ChatResponse) => void
+  ) => {
+    const response = await axiosInstance.post(
+      `/chat/sessions/${sessionId}/messages`,
+      {
+        model,
+        api_key: apiKey,
+        message,
+      },
+      {
+        responseType: 'stream',
+        adapter: 'fetch',
+      }
+    );
+
+    const reader = response.data.getReader();
+    const decoder = new TextDecoder();
+    let chunk: ReadableStreamReadResult<Uint8Array>;
+
+    while (!(chunk = await reader.read()).done) {
+      const decodedChunk = decoder.decode(chunk.value, { stream: true });
+      const lines = decodedChunk.split('\n').filter(Boolean);
+
+      for (const line of lines) {
+        const parsedData = JSON.parse(line);
+        if (parsedData.code !== 200) {
+          throw new Error(parsedData.error);
+        }
+        onChunk(parsedData.data);
+      }
+    }
+  },
+
+  getChatHistory: async (
+    sessionId: string
+  ): Promise<
+    {
+      message_type: string;
+      content: string;
+      timestamp: string;
+      metadata?: any;
+    }[]
+  > => {
+    const { data } = await axiosInstance.get(`/chat/sessions/${sessionId}/history`);
+    return data || [];
+  },
+
+  getOpenAIApiKey: async (): Promise<string> => {
+    const response = await axiosInstance.get('/chat/api-key');
+    return response.data.api_key;
+  },
+
+  setOpenAIApiKey: async (apiKey: string): Promise<void> => {
+    await axiosInstance.post('/chat/api-key', { api_key: apiKey });
   },
 };

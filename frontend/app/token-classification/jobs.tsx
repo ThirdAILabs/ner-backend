@@ -422,8 +422,8 @@ export default function Jobs() {
   };
 
   return (
-    <Card sx={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)', bgcolor: 'grey.100' }}>
-      <CardContent sx={{ p: 3 }}>
+    <Card sx={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+      <CardContent className="bg-muted/60" sx={{ p: 3 }}>
         <Box
           sx={{
             display: 'flex',

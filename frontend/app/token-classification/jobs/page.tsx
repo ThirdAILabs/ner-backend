@@ -300,7 +300,7 @@ function JobDetail() {
       {/* Header with Back Button and Title */}
       <div className="flex items-center justify-between mb-6">
         <Button variant="outline" size="sm" asChild>
-          <Link href={`/?tab=jobs`} className="flex items-center">
+          <Link href={`/token-classification/landing?tab=jobs`} className="flex items-center">
             <ArrowLeft className="mr-1 h-4 w-4" /> Back to Reports
           </Link>
         </Button>
@@ -339,7 +339,7 @@ function JobDetail() {
         <TabsContent value="configuration" className="mt-0">
           {/* STARTS */}
           {/* Source */}
-          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
+          <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3 }}>
             <h2 className="text-2xl font-medium mb-4">Source</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {selectedSource === 's3' && reportData?.SourceS3Bucket && (
@@ -370,7 +370,7 @@ function JobDetail() {
           </Box>
 
           {/* Tags */}
-          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3, marginTop: 3 }}>
+          <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3, marginTop: 3 }}>
             <h2 className="text-2xl font-medium mb-4">Tags</h2>
             <div className="flex justify-between items-center mb-4">
               {isLoading ? (
@@ -390,7 +390,7 @@ function JobDetail() {
           </Box>
 
           {/* Custom Tags */}
-          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3, marginTop: 3 }}>
+          <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3, marginTop: 3 }}>
             <h2 className="text-2xl font-medium mb-4">Tags</h2>
             <div className="flex justify-between items-center mb-4">
               {isLoading ? (
@@ -422,7 +422,7 @@ function JobDetail() {
           </Box>
 
           {/* Groups */}
-          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3, marginTop: 3 }}>
+          <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3, marginTop: 3 }}>
             <h2 className="text-2xl font-medium mb-4">Groups</h2>
             <div className="flex justify-between items-center mb-4">
               {isLoading ? (

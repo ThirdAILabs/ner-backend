@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { nerService } from '@/lib/backend';
 
 interface HealthContextType {
@@ -13,6 +13,7 @@ const HealthContext = createContext<HealthContextType>({
 
 export function HealthProvider({ children }: { children: React.ReactNode }) {
   const [healthStatus, setHealthStatus] = useState<boolean>(false);
+  const fails = useRef<number>(0);
 
   useEffect(() => {
     const checkHealth = async () => {
@@ -20,7 +21,10 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
         const response = await nerService.checkHealth();
         return response.status === 200;
       } catch (error) {
-        console.error('Health check failed:', error);
+        fails.current++;
+        if (fails.current >= 5) {
+          console.error(`Health check failed ${fails.current} times`, error);
+        }
         return false;
       }
     };
@@ -36,8 +40,7 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    // Delay first health check by 5 seconds
-    timeoutId = setTimeout(pollHealth, 5000);
+    pollHealth();
 
     return () => {
       if (timeoutId) {
