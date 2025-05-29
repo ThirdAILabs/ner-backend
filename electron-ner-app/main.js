@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import serve from 'electron-serve';
 import { startBackend } from './scripts/start-backend.js';
+import { openFileChooser } from './scripts/file-utils.js';
 import { initTelemetry, insertTelemetryEvent, closeTelemetry } from './telemetry.js';
 import { initializeUserId, getCurrentUserId } from './userIdManager.js';
 import log from 'electron-log';
@@ -219,58 +220,8 @@ ipcMain.handle('get-port', async () => {
   return port;
 });
 
-ipcMain.handle('open-file-chooser', async () => {
-  const result = {
-    directlySelected: [],
-    allFiles: [],
-  }
-
-  const dialogResult = await dialog.showOpenDialog({
-    properties: [
-      // Note: we cannot both have openFile and openDirectory on Windows.
-      'openFile',
-      'openDirectory',
-      'multiSelections',
-    ]
-  });
-
-  if (dialogResult.canceled) {
-    return result;
-  }
-
-  // Store directly selected paths
-  result.directlySelected = dialogResult.filePaths;
-
-  // Helper function to recursively get files from a directory
-  const getFilesFromDirectory = async (dirPath) => {
-    const files = [];
-    const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
-    
-    for (const entry of entries) {
-      const fullPath = path.join(dirPath, entry.name);
-      if (entry.isDirectory()) {
-        files.push(...await getFilesFromDirectory(fullPath));
-      } else {
-        files.push(fullPath);
-      }
-    }
-    return files;
-  };
-
-  // Process each selected path
-  for (const selectedPath of dialogResult.filePaths) {
-    const stats = await fs.promises.stat(selectedPath);
-    if (stats.isDirectory()) {
-      // If it's a directory, get all files recursively
-      const files = await getFilesFromDirectory(selectedPath);
-      result.allFiles.push(...files);
-    } else {
-      // If it's a file, add it directly
-      result.allFiles.push(selectedPath);
-    }
-  }
-
-  return result;
+ipcMain.handle('open-file-chooser', async (event, supportedTypes) => {
+  return openFileChooser(supportedTypes);
 });
 
 // This method will be called when Electron has finished initialization

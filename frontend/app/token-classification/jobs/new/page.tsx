@@ -10,8 +10,7 @@ import { nerService } from '@/lib/backend';
 import { NO_GROUP } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 
-// Check if we're running in Electron
-const isElectron = typeof window !== 'undefined' && 'electronAPI' in window;
+const SUPPORTED_TYPES = ['.pdf', '.txt', '.csv', '.html', '.json', '.xml'];
 
 // Tag chip component - reused from the detail page but with interactive mode
 interface TagProps {
@@ -40,23 +39,21 @@ const Tag: React.FC<TagProps> = ({
   );
 };
 
-// Source option card component
-interface SourceOptionProps {
+// Source option card component - reused from the detail page
+interface ModelOptionProps {
   title: string;
   description: React.ReactNode;
   isSelected?: boolean;
   disabled?: boolean;
   onClick: () => void;
-  icon?: React.ReactNode;
 }
 
-const SourceOption: React.FC<SourceOptionProps> = ({
+const ModelOption: React.FC<ModelOptionProps> = ({
   title,
   description,
   isSelected = false,
   disabled = false,
   onClick,
-  icon,
 }) => (
   <div
     className={`relative p-6 border rounded-md transition-all
@@ -69,116 +66,161 @@ const SourceOption: React.FC<SourceOptionProps> = ({
     `}
     onClick={() => !disabled && onClick()}
   >
-    {icon && <div className="mb-4">{icon}</div>}
     <h3 className="text-base font-medium">{title}</h3>
     <div className="text-sm text-gray-500 mt-1">{description}</div>
   </div>
 );
 
-// File source component
-interface FileSourceProps {
-  onFilesSelected: (files: File[]) => void;
-  supportedTypes: string[];
-  multiple?: boolean;
-  directory?: boolean;
+interface SourceOptionProps {
+  onClick: () => void;
+  input?: React.ReactNode;
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  disclaimer: string;
 }
 
-const FileSource: React.FC<FileSourceProps> = ({
-  onFilesSelected,
-  supportedTypes,
-  multiple = true,
-  directory = false,
-}) => {
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files) {
-      const fileArray = Array.from(files);
-      const supportedFiles = fileArray.filter((file) => 
-        supportedTypes.some((ext) => file.name.toLowerCase().endsWith(ext))
-      );
-      if (supportedFiles.length > 0) {
-        onFilesSelected(supportedFiles);
-      }
-    }
-    // Reset the input value
-    const input = e.target as HTMLInputElement;
-    input.value = '';
-  };
-
-  return (
-    <div
-      className="relative p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 transition-colors cursor-pointer"
-      onClick={() => {
-        const input = document.getElementById(
-          directory ? 'directory-upload' : 'file-upload'
-        ) as HTMLInputElement;
-        input?.click();
-      }}
-    >
-      <input
-        type="file"
-        id={directory ? 'directory-upload' : 'file-upload'}
-        multiple={multiple}
-        onChange={handleFileChange}
-        className="hidden"
-        accept={supportedTypes.join(',')}
-        {...(directory ? { webkitdirectory: '', directory: '' } : {})}
-      />
-      <div className="flex flex-col items-center justify-center space-y-4">
-        <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-50">
-          <svg
-            className="w-8 h-8 text-blue-500"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d={directory 
-                ? "M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-                : "M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              }
-            />
-          </svg>
-        </div>
-        <div className="text-center">
-          <h3 className="text-base font-medium mb-1">
-            {directory ? 'Local Directory' : 'Local Files'}
-          </h3>
-          <p className="text-sm text-gray-500">
-            {directory ? 'Scan an entire directory' : 'Scan files from your computer'}
-          </p>
-          <p className="text-xs text-gray-400 mt-2">
-            Supported: {supportedTypes.join(', ')}
-          </p>
-        </div>
+const SourceOption: React.FC<SourceOptionProps> = ({ onClick, input, icon, title, description, disclaimer }) => (
+  <div
+    className="relative p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 transition-colors cursor-pointer"
+    onClick={onClick}
+  >
+    {input && input}
+    <div className="flex flex-col items-center justify-center space-y-4">
+      <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-50">
+        <svg
+          className="w-8 h-8 text-blue-500"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          {icon}
+        </svg>
       </div>
-    </div>
-  );
-};
-
-// Group card component
-interface GroupProps {
-  name: string;
-  definition: string;
-  onRemove: () => void;
-}
-
-const GroupCard: React.FC<GroupProps> = ({ name, definition, onRemove }) => (
-  <div className="border border-gray-200 rounded-md overflow-hidden">
-    <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-      <h3 className="text-base font-medium">{name}</h3>
-      <Button variant="ghost" size="sm" onClick={onRemove} className="text-red-500">
-        Remove
-      </Button>
-    </div>
-    <div className="p-4">
-      <p className="text-sm font-mono">{definition}</p>
+      <div className="text-center">
+        <h3 className="text-base font-medium mb-1">{title}</h3>
+        <p className="text-sm text-gray-500">{description}</p>
+        <p className="text-xs text-gray-400 mt-2">{disclaimer}</p>
+      </div>
     </div>
   </div>
 );
+
+interface FileSourcesProps {
+  selectSource: (source: 's3' | 'files' | 'directory') => void;
+  handleLocalFiles: (files: File[]) => void;
+}
+
+const FileSources: React.FC<FileSourcesProps> = ({selectSource, handleLocalFiles}) => {
+  const s3 = <SourceOption
+    onClick={() => selectSource('s3')}
+    icon={
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
+      />
+    }
+    title="S3 Bucket"
+    description="Scan files from an S3 bucket"
+    disclaimer="Public buckets only without enterprise subscription."
+  />
+
+  const folderIcon = <path
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth="2"
+    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+  />
+
+  const getFilesFromElectron = async (): Promise<File[]> => {
+    // @ts-ignore
+    const results = await window.electronAPI.openFileChooser(SUPPORTED_TYPES.map(t => t.replace('.', '')));
+    console.log('results', results);
+    return results.allFiles;
+  }
+
+  // @ts-ignore
+  if (window && window.electronAPI) {
+    return (
+      <>
+        <SourceOption
+          onClick={() => {
+            getFilesFromElectron().then(handleLocalFiles);
+            selectSource('files');
+          }}
+          icon={folderIcon}
+          title="Local Files"
+          description="Scan files from your computer"
+          disclaimer={`Supported: ${SUPPORTED_TYPES.join(', ')}`}
+        />
+        {s3}
+      </> 
+    );
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      handleLocalFiles(Array.from(files));
+      e.target.value = '';
+    }
+  }
+
+  const fileInput = <input
+    type="file"
+    id="file-upload"
+    multiple
+    onChange={handleFileChange}
+    className="hidden"
+    accept={SUPPORTED_TYPES.join(',')}
+  />
+
+  const directoryInput = <input
+    type="file"
+    id="directory-upload"
+    {...({ webkitdirectory: '', directory: '' } as any)}
+    onChange={handleFileChange}
+    className="hidden"
+    accept={SUPPORTED_TYPES.join(',')}
+  />
+
+  return (
+    <>
+      <SourceOption
+        onClick={() => {
+          document.getElementById('file-upload')?.click();
+          selectSource('files');
+        }}
+        input={fileInput}
+        icon={
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+          />
+        }
+        title="Local Files"
+        description="Scan files from your computer"
+        disclaimer={`Supported: ${SUPPORTED_TYPES.join(', ')}`}
+      />
+      <SourceOption
+        onClick={() => {
+          document.getElementById('directory-upload')?.click();
+          selectSource('directory');
+        }}
+        input={directoryInput}
+        icon={folderIcon}
+        title="Local Directory"
+        description="Scan an entire directory"
+        disclaimer={`Supported: ${SUPPORTED_TYPES.join(', ')}`}
+      />
+      {s3}
+    </>
+  );
+};
 
 // Custom Tag interface
 interface CustomTag {
@@ -203,9 +245,7 @@ export default function NewJobPage() {
 
   // Model selection
   const [models, setModels] = useState<any[]>([]);
-  //Bi-default Presidio model is selected.
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
-  const [selectedModel, setSelectedModel] = useState<any>(null);
 
   // Tags handling
   const [availableTags, setAvailableTags] = useState<string[]>([]);
@@ -239,8 +279,6 @@ export default function NewJobPage() {
   const [patternType, setPatternType] = useState('string');
 
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
-
-  const SUPPORTED_TYPES = ['.pdf', '.txt', '.csv', '.html', '.json', '.xml'];
 
   const isFileSupported = (filename: string) => {
     return SUPPORTED_TYPES.some((ext) => filename.toLowerCase().endsWith(ext));
@@ -278,8 +316,6 @@ export default function NewJobPage() {
       setIsTagsLoading(true);
       try {
         const model = await nerService.getModel(selectedModelId);
-        setSelectedModel(model);
-
         // Get tags from the model
         const modelTags = model.Tags || [];
         console.log('Tags from model:', modelTags);
@@ -450,6 +486,17 @@ export default function NewJobPage() {
     });
 
     setSelectedFiles(newSelectedFiles);
+  };
+
+  // Update file handling to use file/directory input
+  const handleLocalFiles = (files: File[]) => {
+    const supportedFiles = files.filter((file) => isFileSupported(file.name));
+
+    if (supportedFiles.length > 0) {
+      addFiles(supportedFiles);
+    } else {
+      setIsConfirmDialogOpen(true);
+    }
   };
 
   const validateS3Bucket = async () => {
@@ -727,77 +774,15 @@ export default function NewJobPage() {
           <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
             <h2 className="text-2xl font-medium mb-4">Source</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              {isElectron ? (
-                <>
-                  <FileSource
-                    onFilesSelected={(files) => {
-                      setSelectedSource('files');
-                      addFiles(files);
-                    }}
-                    supportedTypes={SUPPORTED_TYPES}
-                  />
-                  <FileSource
-                    onFilesSelected={(files) => {
-                      setSelectedSource('directory');
-                      addFiles(files);
-                    }}
-                    supportedTypes={SUPPORTED_TYPES}
-                    directory
-                  />
-                  <SourceOption
-                    title="S3 Bucket"
-                    description="Scan files from an S3 bucket"
-                    isSelected={selectedSource === 's3'}
-                    onClick={() => setSelectedSource('s3')}
-                    icon={
-                      <svg
-                        className="w-8 h-8 text-blue-500"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
-                        />
-                      </svg>
-                    }
-                  />
-                </>
-              ) : (
-                <>
-                  <FileSource
-                    onFilesSelected={(files) => {
-                      setSelectedSource('files');
-                      addFiles(files);
-                    }}
-                    supportedTypes={SUPPORTED_TYPES}
-                  />
-                  <SourceOption
-                    title="S3 Bucket"
-                    description="Scan files from an S3 bucket"
-                    isSelected={selectedSource === 's3'}
-                    onClick={() => setSelectedSource('s3')}
-                    icon={
-                      <svg
-                        className="w-8 h-8 text-blue-500"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
-                        />
-                      </svg>
-                    }
-                  />
-                </>
-              )}
+              <button onClick={() => {
+                // @ts-ignore
+                window.electronAPI.openFile('/Users/benitogeordie/Desktop/2024-archives/00-contract.pdf').then(console.log);
+              }}>Open File</button>
+              <button onClick={() => {
+                // @ts-ignore
+                window.electronAPI.openFileChooser(SUPPORTED_TYPES.map(t => t.replace('.', ''))).then(console.log);
+              }}>Open File Chooser</button>
+              <FileSources selectSource={setSelectedSource} handleLocalFiles={handleLocalFiles} />
             </div>
 
             {selectedFiles.length > 0 && (
@@ -944,7 +929,7 @@ export default function NewJobPage() {
               <h2 className="text-2xl font-medium mb-4">Model</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {models.map((model) => (
-                  <SourceOption
+                  <ModelOption
                     key={model.Id}
                     title={model.Name[0].toUpperCase() + model.Name.slice(1)}
                     description={
@@ -955,7 +940,7 @@ export default function NewJobPage() {
                     disabled={model.Name === 'presidio'}
                   />
                 ))}
-                <SourceOption
+                <ModelOption
                   key={'Advanced-Model'}
                   title={'Advanced'}
                   description={
