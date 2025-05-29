@@ -115,7 +115,7 @@ export default function Options({
   return (
     <div className="w-full bg-white rounded-xl shadow-lg border border-gray-200">
       <div className="p-4 flex flex-col gap-1">
-        <div className="inline font-semibold p-1">Redaction Model</div>
+        <div className="inline font-semibold p-1">Local Guardrail</div>
         <div className="flex flex-row w-full gap-2">
           <div className="w-full">
             <ModelOption onClick={handleBasicMode} selected={true}>
@@ -136,7 +136,7 @@ export default function Options({
           </div>
         </div>
 
-        <div className="inline font-semibold p-1">Model Selection</div>
+        <div className="inline font-semibold p-1">GPT</div>
         <div className="flex flex-row w-full gap-2">
           <div className="w-full">
             <ModelOption onClick={() => onSelectModel('gpt-4o-mini')} selected={model === 'gpt-4o-mini'}>
