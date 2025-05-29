@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 
 	"ner-backend/internal/core"
@@ -23,7 +24,7 @@ import (
 )
 
 func initializeChatService() chi.Router {
-	db, err := gorm.Open(sqlite.Open("file::memory:"), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared&mode=memory"), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
@@ -141,7 +142,7 @@ func renameSession(t *testing.T, router chi.Router, sessionID string, title stri
 	assert.Equal(t, http.StatusOK, rec.Code)
 }
 
-func sendMessage(t *testing.T, router chi.Router, sessionID string, message string, apiKey string) (redactedMessage string, reply string, tagMap map[string]string) {
+func sendMessage(t *testing.T, router chi.Router, sessionID string, message string) (redactedMessage string, reply string, tagMap map[string]string) {
 	chatPayload := pkgapi.ChatRequest{
 		Model:   "gpt-3",
 		Message: message,
@@ -313,7 +314,7 @@ func TestChatEndpoint(t *testing.T) {
 		assert.NotEmpty(t, sessionID)
 
 		message := "Hello, how are you today? I am Yashwanth and I work at ThirdAI and my email is yash@thirdai.com"
-		redactedMessage, reply, tagMap := sendMessage(t, router, sessionID, message, apiKey)
+		redactedMessage, reply, tagMap := sendMessage(t, router, sessionID, message)
 		
 		expectedRedacted := "Hello, how are you today? I am Yashwanth and I work at ThirdAI and my email is [EMAIL_1]"
 		assert.Equal(t, expectedRedacted, redactedMessage)
@@ -335,7 +336,7 @@ func TestChatEndpoint(t *testing.T) {
 		assert.NotEmpty(t, sessionID)
 		
 		message := "Hello, how are you today? I am Yashwanth and I work at ThirdAI and my email is yash@thirdai.com"
-		redactedMessage, reply, _ := sendMessage(t, router, sessionID, message, apiKey)
+		redactedMessage, reply, _ := sendMessage(t, router, sessionID, message)
 
 		history := getHistory(t, router, sessionID)
 		assert.Equal(t, 2, len(history))
@@ -357,11 +358,120 @@ func TestChatEndpoint(t *testing.T) {
 
 		message1 := "Hello, how are you today? I am Yashwanth and I work at ThirdAI and my email is yash@thirdai.com"
 		message2 := "Hello, how are you today? I am Tharun and I work at ThirdAI and my email is tharun@thirdai.com"
-		_, _, _ = sendMessage(t, router, sessionID, message1, apiKey)
-		_, _, _ = sendMessage(t, router, sessionID, message2, apiKey)
+		_, _, _ = sendMessage(t, router, sessionID, message1)
+		_, _, _ = sendMessage(t, router, sessionID, message2)
 
 		session := getSession(t, router, sessionID)
 		assert.Equal(t, "yash@thirdai.com", session.TagMap["[EMAIL_1]"])
 		assert.Equal(t, "tharun@thirdai.com", session.TagMap["[EMAIL_2]"])
+	})
+
+	t.Run("TestSendMessage_ConcurrentSameSession", func(t *testing.T) {
+		apiKey := os.Getenv("OPENAI_API_KEY")
+
+		setOpenAIAPIKey(t, router, apiKey)
+		defer deleteOpenAIAPIKey(t, router)
+
+		sessionID := startSession(t, router, "Test Session")
+		defer deleteSession(t, router, sessionID)
+
+		successCount := 0
+		failureCount := 0
+
+		mu := sync.Mutex{}
+
+		routine := func(wait chan bool) {
+			chatPayload := pkgapi.ChatRequest{
+				Model:   "gpt-3",
+				// 30 words is long enough to ensure that the requests will be
+				// concurrent
+				Message: "Hello, introduce yourself in 30 words",
+			}
+			chatBody, _ := json.Marshal(chatPayload)
+			req := httptest.NewRequest(http.MethodPost, "/chat/sessions/"+sessionID+"/messages", bytes.NewReader(chatBody))
+			req.Header.Set("Content-Type", "application/json")
+		
+			rec := httptest.NewRecorder()
+			router.ServeHTTP(rec, req)
+			
+			mu.Lock()
+			if rec.Code == http.StatusOK {
+				successCount++
+			} else {
+				failureCount++
+			}
+			mu.Unlock()
+
+			wait <- true
+		}
+		
+		wait1 := make(chan bool)
+		wait2 := make(chan bool)
+
+		go routine(wait1)
+		go routine(wait2)
+
+		<-wait1
+		<-wait2
+
+		// The server should only allow one request at a time per session
+		assert.Equal(t, 1, successCount)
+		assert.Equal(t, 1, failureCount)
+	})
+	
+	t.Run("TestSendMessage_ConcurrentDifferentSessions", func(t *testing.T) {
+		apiKey := os.Getenv("OPENAI_API_KEY")
+
+		setOpenAIAPIKey(t, router, apiKey)
+		defer deleteOpenAIAPIKey(t, router)
+
+		sessionID1 := startSession(t, router, "Test Session 1")
+		defer deleteSession(t, router, sessionID1)
+
+		sessionID2 := startSession(t, router, "Test Session 2")
+		defer deleteSession(t, router, sessionID2)
+
+		successCount := 0
+		failureCount := 0
+
+		mu := sync.Mutex{}
+
+		routine := func(sessionID string, wait chan bool) {
+			chatPayload := pkgapi.ChatRequest{
+				Model:   "gpt-3",
+				// 30 words is long enough to ensure that the requests will be
+				// concurrent
+				Message: "Hello, introduce yourself in 30 words",
+			}
+			chatBody, _ := json.Marshal(chatPayload)
+			req := httptest.NewRequest(http.MethodPost, "/chat/sessions/"+sessionID+"/messages", bytes.NewReader(chatBody))
+			req.Header.Set("Content-Type", "application/json")
+		
+			rec := httptest.NewRecorder()
+			router.ServeHTTP(rec, req)
+			
+			mu.Lock()
+			if rec.Code == http.StatusOK {
+				successCount++
+			} else {
+				failureCount++
+			}
+			mu.Unlock()
+
+			wait <- true
+		}
+		
+		wait1 := make(chan bool)
+		wait2 := make(chan bool)
+
+		go routine(sessionID1, wait1)
+		go routine(sessionID2, wait2)
+
+		<-wait1
+		<-wait2
+
+		// The server allows concurrent requests to different sessions
+		assert.Equal(t, 2, successCount)
+		assert.Equal(t, 0, failureCount)
 	})
 }

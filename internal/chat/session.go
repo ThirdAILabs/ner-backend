@@ -8,10 +8,10 @@ import (
 	"log"
 	"log/slog"
 	"ner-backend/internal/core"
-	"ner-backend/internal/core/utils"
 	"ner-backend/internal/database"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/google/uuid"
 	"github.com/tmc/langchaingo/llms"
@@ -22,7 +22,38 @@ import (
 
 var ErrStopStream = errors.New("stop stream")
 
-var mutexMap = utils.NewMutexMap(10)
+type SessionLock struct {
+	mu sync.Mutex
+	sessions map[string]bool
+}
+
+func NewSessionLock() *SessionLock {
+	return &SessionLock{
+		sessions: make(map[string]bool),
+	}
+}
+
+func (l *SessionLock) Lock(sessionID string) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	if _, ok := l.sessions[sessionID]; ok {
+		return fmt.Errorf("session %s is currently in use", sessionID)
+	}
+	l.sessions[sessionID] = true
+	return nil
+}
+
+func (l *SessionLock) Unlock(sessionID string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	if _, ok := l.sessions[sessionID]; ok {
+		delete(l.sessions, sessionID)
+	}
+}
+
+var sessionLock = NewSessionLock()
 
 type TagMetadata struct {
 	TagMap map[string]string 
@@ -120,28 +151,38 @@ type ChatItem struct {
 }
 type ChatIterator func(yield func(ChatItem, error) bool)
 
-func (session *ChatSession) ChatStream(userInput string) ChatIterator {
-	return func(yield func(ChatItem, error) bool) {
-		mutexMap.Lock(session.sessionID.String())
-		defer mutexMap.Unlock(session.sessionID.String())
+func (session *ChatSession) ChatStream(userInput string) (ChatIterator, error) {
+	if err := sessionLock.Lock(session.sessionID.String()); err != nil {
+		return nil, err
+	}
+	defer sessionLock.Unlock(session.sessionID.String())
 
-		tagMetadata, err := session.getTagMetadata()
-		if err != nil {
-			yield(ChatItem{}, fmt.Errorf("error getting tag metadata: %v", err))
-			return
-		}
+	tagMetadata, err := session.getTagMetadata()
+	if err != nil {
+		return nil, fmt.Errorf("error getting tag metadata: %v", err)
+	}
 
-		redactedText, newTagMetadata, err := session.Redact(userInput, tagMetadata)
-		if err != nil {
-			yield(ChatItem{}, fmt.Errorf("error redacting user input: %v", err))
-			return
-		}
+	redactedText, newTagMetadata, err := session.Redact(userInput, tagMetadata)
+	if err != nil {
+		return nil, fmt.Errorf("error redacting user input: %v", err)
+	}
 
-		if err := session.updateTagMetadata(newTagMetadata); err != nil {
-			yield(ChatItem{}, fmt.Errorf("error updating tag map: %v", err))
-			return
-		}
-
+	if err := session.updateTagMetadata(newTagMetadata); err != nil {
+		return nil, fmt.Errorf("error updating tag map: %v", err)
+	}
+	
+	history, err := session.getChatHistory()
+	if err != nil {
+		return nil, fmt.Errorf("error getting chat history: %v", err)
+	}
+	
+	context := ""
+	for _, msg := range history {
+		context += fmt.Sprintf("%s: %s\n", msg.MessageType, msg.Content)
+	}
+	context += fmt.Sprintf("User: %s\n", redactedText)
+	
+	iterator := func(yield func(ChatItem, error) bool) {
 		// First yield the non-streaming components
 		// TODO: Will this the tag map get too big? Should we only yield
 		// the subset of the tag map that is relevant to the current message?
@@ -149,22 +190,9 @@ func (session *ChatSession) ChatStream(userInput string) ChatIterator {
 			log.Printf("Failed to yield redacted text and tag map")
 			return
 		}
-
-		history, err := session.getChatHistory()
-		if err != nil {
-			yield(ChatItem{}, err)
-			return
-		}
-		
-		context := ""
-		for _, msg := range history {
-			context += fmt.Sprintf("%s: %s\n", msg.MessageType, msg.Content)
-		}
-		context += fmt.Sprintf("User: %s\n", redactedText)
-
-		openaiResp := ""
 		
 		// Then stream the OpenAI response
+		openaiResp := ""
 		for chunk, err := range session.streamOpenAIResponse(context) {
 			if err != nil {
 				yield(ChatItem{}, err)
@@ -187,6 +215,8 @@ func (session *ChatSession) ChatStream(userInput string) ChatIterator {
 			return
 		}
 	}
+
+	return iterator, nil
 }
 
 func (session *ChatSession) getTagMetadata() (TagMetadata, error) {

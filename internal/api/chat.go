@@ -161,9 +161,14 @@ func (s *ChatService) SendMessageStream(r *http.Request) (StreamResponse, error)
 	if err != nil {
 		return nil, err
 	}
+	
+	chatIterator, err := session.ChatStream(req.Message)
+	if err != nil {
+		return nil, err
+	}
 
-	stream := func(yield func(any, error) bool) {
-		for item, err := range session.ChatStream(req.Message) {
+	response := func(yield func(any, error) bool) {
+		for item, err := range chatIterator {
 			if err != nil {
 				yield(nil, err)
 				return
@@ -174,7 +179,7 @@ func (s *ChatService) SendMessageStream(r *http.Request) (StreamResponse, error)
 		}
 	}
 
-	return stream, nil
+	return response, nil
 }
 
 func (s *ChatService) GetHistory(r *http.Request) (any, error) {
