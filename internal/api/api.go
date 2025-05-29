@@ -697,13 +697,20 @@ func (s *BackendService) GetReportPreviews(r *http.Request) (any, error) {
 		Limit(limit).
 		Order("object")
 
+	dialect := s.db.Dialector.Name()
 	if len(tags) > 0 {
 		tagFilters := make([]string, len(tags))
 		for i, tag := range tags {
 			tagFilters[i] = fmt.Sprintf("\"%s\"", tag)
 		}
+		tagFilterJSON := fmt.Sprintf("[%s]", strings.Join(tagFilters, ","))
 
-		query = query.Where("token_tags->'tags' @> ?::jsonb", fmt.Sprintf("[%s]", strings.Join(tagFilters, ",")))
+		if dialect == "postgres" {
+			query = query.Where("token_tags->'tags' @> ?::jsonb", tagFilterJSON)
+		} else if dialect == "sqlite" || dialect == "sqlite3" {
+			query = query.Where("json_extract(token_tags, '$.tags') LIKE ?", "%"+strings.Join(tags, "%")+"%")
+		}
+
 	}
 
 	if object != "" {
