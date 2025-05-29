@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -39,6 +39,11 @@ if (!isDev) {
 let mainWindow;
 let backendProcess = null;
 let backendStarted = false;
+
+// Handle external links
+ipcMain.handle('open-external-link', async (_, url) => {
+  await shell.openExternal(url);
+});
 
 // Ensure working directory is set to the app directory for backend
 function fixWorkingDirectory() {
@@ -253,4 +258,4 @@ app.on('quit', async () => {
   
   // Close telemetry connection
   await closeTelemetry();
-}); 
+});
