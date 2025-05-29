@@ -70,6 +70,8 @@ interface ChatInterfaceProps {
   apiKey: string;
   saveApiKey: (key: string) => void;
   showRedaction: boolean;
+  model: string;
+  onSelectModel: (model: string) => void;
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -80,6 +82,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   apiKey,
   saveApiKey,
   showRedaction,
+  model,
+  onSelectModel,
 }) => {
   // Options menu-related logic
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
@@ -352,8 +356,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             {isOptionsOpen && (
               <div className="absolute bottom-12 right-4 w-[350px]">
                 <Options
-                  handleBasicMode={closeOptionsIfNotEditing}
-                  handleAdvancedMode={() => {}}
+                  model={model}
+                  onSelectModel={onSelectModel}
                   apiKey={apiKey}
                   invalidApiKey={invalidApiKey}
                   onEditApiKey={handleEditApiKey}

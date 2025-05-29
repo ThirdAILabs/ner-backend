@@ -30,8 +30,8 @@ function ModelOption({ children, onClick, selected, disabled }: ModelOptionProps
 }
 
 interface OptionsDropdownProps {
-  handleBasicMode: () => void;
-  handleAdvancedMode: () => void;
+  model: string;
+  onSelectModel: (model: string) => void;
   apiKey: string;
   invalidApiKey: boolean;
   onEditApiKey: () => void;
@@ -40,8 +40,8 @@ interface OptionsDropdownProps {
 }
 
 export default function Options({
-  handleBasicMode,
-  handleAdvancedMode,
+  model,
+  onSelectModel,
   apiKey,
   invalidApiKey,
   onEditApiKey,
@@ -111,25 +111,19 @@ export default function Options({
   return (
     <div className="w-full bg-white rounded-xl shadow-lg border border-gray-200">
       <div className="p-4 flex flex-col gap-1">
-        <div className="inline font-semibold p-1">Redaction Model</div>
-
+        <div className="inline font-semibold p-1">Model Selection</div>
         <div className="flex flex-row w-full gap-2">
           <div className="w-full">
-            <ModelOption onClick={handleBasicMode} selected={true}>
+            <ModelOption onClick={() => onSelectModel('gpt-4-mini')} selected={model === 'gpt-4-mini'}>
               <MessageSquare className="w-4 h-4" />
-              <span>Basic</span>
+              <span>GPT-4o Mini</span>
             </ModelOption>
           </div>
           <div className="w-full">
-            <Tooltip title="Requires enterprise subscription. Email us at contact@thirdai.com">
-              {/* Need span because tooltip child cannot be a custom react component. */}
-              <span className="w-full">
-                <ModelOption onClick={handleAdvancedMode} selected={false} disabled>
-                  <Lock className="w-4 h-4" />
-                  <span>Advanced</span>
-                </ModelOption>
-              </span>
-            </Tooltip>
+            <ModelOption onClick={() => onSelectModel('gpt-4')} selected={model === 'gpt-4'}>
+              <MessageSquare className="w-4 h-4" />
+              <span>GPT-4o</span>
+            </ModelOption>
           </div>
         </div>
 
