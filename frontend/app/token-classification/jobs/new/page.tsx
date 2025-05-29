@@ -688,7 +688,7 @@ export default function NewJobPage() {
                   </div>
                   <div className="text-center">
                     <h3 className="text-base font-medium mb-1">Local Files</h3>
-                    <p className="text-sm text-gray-500">Upload files from your computer</p>
+                    <p className="text-sm text-gray-500">Scan files from your computer</p>
                     <p className="text-xs text-gray-400 mt-2">
                       Supported: {SUPPORTED_TYPES.join(', ')}
                     </p>
@@ -729,7 +729,7 @@ export default function NewJobPage() {
                   </div>
                   <div className="text-center">
                     <h3 className="text-base font-medium mb-1">Local Directory</h3>
-                    <p className="text-sm text-gray-500">Upload an entire directory</p>
+                    <p className="text-sm text-gray-500">Scan an entire directory</p>
                     <p className="text-xs text-gray-400 mt-2">
                       Supported: {SUPPORTED_TYPES.join(', ')}
                     </p>
@@ -759,7 +759,7 @@ export default function NewJobPage() {
                   </div>
                   <div className="text-center">
                     <h3 className="text-base font-medium mb-1">S3 Bucket</h3>
-                    <p className="text-sm text-gray-500">Use files from an S3 bucket</p>
+                    <p className="text-sm text-gray-500">Scan files from an S3 bucket</p>
                   </div>
                 </div>
               </div>
