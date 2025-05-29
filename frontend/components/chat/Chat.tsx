@@ -356,6 +356,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             {isOptionsOpen && (
               <div className="absolute bottom-12 right-4 w-[350px]">
                 <Options
+                  handleBasicMode={closeOptionsIfNotEditing}
+                  handleAdvancedMode={() => {}}
                   model={model}
                   onSelectModel={onSelectModel}
                   apiKey={apiKey}
