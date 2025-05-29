@@ -38,6 +38,23 @@ func LoadEnvFile() {
 	}
 }
 
+func RemoveExcludedTagsFromAllModels(db *gorm.DB) error {
+	var models []database.Model
+	if err := db.Find(&models).Error; err != nil {
+		return fmt.Errorf("failed to fetch models: %w", err)
+	}
+
+	for _, model := range models {
+		for _, excludedTag := range core.ExcludedTags {
+			if err := db.Where("model_id = ? AND tag = ?", model.Id, excludedTag).Delete(&database.ModelTag{}).Error; err != nil {
+				return fmt.Errorf("failed to remove excluded tag %v for model %v: %w", excludedTag, model.Id, err)
+			}
+		}
+	}
+
+	return nil
+}
+
 func InitializePresidioModel(db *gorm.DB) {
 	presidio, err := core.NewPresidioModel()
 	if err != nil {
