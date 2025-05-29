@@ -11,12 +11,23 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import Dashboard from '../dashboard';
 import Jobs from '../jobs';
+import useTelemetry from '@/hooks/useTelemetry';
 
 function PageContents() {
   const searchParams = useSearchParams();
   const defaultTab = searchParams.get('tab') || 'jobs';
   const [tabValue, setTabValue] = useState(defaultTab);
+  const recordEvent = useTelemetry();
   
+  // Record initial page load
+  useEffect(() => {
+    recordEvent({
+      UserAction: 'view',
+      UIComponent: 'Page Load',
+      UI: 'Token Classification Page',
+    });
+  }, []);
+
   // Update tabValue if searchParams change after initial load (e.g., browser back/forward)
   useEffect(() => {
     setTabValue(searchParams.get('tab') || 'jobs');
@@ -24,6 +35,19 @@ function PageContents() {
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: string) => {
     setTabValue(newValue);
+    if (newValue === 'monitoring') {
+      recordEvent({
+        UserAction: 'click',
+        UIComponent: 'Usage Stats Tab',
+        UI: 'Token Classification Page',
+      });
+    } else if (newValue === 'jobs') {
+      recordEvent({
+        UserAction: 'click',
+        UIComponent: 'Reports Dashboard Tab',
+        UI: 'Token Classification Page',
+      });
+    }
   };
 
   return (
