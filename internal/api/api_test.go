@@ -238,7 +238,7 @@ func TestCreateReport_InvalidS3(t *testing.T) {
 			"group2": `COUNT(label2) > 8`,
 		},
 	}
-	
+
 	body, err := json.Marshal(payload)
 	assert.NoError(t, err)
 
@@ -522,36 +522,107 @@ func TestGetReportPreviews(t *testing.T) {
 		Object:    "doc2.txt",
 		TokenTags: datatypes.JSON(b),
 	}
-	db := createDB(t, p1, p2)
+	p3 := &database.ObjectPreview{
+		ReportId:  reportId,
+		Object:    "doc3.txt",
+		TokenTags: datatypes.JSON([]byte(`{"tokens":["foo"],"tags":["TAG2"]}`)),
+	}
+	db := createDB(t, p1, p2, p3)
 
 	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
-	url := fmt.Sprintf("/reports/%s/objects?limit=10&offset=0", reportId.String())
-	req := httptest.NewRequest(http.MethodGet, url, nil)
-	rec := httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
+	// Test: Get previews with tag filter "TAG1"
+	t.Run("GetPreviewsWithTagFilter", func(t *testing.T) {
+		url := fmt.Sprintf("/reports/%s/objects?limit=10&offset=0&tags=TAG1", reportId.String())
+		req := httptest.NewRequest(http.MethodGet, url, nil)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
 
-	assert.Equal(t, http.StatusOK, rec.Code)
-	var resp []api.ObjectPreviewResponse
-	err = json.Unmarshal(rec.Body.Bytes(), &resp)
-	require.NoError(t, err)
-	assert.Len(t, resp, 2)
+		assert.Equal(t, http.StatusOK, rec.Code)
 
-	want := []api.ObjectPreviewResponse{
-		{
-			Object: "doc1.txt",
-			Tokens: []string{"foo", "bar", "baz"},
-			Tags:   []string{"O", "TAG1", "O"},
-		},
-		{
-			Object: "doc2.txt",
-			Tokens: []string{"foo", "bar", "baz"},
-			Tags:   []string{"O", "TAG1", "O"},
-		},
-	}
-	assert.ElementsMatch(t, want, resp)
+		var resp []api.ObjectPreviewResponse
+		err := json.Unmarshal(rec.Body.Bytes(), &resp)
+		require.NoError(t, err)
+
+		want := []api.ObjectPreviewResponse{
+			{
+				Object: "doc1.txt",
+				Tokens: []string{"foo", "bar", "baz"},
+				Tags:   []string{"O", "TAG1", "O"},
+			},
+			{
+				Object: "doc2.txt",
+				Tokens: []string{"foo", "bar", "baz"},
+				Tags:   []string{"O", "TAG1", "O"},
+			},
+		}
+		assert.ElementsMatch(t, want, resp)
+	})
+
+	// Test: Get previews with tag filter "TAG2"
+	t.Run("GetPreviewsWithTag2Filter", func(t *testing.T) {
+		url := fmt.Sprintf("/reports/%s/objects?limit=10&offset=0&tags=TAG2", reportId.String())
+		req := httptest.NewRequest(http.MethodGet, url, nil)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+
+		var resp []api.ObjectPreviewResponse
+		err := json.Unmarshal(rec.Body.Bytes(), &resp)
+		require.NoError(t, err)
+
+		want := []api.ObjectPreviewResponse{
+			{
+				Object: "doc3.txt",
+				Tokens: []string{"foo"},
+				Tags:   []string{"TAG2"},
+			},
+		}
+		assert.ElementsMatch(t, want, resp)
+	})
+
+	// Test: Get previews with no matching tags
+	t.Run("GetPreviewsWithNoMatchingTags", func(t *testing.T) {
+		url := fmt.Sprintf("/reports/%s/objects?limit=10&offset=0&tags=TAG3", reportId.String())
+		req := httptest.NewRequest(http.MethodGet, url, nil)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+
+		var resp []api.ObjectPreviewResponse
+		err := json.Unmarshal(rec.Body.Bytes(), &resp)
+		require.NoError(t, err)
+
+		// Since no object has "TAG3", the result should be empty
+		assert.Len(t, resp, 0)
+	})
+
+	// Test: Get previews with object filtering
+	t.Run("GetPreviewsWithObjectFilter", func(t *testing.T) {
+		url := fmt.Sprintf("/reports/%s/objects?limit=10&offset=0&object=doc1.txt", reportId.String())
+		req := httptest.NewRequest(http.MethodGet, url, nil)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+
+		var resp []api.ObjectPreviewResponse
+		err := json.Unmarshal(rec.Body.Bytes(), &resp)
+		require.NoError(t, err)
+
+		want := []api.ObjectPreviewResponse{
+			{
+				Object: "doc1.txt",
+				Tokens: []string{"foo", "bar", "baz"},
+				Tags:   []string{"O", "TAG1", "O"},
+			},
+		}
+		assert.ElementsMatch(t, want, resp)
+	})
 }
 
 func TestGetInferenceMetrics_NoTasks(t *testing.T) {

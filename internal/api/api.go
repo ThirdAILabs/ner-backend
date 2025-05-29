@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"mime"
@@ -14,6 +15,7 @@ import (
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/storage"
 	"regexp"
+	"strings"
 
 	"ner-backend/pkg/api"
 	"net/http"
@@ -677,14 +679,38 @@ func (s *BackendService) GetReportPreviews(r *http.Request) (any, error) {
 		}
 	}
 
+	var tags []string
+	if tagsParam := params["tags"]; len(tagsParam) > 0 {
+		tags = tagsParam
+	}
+
+	var object string
+	if objectParam := params.Get("object"); objectParam != "" {
+		object = objectParam
+	}
+
 	ctx := r.Context()
 	var previews []database.ObjectPreview
-	if err := s.db.WithContext(ctx).
+	query := s.db.WithContext(ctx).
 		Where("report_id = ?", reportId).
 		Offset(offset).
 		Limit(limit).
-		Order("object").
-		Find(&previews).Error; err != nil {
+		Order("object")
+
+	if len(tags) > 0 {
+		tagFilters := make([]string, len(tags))
+		for i, tag := range tags {
+			tagFilters[i] = fmt.Sprintf("\"%s\"", tag)
+		}
+
+		query = query.Where("token_tags->'tags' @> ?::jsonb", fmt.Sprintf("[%s]", strings.Join(tagFilters, ",")))
+	}
+
+	if object != "" {
+		query = query.Where("object = ?", object)
+	}
+
+	if err := query.Find(&previews).Error; err != nil {
 		slog.Error("error fetching previews", "report_id", reportId, "err", err)
 		return nil, CodedErrorf(http.StatusInternalServerError, "error %d: error retrieving previews", ErrCodeDB)
 	}
