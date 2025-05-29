@@ -38,17 +38,17 @@ export default function ModelSelect({ model, onSelect }: ModelSelectProps) {
       <div className="flex flex-row w-full gap-2">
         <div className="w-full">
           <ModelOption
-            onClick={() => onSelect('gpt-4-mini')}
-            selected={model === 'gpt-4-mini'}
+            onClick={() => onSelect('gpt-4o-mini')}
+            selected={model === 'gpt-4o-mini'}
           >
             <HiChip className="w-4 h-4" />
-            <span>GPT-4o Mini</span>
+            <span>GPT-4o mini</span>
           </ModelOption>
         </div>
         <div className="w-full">
           <ModelOption
-            onClick={() => onSelect('gpt-4')}
-            selected={model === 'gpt-4'}
+            onClick={() => onSelect('gpt-4o')}
+            selected={model === 'gpt-4o'}
           >
             <HiChip className="w-4 h-4" />
             <span>GPT-4o</span>

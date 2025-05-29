@@ -139,13 +139,13 @@ export default function Options({
         <div className="inline font-semibold p-1">Model Selection</div>
         <div className="flex flex-row w-full gap-2">
           <div className="w-full">
-            <ModelOption onClick={() => onSelectModel('gpt-4-mini')} selected={model === 'gpt-4-mini'}>
+            <ModelOption onClick={() => onSelectModel('gpt-4o-mini')} selected={model === 'gpt-4o-mini'}>
               <MessageSquare className="w-4 h-4" />
-              <span>GPT-4o Mini</span>
+              <span>GPT-4o mini</span>
             </ModelOption>
           </div>
           <div className="w-full">
-            <ModelOption onClick={() => onSelectModel('gpt-4')} selected={model === 'gpt-4'}>
+            <ModelOption onClick={() => onSelectModel('gpt-4o')} selected={model === 'gpt-4o'}>
               <MessageSquare className="w-4 h-4" />
               <span>GPT-4o</span>
             </ModelOption>

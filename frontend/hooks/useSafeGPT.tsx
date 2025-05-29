@@ -93,7 +93,7 @@ export default function useSafeGPT(chatId: string) {
   const [previews, setPreviews] = useState<ChatPreview[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [invalidApiKey, setInvalidApiKey] = useState<boolean>(false);
-  const [model, setModel] = useState<string>('gpt-4-mini');
+  const [model, setModel] = useState<'gpt-4o-mini' | 'gpt-4o'>('gpt-4o-mini');
 
   useEffect(() => {
     getChatPreviews().then(setPreviews);
