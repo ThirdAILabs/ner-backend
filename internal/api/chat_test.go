@@ -24,9 +24,18 @@ import (
 )
 
 func initializeChatService() chi.Router {
-	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared&mode=memory"), &gorm.Config{})
+	// Enable shared cache and WAL to handle concurrent requests
+	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared&mode=memory&_journal=WAL&_timeout=5000&_busy_timeout=5000"), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
+	}
+
+	if err := db.Exec("PRAGMA journal_mode=WAL;").Error; err != nil {
+		log.Fatalf("Failed to enable WAL mode: %v", err)
+	}
+
+	if err := db.Exec("PRAGMA busy_timeout=5000;").Error; err != nil {
+		log.Fatalf("Failed to set busy timeout: %v", err)
 	}
 
 	if err := database.GetMigrator(db).Migrate(); err != nil {
@@ -379,8 +388,11 @@ func TestChatEndpoint(t *testing.T) {
 		failureCount := 0
 
 		mu := sync.Mutex{}
+		var wg sync.WaitGroup
 
-		routine := func(wait chan bool) {
+		routine := func() {
+			defer wg.Done()
+
 			chatPayload := pkgapi.ChatRequest{
 				Model:   "gpt-3",
 				// 30 words is long enough to ensure that the requests will be
@@ -401,18 +413,12 @@ func TestChatEndpoint(t *testing.T) {
 				failureCount++
 			}
 			mu.Unlock()
-
-			wait <- true
 		}
 		
-		wait1 := make(chan bool)
-		wait2 := make(chan bool)
-
-		go routine(wait1)
-		go routine(wait2)
-
-		<-wait1
-		<-wait2
+		wg.Add(2)
+		go routine()
+		go routine()
+		wg.Wait()
 
 		// The server should only allow one request at a time per session
 		assert.Equal(t, 1, successCount)
@@ -435,8 +441,9 @@ func TestChatEndpoint(t *testing.T) {
 		failureCount := 0
 
 		mu := sync.Mutex{}
+		var wg sync.WaitGroup
 
-		routine := func(sessionID string, wait chan bool) {
+		routine := func(sessionID string) {
 			chatPayload := pkgapi.ChatRequest{
 				Model:   "gpt-3",
 				// 30 words is long enough to ensure that the requests will be
@@ -458,17 +465,13 @@ func TestChatEndpoint(t *testing.T) {
 			}
 			mu.Unlock()
 
-			wait <- true
+			wg.Done()
 		}
 		
-		wait1 := make(chan bool)
-		wait2 := make(chan bool)
-
-		go routine(sessionID1, wait1)
-		go routine(sessionID2, wait2)
-
-		<-wait1
-		<-wait2
+		wg.Add(2)
+		go routine(sessionID1)
+		go routine(sessionID2)
+		wg.Wait()
 
 		// The server allows concurrent requests to different sessions
 		assert.Equal(t, 2, successCount)
