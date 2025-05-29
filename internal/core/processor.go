@@ -42,6 +42,7 @@ var ExcludedTags = map[string]struct{}{
 	"GENDER":             {},
 	"SEXUAL_ORIENTATION": {},
 	"ETHNICITY":          {},
+	"SERVICE_CODE":       {},
 }
 
 func NewTaskProcessor(db *gorm.DB, storage storage.Provider, publisher messaging.Publisher, reciever messaging.Reciever, licenseVerifier licensing.LicenseVerifier, localModelDir string, modelBucket string, modelLoaders map[string]ModelLoader) *TaskProcessor {
@@ -210,7 +211,7 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 		return err
 	}
 
-	totalTokens, errorCount, workerErr := proc.runInferenceOnBucket(ctx, task.ReportId, storage, task.Report.Model.Id, task.Report.Model.Type, tags, customTags, groupToQuery, task.Report.SourceS3Bucket, s3Objects)
+	totalTokens, errorCount, workerErr := proc.runInferenceOnBucket(ctx, taskId, task.ReportId, storage, task.Report.Model.Id, task.Report.Model.Type, tags, customTags, groupToQuery, task.Report.SourceS3Bucket, s3Objects)
 
 	if delta := len(s3Objects) - errorCount; delta > 0 {
 		if err := proc.db.
@@ -292,6 +293,7 @@ type objectChunkStream struct {
 
 func (proc *TaskProcessor) runInferenceOnBucket(
 	ctx context.Context,
+	taskId int,
 	reportId uuid.UUID,
 	storage storage.Provider,
 	modelId uuid.UUID,
@@ -350,43 +352,51 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 
 	for object := range queue {
 		if object.err != nil {
-			slog.Error("error getting object stream", "bucket", bucket, "object", object, "error", err)
+			slog.Error("error getting object stream", "bucket", bucket, "object", object.object, "error", err)
 			objectErrorCnt++
 			continue
 		}
 
-		tokens, entities, groups, objTagCount, objCustomTagCount, err := proc.runInferenceOnObject(reportId, object.chunks, model, tags, customTagsRe, groupToFilter, object.object)
+		result, err := proc.runInferenceOnObject(reportId, object.chunks, model, tags, customTagsRe, groupToFilter, object.object)
+
 		if err != nil {
-			slog.Error("error processing object", "object", object, "error", err)
+			slog.Error("error processing object", "object", object.object, "error", err)
 			objectErrorCnt++
 			continue
 		}
 
-		if err := proc.db.CreateInBatches(&entities, 100).Error; err != nil {
-			slog.Error("error saving entities to database", "object", object, "error", err)
+		if err := proc.db.CreateInBatches(&result.Entities, 100).Error; err != nil {
+			slog.Error("error saving entities to database", "object", object.object, "error", err)
 			objectErrorCnt++
 			continue
 		}
 
-		if err := proc.db.CreateInBatches(groups, 100).Error; err != nil {
-			slog.Error("error saving groups to database", "object", object, "error", err)
+		if err := proc.db.CreateInBatches(result.Groups, 100).Error; err != nil {
+			slog.Error("error saving groups to database", "object", object.object, "error", err)
 			objectErrorCnt++
 			continue
 		}
 
-		if err := proc.updateInferenceTagCount(reportId, objTagCount, false); err != nil {
-			slog.Error("error updating tag count", "object", object, "error", err)
+		if err := proc.updateInferenceTagCount(reportId, result.TagCount, false); err != nil {
+			slog.Error("error updating tag count", "object", object.object, "error", err)
 			objectErrorCnt++
 			continue
 		}
 
-		if err := proc.updateInferenceTagCount(reportId, objCustomTagCount, true); err != nil {
-			slog.Error("error updating custom tag count", "object", object, "error", err)
+		if err := proc.updateInferenceTagCount(reportId, result.CustomTagCount, true); err != nil {
+			slog.Error("error updating custom tag count", "object", object.object, "error", err)
 			objectErrorCnt++
 			continue
 		}
 
-		totalTokens += tokens
+		totalTokens += result.TotalTokens
+
+		if err := proc.db.Model(&database.InferenceTask{}).
+			Where("report_id = ? AND task_id = ?", reportId, taskId).
+			Update("completed_size", gorm.Expr("completed_size + ?", result.TotalSize)).Error; err != nil {
+			slog.Error("could not update completed size in InferenceTask", "error", err)
+			return totalTokens, objectErrorCnt, err
+		}
 	}
 
 	if objectErrorCnt > 0 {
@@ -486,6 +496,15 @@ func (proc *TaskProcessor) createObjectPreview(
 	}).Error
 }
 
+type InferenceResult struct {
+	TotalTokens    int64
+	TotalSize      int64
+	Entities       []database.ObjectEntity
+	Groups         []database.ObjectGroup
+	TagCount       map[string]uint64
+	CustomTagCount map[string]uint64
+}
+
 func (proc *TaskProcessor) runInferenceOnObject(
 	reportId uuid.UUID,
 	chunks <-chan ParsedChunk,
@@ -493,33 +512,35 @@ func (proc *TaskProcessor) runInferenceOnObject(
 	tags map[string]struct{},
 	customTags map[string]*regexp.Regexp,
 	groupFilter map[uuid.UUID]Filter,
-	object string) (
-	int64, []database.ObjectEntity, []database.ObjectGroup, map[string]uint64, map[string]uint64, error) {
-	var tokens int64
+	object string,
+) (InferenceResult, error) {
+	result := InferenceResult{
+		TagCount:       make(map[string]uint64),
+		CustomTagCount: make(map[string]uint64),
+	}
 
 	labelToEntities := make(map[string][]types.Entity)
 
 	const previewLimit = 1000
-
 	previewTokens := make([]string, 0, previewLimit)
-
-	tagCount, customTagCount := make(map[string]uint64), make(map[string]uint64)
 
 	for chunk := range chunks {
 		if chunk.Error != nil {
-			return 0, nil, nil, nil, nil, fmt.Errorf("error parsing document: %w", chunk.Error)
+			return result, fmt.Errorf("error parsing document: %w", chunk.Error)
 		}
+
+		result.TotalSize += chunk.RawSize
 
 		start := time.Now()
 		chunkEntities, err := model.Predict(chunk.Text)
 		duration := time.Since(start)
-		sizeMB := float64(len(chunk.Text)) / float64(bytesPerMB)
+		sizeMB := float64(chunk.RawSize) / float64(bytesPerMB)
 		slog.Info("processed chunk",
 			"chunk_size_mb", fmt.Sprintf("%.2f", sizeMB),
 			"duration", duration,
 		)
 		if err != nil {
-			return 0, nil, nil, nil, nil, fmt.Errorf("error running model inference: %w", err)
+			return result, fmt.Errorf("error running model inference: %w", err)
 		}
 
 		for _, entity := range chunkEntities {
@@ -530,7 +551,7 @@ func (proc *TaskProcessor) runInferenceOnObject(
 				entity.Start += chunk.Offset
 				entity.End += chunk.Offset
 				labelToEntities[entity.Label] = append(labelToEntities[entity.Label], entity)
-				tagCount[entity.Label]++
+				result.TagCount[entity.Label]++
 			}
 		}
 
@@ -546,7 +567,7 @@ func (proc *TaskProcessor) runInferenceOnObject(
 					LContext: strings.ToValidUTF8(chunk.Text[max(0, start-20):start], ""),
 					RContext: strings.ToValidUTF8(chunk.Text[end:min(len(chunk.Text), end+20)], ""),
 				})
-				customTagCount[tag]++
+				result.CustomTagCount[tag]++
 			}
 		}
 
@@ -561,7 +582,7 @@ func (proc *TaskProcessor) runInferenceOnObject(
 		}
 
 		toks := strings.Fields(chunk.Text)
-		tokens += int64(len(toks))
+		result.TotalTokens += int64(len(toks))
 	}
 
 	previewText := strings.Join(previewTokens, " ")
@@ -596,7 +617,10 @@ func (proc *TaskProcessor) runInferenceOnObject(
 		}
 	}
 
-	return tokens, allEntities, groups, tagCount, customTagCount, nil
+	result.Entities = allEntities
+	result.Groups = groups
+
+	return result, nil
 }
 
 func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload messaging.ShardDataPayload) error {

@@ -13,6 +13,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import _ from 'lodash';
 
+import { formatFileSize, formatNumber } from '@/lib/utils';
+
 interface ClusterSpecs {
   cpus: number;
   vendorId: string;
@@ -32,28 +34,8 @@ interface AnalyticsDashboardProps {
   succeededFileCount: number;
   failedFileCount: number;
   totalFileCount: number;
+  dataProcessed: number;
 }
-
-const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return '0 Bytes';
-
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
-
-// Format number for token counts
-const formatNumber = (num: number): string => {
-  if (num >= 1000000) {
-    return `${(num / 1000000).toFixed(2)}M`;
-  }
-  if (num >= 1000) {
-    return `${(num / 1000).toFixed(1)}K`;
-  }
-  return num.toString();
-};
 
 const formatTime = (time: number): string => {
   if (time < 60) return `${time.toFixed(2)}s`;
@@ -69,6 +51,16 @@ const formatTime = (time: number): string => {
   return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
 };
 
+const timeTakenToTextSize = (timeTaken: string) => {
+  if (timeTaken.length > 8) {
+    return 'text-2xl';
+  }
+  if (timeTaken.length > 6) {
+    return 'text-3xl';
+  }
+  return 'text-4xl';
+};
+
 export function AnalyticsDashboard({
   progress,
   tokensProcessed,
@@ -77,10 +69,13 @@ export function AnalyticsDashboard({
   succeededFileCount,
   failedFileCount,
   totalFileCount,
+  dataProcessed,
 }: AnalyticsDashboardProps) {
   const tokenChartData = tags;
   const filesSucceeded = ((succeededFileCount * 100) / totalFileCount).toFixed(0) || 0;
   const filesFailed = ((failedFileCount * 100) / totalFileCount).toFixed(0) || 0;
+
+  const formattedTime = formatTime(timeTaken);
 
   return (
     <div className="space-y-6 w-full">
@@ -122,11 +117,11 @@ export function AnalyticsDashboard({
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center space-y-0">
                 <span className="text-xl font-bold text-gray-700">{progress}%</span>
-                <span className="text-xs  text-gray-400">{filesSucceeded}% succeeded</span>
+                <span className="text-xs  text-gray-400">{filesSucceeded}% processed</span>
                 <span className="text-xs  text-gray-400">{filesFailed}% failed</span>
               </div>
             </div>
-            <h3 className="mt-auto text-sm text-muted-foreground">Progress</h3>
+            <h3 className="mt-auto text-sm text-muted-foreground">File Progress</h3>
           </CardContent>
         </Card>
 
@@ -134,37 +129,44 @@ export function AnalyticsDashboard({
         <Card className="flex flex-col justify-between">
           <CardContent className="flex flex-col items-center pt-6 h-full">
             <div className="flex-1 flex items-center">
-              <span className="text-4xl font-semibold text-gray-700 text-center">
-                {formatFileSize(tokensProcessed)}
-              </span>
+              <div className="flex flex-col items-center text-gray-700">
+                {dataProcessed !== null && dataProcessed > 0 ? (
+                  <>
+                    <span className="text-4xl font-semibold whitespace-nowrap">
+                      {formatFileSize(dataProcessed)}
+                    </span>
+                    <span className="text-xl font-medium text-gray-500 whitespace-nowrap">
+                      / {formatFileSize(tokensProcessed)}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-4xl font-semibold whitespace-nowrap">
+                    {formatFileSize(tokensProcessed)}
+                  </span>
+                )}
+              </div>
             </div>
-            <h3 className="text-sm text-muted-foreground">Data Processed</h3>
+            <h3 className="text-sm text-muted-foreground text-center">
+              Data Successfully Processed
+            </h3>
           </CardContent>
         </Card>
 
         {/* Time Taken */}
-        {timeTaken !== null && timeTaken > 0 && (
-          <Card className="flex flex-col justify-between">
-            <CardContent className="flex flex-col items-center pt-6 h-full">
-              <div className="flex-1 flex items-center">
-                <span
-                  className={`text-4xl font-semibold text-gray-700 text-center ${
-                    timeTaken == null
-                      ? 'text-2xl'
-                      : timeTaken > 100
-                        ? 'text-2xl'
-                        : timeTaken > 10
-                          ? 'text-3xl'
-                          : 'text-4xl'
-                  }`}
-                >
-                  {formatTime(timeTaken)}
-                </span>
-              </div>
-              <h3 className="text-sm text-muted-foreground">Time Taken</h3>
-            </CardContent>
-          </Card>
-        )}
+        <Card className="flex flex-col justify-between">
+          <CardContent className="flex flex-col items-center pt-6 h-full">
+            <div className="flex-1 flex items-center">
+              <span
+                className={`font-semibold text-gray-700 text-center ${timeTakenToTextSize(
+                  formattedTime
+                )}`}
+              >
+                {formattedTime}
+              </span>
+            </div>
+            <h3 className="text-sm text-muted-foreground">Time Taken</h3>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Token Distribution Chart */}

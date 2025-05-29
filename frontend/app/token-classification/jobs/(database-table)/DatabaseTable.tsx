@@ -63,7 +63,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
   // Data states
   const [tokenRecords, setTokenRecords] = useState<ClassifiedTokenDatabaseRecord[]>([]);
   const [objectRecords, setObjectRecords] = useState<ObjectDatabaseRecord[]>([]);
-  const [viewMode, setViewMode] = useState<ViewMode>('classified-token');
+  const [viewMode, setViewMode] = useState<ViewMode>('object');
   const [query, setQuery] = useState('');
   const [filteredObjects, setFilteredObjects] = useState<string[]>([]);
 

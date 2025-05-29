@@ -225,6 +225,17 @@ function JobDetail() {
   const [reportData, setReportData] = useState<Report | null>(null);
   const [customTags, setCustomTags] = useState<CustomTag[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [dataProcessed, setDataProcessed] = useState<number | null>(null);
+
+  function setDataProcessedFromReport(report: Report | null) {
+    if (report) {
+      setDataProcessed(
+        (report.InferenceTaskStatuses?.COMPLETED?.CompletedSize || 0) +
+          (report.InferenceTaskStatuses?.FAILED?.CompletedSize || 0) +
+          (report.InferenceTaskStatuses?.RUNNING?.CompletedSize || 0)
+      );
+    }
+  }
 
   const fetchTags = async () => {
     setIsLoading(true);
@@ -232,6 +243,8 @@ function JobDetail() {
       const report = await nerService.getReport(reportId);
 
       setReportData(report as Report);
+
+      setDataProcessedFromReport(reportData);
 
       setTimeTaken((report.TotalInferenceTimeSeconds || 0) + (report.ShardDataTimeSeconds || 0));
 
@@ -276,14 +289,19 @@ function JobDetail() {
   };
 
   useEffect(() => {
-    const pollInterval = setInterval(async () => {
+    let pollInterval: NodeJS.Timeout;
+
+    const poll = async () => {
       await fetchTags();
       const currentProgress = calculateProgress(reportData);
 
       if (currentProgress === 100) {
         clearInterval(pollInterval);
       }
-    }, 5000);
+    };
+
+    poll();
+    pollInterval = setInterval(poll, 5000);
 
     return () => {
       clearInterval(pollInterval);
@@ -291,11 +309,11 @@ function JobDetail() {
   }, [reportId, reportData?.SucceededFileCount]);
 
   return (
-    <div className="container px-4 py-8 w-3/4 mx-auto">
+    <div className="container px-4 py-8 mx-auto" style={{ width: '90%' }}>
       {/* Header with Back Button and Title */}
       <div className="flex items-center justify-between mb-6">
         <Button variant="outline" size="sm" asChild>
-          <Link href={`/?tab=jobs`} className="flex items-center">
+          <Link href={`/token-classification/landing?tab=jobs`} className="flex items-center">
             <ArrowLeft className="mr-1 h-4 w-4" /> Back to Reports
           </Link>
         </Button>
@@ -334,7 +352,7 @@ function JobDetail() {
         <TabsContent value="configuration" className="mt-0">
           {/* STARTS */}
           {/* Source */}
-          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
+          <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3 }}>
             <h2 className="text-2xl font-medium mb-4">Source</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {selectedSource === 's3' && reportData?.SourceS3Bucket && (
@@ -365,7 +383,7 @@ function JobDetail() {
           </Box>
 
           {/* Tags */}
-          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3, marginTop: 3 }}>
+          <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3, marginTop: 3 }}>
             <h2 className="text-2xl font-medium mb-4">Tags</h2>
             <div className="flex justify-between items-center mb-4">
               {isLoading ? (
@@ -385,7 +403,7 @@ function JobDetail() {
           </Box>
 
           {/* Custom Tags */}
-          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3, marginTop: 3 }}>
+          <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3, marginTop: 3 }}>
             <h2 className="text-2xl font-medium mb-4">Tags</h2>
             <div className="flex justify-between items-center mb-4">
               {isLoading ? (
@@ -417,7 +435,7 @@ function JobDetail() {
           </Box>
 
           {/* Groups */}
-          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3, marginTop: 3 }}>
+          <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3, marginTop: 3 }}>
             <h2 className="text-2xl font-medium mb-4">Groups</h2>
             <div className="flex justify-between items-center mb-4">
               {isLoading ? (
@@ -450,6 +468,7 @@ function JobDetail() {
             succeededFileCount={reportData?.SucceededFileCount || 0}
             failedFileCount={reportData?.FailedFileCount || 0}
             totalFileCount={reportData?.FileCount || 1}
+            dataProcessed={dataProcessed || 0}
           />
         </TabsContent>
 

@@ -27,6 +27,7 @@ jobs:
       MODEL_DIR:             ${{ github.workspace }}/models
       HOST_MODEL_DIR:        ${{ github.workspace }}/models
       PYTHON_MODEL_PLUGIN_SCRIPT_PATH:    ${{ github.workspace }}/plugin/plugin-python/plugin.py
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
     steps:
       - name: Check out code

@@ -194,6 +194,7 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 	assert.Equal(t, modelId, report.Model.Id)
 	assert.Equal(t, dataBucket, report.SourceS3Bucket)
 	assert.Equal(t, 11, report.InferenceTaskStatuses[database.JobCompleted].TotalTasks)
+	assert.Equal(t, report.InferenceTaskStatuses[database.JobCompleted].TotalSize, report.InferenceTaskStatuses[database.JobCompleted].CompletedSize)
 	assert.Equal(t, 2, len(report.Groups))
 	assert.Greater(t, report.TotalInferenceTimeSeconds, 0.0)
 	assert.Greater(t, report.ShardDataTimeSeconds, 0.0)
@@ -365,7 +366,7 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 				UploadId:   uploadID,
 				Tags: []string{"ADDRESS", "CARD_NUMBER", "COMPANY", "CREDIT_SCORE", "DATE",
 					"EMAIL", "ID_NUMBER", "LICENSE_PLATE",
-					"LOCATION", "NAME", "PHONENUMBER", "SERVICE_CODE",
+					"LOCATION", "NAME", "PHONENUMBER",
 					"SSN", "URL", "VIN", "O"},
 			})
 
