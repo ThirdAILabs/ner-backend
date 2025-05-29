@@ -27,7 +27,8 @@ function PageContents() {
   };
 
   return (
-    <div style={{ width: '75%', minHeight: 'calc(100vh - 20px)', margin: '0 auto' }}>
+    // 30px is the height of the title bar
+    <div style={{ width: '75%', minHeight: 'calc(100vh - 30px)', margin: '0 auto' }}>
       <header
         style={{
           width: '100%',
