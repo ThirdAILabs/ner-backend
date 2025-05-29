@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sync"
 	"unicode"
 
 	"ner-backend/internal/core/types"
@@ -17,6 +18,11 @@ import (
 
 	"github.com/daulet/tokenizers"
 	ort "github.com/yalue/onnxruntime_go"
+)
+
+var (
+	initOnce sync.Once
+	initErr  error
 )
 
 var idx2tag = []string{
@@ -187,9 +193,12 @@ func LoadOnnxModel(modelDir string) (Model, error) {
 		contents := filepath.Dir(filepath.Dir(filepath.Dir(exe)))
 		dylib = filepath.Join(contents, "Frameworks", "libonnxruntime.dylib")
 	}
-	ort.SetSharedLibraryPath(dylib)
-	if err := ort.InitializeEnvironment(); err != nil {
-		log.Fatalf("failed to init ONNX Runtime: %v", err)
+	initOnce.Do(func() {
+		ort.SetSharedLibraryPath(dylib)
+		initErr = ort.InitializeEnvironment()
+	})
+	if initErr != nil {
+		log.Fatalf("failed to init ONNX Runtime: %v", initErr)
 	}
 	log.Printf("✔️  Loaded ONNX Runtime from %s", dylib)
 
