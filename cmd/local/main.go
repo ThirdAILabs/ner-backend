@@ -24,6 +24,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	ort "github.com/yalue/onnxruntime_go"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -127,6 +128,16 @@ func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publish
 }
 
 func main() {
+	dylib := os.Getenv("ONNX_RUNTIME_DYLIB")
+	if dylib == "" {
+		log.Fatalf("ONNX_RUNTIME_DYLIB must be set")
+	}
+	ort.SetSharedLibraryPath(dylib)
+	if err := ort.InitializeEnvironment(); err != nil {
+		log.Fatalf("could not init ONNX Runtime: %v", err)
+	}
+	defer ort.DestroyEnvironment()
+
 	const modelBucket = "models"
 
 	var cfg Config

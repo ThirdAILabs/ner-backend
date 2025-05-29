@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -184,24 +183,6 @@ func LoadOnnxModel(modelDir string) (Model, error) {
 		return nil, fmt.Errorf("tokenizer load: %w", err)
 	}
 
-	dylib := os.Getenv("ONNX_RUNTIME_DYLIB")
-	if dylib == "" {
-		exe, err := os.Executable()
-		if err != nil {
-			log.Fatalf("cannot locate executable: %v", err)
-		}
-		contents := filepath.Dir(filepath.Dir(filepath.Dir(exe)))
-		dylib = filepath.Join(contents, "Frameworks", "libonnxruntime.dylib")
-	}
-	initOnce.Do(func() {
-		ort.SetSharedLibraryPath(dylib)
-		initErr = ort.InitializeEnvironment()
-	})
-	if initErr != nil {
-		log.Fatalf("failed to init ONNX Runtime: %v", initErr)
-	}
-	log.Printf("✔️  Loaded ONNX Runtime from %s", dylib)
-
 	session, err := ort.NewDynamicAdvancedSessionWithONNXData(
 		onnxBytes,
 		[]string{"input_ids"},
@@ -307,5 +288,4 @@ func (m *OnnxModel) Save(path string) error {
 func (m *OnnxModel) Release() {
 	m.session.Destroy()
 	m.tokenizer.Close()
-	ort.DestroyEnvironment()
 }
