@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Box, Card, CardContent, Typography, CircularProgress } from '@mui/material';
 import { nerService, InferenceMetrics, ThroughputMetrics } from '@/lib/backend';
 import { formatFileSize, formatNumber } from '@/lib/utils';
+import { useHealth } from '@/contexts/HealthProvider';
 
 interface MetricsDataViewerProps {
   modelId?: string;
@@ -17,9 +18,16 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [throughput, setThroughput] = useState<string | null>('-');
+  const { healthStatus } = useHealth();
 
   useEffect(() => {
     let mounted = true;
+
+    // Don't make API calls if health check hasn't passed
+    if (!healthStatus) {
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -68,7 +76,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
     return () => {
       mounted = false;
     };
-  }, [modelId, days]);
+  }, [modelId, days, healthStatus]);
 
   if (loading) {
     return (
