@@ -10,6 +10,9 @@ import { nerService } from '@/lib/backend';
 import { NO_GROUP } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 
+// Check if we're running in Electron
+const isElectron = typeof window !== 'undefined' && 'electronAPI' in window;
+
 // Tag chip component - reused from the detail page but with interactive mode
 interface TagProps {
   tag: string;
@@ -37,13 +40,14 @@ const Tag: React.FC<TagProps> = ({
   );
 };
 
-// Source option card component - reused from the detail page
+// Source option card component
 interface SourceOptionProps {
   title: string;
   description: React.ReactNode;
   isSelected?: boolean;
   disabled?: boolean;
   onClick: () => void;
+  icon?: React.ReactNode;
 }
 
 const SourceOption: React.FC<SourceOptionProps> = ({
@@ -52,6 +56,7 @@ const SourceOption: React.FC<SourceOptionProps> = ({
   isSelected = false,
   disabled = false,
   onClick,
+  icon,
 }) => (
   <div
     className={`relative p-6 border rounded-md transition-all
@@ -64,10 +69,95 @@ const SourceOption: React.FC<SourceOptionProps> = ({
     `}
     onClick={() => !disabled && onClick()}
   >
+    {icon && <div className="mb-4">{icon}</div>}
     <h3 className="text-base font-medium">{title}</h3>
     <div className="text-sm text-gray-500 mt-1">{description}</div>
   </div>
 );
+
+// File source component
+interface FileSourceProps {
+  onFilesSelected: (files: File[]) => void;
+  supportedTypes: string[];
+  multiple?: boolean;
+  directory?: boolean;
+}
+
+const FileSource: React.FC<FileSourceProps> = ({
+  onFilesSelected,
+  supportedTypes,
+  multiple = true,
+  directory = false,
+}) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      const fileArray = Array.from(files);
+      const supportedFiles = fileArray.filter((file) => 
+        supportedTypes.some((ext) => file.name.toLowerCase().endsWith(ext))
+      );
+      if (supportedFiles.length > 0) {
+        onFilesSelected(supportedFiles);
+      }
+    }
+    // Reset the input value
+    const input = e.target as HTMLInputElement;
+    input.value = '';
+  };
+
+  return (
+    <div
+      className="relative p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 transition-colors cursor-pointer"
+      onClick={() => {
+        const input = document.getElementById(
+          directory ? 'directory-upload' : 'file-upload'
+        ) as HTMLInputElement;
+        input?.click();
+      }}
+    >
+      <input
+        type="file"
+        id={directory ? 'directory-upload' : 'file-upload'}
+        multiple={multiple}
+        onChange={handleFileChange}
+        className="hidden"
+        accept={supportedTypes.join(',')}
+        {...(directory ? { webkitdirectory: '', directory: '' } : {})}
+      />
+      <div className="flex flex-col items-center justify-center space-y-4">
+        <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-50">
+          <svg
+            className="w-8 h-8 text-blue-500"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d={directory 
+                ? "M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                : "M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              }
+            />
+          </svg>
+        </div>
+        <div className="text-center">
+          <h3 className="text-base font-medium mb-1">
+            {directory ? 'Local Directory' : 'Local Files'}
+          </h3>
+          <p className="text-sm text-gray-500">
+            {directory ? 'Scan an entire directory' : 'Scan files from your computer'}
+          </p>
+          <p className="text-xs text-gray-400 mt-2">
+            Supported: {supportedTypes.join(', ')}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // Group card component
 interface GroupProps {
@@ -362,24 +452,6 @@ export default function NewJobPage() {
     setSelectedFiles(newSelectedFiles);
   };
 
-  // Update file handling to use file/directory input
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files) {
-      const fileArray = Array.from(files);
-      const supportedFiles = fileArray.filter((file) => isFileSupported(file.name));
-
-      if (supportedFiles.length > 0) {
-        addFiles(supportedFiles);
-      } else {
-        setIsConfirmDialogOpen(true);
-      }
-    }
-    // Reset the input value
-    const input = e.target as HTMLInputElement;
-    input.value = '';
-  };
-
   const validateS3Bucket = async () => {
     if (!sourceS3Bucket || !sourceS3Region) {
       return;
@@ -655,114 +727,77 @@ export default function NewJobPage() {
           <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
             <h2 className="text-2xl font-medium mb-4">Source</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              <div
-                className="relative p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 transition-colors cursor-pointer"
-                onClick={() => {
-                  document.getElementById('file-upload')?.click();
-                  setSelectedSource('files');
-                }}
-              >
-                <input
-                  type="file"
-                  id="file-upload"
-                  multiple
-                  onChange={handleFileChange}
-                  className="hidden"
-                  accept={SUPPORTED_TYPES.join(',')}
-                />
-                <div className="flex flex-col items-center justify-center space-y-4">
-                  <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-50">
-                    <svg
-                      className="w-8 h-8 text-blue-500"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                      />
-                    </svg>
-                  </div>
-                  <div className="text-center">
-                    <h3 className="text-base font-medium mb-1">Local Files</h3>
-                    <p className="text-sm text-gray-500">Scan files from your computer</p>
-                    <p className="text-xs text-gray-400 mt-2">
-                      Supported: {SUPPORTED_TYPES.join(', ')}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div
-                className="relative p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 transition-colors cursor-pointer"
-                onClick={() => {
-                  document.getElementById('directory-upload')?.click();
-                  setSelectedSource('directory');
-                }}
-              >
-                <input
-                  type="file"
-                  id="directory-upload"
-                  {...({ webkitdirectory: '', directory: '' } as any)}
-                  onChange={handleFileChange}
-                  className="hidden"
-                  accept={SUPPORTED_TYPES.join(',')}
-                />
-                <div className="flex flex-col items-center justify-center space-y-4">
-                  <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-50">
-                    <svg
-                      className="w-8 h-8 text-blue-500"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-                      />
-                    </svg>
-                  </div>
-                  <div className="text-center">
-                    <h3 className="text-base font-medium mb-1">Local Directory</h3>
-                    <p className="text-sm text-gray-500">Scan an entire directory</p>
-                    <p className="text-xs text-gray-400 mt-2">
-                      Supported: {SUPPORTED_TYPES.join(', ')}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div
-                className="relative p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 transition-colors cursor-pointer"
-                onClick={() => setSelectedSource('s3')}
-              >
-                <div className="flex flex-col items-center justify-center space-y-4">
-                  <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-50">
-                    <svg
-                      className="w-8 h-8 text-blue-500"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
-                      />
-                    </svg>
-                  </div>
-                  <div className="text-center">
-                    <h3 className="text-base font-medium mb-1">S3 Bucket</h3>
-                    <p className="text-sm text-gray-500">Scan files from an S3 bucket</p>
-                  </div>
-                </div>
-              </div>
+              {isElectron ? (
+                <>
+                  <FileSource
+                    onFilesSelected={(files) => {
+                      setSelectedSource('files');
+                      addFiles(files);
+                    }}
+                    supportedTypes={SUPPORTED_TYPES}
+                  />
+                  <FileSource
+                    onFilesSelected={(files) => {
+                      setSelectedSource('directory');
+                      addFiles(files);
+                    }}
+                    supportedTypes={SUPPORTED_TYPES}
+                    directory
+                  />
+                  <SourceOption
+                    title="S3 Bucket"
+                    description="Scan files from an S3 bucket"
+                    isSelected={selectedSource === 's3'}
+                    onClick={() => setSelectedSource('s3')}
+                    icon={
+                      <svg
+                        className="w-8 h-8 text-blue-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
+                        />
+                      </svg>
+                    }
+                  />
+                </>
+              ) : (
+                <>
+                  <FileSource
+                    onFilesSelected={(files) => {
+                      setSelectedSource('files');
+                      addFiles(files);
+                    }}
+                    supportedTypes={SUPPORTED_TYPES}
+                  />
+                  <SourceOption
+                    title="S3 Bucket"
+                    description="Scan files from an S3 bucket"
+                    isSelected={selectedSource === 's3'}
+                    onClick={() => setSelectedSource('s3')}
+                    icon={
+                      <svg
+                        className="w-8 h-8 text-blue-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
+                        />
+                      </svg>
+                    }
+                  />
+                </>
+              )}
             </div>
 
             {selectedFiles.length > 0 && (

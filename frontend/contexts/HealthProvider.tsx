@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { nerService } from '@/lib/backend';
+import { updateNerBaseUrl } from '@/lib/axios.config';
 
 interface HealthContextType {
   healthStatus: boolean;
@@ -18,13 +19,13 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const checkHealth = async () => {
       try {
+        const updated = await updateNerBaseUrl();
+        if (!updated) {
+          return false;
+        }
         const response = await nerService.checkHealth();
         return response.status === 200;
       } catch (error) {
-        fails.current++;
-        if (fails.current >= 5) {
-          console.error(`Health check failed ${fails.current} times`, error);
-        }
         return false;
       }
     };
@@ -34,6 +35,10 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
     const pollHealth = async () => {
       const isHealthy = await checkHealth();
       if (!isHealthy) {
+        fails.current++;
+        if (fails.current >= 5) {
+          console.error(`Health check failed ${fails.current} times`);
+        }
         timeoutId = setTimeout(pollHealth, 1000);
       } else {
         setHealthStatus(true);

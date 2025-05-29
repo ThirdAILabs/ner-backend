@@ -1,14 +1,23 @@
 import axios from 'axios';
 
-// Use our fixed port (16549) for backend communication
-const nerBaseUrl = 'http://localhost:16549/api/v1';
-
 const axiosInstance = axios.create({
-  baseURL: nerBaseUrl,
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+export const updateNerBaseUrl = async () => {
+  if (typeof window !== 'undefined') {
+    // @ts-ignore
+    const port = await window.electronAPI.getPort();
+    console.log('port', port);
+    if (port) {
+      axiosInstance.defaults.baseURL = `http://localhost:${port}/api/v1`;
+      return true
+    }
+  }
+  return false;
+};
 
 axiosInstance.interceptors.request.use(
   (config) => {

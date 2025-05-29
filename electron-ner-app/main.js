@@ -8,6 +8,7 @@ import { initTelemetry, insertTelemetryEvent, closeTelemetry } from './telemetry
 import { initializeUserId, getCurrentUserId } from './userIdManager.js';
 import log from 'electron-log';
 import electronUpdater from 'electron-updater';
+import getPort from 'get-port'
 
 const { autoUpdater } = electronUpdater;
 
@@ -39,6 +40,22 @@ if (!isDev) {
 let mainWindow;
 let backendProcess = null;
 let backendStarted = false;
+let port = null;
+
+function range(start, end) {
+  const iterable = {};
+  iterable[Symbol.iterator] = function() {
+    let n = start;
+    return {
+      next() {
+        const value = n;
+        n++;
+        return { value, done: value === end };
+      }
+    }
+  }
+  return iterable;
+}
 
 // Ensure working directory is set to the app directory for backend
 function fixWorkingDirectory() {
@@ -113,7 +130,9 @@ async function ensureBackendStarted() {
   if (!backendStarted) {
     console.log('Starting backend...');
     try {
-      backendProcess = await startBackend();
+      // Start at 5 digits because people rarely use these.
+      port = await getPort({ port: range(10000, 16559) });
+      backendProcess = await startBackend(port);
       if (backendProcess) {
         console.log('Backend started successfully');
         backendStarted = true;
@@ -194,6 +213,64 @@ ipcMain.handle('telemetry', async (event, data) => {
 // Set up user ID IPC handler
 ipcMain.handle('get-user-id', async () => {
   return getCurrentUserId();
+});
+
+ipcMain.handle('get-port', async () => {
+  return port;
+});
+
+ipcMain.handle('open-file-chooser', async () => {
+  const result = {
+    directlySelected: [],
+    allFiles: [],
+  }
+
+  const dialogResult = await dialog.showOpenDialog({
+    properties: [
+      // Note: we cannot both have openFile and openDirectory on Windows.
+      'openFile',
+      'openDirectory',
+      'multiSelections',
+    ]
+  });
+
+  if (dialogResult.canceled) {
+    return result;
+  }
+
+  // Store directly selected paths
+  result.directlySelected = dialogResult.filePaths;
+
+  // Helper function to recursively get files from a directory
+  const getFilesFromDirectory = async (dirPath) => {
+    const files = [];
+    const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
+    
+    for (const entry of entries) {
+      const fullPath = path.join(dirPath, entry.name);
+      if (entry.isDirectory()) {
+        files.push(...await getFilesFromDirectory(fullPath));
+      } else {
+        files.push(fullPath);
+      }
+    }
+    return files;
+  };
+
+  // Process each selected path
+  for (const selectedPath of dialogResult.filePaths) {
+    const stats = await fs.promises.stat(selectedPath);
+    if (stats.isDirectory()) {
+      // If it's a directory, get all files recursively
+      const files = await getFilesFromDirectory(selectedPath);
+      result.allFiles.push(...files);
+    } else {
+      // If it's a file, add it directly
+      result.allFiles.push(selectedPath);
+    }
+  }
+
+  return result;
 });
 
 // This method will be called when Electron has finished initialization

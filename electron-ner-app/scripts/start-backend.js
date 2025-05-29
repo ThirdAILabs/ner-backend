@@ -2,7 +2,6 @@ import { spawn } from 'node:child_process';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { FIXED_PORT, ensurePortIsFree } from './check-port.js';
 import log from 'electron-log';
 
 log.transports.file.level = 'debug';
@@ -190,15 +189,8 @@ function getDefaultModelPath() {
   return path.join(binPath, 'udt_complete.model');
 }
 
-export async function startBackend() {
-  // Ensure our fixed port is available
-  const portAvailable = await ensurePortIsFree();
-  if (!portAvailable) {
-    log.error(`🔴 Could not secure port ${FIXED_PORT} for backend use`);
-    return null;
-  }
-
-  log.debug(`Using fixed port: ${FIXED_PORT}`)
+export async function startBackend(port) {
+  log.debug(`Using fixed port: ${port}`)
 
 
   const backendPath = getBackendPath();
@@ -223,7 +215,7 @@ export async function startBackend() {
       cwd:    backendDir,
       env:    {
         ...process.env,
-        PORT:       FIXED_PORT.toString(),
+        PORT:       port.toString(),
         MODEL_PATH: getDefaultModelPath(),
       },
       stdio:  ['ignore', outFd, errFd]
