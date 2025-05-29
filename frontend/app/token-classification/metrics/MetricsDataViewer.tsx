@@ -22,7 +22,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
 
   useEffect(() => {
     let mounted = true;
-    
+
     // Don't make API calls if health check hasn't passed
     if (!healthStatus) {
       return;
