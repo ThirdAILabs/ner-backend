@@ -22,8 +22,6 @@ function Choice({
     <Link href={href}>
       <Card className="w-[300px] h-[250px] flex justify-center items-center hover:scale-105 transition-transform duration-200 hover:shadow-lg cursor-pointer">
         <Box>
-          {/* {icon}
-          <CardTitle className="text-center text-gray-500">{title}</CardTitle> */}
           <div className="flex justify-center mt-4">{icon}</div>
           <CardTitle className="text-center text-gray-500">{title}</CardTitle>
           <Typography variant="subtitle2" className="text-center text-gray-400 pt-3">

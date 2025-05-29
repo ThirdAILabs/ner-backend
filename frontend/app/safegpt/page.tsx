@@ -45,12 +45,7 @@ function DeleteDialog({ onCancel, onConfirm }: DeleteDialogProps) {
             type="button"
             variant="default"
             onClick={onConfirm}
-            style={{
-              backgroundColor: '#dc2626',
-              color: 'white',
-            }}
-            onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#b91c1c')}
-            onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#dc2626')}
+            className="bg-red-600 text-white hover:bg-red-700 transition-colors"
           >
             Delete
           </Button>
