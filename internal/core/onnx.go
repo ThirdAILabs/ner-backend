@@ -264,9 +264,12 @@ func (m *OnnxModel) Predict(text string) ([]types.Entity, error) {
 		if len(offs) == 0 {
 			continue
 		}
+		tag := wordTags[wid]
+		if tag == "O" {
+			continue
+		}
 		start := int(offs[0][0])
 		end := int(offs[len(offs)-1][1])
-		tag := wordTags[wid]
 		ents = append(ents, types.CreateEntity(
 			tag,
 			text,
