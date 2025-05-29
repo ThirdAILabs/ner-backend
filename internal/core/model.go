@@ -2,11 +2,9 @@ package core
 
 import (
 	"fmt"
-	"ner-backend/internal/core/bolt"
 	"ner-backend/internal/core/python"
 	"ner-backend/internal/core/types"
 	"ner-backend/pkg/api"
-	"path/filepath"
 )
 
 const defaultPresidioThreshold = 0.5
@@ -35,9 +33,9 @@ func IsStatelessModel(modelType string) bool {
 func NewModelLoaders(pythonExec, pluginScript string) map[string]ModelLoader {
 
 	return map[string]ModelLoader{
-		"bolt": func(modelDir string) (Model, error) {
-			return bolt.LoadNER(filepath.Join(modelDir, "model.bin"))
-		},
+		// "bolt": func(modelDir string) (Model, error) {
+		// 	return bolt.LoadNER(filepath.Join(modelDir, "model.bin"))
+		// },
 		"transformer": func(modelDir string) (Model, error) {
 			cfgJSON := fmt.Sprintf(`{"model_path":"%s","threshold":0.5}`, modelDir)
 			return python.LoadPythonModel(
