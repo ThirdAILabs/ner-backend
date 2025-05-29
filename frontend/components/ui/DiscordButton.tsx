@@ -20,9 +20,9 @@ const handleClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
 
 export function DiscordButton() {
   return (
-    <div className="absolute top-4 right-4 z-50">
+    <div className="absolute bottom-4 left-4 z-50">
       <button
-        className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200 tooltip tooltip-left"
+        className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200 tooltip tooltip-right"
         data-tip="PocketLLM community"
         onClick={handleClick}
         aria-label="Join Discord Community"
