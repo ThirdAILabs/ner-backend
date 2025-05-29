@@ -315,6 +315,10 @@ export function TableContent({
                   />
                 );
               })}
+              ...
+              <p className="text-gray-500 text-xs">
+                Truncated File View. Please open the original file for the entire content.
+              </p>
             </div>
           </details>
         );
