@@ -8,10 +8,10 @@ import (
 	"log"
 	"log/slog"
 	"ner-backend/internal/core"
-	"ner-backend/internal/core/utils"
 	"ner-backend/internal/database"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/google/uuid"
 	"github.com/tmc/langchaingo/llms"
@@ -21,8 +21,6 @@ import (
 )
 
 var ErrStopStream = errors.New("stop stream")
-
-var mutexMap = utils.NewMutexMap(10)
 
 type TagMetadata struct {
 	TagMap map[string]string 
@@ -39,6 +37,7 @@ func NewTagMetadata() TagMetadata {
 }
 
 type ChatSession struct {
+	mu           sync.Mutex
 	db           *gorm.DB
 	sessionID    uuid.UUID
 	model        string
@@ -122,8 +121,8 @@ type ChatIterator func(yield func(ChatItem, error) bool)
 
 func (session *ChatSession) ChatStream(userInput string) ChatIterator {
 	return func(yield func(ChatItem, error) bool) {
-		mutexMap.Lock(session.sessionID.String())
-		defer mutexMap.Unlock(session.sessionID.String())
+		session.mu.Lock()
+		defer session.mu.Unlock()
 
 		tagMetadata, err := session.getTagMetadata()
 		if err != nil {
@@ -209,7 +208,7 @@ func (session *ChatSession) updateTagMetadata(tagMetadata TagMetadata) error {
 	if err != nil {
 		return fmt.Errorf("error marshalling tag map: %v", err)
 	}
-	return session.db.Model(&database.ChatSession{ID: session.sessionID}).Update("tag_metadata", tagMetadataJSON).Error
+	return session.db.Model(&database.ChatSession{}).Where("id = ?", session.sessionID).Update("tag_metadata", tagMetadataJSON).Error
 }
 
 func (session *ChatSession) streamOpenAIResponse(ctx string) func(yield func(string, error) bool) {
