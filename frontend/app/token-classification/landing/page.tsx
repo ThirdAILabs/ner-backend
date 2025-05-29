@@ -18,7 +18,7 @@ function PageContents() {
   const defaultTab = searchParams.get('tab') || 'jobs';
   const [tabValue, setTabValue] = useState(defaultTab);
   const recordEvent = useTelemetry();
-  
+
   // Record initial page load
   useEffect(() => {
     recordEvent({

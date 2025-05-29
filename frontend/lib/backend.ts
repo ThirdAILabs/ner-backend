@@ -313,7 +313,9 @@ export const nerService = {
     }
   },
 
-  getChatSessions: async (): Promise<{ ID: string; Title: string; TagMap: Record<string, string> }[]> => {
+  getChatSessions: async (): Promise<
+    { ID: string; Title: string; TagMap: Record<string, string> }[]
+  > => {
     const { data } = await axiosInstance.get('/chat/sessions');
     return data.Sessions;
   },
@@ -363,7 +365,7 @@ export const nerService = {
         const decoder = new TextDecoder();
         let text = '';
         while (true) {
-          const {done, value} = await reader.read();
+          const { done, value } = await reader.read();
           if (done) break;
           text += decoder.decode(value);
         }
