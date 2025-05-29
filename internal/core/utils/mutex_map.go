@@ -2,7 +2,6 @@ package utils
 
 import (
 	"fmt"
-	"log/slog"
 	"sync"
 )
 
@@ -25,7 +24,6 @@ func (m *MutexMap) Lock(key string) error {
 	m.edit.Lock()
 
 	if m.mutexes[key] == nil {
-		slog.Info("Mutex not found, creating new one", "key", key)
 		if len(m.mutexes) >= m.maxSize {
 			m.edit.Unlock()
 			return fmt.Errorf("max size reached")
@@ -33,8 +31,6 @@ func (m *MutexMap) Lock(key string) error {
 
 		m.mutexes[key] = &sync.Mutex{}
 		m.queueLengths[key] = 0
-	} else {
-		slog.Info("Mutex found", "key", key)
 	}
 
 	m.queueLengths[key]++
