@@ -48,9 +48,7 @@ func (l *SessionLock) Unlock(sessionID string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	if _, ok := l.sessions[sessionID]; ok {
-		delete(l.sessions, sessionID)
-	}
+	delete(l.sessions, sessionID)
 }
 
 var sessionLock = NewSessionLock()
