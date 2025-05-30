@@ -57,8 +57,8 @@ func (s *ChatService) GetSessions(r *http.Request) (any, error) {
 	apiSessions := make([]api.ChatSessionMetadata, len(sessions))
 	for i, session := range sessions {
 		apiSessions[i] = api.ChatSessionMetadata{
-			ID:      session.ID,
-			Title:   session.Title,
+			ID:    session.ID,
+			Title: session.Title,
 		}
 	}
 
@@ -80,13 +80,13 @@ func (s *ChatService) StartSession(r *http.Request) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	sessionID := uuid.New()
 	err = s.db.Create(&database.ChatSession{
 		ID:          sessionID,
 		Title:       req.Title,
 		TagMetadata: tagMetadataJSON,
-	}).Error;
+	}).Error
 	if err != nil {
 		return nil, err
 	}
@@ -101,8 +101,7 @@ func (s *ChatService) GetSession(r *http.Request) (any, error) {
 	}
 
 	var session database.ChatSession
-	err = s.db.Where("id = ?", sessionID).First(&session).Error
-	if err != nil {
+	if err := s.db.First(&session, "id = ?", sessionID).Error; err != nil {
 		slog.Error("Error getting session", "error", err)
 		return nil, fmt.Errorf("error getting session: %v", err)
 	}
@@ -114,9 +113,9 @@ func (s *ChatService) GetSession(r *http.Request) (any, error) {
 	}
 
 	return api.ChatSessionMetadata{
-		ID:      session.ID,
-		Title:   session.Title,
-		TagMap:  tagMetadata.TagMap,
+		ID:     session.ID,
+		Title:  session.Title,
+		TagMap: tagMetadata.TagMap,
 	}, nil
 }
 
@@ -130,52 +129,52 @@ func (s *ChatService) RenameSession(r *http.Request) (any, error) {
 		return nil, err
 	}
 
-	err = s.db.Model(&database.ChatSession{}).Where("id = ?", sessionID).Update("title", req.Title).Error
-	if err != nil {
+	if err := s.db.Model(&database.ChatSession{ID: sessionID}).Update("title", req.Title).Error; err != nil {
 		return nil, err
 	}
 
 	return nil, nil
 }
 
-func (s *ChatService) SendMessageStream(r *http.Request) StreamResponse {
-	return func(yield func(any, error) bool) {
-		sessionID, err := URLParamUUID(r, "session_id")
-		if err != nil {
-			yield(nil, err)
-			return
-		}
-
-		req, err := ParseRequest[api.ChatRequest](r)
-		if err != nil {
-			yield(nil, err)
-			return
-		}
-
-		if err := s.manager.ValidateModel(req.Model); err != nil {
-			yield(nil, err)
-			return
-		}
-
-		engine, err := s.manager.EngineName(req.Model)
-		if err != nil {
-			yield(nil, err)
-			return
-		}
-
-		session, err := chat.NewChatSession(s.db, sessionID, engine, req.APIKey, s.model)
-		if err != nil {
-			yield(nil, err)
-			return
-		}
-
-		session.ChatStream(req.Message)(func (redactedIpText string, reply string, tagMap map[string]string, err error) bool {
-			if err != nil {
-				return yield(nil, err)
-			}
-			return yield(api.ChatResponse{InputText: redactedIpText, Reply: reply, TagMap: tagMap}, nil)
-		})
+func (s *ChatService) SendMessageStream(r *http.Request) (StreamResponse, error) {
+	sessionID, err := URLParamUUID(r, "session_id")
+	if err != nil {
+		return nil, err
 	}
+
+	req, err := ParseRequest[api.ChatRequest](r)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.manager.ValidateModel(req.Model); err != nil {
+		return nil, err
+	}
+
+	engine, err := s.manager.EngineName(req.Model)
+	if err != nil {
+		return nil, err
+	}
+
+	apiKey := s.getOpenAIApiKey()
+	session, err := chat.NewChatSession(s.db, sessionID, engine, apiKey, s.model)
+	if err != nil {
+		return nil, err
+	}
+
+	stream := func(yield func(any, error) bool) {
+		for item, err := range session.ChatStream(req.Message) {
+			if err != nil {
+				yield(nil, err)
+				return
+			}
+			if !yield(api.ChatResponse{InputText: item.RedactedText, Reply: item.Reply, TagMap: item.TagMap}, nil) {
+				break
+			}
+		}
+	}
+
+	return stream, nil
 }
 
 func (s *ChatService) GetHistory(r *http.Request) (any, error) {
@@ -196,11 +195,10 @@ func (s *ChatService) GetHistory(r *http.Request) (any, error) {
 
 	var resp []api.ChatHistoryItem
 	for _, msg := range history {
-		ts := msg.Timestamp.Format("2006-01-02 15:04:05")
 		resp = append(resp, api.ChatHistoryItem{
 			MessageType: msg.MessageType,
 			Content:     msg.Content,
-			Timestamp:   ts,
+			Timestamp:   msg.Timestamp,
 			Metadata:    msg.Metadata,
 		})
 	}
@@ -213,7 +211,7 @@ func (s *ChatService) DeleteSession(r *http.Request) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	err = s.db.Delete(&database.ChatHistory{}, "session_id = ?", sessionID).Error
 	if err != nil {
 		return nil, err
@@ -227,13 +225,17 @@ func (s *ChatService) DeleteSession(r *http.Request) (any, error) {
 	return nil, nil
 }
 
-func (s *ChatService) GetOpenAIApiKey(r *http.Request) (any, error) {
+func (s *ChatService) getOpenAIApiKey() string {
 	// TODO: Store in a more secure way.
 	apiKey := ""
 	if data, err := os.ReadFile("api-key.txt"); err == nil {
-		apiKey = strings.TrimSpace(string(data));
+		apiKey = strings.TrimSpace(string(data))
 	}
-	return api.ApiKey{ApiKey: apiKey}, nil
+	return apiKey
+}
+
+func (s *ChatService) GetOpenAIApiKey(r *http.Request) (any, error) {
+	return api.ApiKey{ApiKey: s.getOpenAIApiKey()}, nil
 }
 
 func (s *ChatService) SetOpenAIApiKey(r *http.Request) (any, error) {

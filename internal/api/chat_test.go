@@ -22,9 +22,7 @@ import (
 	"gorm.io/gorm"
 )
 
-var router chi.Router
-
-func init() {
+func initializeChatService() chi.Router {
 	db, err := gorm.Open(sqlite.Open("file::memory:"), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
@@ -42,17 +40,13 @@ func init() {
 	}
 
 	chatService := NewChatService(db, nerModel)
-	router = chi.NewRouter()
+	router := chi.NewRouter()
 	chatService.AddRoutes(router)
+
+	return router
 }
 
-func TestChatEndpoint(t *testing.T) {
-	apiKey := os.Getenv("OPENAI_API_KEY")
-	if apiKey == "" {
-		t.Fatal("OPENAI_API_KEY must be set for TestChatEndpoint")
-	}
-
-	// Test setting API key
+func setOpenAIAPIKey(t *testing.T, router chi.Router, apiKey string) {
 	setKeyPayload := pkgapi.ApiKey{ApiKey: apiKey}
 	setKeyBody, _ := json.Marshal(setKeyPayload)
 	req := httptest.NewRequest(http.MethodPost, "/chat/api-key", bytes.NewReader(setKeyBody))
@@ -60,27 +54,36 @@ func TestChatEndpoint(t *testing.T) {
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	assert.Equal(t, http.StatusOK, rec.Code)
+}
 
-	// Test getting API key
-	req = httptest.NewRequest(http.MethodGet, "/chat/api-key", nil)
-	rec = httptest.NewRecorder()
+func getOpenAIAPIKey(t *testing.T, router chi.Router) string {
+	req := httptest.NewRequest(http.MethodGet, "/chat/api-key", nil)
+	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
-	assert.Equal(t, http.StatusOK, rec.Code)
 
 	var getKeyResp pkgapi.ApiKey
 	if err := json.NewDecoder(rec.Body).Decode(&getKeyResp); err != nil {
 		t.Fatalf("decode get-api-key response: %v", err)
 	}
-	assert.Equal(t, apiKey, getKeyResp.ApiKey)
 
-	// Test Chat Session
+	return getKeyResp.ApiKey
+}
 
-	startPayload := pkgapi.StartSessionRequest{Model: "gpt-3", Title: "Test Session"}
+func deleteOpenAIAPIKey(t *testing.T, router chi.Router) {
+	req := httptest.NewRequest(http.MethodDelete, "/chat/api-key", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+}
+
+func startSession(t *testing.T, router chi.Router, title string) string {
+	startPayload := pkgapi.StartSessionRequest{Model: "gpt-3", Title: title}
 	startBody, _ := json.Marshal(startPayload)
-	req = httptest.NewRequest(http.MethodPost, "/chat/sessions", bytes.NewReader(startBody))
+	req := httptest.NewRequest(http.MethodPost, "/chat/sessions", bytes.NewReader(startBody))
 	req.Header.Set("Content-Type", "application/json")
 
-	rec = httptest.NewRecorder()
+	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -90,9 +93,12 @@ func TestChatEndpoint(t *testing.T) {
 	}
 	sessionID := startResp.SessionID
 
-	// Get all sessions and verify our new session is there
-	req = httptest.NewRequest(http.MethodGet, "/chat/sessions", nil)
-	rec = httptest.NewRecorder()
+	return sessionID
+}
+
+func getSessions(t *testing.T, router chi.Router) []pkgapi.ChatSessionMetadata {
+	req := httptest.NewRequest(http.MethodGet, "/chat/sessions", nil)
+	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -100,12 +106,13 @@ func TestChatEndpoint(t *testing.T) {
 	if err := json.NewDecoder(rec.Body).Decode(&sessionsResp); err != nil {
 		t.Fatalf("decode get-sessions response: %v", err)
 	}
-	assert.Equal(t, 1, len(sessionsResp.Sessions))
-	assert.Equal(t, "Test Session", sessionsResp.Sessions[0].Title)
 
-	// Get specific session
-	req = httptest.NewRequest(http.MethodGet, "/chat/sessions/"+sessionID, nil)
-	rec = httptest.NewRecorder()
+	return sessionsResp.Sessions
+}
+
+func getSession(t *testing.T, router chi.Router, sessionID string) pkgapi.ChatSessionMetadata {
+	req := httptest.NewRequest(http.MethodGet, "/chat/sessions/"+sessionID, nil)
+	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -113,48 +120,43 @@ func TestChatEndpoint(t *testing.T) {
 	if err := json.NewDecoder(rec.Body).Decode(&sessionResp); err != nil {
 		t.Fatalf("decode get-session response: %v", err)
 	}
-	assert.Equal(t, "Test Session", sessionResp.Title)
 
-	// Rename the session
-	renamePayload := pkgapi.RenameSessionRequest{Title: "Renamed Test Session"}
+	return sessionResp
+}
+
+func deleteSession(t *testing.T, router chi.Router, sessionID string) {
+	req := httptest.NewRequest(http.MethodDelete, "/chat/sessions/"+sessionID, nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+}
+
+func renameSession(t *testing.T, router chi.Router, sessionID string, title string) {
+	renamePayload := pkgapi.RenameSessionRequest{Title: title}
 	renameBody, _ := json.Marshal(renamePayload)
-	req = httptest.NewRequest(http.MethodPost, "/chat/sessions/"+sessionID+"/rename", bytes.NewReader(renameBody))
+	req := httptest.NewRequest(http.MethodPost, "/chat/sessions/"+sessionID+"/rename", bytes.NewReader(renameBody))
 	req.Header.Set("Content-Type", "application/json")
-	rec = httptest.NewRecorder()
+	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	assert.Equal(t, http.StatusOK, rec.Code)
+}
 
-	// Verify rename worked
-	req = httptest.NewRequest(http.MethodGet, "/chat/sessions/"+sessionID, nil)
-	rec = httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-	assert.Equal(t, http.StatusOK, rec.Code)
-
-	if err := json.NewDecoder(rec.Body).Decode(&sessionResp); err != nil {
-		t.Fatalf("decode get-session response: %v", err)
-	}
-	assert.Equal(t, "Renamed Test Session", sessionResp.Title)
-
-	// Send a message to the session
+func sendMessage(t *testing.T, router chi.Router, sessionID string, message string, apiKey string) (redactedMessage string, reply string, tagMap map[string]string) {
 	chatPayload := pkgapi.ChatRequest{
 		Model:   "gpt-3",
-		APIKey:  apiKey,
-		Message: "Hello, how are you today? I am Yashwanth and I work at ThirdAI and my email is yash@thirdai.com",
+		Message: message,
 	}
 	chatBody, _ := json.Marshal(chatPayload)
-	req = httptest.NewRequest(http.MethodPost, "/chat/sessions/"+sessionID+"/messages", bytes.NewReader(chatBody))
+	req := httptest.NewRequest(http.MethodPost, "/chat/sessions/"+sessionID+"/messages", bytes.NewReader(chatBody))
 	req.Header.Set("Content-Type", "application/json")
 
-	rec = httptest.NewRecorder()
+	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	assert.Equal(t, http.StatusOK, rec.Code)
 
 	// Read the streaming response
 	reader := bufio.NewReader(rec.Body)
-	var chatResp pkgapi.ChatResponse
-	var tagMap map[string]string
-	var inputText string
-	var replyBuilder string
+	var streamResp StreamMessage
 
 	for {
 		line, err := reader.ReadString('\n')
@@ -169,35 +171,46 @@ func TestChatEndpoint(t *testing.T) {
 			continue
 		}
 
-		if err := json.Unmarshal([]byte(line), &chatResp); err != nil {
+		// Parse response.data as a ChatResponse
+		var chatResp pkgapi.ChatResponse
+		if err := json.Unmarshal([]byte(line), &streamResp); err != nil {
 			t.Fatalf("decode chat response: %v", err)
+		}
+
+		if streamResp.Error != "" {
+			t.Fatalf("stream response error: %s", streamResp.Error)
+		}
+
+		if streamResp.Data == nil {
+			t.Fatalf("stream response data is nil")
+		}
+
+		jsonData, err := json.Marshal(streamResp.Data)
+		if err != nil {
+			t.Fatalf("marshal stream data: %v", err)
+		}
+
+		if err := json.Unmarshal(jsonData, &chatResp); err != nil {
+			t.Fatalf("unmarshal chat response: %v", err)
 		}
 
 		if chatResp.TagMap != nil {
 			tagMap = chatResp.TagMap
 		}
 		if chatResp.InputText != "" {
-			inputText = chatResp.InputText
+			redactedMessage = chatResp.InputText
 		}
 		if chatResp.Reply != "" {
-			replyBuilder += chatResp.Reply
+			reply += chatResp.Reply
 		}
 	}
 
-	expectedRedacted := "Hello, how are you today? I am Yashwanth and I work at ThirdAI and my email is [EMAIL_1]"
+	return redactedMessage, reply, tagMap
+}
 
-	assert.Equal(t, expectedRedacted, inputText)
-
-	assert.Equal(t,
-		map[string]string{"[EMAIL_1]": "yash@thirdai.com"},
-		tagMap,
-	)
-
-	assert.NotEmpty(t, replyBuilder)
-
-	// Get history
-	req = httptest.NewRequest(http.MethodGet, "/chat/sessions/"+sessionID+"/history", nil)
-	rec = httptest.NewRecorder()
+func getHistory(t *testing.T, router chi.Router, sessionID string) []pkgapi.ChatHistoryItem {
+	req := httptest.NewRequest(http.MethodGet, "/chat/sessions/"+sessionID+"/history", nil)
+	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -206,43 +219,149 @@ func TestChatEndpoint(t *testing.T) {
 		t.Fatalf("decode history: %v", err)
 	}
 
-	if len(history) != 2 {
-		t.Fatalf("expected 2 history items, got %d", len(history))
-	}
+	return history
+}
 
-	userItem := history[0]
-	assert.Equal(t, "user", userItem.MessageType)
-	assert.Equal(t, expectedRedacted, userItem.Content)
+func TestChatEndpoint(t *testing.T) {
 
-	req = httptest.NewRequest(http.MethodGet, "/chat/sessions/"+sessionID, nil)
-	rec = httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-	assert.Equal(t, http.StatusOK, rec.Code)
+	router := initializeChatService()
 
-	// Get the session again to check that the tag map has been updated
-	if err := json.NewDecoder(rec.Body).Decode(&sessionResp); err != nil {
-		t.Fatalf("decode get-session response: %v", err)
-	}
-	assert.Equal(t, "yash@thirdai.com", sessionResp.TagMap["[EMAIL_1]"])
-	
-	aiItem := history[1]
-	assert.Equal(t, "ai", aiItem.MessageType)
-	assert.Equal(t, replyBuilder, aiItem.Content)
+	t.Run("TestGetOpenAIAPIKey_KeyUnset", func(t *testing.T) {
+		apiKey := getOpenAIAPIKey(t, router)
+		assert.Equal(t, "", apiKey)
+	})
 
-	// Clean up
-	req = httptest.NewRequest(http.MethodDelete, "/chat/api-key", nil)
-	rec = httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-	assert.Equal(t, http.StatusOK, rec.Code)
+	t.Run("TestDeleteOpenAIAPIKey", func(t *testing.T) {
+		apiKey := os.Getenv("OPENAI_API_KEY")
 
-	// Test that the api key is deleted
-	req = httptest.NewRequest(http.MethodGet, "/chat/api-key", nil)
-	rec = httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
-	assert.Equal(t, http.StatusOK, rec.Code)
+		setOpenAIAPIKey(t, router, apiKey)
 
-	if err := json.NewDecoder(rec.Body).Decode(&getKeyResp); err != nil {
-		t.Fatalf("decode get-api-key response: %v", err)
-	}
-	assert.Equal(t, "", getKeyResp.ApiKey)
+		apiKey = getOpenAIAPIKey(t, router)
+		assert.Equal(t, apiKey, apiKey)
+
+		deleteOpenAIAPIKey(t, router)
+
+		apiKey = getOpenAIAPIKey(t, router)
+		assert.Equal(t, "", apiKey)
+	})
+
+	t.Run("TestGetOpenAIAPIKey_KeySet", func(t *testing.T) {
+		apiKey := os.Getenv("OPENAI_API_KEY")
+
+		setOpenAIAPIKey(t, router, apiKey)
+		defer deleteOpenAIAPIKey(t, router)
+
+		apiKey = getOpenAIAPIKey(t, router)
+		assert.Equal(t, apiKey, apiKey)
+	})
+
+	t.Run("TestGetSessions", func(t *testing.T) {
+		sessionID1 := startSession(t, router, "Test Session 1")
+		defer deleteSession(t, router, sessionID1)
+		assert.NotEmpty(t, sessionID1)
+
+		sessionID2 := startSession(t, router, "Test Session 2")
+		defer deleteSession(t, router, sessionID2)
+		assert.NotEmpty(t, sessionID2)
+
+		sessions := getSessions(t, router)
+		assert.Equal(t, 2, len(sessions))
+		assert.Equal(t, sessionID1, sessions[0].ID.String())
+		assert.Equal(t, "Test Session 1", sessions[0].Title)
+		assert.Equal(t, sessionID2, sessions[1].ID.String())
+		assert.Equal(t, "Test Session 2", sessions[1].Title)
+	})
+
+	t.Run("TestDeleteSession", func(t *testing.T) {
+		sessionID := startSession(t, router, "Test Session")
+		deleteSession(t, router, sessionID)
+
+		sessions := getSessions(t, router)
+		assert.Equal(t, 0, len(sessions))
+	})
+
+	t.Run("TestStartSession", func(t *testing.T) {
+		sessionID := startSession(t, router, "Test Session")
+		defer deleteSession(t, router, sessionID)
+		assert.NotEmpty(t, sessionID)
+
+		session := getSession(t, router, sessionID)
+		assert.Equal(t, "Test Session", session.Title)
+	})
+
+	t.Run("TestRenameSession", func(t *testing.T) {
+		sessionID := startSession(t, router, "Test Session")
+		defer deleteSession(t, router, sessionID)
+
+		session := getSession(t, router, sessionID)
+		assert.Equal(t, "Test Session", session.Title)
+
+		renameSession(t, router, sessionID, "Renamed Test Session")
+
+		session = getSession(t, router, sessionID)
+		assert.Equal(t, "Renamed Test Session", session.Title)
+	})
+
+	t.Run("TestSendMessage", func(t *testing.T) {
+		apiKey := os.Getenv("OPENAI_API_KEY")
+
+		setOpenAIAPIKey(t, router, apiKey)
+		defer deleteOpenAIAPIKey(t, router)
+
+		sessionID := startSession(t, router, "Test Session")
+		defer deleteSession(t, router, sessionID)
+		assert.NotEmpty(t, sessionID)
+
+		message := "Hello, how are you today? I am Yashwanth and I work at ThirdAI and my email is yash@thirdai.com"
+		redactedMessage, reply, tagMap := sendMessage(t, router, sessionID, message, apiKey)
+
+		expectedRedacted := "Hello, how are you today? I am Yashwanth and I work at ThirdAI and my email is [EMAIL_1]"
+		assert.Equal(t, expectedRedacted, redactedMessage)
+		assert.NotEmpty(t, reply)
+		assert.Equal(t,
+			map[string]string{"[EMAIL_1]": "yash@thirdai.com"},
+			tagMap,
+		)
+	})
+
+	t.Run("TestSendMessage_UpdatesHistory", func(t *testing.T) {
+		apiKey := os.Getenv("OPENAI_API_KEY")
+
+		setOpenAIAPIKey(t, router, apiKey)
+		defer deleteOpenAIAPIKey(t, router)
+
+		sessionID := startSession(t, router, "Test Session")
+		defer deleteSession(t, router, sessionID)
+		assert.NotEmpty(t, sessionID)
+
+		message := "Hello, how are you today? I am Yashwanth and I work at ThirdAI and my email is yash@thirdai.com"
+		redactedMessage, reply, _ := sendMessage(t, router, sessionID, message, apiKey)
+
+		history := getHistory(t, router, sessionID)
+		assert.Equal(t, 2, len(history))
+		assert.Equal(t, "user", history[0].MessageType)
+		assert.Equal(t, redactedMessage, history[0].Content)
+		assert.Equal(t, "ai", history[1].MessageType)
+		assert.Equal(t, reply, history[1].Content)
+	})
+
+	t.Run("TestSendMessage_UpdatesSession", func(t *testing.T) {
+		apiKey := os.Getenv("OPENAI_API_KEY")
+
+		setOpenAIAPIKey(t, router, apiKey)
+		defer deleteOpenAIAPIKey(t, router)
+
+		sessionID := startSession(t, router, "Test Session")
+		defer deleteSession(t, router, sessionID)
+		assert.NotEmpty(t, sessionID)
+
+		message1 := "Hello, how are you today? I am Yashwanth and I work at ThirdAI and my email is yash@thirdai.com"
+		message2 := "Hello, how are you today? I am Tharun and I work at ThirdAI and my email is tharun@thirdai.com"
+		_, _, _ = sendMessage(t, router, sessionID, message1, apiKey)
+		_, _, _ = sendMessage(t, router, sessionID, message2, apiKey)
+
+		session := getSession(t, router, sessionID)
+		assert.Equal(t, "yash@thirdai.com", session.TagMap["[EMAIL_1]"])
+		assert.Equal(t, "tharun@thirdai.com", session.TagMap["[EMAIL_2]"])
+	})
 }

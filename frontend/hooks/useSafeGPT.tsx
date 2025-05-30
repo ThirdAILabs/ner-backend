@@ -93,6 +93,7 @@ export default function useSafeGPT(chatId: string) {
   const [previews, setPreviews] = useState<ChatPreview[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [invalidApiKey, setInvalidApiKey] = useState<boolean>(false);
+  const [model, setModel] = useState<'gpt-4o-mini' | 'gpt-4o'>('gpt-4o-mini');
 
   useEffect(() => {
     getChatPreviews().then(setPreviews);
@@ -107,8 +108,8 @@ export default function useSafeGPT(chatId: string) {
       const sessions = await nerService.getChatSessions();
       return sessions
         .map((session) => ({
-          id: session.id,
-          title: session.title,
+          id: session.ID,
+          title: session.Title,
         }))
         .reverse(); // reverse to show most recent chats first TODO this should be handled by backend and based on last modified not last created.
     } catch (error) {
@@ -131,8 +132,8 @@ export default function useSafeGPT(chatId: string) {
       return [];
     }
 
-    setTitle(session.title || `Chat ${chatId}`);
-    const tagMap = session.tag_map;
+    setTitle(session.Title || `Chat ${chatId}`);
+    const tagMap = session.TagMap;
 
     let history;
     try {
@@ -145,9 +146,9 @@ export default function useSafeGPT(chatId: string) {
     const messages: Message[] = [];
     for (const message of history) {
       messages.push({
-        content: unredactContent(message.content, tagMap),
-        redactedContent: toRedactedContent(message.content, tagMap),
-        role: message.message_type === 'user' ? 'user' : 'llm',
+        content: unredactContent(message.Content, tagMap),
+        redactedContent: toRedactedContent(message.Content, tagMap),
+        role: message.MessageType === 'user' ? 'user' : 'llm',
       });
     }
 
@@ -162,13 +163,13 @@ export default function useSafeGPT(chatId: string) {
     setPreviews((prevPreviews) => prevPreviews.filter((preview) => preview.id !== selectedId));
   };
 
-  const sendMessage = async (message: string, apiKey: string) => {
+  const sendMessage = async (message: string) => {
     setInvalidApiKey(false);
 
     // If the chat is new, create a new chat session.
     let sessionId = chatId;
     if (chatId === NEW_CHAT_ID) {
-      sessionId = await nerService.startChatSession('gpt-4', title);
+      sessionId = await nerService.startChatSession(model, title);
     }
 
     // Save the current state of messages to restore if the request fails.
@@ -188,16 +189,16 @@ export default function useSafeGPT(chatId: string) {
     let replyBuilder: string = '';
 
     const handleChunk = (chunk: ChatResponse) => {
-      if (chunk.tag_map) {
-        tagMap = { ...tagMap, ...chunk.tag_map };
+      if (chunk.TagMap) {
+        tagMap = { ...tagMap, ...chunk.TagMap };
       }
 
-      if (chunk.input_text) {
+      if (chunk.InputText) {
         setMessages([
           ...prevMessages,
           {
-            content: unredactContent(chunk.input_text, tagMap),
-            redactedContent: toRedactedContent(chunk.input_text, tagMap),
+            content: unredactContent(chunk.InputText, tagMap),
+            redactedContent: toRedactedContent(chunk.InputText, tagMap),
             role: 'user',
           },
           // Add a placeholder message for the LLM response so we don't have to
@@ -217,8 +218,8 @@ export default function useSafeGPT(chatId: string) {
 
       // We assume that the input text is always the first message.
       // Thus, the last message must be the LLM message.
-      if (chunk.reply) {
-        replyBuilder += chunk.reply;
+      if (chunk.Reply) {
+        replyBuilder += chunk.Reply;
         setMessages((prev) => {
           const newMessages = [...prev];
           newMessages[newMessages.length - 1].content = unredactContent(replyBuilder, tagMap);
@@ -232,7 +233,7 @@ export default function useSafeGPT(chatId: string) {
     };
 
     try {
-      await nerService.sendChatMessageStream(sessionId, 'gpt-4', apiKey, message, handleChunk);
+      await nerService.sendChatMessageStream(sessionId, model, message, handleChunk);
     } catch (error) {
       if ((error as Error).message.toLowerCase().includes('api key')) {
         setInvalidApiKey(true);
@@ -299,5 +300,7 @@ export default function useSafeGPT(chatId: string) {
     sendMessage,
     invalidApiKey,
     deleteChat,
+    model,
+    setModel,
   };
 }

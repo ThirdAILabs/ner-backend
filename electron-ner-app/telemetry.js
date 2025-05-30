@@ -27,8 +27,23 @@ export async function initTelemetry() {
       pgClient = null;
     });
 
+    // Handle connection termination
     pgClient.on('end', () => {
       console.log('Telemetry database connection ended');
+      isConnected = false;
+      pgClient = null;
+    });
+
+    // Handle unexpected connection termination
+    pgClient.connection?.socket?.on('error', (err) => {
+      console.log('Telemetry socket error (silent):', err.message);
+      isConnected = false;
+      pgClient = null;
+    });
+
+    // Handle connection close
+    pgClient.connection?.socket?.on('close', () => {
+      console.log('Telemetry socket closed unexpectedly');
       isConnected = false;
       pgClient = null;
     });

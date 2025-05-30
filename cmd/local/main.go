@@ -177,6 +177,10 @@ func main() {
 		cmd.InitializePresidioModel(db)
 	}
 
+	if err := cmd.RemoveExcludedTagsFromAllModels(db); err != nil {
+		log.Fatalf("Failed to remove excluded tags from all models: %v", err)
+	}
+
 	queue := createQueue(db)
 
 	licensing := cmd.CreateLicenseVerifier(db, cfg.License)

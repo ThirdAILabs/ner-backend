@@ -1,49 +1,52 @@
 package api
 
-import "github.com/google/uuid"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type StartSessionRequest struct {
-	Model string `json:"model"`
-	Title string `json:"title"`
+	Model string
+	Title string
 }
 
 type ChatSessionMetadata struct {
-	ID      uuid.UUID 	        `json:"id"`
-	Title   string 		        `json:"title"`
-	TagMap  map[string]string   `json:"tag_map"`
+	ID     uuid.UUID
+	Title  string
+	TagMap map[string]string
 }
 
 type GetSessionsResponse struct {
-	Sessions []ChatSessionMetadata `json:"sessions"`
+	Sessions []ChatSessionMetadata
 }
 
 type StartSessionResponse struct {
-	SessionID string `json:"session_id"`
+	SessionID string
 }
 
 type RenameSessionRequest struct {
-	Title string `json:"title"`
+	Title string
 }
 
 type ChatRequest struct {
-	Model   string `json:"model"`
-	APIKey  string `json:"api_key"`
-	Message string `json:"message"`
+	Model   string
+	Message string
 }
 
 type ChatResponse struct {
-	InputText string            `json:"input_text"`
-	Reply     string            `json:"reply"`
-	TagMap    map[string]string `json:"tag_map"`
+	InputText string
+	Reply     string
+	TagMap    map[string]string
 }
 
 type ChatHistoryItem struct {
-	MessageType string `json:"message_type"` // "user" or "ai"
-	Content     string `json:"content"`
-	Timestamp   string `json:"timestamp"`
-	Metadata    any    `json:"metadata,omitempty"` // Optional metadata field
+	MessageType string
+	Content     string
+	Timestamp   time.Time
+	Metadata    any
 }
 
 type ApiKey struct {
-	ApiKey string `json:"api_key"`
+	ApiKey string
 }

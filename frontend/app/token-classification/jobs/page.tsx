@@ -225,6 +225,17 @@ function JobDetail() {
   const [reportData, setReportData] = useState<Report | null>(null);
   const [customTags, setCustomTags] = useState<CustomTag[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [dataProcessed, setDataProcessed] = useState<number | null>(null);
+
+  function setDataProcessedFromReport(report: Report | null) {
+    if (report) {
+      setDataProcessed(
+        (report.InferenceTaskStatuses?.COMPLETED?.CompletedSize || 0) +
+          (report.InferenceTaskStatuses?.FAILED?.CompletedSize || 0) +
+          (report.InferenceTaskStatuses?.RUNNING?.CompletedSize || 0)
+      );
+    }
+  }
 
   const fetchTags = async () => {
     setIsLoading(true);
@@ -232,6 +243,8 @@ function JobDetail() {
       const report = await nerService.getReport(reportId);
 
       setReportData(report as Report);
+
+      setDataProcessedFromReport(reportData);
 
       setTimeTaken((report.TotalInferenceTimeSeconds || 0) + (report.ShardDataTimeSeconds || 0));
 
@@ -296,7 +309,7 @@ function JobDetail() {
   }, [reportId, reportData?.SucceededFileCount]);
 
   return (
-    <div className="container px-4 py-8 w-3/4 mx-auto">
+    <div className="container px-4 py-8 mx-auto" style={{ width: '90%' }}>
       {/* Header with Back Button and Title */}
       <div className="flex items-center justify-between mb-6">
         <Button variant="outline" size="sm" asChild>
@@ -455,6 +468,7 @@ function JobDetail() {
             succeededFileCount={reportData?.SucceededFileCount || 0}
             failedFileCount={reportData?.FailedFileCount || 0}
             totalFileCount={reportData?.FileCount || 1}
+            dataProcessed={dataProcessed || 0}
           />
         </TabsContent>
 

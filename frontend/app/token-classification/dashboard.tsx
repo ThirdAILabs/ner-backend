@@ -24,7 +24,7 @@ const Dashboard = () => {
     recordEvent({
       UserAction: 'view',
       UIComponent: 'Usage Stats Dashboard Page',
-      UI: 'Token Classification Page'
+      UI: 'Token Classification Page',
     });
   }, []);
   const { healthStatus } = useHealth();
@@ -32,6 +32,15 @@ const Dashboard = () => {
   const deploymentId = searchParams.get('deploymentId');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Don't make API calls if health check hasn't passed
+  if (!healthStatus) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   // Models for the dropdown
   const [days, setDays] = useState<number>(7);
@@ -42,7 +51,7 @@ const Dashboard = () => {
       UserAction: 'select',
       UIComponent: 'Days Filter',
       UI: 'Usage Stats Dashboard Page',
-      data: { days: newDays }
+      data: { days: newDays },
     });
   };
   const [models, setModels] = useState<Model[]>([]);
@@ -54,7 +63,7 @@ const Dashboard = () => {
       UserAction: 'select',
       UIComponent: 'Model Filter',
       UI: 'Usage Stats Dashboard Page',
-      data: { model }
+      data: { model },
     });
   };
 
@@ -107,7 +116,7 @@ const Dashboard = () => {
             sx={{
               fontWeight: 600,
               fontSize: '1.5rem',
-              color: '#111827',
+              color: '#4a5568',
             }}
           >
             Metrics Dashboard
@@ -201,10 +210,8 @@ const Dashboard = () => {
                 value={selectedModel}
                 displayEmpty
                 onChange={handleModelChange}
-                renderValue={val =>
-                  val === ''
-                    ? 'All Models'
-                    : models.find(m => m.Id === val)?.Name || val
+                renderValue={(val) =>
+                  val === '' ? 'All Models' : models.find((m) => m.Id === val)?.Name || val
                 }
                 sx={{
                   bgcolor: '#f8fafc',
@@ -218,7 +225,7 @@ const Dashboard = () => {
                 </MenuItem>
                 {models.map((m) => (
                   <MenuItem key={m.Id} value={m.Id}>
-                    {m.Name}
+                    {m.Name.charAt(0).toUpperCase() + m.Name.slice(1)}
                   </MenuItem>
                 ))}
               </Select>

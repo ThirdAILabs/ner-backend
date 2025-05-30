@@ -2,7 +2,9 @@ package database
 
 import (
 	"log"
-	"ner-backend/internal/database/versions"
+	"ner-backend/internal/database/versions/migration_0"
+	"ner-backend/internal/database/versions/migration_1"
+	"ner-backend/internal/database/versions/migration_2"
 
 	"github.com/go-gormigrate/gormigrate/v2"
 	"gorm.io/gorm"
@@ -12,7 +14,17 @@ func GetMigrator(db *gorm.DB) *gormigrate.Gormigrate {
 	migrator := gormigrate.New(db, gormigrate.DefaultOptions, []*gormigrate.Migration{
 		{
 			ID:      "0",
-			Migrate: versions.Migration0,
+			Migrate: migration_0.Migration,
+		},
+		{
+			ID:       "1",
+			Migrate:  migration_1.Migration,
+			Rollback: migration_1.Rollback,
+		},
+		{
+			ID:       "2",
+			Migrate:  migration_2.Migration,
+			Rollback: migration_2.Rollback,
 		},
 		{
 			ID:       "1",

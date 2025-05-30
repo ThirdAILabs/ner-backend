@@ -3,6 +3,53 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { nerService } from '@/lib/backend';
 
+import Image from 'next/image';
+import { keyframes } from '@emotion/react';
+import styled from '@emotion/styled';
+import { Typography } from '@mui/material';
+
+const pulse = keyframes`
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+`;
+
+const LoadingContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  height: 100vh;
+  padding: 25vh 0;
+`;
+
+const PulsingLogo = styled.div`
+  animation: ${pulse} 2s ease-in-out infinite;
+  margin: auto 0;
+`;
+
+const Loading = () => {
+  return (
+    <LoadingContainer>
+      <PulsingLogo>
+        <Image src="/thirdai-logo.png" alt="Logo" width={100} height={100} priority />
+      </PulsingLogo>
+      <Typography className="text-gray-500" variant="h6" sx={{ fontWeight: 600 }}>
+        Warming up...
+      </Typography>
+    </LoadingContainer>
+  );
+};
+
 interface HealthContextType {
   healthStatus: boolean;
 }
@@ -49,7 +96,11 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  return <HealthContext.Provider value={{ healthStatus }}>{children}</HealthContext.Provider>;
+  return (
+    <HealthContext.Provider value={{ healthStatus }}>
+      {healthStatus ? children : <Loading />}
+    </HealthContext.Provider>
+  );
 }
 
 export function useHealth() {

@@ -45,12 +45,7 @@ function DeleteDialog({ onCancel, onConfirm }: DeleteDialogProps) {
             type="button"
             variant="default"
             onClick={onConfirm}
-            style={{
-              backgroundColor: '#dc2626',
-              color: 'white',
-            }}
-            onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#b91c1c')}
-            onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#dc2626')}
+            className="bg-red-600 text-white hover:bg-red-700 transition-colors"
           >
             Delete
           </Button>
@@ -85,8 +80,17 @@ function SafeGPTContent() {
   const selectedId = searchParams.get('id');
 
   const { apiKey, saveApiKey } = useApiKeyStore();
-  const { title, updateTitle, previews, messages, sendMessage, invalidApiKey, deleteChat } =
-    useSafeGPT(selectedId || 'new');
+  const {
+    title,
+    updateTitle,
+    previews,
+    messages,
+    sendMessage,
+    invalidApiKey,
+    deleteChat,
+    model,
+    setModel,
+  } = useSafeGPT(selectedId || 'new');
 
   const [showRedaction, setShowRedaction] = useState<boolean>(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
@@ -106,7 +110,7 @@ function SafeGPTContent() {
   };
 
   const handleSendMessage = async (message: string) => {
-    const newSessionId = await sendMessage(message, apiKey);
+    const newSessionId = await sendMessage(message);
     if (newSessionId) {
       router.push(`/safegpt?id=${newSessionId}`);
     }
@@ -215,6 +219,8 @@ function SafeGPTContent() {
             apiKey={apiKey}
             saveApiKey={saveApiKey}
             showRedaction={showRedaction}
+            model={model}
+            onSelectModel={setModel}
           />
         </div>
       </div>

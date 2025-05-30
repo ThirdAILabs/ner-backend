@@ -51,11 +51,11 @@ func ParseRequestQueryParams[T any](r *http.Request) (T, error) {
 	}
 
 	err := schema.NewDecoder().Decode(&data, r.Form)
-	 if err != nil {
+	if err != nil {
 		slog.Error("error decoding query params", "error", err)
 		return data, CodedErrorf(http.StatusBadRequest, "unable to parse request query params")
 	}
-   
+
 	return data, nil
 }
 
@@ -88,14 +88,28 @@ func RestHandler(handler func(r *http.Request) (any, error)) http.HandlerFunc {
 type StreamResponse func(yield func(any, error) bool)
 
 type StreamMessage struct {
-	Data    interface{} `json:"data,omitempty"`
-	Error   string      `json:"error,omitempty"`
-	Code    int         `json:"code,omitempty"`
+	Data  interface{}
+	Error string
+	Code  int
 }
 
-func RestStreamHandler(handler func(r *http.Request) StreamResponse) http.HandlerFunc {
+func RestStreamHandler(handler func(r *http.Request) (StreamResponse, error)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		stream := handler(r)
+		stream, err := handler(r)
+		if err != nil {
+			var cerr *codedError
+			if errors.As(err, &cerr) {
+				http.Error(w, err.Error(), cerr.code)
+				if cerr.code == http.StatusInternalServerError {
+					slog.Error("internal server error received in endpoint", "error", err)
+				}
+			} else {
+				slog.Error("recieved non coded error from endpoint", "error", err)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+
+			}
+			return
+		}
 
 		flusher, ok := w.(http.Flusher)
 		if !ok {
@@ -107,7 +121,7 @@ func RestStreamHandler(handler func(r *http.Request) StreamResponse) http.Handle
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 
-		stream(func(data any, err error) bool {
+		for data, err := range stream {
 			var msg StreamMessage
 			if err != nil {
 				var cerr *codedError
@@ -135,13 +149,11 @@ func RestStreamHandler(handler func(r *http.Request) StreamResponse) http.Handle
 
 			if writeErr := json.NewEncoder(w).Encode(msg); writeErr != nil {
 				slog.Error("error writing json response", "error", writeErr)
-				return false
+				return
 			}
-			
-			flusher.Flush()
 
-			return true
-		})
+			flusher.Flush()
+		}
 	}
 }
 
