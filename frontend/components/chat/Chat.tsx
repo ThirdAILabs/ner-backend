@@ -70,6 +70,8 @@ interface ChatInterfaceProps {
   apiKey: string;
   saveApiKey: (key: string) => void;
   showRedaction: boolean;
+  model: 'gpt-4o-mini' | 'gpt-4o';
+  onSelectModel: (model: 'gpt-4o-mini' | 'gpt-4o') => void;
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -80,6 +82,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   apiKey,
   saveApiKey,
   showRedaction,
+  model,
+  onSelectModel,
 }) => {
   // Options menu-related logic
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
@@ -354,6 +358,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 <Options
                   handleBasicMode={closeOptionsIfNotEditing}
                   handleAdvancedMode={() => {}}
+                  model={model}
+                  onSelectModel={onSelectModel}
                   apiKey={apiKey}
                   invalidApiKey={invalidApiKey}
                   onEditApiKey={handleEditApiKey}

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -18,17 +19,48 @@ import (
 	"ner-backend/pkg/api"
 )
 
+type SessionLock struct {
+	mu sync.Mutex
+	sessions map[uuid.UUID]bool
+}
+
+func NewSessionLock() *SessionLock {
+	return &SessionLock{
+		sessions: make(map[uuid.UUID]bool),
+	}
+}
+
+func (l *SessionLock) Lock(sessionID uuid.UUID) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	if _, ok := l.sessions[sessionID]; ok {
+		return fmt.Errorf("session %s is currently in use", sessionID)
+	}
+	l.sessions[sessionID] = true
+	return nil
+}
+
+func (l *SessionLock) Unlock(sessionID uuid.UUID) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	delete(l.sessions, sessionID)
+}
+
 type ChatService struct {
-	db      *gorm.DB
+	db      *chat.ChatDB
 	manager *chat.ChatSessionManager
 	model   core.Model
+	lock    *SessionLock
 }
 
 func NewChatService(db *gorm.DB, model core.Model) *ChatService {
 	return &ChatService{
-		db:      db,
+		db:      chat.NewChatDB(db),
 		manager: chat.NewChatSessionManager(db),
 		model:   model,
+		lock:    NewSessionLock(),
 	}
 }
 
@@ -48,8 +80,7 @@ func (s *ChatService) AddRoutes(r chi.Router) {
 }
 
 func (s *ChatService) GetSessions(r *http.Request) (any, error) {
-	var sessions []database.ChatSession
-	err := s.db.Find(&sessions).Error
+	sessions, err := s.db.GetSessions()
 	if err != nil {
 		return nil, err
 	}
@@ -82,11 +113,11 @@ func (s *ChatService) StartSession(r *http.Request) (any, error) {
 	}
 	
 	sessionID := uuid.New()
-	err = s.db.Create(&database.ChatSession{
+	err = s.db.CreateSession(&database.ChatSession{
 		ID:          sessionID,
 		Title:       req.Title,
 		TagMetadata: tagMetadataJSON,
-	}).Error;
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -100,8 +131,13 @@ func (s *ChatService) GetSession(r *http.Request) (any, error) {
 		return nil, err
 	}
 
-	var session database.ChatSession
-	if err := s.db.First(&session, "id = ?", sessionID).Error; err != nil {
+	if err := s.lock.Lock(sessionID); err != nil {
+		return nil, err
+	}
+	defer s.lock.Unlock(sessionID)
+
+	session, err := s.db.GetSession(sessionID)
+	if err != nil {
 		slog.Error("Error getting session", "error", err)
 		return nil, fmt.Errorf("error getting session: %v", err)
 	}
@@ -124,12 +160,18 @@ func (s *ChatService) RenameSession(r *http.Request) (any, error) {
 	if err != nil {
 		return nil, err
 	}
+	
+	if err := s.lock.Lock(sessionID); err != nil {
+		return nil, err
+	}
+	defer s.lock.Unlock(sessionID)
+
 	req, err := ParseRequest[api.RenameSessionRequest](r)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := s.db.Model(&database.ChatSession{ID: sessionID}).Update("title", req.Title).Error; err != nil {
+	if err := s.db.UpdateSessionTitle(sessionID, req.Title); err != nil {
 		return nil, err
 	}
 
@@ -141,6 +183,11 @@ func (s *ChatService) SendMessageStream(r *http.Request) (StreamResponse, error)
 	if err != nil {
 		return nil, err
 	}
+
+	if err := s.lock.Lock(sessionID); err != nil {
+		return nil, err
+	}
+	defer s.lock.Unlock(sessionID)
 
 	req, err := ParseRequest[api.ChatRequest](r)
 	if err != nil {
@@ -161,9 +208,14 @@ func (s *ChatService) SendMessageStream(r *http.Request) (StreamResponse, error)
 	if err != nil {
 		return nil, err
 	}
+	
+	chatIterator, err := session.ChatStream(req.Message)
+	if err != nil {
+		return nil, err
+	}
 
-	stream := func(yield func(any, error) bool) {
-		for item, err := range session.ChatStream(req.Message) {
+	response := func(yield func(any, error) bool) {
+		for item, err := range chatIterator {
 			if err != nil {
 				yield(nil, err)
 				return
@@ -174,7 +226,7 @@ func (s *ChatService) SendMessageStream(r *http.Request) (StreamResponse, error)
 		}
 	}
 
-	return stream, nil
+	return response, nil
 }
 
 func (s *ChatService) GetHistory(r *http.Request) (any, error) {
@@ -183,24 +235,24 @@ func (s *ChatService) GetHistory(r *http.Request) (any, error) {
 		return nil, err
 	}
 
-	var history []database.ChatHistory
-	err = s.db.
-		Where("session_id = ?", sessionID).
-		Order("timestamp ASC").
-		Find(&history).
-		Error
+	if err := s.lock.Lock(sessionID); err != nil {
+		return nil, err
+	}
+	defer s.lock.Unlock(sessionID)
+
+	history, err := s.db.GetChatHistory(sessionID)
 	if err != nil {
 		return nil, err
 	}
 
-	var resp []api.ChatHistoryItem
-	for _, msg := range history {
-		resp = append(resp, api.ChatHistoryItem{
-			MessageType: msg.MessageType,
-			Content:     msg.Content,
-			Timestamp:   msg.Timestamp,
-			Metadata:    msg.Metadata,
-		})
+	resp := make([]api.ChatHistoryItem, len(history))
+	for i, item := range history {
+		resp[i] = api.ChatHistoryItem{
+			MessageType: item.MessageType,
+			Content:     item.Content,
+			Timestamp:   item.Timestamp,
+			Metadata:    item.Metadata,
+		}
 	}
 
 	return resp, nil
@@ -211,14 +263,13 @@ func (s *ChatService) DeleteSession(r *http.Request) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	
-	err = s.db.Delete(&database.ChatHistory{}, "session_id = ?", sessionID).Error
-	if err != nil {
+
+	if err := s.lock.Lock(sessionID); err != nil {
 		return nil, err
 	}
+	defer s.lock.Unlock(sessionID)
 
-	err = s.db.Delete(&database.ChatSession{}, "id = ?", sessionID).Error
-	if err != nil {
+	if err := s.db.DeleteSession(sessionID); err != nil {
 		return nil, err
 	}
 
