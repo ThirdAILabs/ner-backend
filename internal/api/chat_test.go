@@ -407,7 +407,7 @@ func TestChatEndpoint(t *testing.T) {
 			// This helps to ensure that the requests are concurrent.
 			rec := sendMessage(t, router, sessionID, uniquePrompt())
 			
-			// Wait for the stream to finish
+			// Wait for the stream to finish so we can delete the session safely afterwards.
 			if rec.Code == http.StatusOK {
 				processStreamResponse(t, rec)
 			}
@@ -456,7 +456,7 @@ func TestChatEndpoint(t *testing.T) {
 			// This helps to ensure that the requests are concurrent.
 			rec := sendMessage(t, router, sessionID, uniquePrompt())
 			
-			// Wait for the stream to finish
+			// Wait for the stream to finish so we can delete the session safely afterwards.
 			if rec.Code == http.StatusOK {
 				processStreamResponse(t, rec)
 			}
