@@ -80,6 +80,12 @@ func (s *BackendService) AddRoutes(r chi.Router) {
 		r.Get("/group", RestHandler(s.ValidateGroupDefinition))
 		r.Get("/s3", RestHandler(s.ValidateS3Access))
 	})
+
+	// Upload file path mapping endpoints
+	r.Route("/upload-paths", func(r chi.Router) {
+		r.Post("/", RestHandler(s.StoreUploadPaths))
+		r.Get("/", RestHandler(s.GetUploadPaths))
+	})
 }
 
 func (s *BackendService) ListModels(r *http.Request) (any, error) {
@@ -979,4 +985,44 @@ func (s *BackendService) ValidateS3Access(r *http.Request) (any, error) {
 		return nil, err
 	}
 	return nil, validateS3Access(req.S3Endpoint, req.S3Region, req.SourceS3Bucket, req.SourceS3Prefix)
+}
+
+func (s *BackendService) StoreUploadPaths(r *http.Request) (any, error) {
+	mappings, err := ParseRequest[[]api.UploadPathMapping](r)
+	if err != nil {
+		return nil, CodedErrorf(http.StatusBadRequest, "invalid request body")
+	}
+	var dbMappings []database.UploadFilePath
+	for _, m := range mappings {
+		dbMappings = append(dbMappings, database.UploadFilePath{
+			FileIdentifier: m.FileIdentifier,
+			FullPath: m.FullPath,
+		})
+	}
+	if err := s.db.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "file_identifier"}},
+		DoUpdates: clause.AssignmentColumns([]string{"full_path"}),
+	}).Create(&dbMappings).Error; err != nil {
+		return nil, CodedErrorf(http.StatusInternalServerError, "failed to store upload path mappings")
+	}
+	return nil, nil
+}
+
+func (s *BackendService) GetUploadPaths(r *http.Request) (any, error) {
+	params, err := ParseRequest[api.UploadPathMappingRequest](r)
+	if err != nil {
+		return nil, CodedErrorf(http.StatusBadRequest, "invalid request body")
+	}
+	var results []database.UploadFilePath
+	if err := s.db.Where("file_identifier IN ?", params.FileIdentifiers).Find(&results).Error; err != nil {
+		return nil, CodedErrorf(http.StatusInternalServerError, "failed to fetch upload path mappings")
+	}
+	var resp []api.UploadPathMapping
+	for _, r := range results {
+		resp = append(resp, api.UploadPathMapping{
+			FileIdentifier: r.FileIdentifier,
+			FullPath: r.FullPath,
+		})
+	}
+	return resp, nil
 }
