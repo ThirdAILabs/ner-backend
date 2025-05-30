@@ -794,14 +794,6 @@ export default function NewJobPage() {
           <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
             <h2 className="text-2xl font-medium mb-4">Source</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              <button onClick={() => {
-                // @ts-ignore
-                window.electronAPI.openFile('/Users/benitogeordie/Desktop/2024-archives/00-contract.pdf').then(console.log);
-              }}>Open File</button>
-              <button onClick={() => {
-                // @ts-ignore
-                window.electronAPI.openFileChooser(SUPPORTED_TYPES.map(t => t.replace('.', ''))).then(console.log);
-              }}>Open File Chooser</button>
               <FileSources selectSource={setSelectedSource} handleLocalFiles={handleLocalFiles} />
             </div>
 
