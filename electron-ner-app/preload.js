@@ -18,4 +18,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getUserId: () => ipcRenderer.invoke('get-user-id'),
   getPort: () => ipcRenderer.invoke('get-port'),
   openFileChooser: (supportedTypes) => ipcRenderer.invoke('open-file-chooser', supportedTypes),
+  openFile: (filePath) => ipcRenderer.invoke('open-file', filePath),
 }); 
