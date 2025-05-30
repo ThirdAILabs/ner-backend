@@ -151,7 +151,7 @@ const FileSources: React.FC<FileSourcesProps> = ({ selectSource, handleLocalFile
       <>
         <SourceOption
           onClick={() => {
-            getFilesFromElectron().then(handleLocalFiles);
+            getFilesFromElectron(SUPPORTED_TYPES).then(handleLocalFiles);
             selectSource('files');
           }}
           icon={folderIcon}
