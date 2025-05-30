@@ -19,10 +19,11 @@ datas += collect_data_files('transformers', include_py_files=True)
 transformers_models_path = os.path.join(os.path.dirname(transformers.__file__), 'models')
 datas.append((transformers_models_path, 'transformers/models'))
 
-
-# Get torch library path
 torch_lib_path = os.path.dirname(torch.__file__)
 torch_dylib_path = os.path.join(torch_lib_path, 'lib')
+
+# Standard Homebrew path for libomp on Intel Macs
+homebrew_intel_libomp_path = '/usr/local/opt/libomp/lib/libomp.dylib'
 
 # Add torch dynamic libraries with full paths
 torch_binaries = []
@@ -30,25 +31,57 @@ torch_dylib_datas = []
 dylib_names = [
     'libtorch_python.dylib',
     'libtorch.dylib',
-    'libomp.dylib',
+    # 'libomp.dylib', # We will handle this specially
     'libtorch_cpu.dylib',
     'libc10.dylib',
     'libshm.dylib'
 ]
 
-for lib in dylib_names:
-    lib_path = os.path.join(torch_dylib_path, lib)
-    if os.path.exists(lib_path):
-        torch_binaries.append((lib_path, '.'))
-        torch_dylib_datas.append((lib_path, '.'))
+for lib_name in dylib_names:
+    lib_path_in_torch_lib = os.path.join(torch_dylib_path, lib_name)
+    lib_path_in_torch_main = os.path.join(torch_lib_path, lib_name)
+
+    if os.path.exists(lib_path_in_torch_lib):
+        torch_binaries.append((lib_path_in_torch_lib, '.'))
+        torch_dylib_datas.append((lib_path_in_torch_lib, '.'))
+        print(f"Found {lib_name} in {torch_dylib_path}")
+    elif os.path.exists(lib_path_in_torch_main):
+        torch_binaries.append((lib_path_in_torch_main, '.'))
+        torch_dylib_datas.append((lib_path_in_torch_main, '.'))
+        print(f"Found {lib_name} in {torch_lib_path}")
     else:
-        # Try looking in the main torch directory
-        lib_path = os.path.join(torch_lib_path, lib)
-        if os.path.exists(lib_path):
-            torch_binaries.append((lib_path, '.'))
-            torch_dylib_datas.append((lib_path, '.'))
+        print(f"Warning: Could not find {lib_name} in PyTorch directories")
+
+# --- Special handling for libomp.dylib ---
+libomp_name = 'libomp.dylib'
+found_libomp = False
+
+# 1. Check in torch_dylib_path (torch/lib)
+libomp_path_in_torch_lib = os.path.join(torch_dylib_path, libomp_name)
+if os.path.exists(libomp_path_in_torch_lib):
+    torch_binaries.append((libomp_path_in_torch_lib, '.'))
+    torch_dylib_datas.append((libomp_path_in_torch_lib, '.'))
+    print(f"Found {libomp_name} in {torch_dylib_path}")
+    found_libomp = True
+else:
+    # 2. Check in torch_lib_path (main torch directory)
+    libomp_path_in_torch_main = os.path.join(torch_lib_path, libomp_name)
+    if os.path.exists(libomp_path_in_torch_main):
+        torch_binaries.append((libomp_path_in_torch_main, '.'))
+        torch_dylib_datas.append((libomp_path_in_torch_main, '.'))
+        print(f"Found {libomp_name} in {torch_lib_path}")
+        found_libomp = True
+    else:
+        # 3. Check standard Homebrew path for Intel Macs
+        if os.path.exists(homebrew_intel_libomp_path):
+            torch_binaries.append((homebrew_intel_libomp_path, '.'))
+            torch_dylib_datas.append((homebrew_intel_libomp_path, '.'))
+            print(f"Found {libomp_name} at Homebrew path: {homebrew_intel_libomp_path}")
+            found_libomp = True
         else:
-            print(f"Warning: Could not find {lib}")
+            print(f"Warning: Could not find {libomp_name} in PyTorch directories or at {homebrew_intel_libomp_path}")
+            print(f"Please verify the location of {libomp_name} and update the script if necessary.")
+
 
 # Add dylibs to datas
 datas.extend(torch_dylib_datas)
