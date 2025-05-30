@@ -230,7 +230,9 @@ export const nerService = {
       params: {
         offset: params?.offset || 0,
         limit: params?.limit || 100,
+        tags: params?.tags,
       },
+      paramsSerializer: (params) => qs.stringify(params, { arrayFormat: 'repeat' }),
     });
     return response.data;
   },
