@@ -394,8 +394,8 @@ func TestChatEndpoint(t *testing.T) {
 		routine := func() {
 			defer wg.Done()
 			
-			// 40 words is long enough to ensure that the requests will be concurrent
-			message := "Hello, introduce yourself in 40 words"
+			// 50 words is long enough to ensure that the requests will be concurrent
+			message := "Hello, introduce yourself in 50 words"
 			rec := sendMessage(t, router, sessionID, message)
 			
 			slog.Info("Code: ", "code", rec.Code)
@@ -445,8 +445,8 @@ func TestChatEndpoint(t *testing.T) {
 		routine := func(sessionID string) {
 			defer wg.Done()
 			
-			// 40 words is long enough to ensure that the requests will be concurrent
-			message := "Hello, introduce yourself in 40 words"
+			// 50 words is long enough to ensure that the requests will be concurrent
+			message := "Hello, introduce yourself in 50 words"
 			rec := sendMessage(t, router, sessionID, message)
 			
 			// Wait for the stream to finish
