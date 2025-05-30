@@ -36,15 +36,17 @@ const gatherFilesRecursively = async (filePaths, supportedTypes) => {
 
 const pathToFile = async (filePath) => {
   const stats = await fs.promises.stat(filePath);
-  const file = new File(
-    [await fs.promises.readFile(filePath)],
-    path.basename(filePath),
-    {
-      type: 'application/octet-stream',
-      lastModified: stats.mtimeMs
-    }
-  );
-  return file;
+  const buffer = await fs.promises.readFile(filePath);
+  
+  // Return only serializable data
+  return {
+    name: path.basename(filePath),
+    size: stats.size,
+    type: 'application/octet-stream',
+    lastModified: stats.mtimeMs,
+    // Convert buffer to base64 for transmission
+    data: buffer.toString('base64')
+  };
 };
 
 export const openFileChooser = async (supportedTypes) => {

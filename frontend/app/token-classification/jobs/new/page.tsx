@@ -138,7 +138,27 @@ const FileSources: React.FC<FileSourcesProps> = ({selectSource, handleLocalFiles
     // @ts-ignore
     const results = await window.electronAPI.openFileChooser(SUPPORTED_TYPES.map(t => t.replace('.', '')));
     console.log('results', results);
-    return results.allFiles;
+    
+    // Convert the file data into proper File objects
+    const files = await Promise.all(results.allFiles.map(async (fileData: any) => {
+      // Convert base64 to ArrayBuffer
+      const binaryString = atob(fileData.data);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      
+      // Create a Blob from the ArrayBuffer
+      const blob = new Blob([bytes], { type: fileData.type });
+      
+      // Create a File object from the Blob
+      return new File([blob], fileData.name, {
+        type: fileData.type,
+        lastModified: fileData.lastModified
+      });
+    }));
+    
+    return files;
   }
 
   // @ts-ignore
