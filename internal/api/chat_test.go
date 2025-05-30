@@ -3,7 +3,9 @@ package api
 import (
 	"bufio"
 	"bytes"
+	"crypto/md5"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"log/slog"
@@ -13,6 +15,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"ner-backend/internal/core"
 	"ner-backend/internal/database"
@@ -213,6 +216,10 @@ func processStreamResponse(t *testing.T, rec *httptest.ResponseRecorder) (redact
 	return redactedMessage, reply, tagMap
 }
 
+func randomString() string {
+	return fmt.Sprintf("%x", md5.Sum([]byte(time.Now().String())))[:8]
+}
+
 func getHistory(t *testing.T, router chi.Router, sessionID string) []pkgapi.ChatHistoryItem {	
 		req := httptest.NewRequest(http.MethodGet, "/chat/sessions/"+sessionID+"/history", nil)
 		rec := httptest.NewRecorder()
@@ -394,8 +401,9 @@ func TestChatEndpoint(t *testing.T) {
 		routine := func() {
 			defer wg.Done()
 			
-			// 50 words is long enough to ensure that the requests will be concurrent
-			message := "Hello, introduce yourself in 50 words"
+			// Prompt is slightly different each time so that GPT can't cache the response.
+			// This helps to ensure that the requests are concurrent.
+			message := fmt.Sprintf("Pretend like you're a robot with ID %s and introduce yourself in 30 words", randomString())
 			rec := sendMessage(t, router, sessionID, message)
 			
 			slog.Info("Code: ", "code", rec.Code)
@@ -445,8 +453,9 @@ func TestChatEndpoint(t *testing.T) {
 		routine := func(sessionID string) {
 			defer wg.Done()
 			
-			// 50 words is long enough to ensure that the requests will be concurrent
-			message := "Hello, introduce yourself in 50 words"
+			// Prompt is slightly different each time so that GPT can't cache the response.
+			// This helps to ensure that the requests are concurrent.
+			message := fmt.Sprintf("Pretend like you're a robot with ID %s and introduce yourself in 30 words", randomString())
 			rec := sendMessage(t, router, sessionID, message)
 			
 			// Wait for the stream to finish
