@@ -38,7 +38,6 @@ const pathToFile = async (filePath) => {
   const stats = await fs.promises.stat(filePath);
   const buffer = await fs.promises.readFile(filePath);
   
-  // Return only serializable data
   return {
     name: path.basename(filePath),
     size: stats.size,
@@ -80,7 +79,7 @@ export const openFileChooser = async (supportedTypes) => {
   allFilePaths = [...new Set(allFilePaths)].sort();
 
   const allFiles = await Promise.all(
-    allFilePaths.map(pathToFile)
+    allFilePaths.map((filePath) => [pathToFile(filePath), filePath])
   );
 
   result.directlySelected = dialogResult.filePaths;
