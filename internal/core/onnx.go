@@ -259,6 +259,20 @@ func (m *OnnxModel) Predict(text string) ([]types.Entity, error) {
 		}
 	}
 
+	spans := make([][2]int, len(groups))
+	for wid, offs := range groups {
+		if len(offs) == 0 {
+			spans[wid] = [2]int{0, 0}
+		} else {
+			spans[wid] = [2]int{
+				int(offs[0][0]),
+				int(offs[len(offs)-1][1]),
+			}
+		}
+	}
+
+	wordTags = FilterWordTags(text, spans, wordTags)
+
 	var ents []types.Entity
 	for wid, offs := range groups {
 		if len(offs) == 0 {
