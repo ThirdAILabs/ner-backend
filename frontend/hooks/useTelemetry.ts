@@ -20,7 +20,7 @@ export default function useTelemetry() {
 
     if (typeof window !== 'undefined') {
       // Check if we're in Electron and can get user ID
-      const isElectron = (window as any).electronAPI !== undefined;
+      const isElectron = (window as any).electron !== undefined;
 
       if (isElectron) {
         // Try to get user ID from localStorage first
@@ -29,7 +29,7 @@ export default function useTelemetry() {
         if (!storedUserId) {
           // If not in localStorage, get it from Electron and store it
           try {
-            storedUserId = await (window as any).electronAPI.getUserId();
+            storedUserId = await (window as any).electron.getUserId();
             if (storedUserId && storedUserId !== 'anonymous') {
               localStorage.setItem('user_id', storedUserId);
             }
@@ -56,11 +56,11 @@ export default function useTelemetry() {
 
     try {
       // Check if we're in Electron
-      const isElectron = typeof window !== 'undefined' && (window as any).electronAPI !== undefined;
+      const isElectron = typeof window !== 'undefined' && (window as any).electron !== undefined;
 
       if (isElectron) {
         // Use Electron IPC for telemetry
-        (window as any).electronAPI.sendTelemetry(telemetryPackage);
+        (window as any).electron.sendTelemetry(telemetryPackage);
       } else {
         // Use API route for web/dev mode
         const response = await fetch('/api/telemetry', {
