@@ -167,7 +167,7 @@ const FileSources: React.FC<FileSourcesProps> = ({ selectSource, handleLocalFile
   );
 
   // @ts-ignore
-  if (window && window.electronAPI) {
+  if (window && window.electron) {
     return (
       <>
         <SourceOption
@@ -266,7 +266,7 @@ export default function NewJobPage() {
   const [sourceS3Region, setSourceS3Region] = useState('');
   const [sourceS3Bucket, setSourceS3Bucket] = useState('');
   const [sourceS3Prefix, setSourceS3Prefix] = useState('');
-  // [File object, full path] pairs. Full path may be empty if electronAPI is not available.
+  // [File object, full path] pairs. Full path may be empty if electron is not available.
   const [selectedFiles, setSelectedFiles] = useState<[File, string][]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [existingReportName, setExistingReportName] = useState<string[]>([]);
@@ -508,7 +508,7 @@ export default function NewJobPage() {
     files.forEach(([newFile, newFullPath]) => {
       const existingIndex = newSelectedFiles.findIndex((existingFile) => {
         // In practice, either both are empty or both are not empty
-        // If both are not empty, it means we are using electronAPI to choose files
+        // If both are not empty, it means we are using electron to choose files
         // Otherwise, we are using the file input to choose files
         if (existingFile[1] !== '' && newFullPath !== '') {
           return existingFile[1] === newFullPath;
