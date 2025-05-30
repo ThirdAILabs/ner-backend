@@ -235,7 +235,7 @@ export function DatabaseTable({ groups: groupsProp, tags, uploadId }: DatabaseTa
   useEffect(() => {
     if (uploadId) {
       nerService
-        .getUploadPaths(uploadId)
+        .getFileNameToPath(uploadId)
         .then((pathMap) => {
           setPathMap(pathMap);
         })

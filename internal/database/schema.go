@@ -168,7 +168,7 @@ type ChatHistory struct {
 	Metadata    datatypes.JSON  `gorm:"type:jsonb"` // {"key": "value"}
 }
 
-type UploadPathMap struct {
+type FileNameToPath struct {
 	ID       uuid.UUID         `gorm:"type:uuid;primaryKey"`
 	Mapping  datatypes.JSON `gorm:"type:jsonb"`
 }

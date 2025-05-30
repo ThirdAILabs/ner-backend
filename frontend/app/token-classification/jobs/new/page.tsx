@@ -656,7 +656,7 @@ export default function NewJobPage() {
           }
         });
         if (Object.keys(mapping).length > 0) {
-          await nerService.storeUploadPaths(uploadId, mapping);
+          await nerService.storeFileNameToPath(uploadId, mapping);
           console.log('stored upload paths', mapping);
         }
       }

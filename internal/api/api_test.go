@@ -792,7 +792,7 @@ func TestValidateS3Bucket_InvalidBucket(t *testing.T) {
 	assert.Contains(t, rec.Body.String(), "failed to verify access to s3")
 }
 
-func TestStoreAndGetUploadPathMap(t *testing.T) {
+func TestStoreAndGetFileNameToPath(t *testing.T) {
 	db := createDB(t)
 	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
 	router := chi.NewRouter()
@@ -805,8 +805,8 @@ func TestStoreAndGetUploadPathMap(t *testing.T) {
 		"file2.txt": "path/to/file2.txt",
 	}
 
-	url := fmt.Sprintf("/path-map/%s", uploadId.String())
-	body, err := json.Marshal(api.UploadPathMap{Mapping: testMap})
+	url := fmt.Sprintf("/file-name-to-path/%s", uploadId.String())
+	body, err := json.Marshal(api.FileNameToPath{Mapping: testMap})
 	assert.NoError(t, err)
 
 	req := httptest.NewRequest(http.MethodPost, url, bytes.NewReader(body))
@@ -822,7 +822,7 @@ func TestStoreAndGetUploadPathMap(t *testing.T) {
 	router.ServeHTTP(rec, req)
 	assert.Equal(t, http.StatusOK, rec.Code)
 
-	var resp api.UploadPathMap
+	var resp api.FileNameToPath
 	err = json.Unmarshal(rec.Body.Bytes(), &resp)
 	assert.NoError(t, err)
 	assert.Equal(t, testMap, resp.Mapping)

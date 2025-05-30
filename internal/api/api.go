@@ -81,9 +81,9 @@ func (s *BackendService) AddRoutes(r chi.Router) {
 		r.Get("/s3", RestHandler(s.ValidateS3Access))
 	})
 
-	r.Route("/path-map", func(r chi.Router) {
-		r.Post("/{upload_id}", RestHandler(s.StoreUploadPathMap))
-		r.Get("/{upload_id}", RestHandler(s.GetUploadPathMap))
+	r.Route("/file-name-to-path", func(r chi.Router) {
+		r.Post("/{upload_id}", RestHandler(s.StoreFileNameToPath))
+		r.Get("/{upload_id}", RestHandler(s.GetFileNameToPath))
 	})
 }
 
@@ -1012,12 +1012,12 @@ func (s *BackendService) ValidateS3Access(r *http.Request) (any, error) {
 	return nil, validateS3Access(req.S3Endpoint, req.S3Region, req.SourceS3Bucket, req.SourceS3Prefix)
 }
 
-func (s *BackendService) StoreUploadPathMap(r *http.Request) (any, error) {
+func (s *BackendService) StoreFileNameToPath(r *http.Request) (any, error) {
 	uploadId, err := URLParamUUID(r, "upload_id")
 	if err != nil {
 		return nil, err
 	}
-	req, err := ParseRequest[api.UploadPathMap](r)
+	req, err := ParseRequest[api.FileNameToPath](r)
 	if err != nil {
 		return nil, CodedErrorf(http.StatusBadRequest, "invalid request body")
 	}
@@ -1025,7 +1025,7 @@ func (s *BackendService) StoreUploadPathMap(r *http.Request) (any, error) {
 	if err != nil {
 		return nil, CodedErrorf(http.StatusBadRequest, "invalid mapping")
 	}
-	entry := database.UploadPathMap{
+	entry := database.FileNameToPath{
 		ID: uploadId,
 		Mapping:  mappingJson,
 	}
@@ -1038,12 +1038,12 @@ func (s *BackendService) StoreUploadPathMap(r *http.Request) (any, error) {
 	return nil, nil
 }
 
-func (s *BackendService) GetUploadPathMap(r *http.Request) (any, error) {
+func (s *BackendService) GetFileNameToPath(r *http.Request) (any, error) {
 	uploadId, err := URLParamUUID(r, "upload_id")
 	if err != nil {
 		return nil, err
 	}
-	var entry database.UploadPathMap
+	var entry database.FileNameToPath
 	if err := s.db.First(&entry, "id = ?", uploadId).Error; err != nil {
 		return nil, CodedErrorf(http.StatusNotFound, "not found")
 	}
@@ -1051,7 +1051,7 @@ func (s *BackendService) GetUploadPathMap(r *http.Request) (any, error) {
 	if err := json.Unmarshal(entry.Mapping, &mapping); err != nil {
 		return nil, CodedErrorf(http.StatusInternalServerError, "invalid mapping data")
 	}
-	return api.UploadPathMap{
+	return api.FileNameToPath{
 		Mapping:  mapping,
 	}, nil
 }
