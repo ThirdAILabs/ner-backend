@@ -386,7 +386,7 @@ function JobDetail() {
           <DatabaseTable
             groups={reportData?.Groups?.map((g) => g.Name) || []}
             tags={availableTagsCount}
-            uploadId={reportData?.SourceS3Prefix}
+            uploadId={reportData?.IsUpload ? reportData?.SourceS3Prefix : ''}
           />
         </TabsContent>
       </Tabs>

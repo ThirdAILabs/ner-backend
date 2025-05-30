@@ -158,7 +158,7 @@ export function DatabaseTable({ groups: groupsProp, tags, uploadId }: DatabaseTa
         // Map API objects to our record format
         const mappedRecords = objects.map((obj) => ({
           sourceObject: obj.object,
-          taggedTokens: obj.tokens.map((token, i) => [token, obj.tags[i]] as [string, string]),
+          taggedTokens: obj.tokens?.map((token, i) => [token, obj.tags[i]] as [string, string]) || [],
           groups: [], // This would need to be populated from somewhere if needed
         }));
 
@@ -236,13 +236,10 @@ export function DatabaseTable({ groups: groupsProp, tags, uploadId }: DatabaseTa
 
   // Load path map
   useEffect(() => {
-    console.log('uploadId', uploadId);
     if (uploadId) {
-      console.log('loading path map');
       nerService
         .getUploadPaths(uploadId)
         .then((pathMap) => {
-          console.log('got path map', pathMap);
           setPathMap(pathMap);
         })
         .catch((error) => {

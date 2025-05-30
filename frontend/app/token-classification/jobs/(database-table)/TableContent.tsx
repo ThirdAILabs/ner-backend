@@ -200,7 +200,7 @@ export function TableContent({
     const fullPath = pathMap?.[fileIdentifier.split('/').slice(-1).join('')];
     const openFile = () => {
       // @ts-ignore
-      window.electronAPI?.openFile?.(fullPath);
+      window.electron?.openFile?.(fullPath);
     };
     return { fullPath, openFile };
   };
@@ -251,7 +251,7 @@ export function TableContent({
                       const fileIdentifier = record.sourceObject;
                       const { fullPath, openFile } = handleFullPath(fileIdentifier);
                       // @ts-ignore
-                      if (fullPath && typeof window !== 'undefined' && window.electronAPI) {
+                      if (fullPath && typeof window !== 'undefined' && window.electron) {
                         return (
                           <span
                             style={{
@@ -268,7 +268,7 @@ export function TableContent({
                       } else {
                         return (
                           <span
-                            style={{ textDecoration: 'underline', color: 'inherit' }}
+                            style={{ color: 'inherit' }}
                             title={fileIdentifier.split('/').slice(-1).join('')}
                           >
                             {fileIdentifier.split('/').slice(-1)}
@@ -324,7 +324,7 @@ export function TableContent({
               <div className="flex items-center gap-2">
                 <ChevronRight className="w-4 h-4 transition-transform group-open:rotate-90" />
                 {/* @ts-ignore */}
-                {fullPath && typeof window !== 'undefined' && window.electronAPI ? (
+                {fullPath && typeof window !== 'undefined' && window.electron ? (
                   <span
                     className="font-semibold"
                     style={{
@@ -340,7 +340,7 @@ export function TableContent({
                 ) : (
                   <span
                     className="font-semibold"
-                    style={{ textDecoration: 'underline', color: 'inherit', userSelect: 'none' }}
+                    style={{ color: 'inherit', userSelect: 'none' }}
                   >
                     {fileIdentifier.split('/').slice(-1)}
                   </span>
