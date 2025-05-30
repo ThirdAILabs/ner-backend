@@ -389,10 +389,15 @@ func TestChatEndpoint(t *testing.T) {
 		failureCount := 0
 
 		mu := sync.Mutex{}
-		var wg sync.WaitGroup
+		var startWg sync.WaitGroup
+		var endWg sync.WaitGroup
 
 		routine := func() {
-			defer wg.Done()
+			startWg.Done()
+			// Start when both goroutines are ready
+			startWg.Wait()
+
+			defer endWg.Done()
 			
 			// 40 words is long enough to ensure that the requests will be concurrent
 			message := "Hello, introduce yourself in 40 words"
@@ -414,10 +419,11 @@ func TestChatEndpoint(t *testing.T) {
 			mu.Unlock()
 		}
 		
-		wg.Add(2)
+		startWg.Add(2)
+		endWg.Add(2)
 		go routine()
 		go routine()
-		wg.Wait()
+		endWg.Wait()
 
 		// The server should only allow one request at a time per session
 		assert.Equal(t, 1, successCount)
@@ -440,10 +446,15 @@ func TestChatEndpoint(t *testing.T) {
 		failureCount := 0
 
 		mu := sync.Mutex{}
-		var wg sync.WaitGroup
-
+		var startWg sync.WaitGroup
+		var endWg sync.WaitGroup
+		
 		routine := func(sessionID string) {
-			defer wg.Done()
+			startWg.Done()
+			// Start when both goroutines are ready
+			startWg.Wait()
+
+			defer endWg.Done()
 			
 			// 40 words is long enough to ensure that the requests will be concurrent
 			message := "Hello, introduce yourself in 40 words"
@@ -461,13 +472,13 @@ func TestChatEndpoint(t *testing.T) {
 				failureCount++
 			}
 			mu.Unlock()
-
 		}
 		
-		wg.Add(2)
+		startWg.Add(2)
+		endWg.Add(2)
 		go routine(sessionID1)
 		go routine(sessionID2)
-		wg.Wait()
+		endWg.Wait()
 
 		// The server allows concurrent requests to different sessions
 		assert.Equal(t, 2, successCount)
