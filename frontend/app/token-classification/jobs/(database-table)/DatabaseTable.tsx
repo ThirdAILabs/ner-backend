@@ -65,7 +65,6 @@ export function DatabaseTable({ groups: groupsProp, tags, uploadId }: DatabaseTa
   const [objectRecords, setObjectRecords] = useState<ObjectDatabaseRecord[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('object');
   const [query, setQuery] = useState('');
-  const [filteredObjects, setFilteredObjects] = useState<string[]>([]);
   const [pathMap, setPathMap] = useState<Record<string, string>>({});
 
   // Pagination states
@@ -184,7 +183,6 @@ export function DatabaseTable({ groups: groupsProp, tags, uploadId }: DatabaseTa
   const handleSearch = async (searchQuery: string) => {
     if (!searchQuery.trim()) {
       // If empty query, reset filters and reload data
-      setFilteredObjects([]);
       resetPagination();
       loadTokenRecords(0, toActiveTagList(tagFilters));
       loadObjectRecords(0, toActiveTagList(tagFilters));
@@ -194,8 +192,6 @@ export function DatabaseTable({ groups: groupsProp, tags, uploadId }: DatabaseTa
     setIsSearching(true);
     try {
       const result = await nerService.searchReport(reportId, searchQuery);
-      setFilteredObjects(result.Objects || []);
-
       // Reset pagination and clear existing records
       resetPagination();
 
@@ -294,7 +290,6 @@ export function DatabaseTable({ groups: groupsProp, tags, uploadId }: DatabaseTa
 
       const activeTagList = toActiveTagList(newFilters);
 
-      setFilteredObjects([]);
       resetPagination();
       loadTokenRecords(0, activeTagList);
       loadObjectRecords(0, activeTagList);
@@ -316,15 +311,15 @@ export function DatabaseTable({ groups: groupsProp, tags, uploadId }: DatabaseTa
   const handleSelectAllTags = () => {
     const newFilters = Object.fromEntries(tags.map((tag) => [tag.type, true]));
     setTagFilters(newFilters);
-    setFilteredObjects([]);
     resetPagination();
     loadTokenRecords(0, toActiveTagList(newFilters));
-    loadObjectRecords(0, toActiveTagList(tagFilters));
+    loadObjectRecords(0, toActiveTagList(newFilters));
   };
 
   const handleDeselectAllTags = () => {
     const newFilters = Object.fromEntries(tags.map((tag) => [tag.type, false]));
     setTagFilters(newFilters);
+    resetPagination();
   };
 
   // Handle view mode changes
