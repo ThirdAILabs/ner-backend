@@ -52,6 +52,7 @@ export const openFileChooser = async (supportedTypes) => {
   const result = {
     directlySelected: [],
     allFiles: [],
+    allFilePaths: [],
   }
 
   const dialogResult = await dialog.showOpenDialog({
@@ -79,11 +80,12 @@ export const openFileChooser = async (supportedTypes) => {
   allFilePaths = [...new Set(allFilePaths)].sort();
 
   const allFiles = await Promise.all(
-    allFilePaths.map((filePath) => [pathToFile(filePath), filePath])
+    allFilePaths.map(pathToFile)
   );
 
   result.directlySelected = dialogResult.filePaths;
   result.allFiles = allFiles;
+  result.allFilePaths = allFilePaths;
 
   return result;
 } 

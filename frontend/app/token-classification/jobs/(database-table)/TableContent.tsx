@@ -6,6 +6,15 @@ import { Button } from '@/components/ui/button';
 import { NO_GROUP } from '@/lib/utils';
 import { ChevronRight } from 'lucide-react';
 
+// @ts-ignore
+declare global {
+  interface Window {
+    electronAPI?: {
+      openFile: (filePath: string) => void;
+    };
+  }
+}
+
 const PASTELS = ['#E5A49C', '#F6C886', '#FBE7AA', '#99E3B5', '#A6E6E7', '#A5A1E1', '#D8A4E2'];
 const DARKERS = ['#D34F3E', '#F09336', '#F7CF5F', '#5CC96E', '#65CFD0', '#597CE2', '#B64DC8'];
 
@@ -173,6 +182,7 @@ export function TableContent({
   hasMoreObjects = false,
   onLoadMore,
   showFilterContent,
+  pathMap,
 }: TableContentProps) {
   const tagColors = useMemo(() => {
     const colors: Record<string, HighlightColor> = {};
@@ -229,12 +239,33 @@ export function TableContent({
                 </TableCell>
                 <TableCell className="w-1/5 px-4">
                   <div className="relative group">
-                    <span
-                      className="block max-w-[200px] truncate"
-                      title={record.sourceObject.split('/').slice(-1).join('')}
-                    >
-                      {record.sourceObject.split('/').slice(-1)}
-                    </span>
+                    {(() => {
+                      const fileIdentifier = record.sourceObject;
+                      const fullPath = pathMap?.[fileIdentifier.split('/').slice(-1).join('')];
+                      console.log('fullPath', fullPath);
+                      if (fullPath && typeof window !== 'undefined' && window.electronAPI) {
+                        return (
+                          <span
+                            style={{ textDecoration: 'underline', color: 'inherit', cursor: 'pointer' }}
+                            title={fileIdentifier.split('/').slice(-1).join('')}
+                            onClick={async () => {
+                              window.electronAPI?.openFile?.(fullPath)
+                            }}
+                          >
+                            {fullPath}
+                          </span>
+                        );
+                      } else {
+                        return (
+                          <span
+                            style={{ textDecoration: 'underline', color: 'inherit' }}
+                            title={fileIdentifier.split('/').slice(-1).join('')}
+                          >
+                            {fileIdentifier.split('/').slice(-1)}
+                          </span>
+                        );
+                      }
+                    })()}
                   </div>
                 </TableCell>
               </TableRow>
@@ -257,18 +288,6 @@ export function TableContent({
               </TableCell>
             </TableRow>
           )}
-
-          {/* {filteredRecords.length > 0 && (
-            <TableRow>
-              <TableCell colSpan={2}>
-                <LoadMoreButton
-                  hasMore={hasMoreTokens}
-                  isLoading={isLoadingTokenRecords}
-                  onClick={onLoadMore ?? (() => {})}
-                />
-              </TableCell>
-            </TableRow>
-          )} */}
         </TableBody>
       </>
     );
@@ -284,14 +303,32 @@ export function TableContent({
   return (
     <div className="mt-4">
       {filteredRecords.map((record, index) => {
+        const fileIdentifier = record.sourceObject;
+        const fullPath = pathMap?.[fileIdentifier.split('/').slice(-1).join('')];
+        console.log('fullPath', fullPath);
         return (
-          <details className="group text-sm leading-relaxed bg-white rounded border border-gray-100 shadow-sm mb-4">
+          <details key={index} className="group text-sm leading-relaxed bg-white rounded border border-gray-100 shadow-sm mb-4">
             <summary className="p-3 cursor-pointer bg-gray-100 flex items-center">
               <div className="flex items-center gap-2">
                 <ChevronRight className="w-4 h-4 transition-transform group-open:rotate-90" />
-                <span className="font-semibold" style={{ userSelect: 'none' }}>
-                  {record.sourceObject.split('/').slice(-1)}
-                </span>
+                {fullPath && typeof window !== 'undefined' && window.electronAPI ? (
+                  <span
+                    className="font-semibold"
+                    style={{ textDecoration: 'underline', color: 'inherit', cursor: 'pointer', userSelect: 'none' }}
+                    onClick={async () => {
+                      window.electronAPI?.openFile?.(fullPath);
+                    }}
+                  >
+                    {fileIdentifier.split('/').slice(-1)}
+                  </span>
+                ) : (
+                  <span
+                    className="font-semibold"
+                    style={{ textDecoration: 'underline', color: 'inherit', userSelect: 'none' }}
+                  >
+                    {fileIdentifier.split('/').slice(-1)}
+                  </span>
+                )}
               </div>
             </summary>
             <div className="p-4">

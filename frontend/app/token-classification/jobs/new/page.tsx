@@ -108,7 +108,7 @@ const SourceOption: React.FC<SourceOptionProps> = ({ onClick, input, icon, title
 
 interface FileSourcesProps {
   selectSource: (source: 's3' | 'files' | 'directory') => void;
-  handleLocalFiles: (files: File[]) => void;
+  handleLocalFiles: (files: [File, string][]) => void;
 }
 
 const FileSources: React.FC<FileSourcesProps> = ({selectSource, handleLocalFiles}) => {
@@ -134,13 +134,13 @@ const FileSources: React.FC<FileSourcesProps> = ({selectSource, handleLocalFiles
     d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
   />
 
-  const getFilesFromElectron = async (): Promise<File[]> => {
+  const getFilesFromElectron = async (): Promise<[File, string][]> => {
     // @ts-ignore
     const results = await window.electronAPI.openFileChooser(SUPPORTED_TYPES.map(t => t.replace('.', '')));
     console.log('results', results);
     
     // Convert the file data into proper File objects
-    const files = await Promise.all(results.allFiles.map(async (fileData: any) => {
+    const files = await Promise.all(results.allFiles.map(async (fileData: any, index: number) => {
       // Convert base64 to ArrayBuffer
       const binaryString = atob(fileData.data);
       const bytes = new Uint8Array(binaryString.length);
@@ -152,10 +152,12 @@ const FileSources: React.FC<FileSourcesProps> = ({selectSource, handleLocalFiles
       const blob = new Blob([bytes], { type: fileData.type });
       
       // Create a File object from the Blob
-      return new File([blob], fileData.name, {
+      const file = new File([blob], fileData.name, {
         type: fileData.type,
         lastModified: fileData.lastModified
       });
+
+      return [file, results.allFilePaths[index]];
     }));
     
     return files;
@@ -183,7 +185,7 @@ const FileSources: React.FC<FileSourcesProps> = ({selectSource, handleLocalFiles
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      handleLocalFiles(Array.from(files));
+      handleLocalFiles(Array.from(files).map((file) => [file, '']));
       e.target.value = '';
     }
   }
@@ -257,7 +259,8 @@ export default function NewJobPage() {
   const [sourceS3Region, setSourceS3Region] = useState('');
   const [sourceS3Bucket, setSourceS3Bucket] = useState('');
   const [sourceS3Prefix, setSourceS3Prefix] = useState('');
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  // [File object, full path] pairs. Full path may be empty if electronAPI is not available.
+  const [selectedFiles, setSelectedFiles] = useState<[File, string][]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [existingReportName, setExistingReportName] = useState<string[]>([]);
   //Job Name
@@ -488,29 +491,66 @@ export default function NewJobPage() {
     setIsCustomTagDialogOpen(false);
   };
 
-  const addFiles = (files: File[]) => {
+  const renameFiles = (fileNames: string[]) => {
+    const existingFileNameCount: Record<string, number> = {};
+    const newFileNames = fileNames.map((fileName) => {
+      let newFileName = fileName;
+      if (existingFileNameCount[fileName] === undefined) {
+        existingFileNameCount[fileName] = 0;
+      } else {
+        const ext_idx = fileName.lastIndexOf('.');
+        newFileName = fileName.substring(0, ext_idx) + ` (${existingFileNameCount[fileName]})` + fileName.substring(ext_idx);
+        // This is to handle an edge case like [a/file.txt, b/file.txt, b/file (1).txt]
+        // a/file.txt -> file.txt | b/file.txt -> file (1).txt | b/file (1).txt -> b/file (1) (1).txt
+        existingFileNameCount[newFileName] = 1;
+      }
+      existingFileNameCount[newFileName]++;
+      return newFileName;
+    });
+    return newFileNames;
+  }
+
+  const addFiles = (files: [File, string][]) => {
     const newSelectedFiles = [...selectedFiles];
 
-    files.forEach((newFile) => {
+    files.forEach(([newFile, newFullPath]) => {
       const existingIndex = newSelectedFiles.findIndex(
-        (existingFile) => existingFile.name === newFile.name
+        (existingFile) => {
+          // In practice, either both are empty or both are not empty
+          // If both are not empty, it means we are using electronAPI to choose files
+          // Otherwise, we are using the file input to choose files
+          if (existingFile[1] !== "" && newFullPath !== "") {
+            return existingFile[1] === newFullPath;
+          }
+          return existingFile[0].name === newFile.name;
+        }
       );
 
       if (existingIndex !== -1) {
         // Duplicate file so, replace the existing file with the new one
-        newSelectedFiles[existingIndex] = newFile;
+        newSelectedFiles[existingIndex] = [newFile, newFullPath];
       } else {
         // Add the new file
-        newSelectedFiles.push(newFile);
+        newSelectedFiles.push([newFile, newFullPath]);
       }
     });
 
-    setSelectedFiles(newSelectedFiles);
+    const newFileNames = renameFiles(newSelectedFiles.map((file) => file[0].name));
+    
+    setSelectedFiles(
+      newSelectedFiles.map(([file, fullPath], index) => {
+        const newFile = new File([file], newFileNames[index], {
+          type: file.type,
+          lastModified: file.lastModified
+        });
+        return [newFile, fullPath];
+      })
+    )
   };
 
   // Update file handling to use file/directory input
-  const handleLocalFiles = (files: File[]) => {
-    const supportedFiles = files.filter((file) => isFileSupported(file.name));
+  const handleLocalFiles = (files: [File, string][]) => {
+    const supportedFiles = files.filter((file) => isFileSupported(file[0].name));
 
     if (supportedFiles.length > 0) {
       addFiles(supportedFiles);
@@ -609,12 +649,24 @@ export default function NewJobPage() {
     setIsSubmitting(true);
 
     try {
-      let uploadId;
+      let uploadId: string | undefined;
 
       // Handle file/directory uploads if needed
       if (selectedSource === 'files' || selectedSource === 'directory') {
-        const uploadResponse = await nerService.uploadFiles(selectedFiles);
+        const uploadResponse = await nerService.uploadFiles(selectedFiles.map(([file, _]) => file));
         uploadId = uploadResponse.Id;
+
+        // Store file path mappings for local uploads if full path is available
+        const mapping: { [filename: string]: string } = {};
+        selectedFiles.forEach(([file, fullPath]) => {
+          if (fullPath) {
+            mapping[file.name] = fullPath;
+          }
+        });
+        if (Object.keys(mapping).length > 0) {
+          await nerService.storeUploadPaths(uploadId, mapping);
+          console.log('stored upload paths', mapping);
+        }
       }
 
       // Create custom tags object for API
@@ -813,14 +865,14 @@ export default function NewJobPage() {
                   </Button>
                 </div>
                 <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-md">
-                  {selectedFiles.map((file, index) => (
+                  {selectedFiles.map(([file, fullPath], index) => (
                     <div
-                      key={`${file.name}-${index}`}
+                      key={`${file.name}-${fullPath}-${index}`}
                       className="flex items-center justify-between px-4 py-2 border-b last:border-b-0 hover:bg-gray-50"
                     >
                       <div className="flex items-center">
                         <div className="text-sm text-gray-600">
-                          {file.name}
+                          {fullPath || file.name}
                           <span className="text-xs text-gray-400 ml-2">
                             ({(file.size / 1024).toFixed(1)} KB)
                           </span>

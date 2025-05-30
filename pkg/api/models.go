@@ -151,5 +151,5 @@ type ValidateS3BucketRequest struct {
 }
 
 type UploadPathMap struct {
-	Mapping  map[string]string `json:"mapping"`
+	Mapping  map[string]string
 }
