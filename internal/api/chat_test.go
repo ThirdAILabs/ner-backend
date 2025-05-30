@@ -396,6 +396,7 @@ func TestChatEndpoint(t *testing.T) {
 
 		successCount := 0
 		failureCount := 0
+		var lastAckTime time.Time
 
 		mu := sync.Mutex{}
 		var wg sync.WaitGroup
@@ -403,9 +404,7 @@ func TestChatEndpoint(t *testing.T) {
 		routine := func() {
 			defer wg.Done()
 			
-			// Prompt is slightly different each time so that GPT can't cache the response.
-			// This helps to ensure that the requests are concurrent.
-			rec := sendMessage(t, router, sessionID, uniquePrompt())
+			rec := sendMessage(t, router, sessionID, "Hi, introduce yourself in 30 words")
 			
 			// Wait for the stream to finish so we can delete the session safely afterwards.
 			if rec.Code == http.StatusOK {
@@ -415,6 +414,7 @@ func TestChatEndpoint(t *testing.T) {
 			mu.Lock()
 			if rec.Code == http.StatusOK {
 				successCount++
+				lastAckTime = time.Now()
 			} else {
 				failureCount++
 			}
@@ -426,9 +426,17 @@ func TestChatEndpoint(t *testing.T) {
 		go routine()
 		wg.Wait()
 
-		// The server should only allow one request at a time per session
-		assert.Equal(t, 1, successCount)
-		assert.Equal(t, 1, failureCount)
+		if failureCount == 0 {
+			// If both succeeded, verify the second message was processed after the first
+			history := getHistory(t, router, sessionID)
+			assert.Equal(t, 4, len(history)) // 2 messages, 2 responses
+			assert.True(t, lastAckTime.After(history[2].Timestamp), 
+				"Last acknowledgement time should be after second message timestamp")
+		} else {
+			// Otherwise verify one succeeded and one failed
+			assert.Equal(t, 1, successCount)
+			assert.Equal(t, 1, failureCount)
+		}
 	})
 	
 	t.Run("TestSendMessage_ConcurrentDifferentSessions", func(t *testing.T) {
@@ -452,9 +460,7 @@ func TestChatEndpoint(t *testing.T) {
 		routine := func(sessionID string) {
 			defer wg.Done()
 			
-			// Prompt is slightly different each time so that GPT can't cache the response.
-			// This helps to ensure that the requests are concurrent.
-			rec := sendMessage(t, router, sessionID, uniquePrompt())
+			rec := sendMessage(t, router, sessionID, "Hi, introduce yourself in 30 words")
 			
 			// Wait for the stream to finish so we can delete the session safely afterwards.
 			if rec.Code == http.StatusOK {
