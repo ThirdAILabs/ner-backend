@@ -32,8 +32,8 @@ function ModelOption({ children, onClick, selected, disabled }: ModelOptionProps
 interface OptionsDropdownProps {
   handleBasicMode: () => void;
   handleAdvancedMode: () => void;
-  model: string;
-  onSelectModel: (model: string) => void;
+  model: 'gpt-4o-mini' | 'gpt-4o';
+  onSelectModel: (model: 'gpt-4o-mini' | 'gpt-4o') => void;
   apiKey: string;
   invalidApiKey: boolean;
   onEditApiKey: () => void;

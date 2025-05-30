@@ -70,8 +70,8 @@ interface ChatInterfaceProps {
   apiKey: string;
   saveApiKey: (key: string) => void;
   showRedaction: boolean;
-  model: string;
-  onSelectModel: (model: string) => void;
+  model: 'gpt-4o-mini' | 'gpt-4o';
+  onSelectModel: (model: 'gpt-4o-mini' | 'gpt-4o') => void;
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
