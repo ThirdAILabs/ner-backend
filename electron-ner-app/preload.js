@@ -16,4 +16,5 @@ window.addEventListener('DOMContentLoaded', () => {
 contextBridge.exposeInMainWorld('electronAPI', {
   sendTelemetry: (data) => ipcRenderer.invoke('telemetry', data),
   getUserId: () => ipcRenderer.invoke('get-user-id'),
+  getPort: () => ipcRenderer.invoke('get-port'),
 }); 

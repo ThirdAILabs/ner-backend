@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import serve from 'electron-serve';
 import { startBackend } from './scripts/start-backend.js';
+import { findPort } from './scripts/find-port.js';
 import { initTelemetry, insertTelemetryEvent, closeTelemetry } from './telemetry.js';
 import { initializeUserId, getCurrentUserId } from './userIdManager.js';
 import log from 'electron-log';
@@ -39,6 +40,7 @@ if (!isDev) {
 let mainWindow;
 let backendProcess = null;
 let backendStarted = false;
+let port = null;
 
 // Ensure working directory is set to the app directory for backend
 function fixWorkingDirectory() {
@@ -113,7 +115,8 @@ async function ensureBackendStarted() {
   if (!backendStarted) {
     console.log('Starting backend...');
     try {
-      backendProcess = await startBackend();
+      port = await findPort();
+      backendProcess = await startBackend(port);
       if (backendProcess) {
         console.log('Backend started successfully');
         backendStarted = true;
@@ -194,6 +197,10 @@ ipcMain.handle('telemetry', async (event, data) => {
 // Set up user ID IPC handler
 ipcMain.handle('get-user-id', async () => {
   return getCurrentUserId();
+});
+
+ipcMain.handle('get-port', async () => {
+  return port;
 });
 
 // This method will be called when Electron has finished initialization
