@@ -350,10 +350,7 @@ export function TableContent({
                     {truncateFilePath(fullPath)}
                   </span>
                 ) : (
-                  <span
-                    className="font-semibold"
-                    style={{ color: 'inherit', userSelect: 'none' }}
-                  >
+                  <span className="font-semibold" style={{ color: 'inherit', userSelect: 'none' }}>
                     {fileIdentifier.split('/').slice(-1)}
                   </span>
                 )}

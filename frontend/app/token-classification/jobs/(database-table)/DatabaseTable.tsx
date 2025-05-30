@@ -157,7 +157,8 @@ export function DatabaseTable({ groups: groupsProp, tags, uploadId }: DatabaseTa
         // Map API objects to our record format
         const mappedRecords = objects.map((obj) => ({
           sourceObject: obj.object,
-          taggedTokens: obj.tokens?.map((token, i) => [token, obj.tags[i]] as [string, string]) || [],
+          taggedTokens:
+            obj.tokens?.map((token, i) => [token, obj.tags[i]] as [string, string]) || [],
           groups: [], // This would need to be populated from somewhere if needed
         }));
 
