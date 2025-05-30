@@ -297,16 +297,14 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
     const newFilters = Object.fromEntries(tags.map((tag) => [tag.type, true]));
     setTagFilters(newFilters);
     resetPagination();
-    loadTokenRecords(0, toActiveTagList(tagFilters));
-    loadObjectRecords(0, toActiveTagList(tagFilters));
+    loadTokenRecords(0, toActiveTagList(newFilters));
+    loadObjectRecords(0, toActiveTagList(newFilters));
   };
 
   const handleDeselectAllTags = () => {
     const newFilters = Object.fromEntries(tags.map((tag) => [tag.type, false]));
     setTagFilters(newFilters);
     resetPagination();
-    setTokenRecords([]);
-    setObjectRecords([]);
   };
 
   // Handle view mode changes
