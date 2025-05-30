@@ -647,6 +647,18 @@ export default function NewJobPage() {
       if (selectedSource === 'files' || selectedSource === 'directory') {
         const uploadResponse = await nerService.uploadFiles(selectedFiles.map(([file, _]) => file));
         uploadId = uploadResponse.Id;
+
+        // Store file path mappings for local uploads if full path is available
+        const mapping: { [filename: string]: string } = {};
+        selectedFiles.forEach(([file, fullPath]) => {
+          if (fullPath) {
+            mapping[file.name] = fullPath;
+          }
+        });
+        if (Object.keys(mapping).length > 0) {
+          await nerService.storeUploadPaths(uploadId, mapping);
+          console.log('stored upload paths', mapping);
+        }
       }
 
       // Create custom tags object for API

@@ -1,4 +1,4 @@
-import { dialog } from 'electron';
+import { dialog, shell } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
 
