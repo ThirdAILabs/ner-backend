@@ -677,14 +677,40 @@ func (s *BackendService) GetReportPreviews(r *http.Request) (any, error) {
 		}
 	}
 
+	tags := params["tags"]
+	objectFilter := params.Get("object")
+
 	ctx := r.Context()
+
+	query := s.db.WithContext(ctx).
+		Where("report_id = ?", reportId)
+
+	if len(tags) > 0 {
+		var matchingObjects []string
+		if err := s.db.WithContext(ctx).
+			Model(&database.ObjectEntity{}).
+			Distinct("object").
+			Where("report_id = ? AND label IN ?", reportId, tags).
+			Pluck("object", &matchingObjects).Error; err != nil {
+			slog.Error("error fetching entities for tag filter", "report_id", reportId, "tags", tags, "error", err)
+			return nil, CodedErrorf(http.StatusInternalServerError, "error %d: error applying tag filter", ErrCodeDB)
+		}
+
+		if len(matchingObjects) == 0 {
+			return []api.ObjectPreviewResponse{}, nil
+		}
+
+		query = query.Where("object IN ?", matchingObjects)
+	}
+
+	if objectFilter != "" {
+		query = query.Where("object = ?", objectFilter)
+	}
+
+	query = query.Offset(offset).Limit(limit).Order("object")
+
 	var previews []database.ObjectPreview
-	if err := s.db.WithContext(ctx).
-		Where("report_id = ?", reportId).
-		Offset(offset).
-		Limit(limit).
-		Order("object").
-		Find(&previews).Error; err != nil {
+	if err := query.Find(&previews).Error; err != nil {
 		slog.Error("error fetching previews", "report_id", reportId, "err", err)
 		return nil, CodedErrorf(http.StatusInternalServerError, "error %d: error retrieving previews", ErrCodeDB)
 	}

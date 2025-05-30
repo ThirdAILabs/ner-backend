@@ -1,9 +1,11 @@
-import { app, BrowserWindow, dialog } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import serve from 'electron-serve';
 import { startBackend } from './scripts/start-backend.js';
+import { initTelemetry, insertTelemetryEvent, closeTelemetry } from './telemetry.js';
+import { initializeUserId, getCurrentUserId } from './userIdManager.js';
 import log from 'electron-log';
 import electronUpdater from 'electron-updater';
 
@@ -78,6 +80,8 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    frame: false,
+    titleBarStyle: 'hiddenInset',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,  // Enable context isolation for security
@@ -219,8 +223,25 @@ if (process.env.DEBUG_UPDATER === 'true') {
   console.log('Monkey-patched app.isPackaged to true for DEBUG_UPDATER');
 }
 
+// Set up telemetry IPC handler
+ipcMain.handle('telemetry', async (event, data) => {
+  await insertTelemetryEvent(data);
+});
+
+// Set up user ID IPC handler
+ipcMain.handle('get-user-id', async () => {
+  return getCurrentUserId();
+});
+
 // This method will be called when Electron has finished initialization
 app.whenReady().then(async () => {
+  // Initialize user ID first
+  await initializeUserId();
+  
+  // Initialize telemetry
+  await initTelemetry();
+  
+  // Always start the backend first, regardless of dev/prod mode
   try {
     await ensureBackendStarted();
   } catch (err) {
@@ -309,10 +330,13 @@ app.on('will-quit', () => {
 });
 
 // Handle app quit
-app.on('quit', () => {
+app.on('quit', async () => {
   console.log('App is quitting, ensuring backend is cleaned up...');
   if (backendProcess && backendProcess.kill) {
     console.log('Sending SIGTERM to backend process...');
     backendProcess.kill('SIGTERM');
   }
+  
+  // Close telemetry connection
+  await closeTelemetry();
 }); 

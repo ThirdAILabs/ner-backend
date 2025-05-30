@@ -63,7 +63,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
   // Data states
   const [tokenRecords, setTokenRecords] = useState<ClassifiedTokenDatabaseRecord[]>([]);
   const [objectRecords, setObjectRecords] = useState<ObjectDatabaseRecord[]>([]);
-  const [viewMode, setViewMode] = useState<ViewMode>('classified-token');
+  const [viewMode, setViewMode] = useState<ViewMode>('object');
   const [query, setQuery] = useState('');
   const [filteredObjects, setFilteredObjects] = useState<string[]>([]);
 
@@ -73,7 +73,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
   const [objectOffset, setObjectOffset] = useState(0);
   const [hasMoreObjects, setHasMoreObjects] = useState(true);
   const TOKENS_LIMIT = 25; // Number of token records to fetch per request
-  const OBJECTS_LIMIT = 10; // Number of object records to fetch per request
+  const OBJECTS_LIMIT = 25; // Number of object records to fetch per request
 
   // Filter states
   const [groupFilters, setGroupFilters] = useState<Record<string, boolean>>(() =>
@@ -149,7 +149,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
       .getReportObjects(reportId, {
         offset: newOffset,
         limit: limit,
-        ...(objectsFilter && { tags: objectsFilter }),
+        tags: objectsFilter,
       })
       .then((objects) => {
         console.log(`Loaded ${objects.length} object records from offset ${newOffset}`);
@@ -186,7 +186,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
       setFilteredObjects([]);
       resetPagination();
       loadTokenRecords(0, toActiveTagList(tagFilters));
-      loadObjectRecords(0);
+      loadObjectRecords(0, toActiveTagList(tagFilters));
       return;
     }
 
@@ -200,7 +200,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
 
       // Load records filtered by the object names
       if (result.Objects?.length) {
-        loadObjectRecords(0, result.Objects);
+        loadObjectRecords(0, toActiveTagList(tagFilters));
         // For token records, we'll let them load unfiltered first
         // then filter them in the TableContent component
         loadTokenRecords(0, toActiveTagList(tagFilters));
@@ -228,7 +228,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
     console.log('Component mounted, loading initial data');
     resetPagination();
     loadTokenRecords(0, toActiveTagList(tagFilters));
-    loadObjectRecords(0);
+    loadObjectRecords(0, toActiveTagList(tagFilters));
     loadedInitialTokenRecords.current = true;
     loadedInitialObjectRecords.current = true;
   }, []);
@@ -245,7 +245,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
       if (scrollHeight - (scrollTop + clientHeight) < bottomThreshold) {
         // Load more records based on view mode
         if (viewMode === 'object' && !isLoadingObjectRecords && hasMoreObjects) {
-          loadObjectRecords(objectOffset, filteredObjects.length ? filteredObjects : undefined);
+          loadObjectRecords(objectOffset, toActiveTagList(tagFilters));
         } else if (viewMode === 'classified-token' && !isLoadingTokenRecords && hasMoreTokens) {
           loadTokenRecords(tokenOffset, toActiveTagList(tagFilters));
         }
@@ -256,7 +256,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
   // Load more handler for manual loading (can be used with a button)
   const handleLoadMore = () => {
     if (viewMode === 'object' && !isLoadingObjectRecords && hasMoreObjects) {
-      loadObjectRecords(objectOffset, filteredObjects.length ? filteredObjects : undefined);
+      loadObjectRecords(objectOffset, toActiveTagList(tagFilters));
     } else if (viewMode === 'classified-token' && !isLoadingTokenRecords && hasMoreTokens) {
       loadTokenRecords(tokenOffset, toActiveTagList(tagFilters));
     }
@@ -304,7 +304,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
     setFilteredObjects([]);
     resetPagination();
     loadTokenRecords(0, toActiveTagList(newFilters));
-    loadObjectRecords(0);
+    loadObjectRecords(0, toActiveTagList(tagFilters));
   };
 
   const handleDeselectAllTags = () => {
@@ -318,7 +318,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
 
     // Load data if we haven't loaded any for this view mode yet
     if (newMode === 'object' && objectRecords.length === 0) {
-      loadObjectRecords(0);
+      loadObjectRecords(0, toActiveTagList(tagFilters));
     } else if (newMode === 'classified-token' && tokenRecords.length === 0) {
       loadTokenRecords(0, toActiveTagList(tagFilters));
     }

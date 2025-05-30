@@ -58,3 +58,4 @@ package-lock.json
 __pycache__/
 
 main
+.cursor/

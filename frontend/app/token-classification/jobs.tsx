@@ -314,56 +314,6 @@ export default function Jobs() {
 
     const progress = succeededFileCount > 0 ? (succeededFileCount / fileCount) * 100 : 0;
 
-    // If there are failed tasks, show failure status
-    if (failedFileCount > 0) {
-      return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Box
-              sx={{
-                flex: 1,
-                height: '8px',
-                bgcolor: '#f1f5f9',
-                borderRadius: '9999px',
-                overflow: 'hidden',
-                display: 'flex',
-              }}
-            >
-              {/* Green (successful files) */}
-              <Box
-                sx={{
-                  height: '100%',
-                  width: `${(succeededFileCount / fileCount) * 100}%`,
-                  bgcolor: '#4caf50',
-                }}
-              />
-              {/* Red (failed files) */}
-              <Box
-                sx={{
-                  height: '100%',
-                  width: `${(failedFileCount / fileCount) * 100}%`,
-                  bgcolor: '#ef4444',
-                }}
-              />
-            </Box>
-            <Typography
-              variant="body2"
-              sx={{
-                color: 'text.secondary',
-                whiteSpace: 'nowrap',
-                fontWeight: 'medium',
-              }}
-            >
-              {`${(((succeededFileCount + failedFileCount) / fileCount) * 100).toFixed(0)} %`}
-            </Typography>
-          </Box>
-          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            {`Files: ${succeededFileCount}/${fileCount} Processed, ${failedFileCount}/${fileCount} Failed`}
-          </Typography>
-        </Box>
-      );
-    }
-
     // If no tasks yet, show just the ShardDataTaskStatus
     if (totalTasks === 0) {
       return (
@@ -375,7 +325,6 @@ export default function Jobs() {
       );
     }
 
-    // Show progress for running tasks
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -386,25 +335,43 @@ export default function Jobs() {
               bgcolor: '#f1f5f9',
               borderRadius: '9999px',
               overflow: 'hidden',
+              display: 'flex',
             }}
           >
+            {/* Green (successful files) */}
             <Box
               sx={{
                 height: '100%',
-                width: `${progress}%`,
-                bgcolor:
-                  ShardDataTaskStatus === 'COMPLETED' && progress === 100 ? '#4caf50' : '#1976d2',
-                borderRadius: '9999px',
-                transition: 'all 0.2s',
+                width: `${(succeededFileCount / fileCount) * 100}%`,
+                bgcolor: '#4caf50',
+              }}
+            />
+            {/* Red (failed files) */}
+            <Box
+              sx={{
+                height: '100%',
+                width: `${(failedFileCount / fileCount) * 100}%`,
+                bgcolor: '#ef4444',
               }}
             />
           </Box>
-          <Typography variant="body2" sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}>
-            {`${Math.round(progress)}%`}
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+              whiteSpace: 'nowrap',
+              fontWeight: 'medium',
+            }}
+          >
+            {`${(((succeededFileCount + failedFileCount) / fileCount) * 100).toFixed(0)} %`}
           </Typography>
         </Box>
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-          {`Files: ${succeededFileCount}/${fileCount}`}
+          {succeededFileCount === fileCount
+            ? `Files: ${fileCount}/${fileCount} Processed`
+            : failedFileCount === fileCount
+              ? `Files: ${failedFileCount}/${fileCount} Failed`
+              : `Files: ${succeededFileCount}/${fileCount} Processed${failedFileCount > 0 ? `, ${failedFileCount}/${fileCount} Failed` : ''}`}
         </Typography>
       </Box>
     );
@@ -448,7 +415,7 @@ export default function Jobs() {
               sx={{
                 fontWeight: 600,
                 fontSize: '1.5rem',
-                color: '#111827',
+                color: '#4a5568',
               }}
             >
               Reports
@@ -584,7 +551,7 @@ export default function Jobs() {
                             color: '#475569',
                           }}
                         >
-                          {report.Model.Name}
+                          {report.Model.Name.charAt(0).toUpperCase() + report.Model.Name.slice(1)}
                         </Typography>
                       </Box>
                     </TableCell>
@@ -672,7 +639,7 @@ export default function Jobs() {
                           fontSize: '0.875rem',
                         }}
                       >
-                        No reports found
+                        -
                       </Typography>
                     </Box>
                   </TableCell>

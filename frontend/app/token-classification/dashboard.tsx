@@ -8,6 +8,7 @@ import {
   FormControl,
   Select,
   MenuItem,
+  SelectChangeEvent,
   Card,
   CardContent,
 } from '@mui/material';
@@ -15,18 +16,56 @@ import { useSearchParams } from 'next/navigation';
 import { nerService } from '@/lib/backend';
 import MetricsDataViewer from './metrics/MetricsDataViewer';
 import { useHealth } from '@/contexts/HealthProvider';
+import useTelemetry from '@/hooks/useTelemetry';
 
 const Dashboard = () => {
+  const recordEvent = useTelemetry();
+  React.useEffect(() => {
+    recordEvent({
+      UserAction: 'view',
+      UIComponent: 'Usage Stats Dashboard Page',
+      UI: 'Token Classification Page',
+    });
+  }, []);
   const { healthStatus } = useHealth();
   const searchParams = useSearchParams();
   const deploymentId = searchParams.get('deploymentId');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Don't make API calls if health check hasn't passed
+  if (!healthStatus) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   // Models for the dropdown
   const [days, setDays] = useState<number>(7);
+  const handleDaysChange = (e: SelectChangeEvent<number>) => {
+    const newDays = Number(e.target.value);
+    setDays(newDays);
+    recordEvent({
+      UserAction: 'select',
+      UIComponent: 'Days Filter',
+      UI: 'Usage Stats Dashboard Page',
+      data: { days: newDays },
+    });
+  };
   const [models, setModels] = useState<Model[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>('');
+  const handleModelChange = (e: SelectChangeEvent<string>) => {
+    const model = e.target.value;
+    setSelectedModel(model);
+    recordEvent({
+      UserAction: 'select',
+      UIComponent: 'Model Filter',
+      UI: 'Usage Stats Dashboard Page',
+      data: { model },
+    });
+  };
 
   useEffect(() => {
     nerService
@@ -77,7 +116,7 @@ const Dashboard = () => {
             sx={{
               fontWeight: 600,
               fontSize: '1.5rem',
-              color: '#111827',
+              color: '#4a5568',
             }}
           >
             Metrics Dashboard
@@ -170,7 +209,7 @@ const Dashboard = () => {
               <Select
                 value={selectedModel}
                 displayEmpty
-                onChange={(e) => setSelectedModel(e.target.value)}
+                onChange={handleModelChange}
                 renderValue={(val) =>
                   val === '' ? 'All Models' : models.find((m) => m.Id === val)?.Name || val
                 }
@@ -186,7 +225,7 @@ const Dashboard = () => {
                 </MenuItem>
                 {models.map((m) => (
                   <MenuItem key={m.Id} value={m.Id}>
-                    {m.Name}
+                    {m.Name.charAt(0).toUpperCase() + m.Name.slice(1)}
                   </MenuItem>
                 ))}
               </Select>

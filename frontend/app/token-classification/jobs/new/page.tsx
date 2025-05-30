@@ -508,7 +508,7 @@ export default function NewJobPage() {
 
       // Redirect after success
       setTimeout(() => {
-        router.push(`/?tab=jobs`);
+        router.push(`/token-classification/landing?tab=jobs`);
       }, 2000);
     } catch (err: unknown) {
       let errorMessage = 'An unexpected error occurred';
@@ -598,11 +598,11 @@ export default function NewJobPage() {
   );
 
   return (
-    <div className="container px-4 py-8 w-3/4">
+    <div className="container px-4 py-8" style={{ width: '90%' }}>
       {/* Title and Back Button */}
       <div className="flex items-center justify-between mb-6">
         <Button variant="outline" size="sm" asChild>
-          <Link href={`/?tab=jobs`} className="flex items-center">
+          <Link href={`/token-classification/landing?tab=jobs`} className="flex items-center">
             <ArrowLeft className="mr-1 h-4 w-4" /> Back to Reports
           </Link>
         </Button>
@@ -621,7 +621,7 @@ export default function NewJobPage() {
       ) : (
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Job Name Field */}
-          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
+          <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3 }}>
             <h2 className="text-2xl font-medium mb-4">Report Name</h2>
             <div className="w-full">
               <input
@@ -688,7 +688,7 @@ export default function NewJobPage() {
                   </div>
                   <div className="text-center">
                     <h3 className="text-base font-medium mb-1">Local Files</h3>
-                    <p className="text-sm text-gray-500">Upload files from your computer</p>
+                    <p className="text-sm text-gray-500">Scan files from your computer</p>
                     <p className="text-xs text-gray-400 mt-2">
                       Supported: {SUPPORTED_TYPES.join(', ')}
                     </p>
@@ -729,7 +729,7 @@ export default function NewJobPage() {
                   </div>
                   <div className="text-center">
                     <h3 className="text-base font-medium mb-1">Local Directory</h3>
-                    <p className="text-sm text-gray-500">Upload an entire directory</p>
+                    <p className="text-sm text-gray-500">Scan an entire directory</p>
                     <p className="text-xs text-gray-400 mt-2">
                       Supported: {SUPPORTED_TYPES.join(', ')}
                     </p>
@@ -759,7 +759,7 @@ export default function NewJobPage() {
                   </div>
                   <div className="text-center">
                     <h3 className="text-base font-medium mb-1">S3 Bucket</h3>
-                    <p className="text-sm text-gray-500">Use files from an S3 bucket</p>
+                    <p className="text-sm text-gray-500">Scan files from an S3 bucket</p>
                   </div>
                 </div>
               </div>
@@ -904,7 +904,7 @@ export default function NewJobPage() {
           </Box>
 
           {/* Model Selection */}
-          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
+          <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3 }}>
             <div>
               <h2 className="text-2xl font-medium mb-4">Model</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1019,7 +1019,7 @@ export default function NewJobPage() {
           </Box>
 
           {/* Custom Tags Section */}
-          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
+          <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3 }}>
             <h2 className="text-2xl font-medium mb-4">
               Custom Tags
               <span className="text-sm font-normal text-gray-500 ml-2">(Optional)</span>
@@ -1203,7 +1203,7 @@ export default function NewJobPage() {
           </Box>
 
           {/* Groups Section */}
-          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
+          <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3 }}>
             <h2 className="text-2xl font-medium mb-4">
               Groups
               <span className="text-sm font-normal text-gray-500 ml-2">(Optional)</span>
