@@ -13,7 +13,7 @@ export const updateNerBaseUrl = async () => {
     console.log('port', port);
     if (port) {
       axiosInstance.defaults.baseURL = `http://localhost:${port}/api/v1`;
-      return true
+      return true;
     }
   }
   return false;

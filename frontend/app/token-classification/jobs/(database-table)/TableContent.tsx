@@ -246,10 +246,14 @@ export function TableContent({
                       if (fullPath && typeof window !== 'undefined' && window.electronAPI) {
                         return (
                           <span
-                            style={{ textDecoration: 'underline', color: 'inherit', cursor: 'pointer' }}
+                            style={{
+                              textDecoration: 'underline',
+                              color: 'inherit',
+                              cursor: 'pointer',
+                            }}
                             title={fileIdentifier.split('/').slice(-1).join('')}
                             onClick={async () => {
-                              window.electronAPI?.openFile?.(fullPath)
+                              window.electronAPI?.openFile?.(fullPath);
                             }}
                           >
                             {fullPath}
@@ -307,14 +311,22 @@ export function TableContent({
         const fullPath = pathMap?.[fileIdentifier.split('/').slice(-1).join('')];
         console.log('fullPath', fullPath);
         return (
-          <details key={index} className="group text-sm leading-relaxed bg-white rounded border border-gray-100 shadow-sm mb-4">
+          <details
+            key={index}
+            className="group text-sm leading-relaxed bg-white rounded border border-gray-100 shadow-sm mb-4"
+          >
             <summary className="p-3 cursor-pointer bg-gray-100 flex items-center">
               <div className="flex items-center gap-2">
                 <ChevronRight className="w-4 h-4 transition-transform group-open:rotate-90" />
                 {fullPath && typeof window !== 'undefined' && window.electronAPI ? (
                   <span
                     className="font-semibold"
-                    style={{ textDecoration: 'underline', color: 'inherit', cursor: 'pointer', userSelect: 'none' }}
+                    style={{
+                      textDecoration: 'underline',
+                      color: 'inherit',
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                    }}
                     onClick={async () => {
                       window.electronAPI?.openFile?.(fullPath);
                     }}

@@ -80,7 +80,14 @@ interface SourceOptionProps {
   disclaimer: string;
 }
 
-const SourceOption: React.FC<SourceOptionProps> = ({ onClick, input, icon, title, description, disclaimer }) => (
+const SourceOption: React.FC<SourceOptionProps> = ({
+  onClick,
+  input,
+  icon,
+  title,
+  description,
+  disclaimer,
+}) => (
   <div
     className="relative p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 transition-colors cursor-pointer"
     onClick={onClick}
@@ -111,57 +118,65 @@ interface FileSourcesProps {
   handleLocalFiles: (files: [File, string][]) => void;
 }
 
-const FileSources: React.FC<FileSourcesProps> = ({selectSource, handleLocalFiles}) => {
-  const s3 = <SourceOption
-    onClick={() => selectSource('s3')}
-    icon={
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
-      />
-    }
-    title="S3 Bucket"
-    description="Scan files from an S3 bucket"
-    disclaimer="Public buckets only without enterprise subscription."
-  />
+const FileSources: React.FC<FileSourcesProps> = ({ selectSource, handleLocalFiles }) => {
+  const s3 = (
+    <SourceOption
+      onClick={() => selectSource('s3')}
+      icon={
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
+        />
+      }
+      title="S3 Bucket"
+      description="Scan files from an S3 bucket"
+      disclaimer="Public buckets only without enterprise subscription."
+    />
+  );
 
-  const folderIcon = <path
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    strokeWidth="2"
-    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-  />
+  const folderIcon = (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+    />
+  );
 
   const getFilesFromElectron = async (): Promise<[File, string][]> => {
     // @ts-ignore
-    const results = await window.electronAPI.openFileChooser(SUPPORTED_TYPES.map(t => t.replace('.', '')));
+    const results = await window.electronAPI.openFileChooser(
+      SUPPORTED_TYPES.map((t) => t.replace('.', ''))
+    );
     console.log('results', results);
-    
-    // Convert the file data into proper File objects
-    const files = await Promise.all(results.allFiles.map(async (fileData: any, index: number) => {
-      // Convert base64 to ArrayBuffer
-      const binaryString = atob(fileData.data);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      
-      // Create a Blob from the ArrayBuffer
-      const blob = new Blob([bytes], { type: fileData.type });
-      
-      // Create a File object from the Blob
-      const file = new File([blob], fileData.name, {
-        type: fileData.type,
-        lastModified: fileData.lastModified
-      });
 
-      return [file, results.allFilePaths[index]];
-    }));
-    
+    // Convert the file data into proper File objects
+    const files = await Promise.all(
+      results.allFiles.map(async (fileData: any, index: number) => {
+        // Convert base64 to ArrayBuffer
+        const binaryString = atob(fileData.data);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        // Create a Blob from the ArrayBuffer
+        const blob = new Blob([bytes], { type: fileData.type });
+
+        // Create a File object from the Blob
+        const file = new File([blob], fileData.name, {
+          type: fileData.type,
+          lastModified: fileData.lastModified,
+        });
+
+        return [file, results.allFilePaths[index]];
+      })
+    );
+
     return files;
-  }
+  };
 
   // @ts-ignore
   if (window && window.electronAPI) {
@@ -178,7 +193,7 @@ const FileSources: React.FC<FileSourcesProps> = ({selectSource, handleLocalFiles
           disclaimer={`Supported: ${SUPPORTED_TYPES.join(', ')}`}
         />
         {s3}
-      </> 
+      </>
     );
   }
 
@@ -188,25 +203,29 @@ const FileSources: React.FC<FileSourcesProps> = ({selectSource, handleLocalFiles
       handleLocalFiles(Array.from(files).map((file) => [file, '']));
       e.target.value = '';
     }
-  }
+  };
 
-  const fileInput = <input
-    type="file"
-    id="file-upload"
-    multiple
-    onChange={handleFileChange}
-    className="hidden"
-    accept={SUPPORTED_TYPES.join(',')}
-  />
+  const fileInput = (
+    <input
+      type="file"
+      id="file-upload"
+      multiple
+      onChange={handleFileChange}
+      className="hidden"
+      accept={SUPPORTED_TYPES.join(',')}
+    />
+  );
 
-  const directoryInput = <input
-    type="file"
-    id="directory-upload"
-    {...({ webkitdirectory: '', directory: '' } as any)}
-    onChange={handleFileChange}
-    className="hidden"
-    accept={SUPPORTED_TYPES.join(',')}
-  />
+  const directoryInput = (
+    <input
+      type="file"
+      id="directory-upload"
+      {...({ webkitdirectory: '', directory: '' } as any)}
+      onChange={handleFileChange}
+      className="hidden"
+      accept={SUPPORTED_TYPES.join(',')}
+    />
+  );
 
   return (
     <>
@@ -499,7 +518,10 @@ export default function NewJobPage() {
         existingFileNameCount[fileName] = 0;
       } else {
         const ext_idx = fileName.lastIndexOf('.');
-        newFileName = fileName.substring(0, ext_idx) + ` (${existingFileNameCount[fileName]})` + fileName.substring(ext_idx);
+        newFileName =
+          fileName.substring(0, ext_idx) +
+          ` (${existingFileNameCount[fileName]})` +
+          fileName.substring(ext_idx);
         // This is to handle an edge case like [a/file.txt, b/file.txt, b/file (1).txt]
         // a/file.txt -> file.txt | b/file.txt -> file (1).txt | b/file (1).txt -> b/file (1) (1).txt
         existingFileNameCount[newFileName] = 1;
@@ -508,23 +530,21 @@ export default function NewJobPage() {
       return newFileName;
     });
     return newFileNames;
-  }
+  };
 
   const addFiles = (files: [File, string][]) => {
     const newSelectedFiles = [...selectedFiles];
 
     files.forEach(([newFile, newFullPath]) => {
-      const existingIndex = newSelectedFiles.findIndex(
-        (existingFile) => {
-          // In practice, either both are empty or both are not empty
-          // If both are not empty, it means we are using electronAPI to choose files
-          // Otherwise, we are using the file input to choose files
-          if (existingFile[1] !== "" && newFullPath !== "") {
-            return existingFile[1] === newFullPath;
-          }
-          return existingFile[0].name === newFile.name;
+      const existingIndex = newSelectedFiles.findIndex((existingFile) => {
+        // In practice, either both are empty or both are not empty
+        // If both are not empty, it means we are using electronAPI to choose files
+        // Otherwise, we are using the file input to choose files
+        if (existingFile[1] !== '' && newFullPath !== '') {
+          return existingFile[1] === newFullPath;
         }
-      );
+        return existingFile[0].name === newFile.name;
+      });
 
       if (existingIndex !== -1) {
         // Duplicate file so, replace the existing file with the new one
@@ -536,16 +556,16 @@ export default function NewJobPage() {
     });
 
     const newFileNames = renameFiles(newSelectedFiles.map((file) => file[0].name));
-    
+
     setSelectedFiles(
       newSelectedFiles.map(([file, fullPath], index) => {
         const newFile = new File([file], newFileNames[index], {
           type: file.type,
-          lastModified: file.lastModified
+          lastModified: file.lastModified,
         });
         return [newFile, fullPath];
       })
-    )
+    );
   };
 
   // Update file handling to use file/directory input

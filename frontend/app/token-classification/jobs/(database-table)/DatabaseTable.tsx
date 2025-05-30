@@ -239,12 +239,15 @@ export function DatabaseTable({ groups: groupsProp, tags, uploadId }: DatabaseTa
     console.log('uploadId', uploadId);
     if (uploadId) {
       console.log('loading path map');
-      nerService.getUploadPaths(uploadId).then((pathMap) => {
-        console.log('got path map', pathMap);
-        setPathMap(pathMap);
-      }).catch((error) => {
-        console.error('Could not load path map:', error);
-      });
+      nerService
+        .getUploadPaths(uploadId)
+        .then((pathMap) => {
+          console.log('got path map', pathMap);
+          setPathMap(pathMap);
+        })
+        .catch((error) => {
+          console.error('Could not load path map:', error);
+        });
     }
   }, [uploadId]);
 
