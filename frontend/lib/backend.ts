@@ -416,4 +416,22 @@ export const nerService = {
   setOpenAIApiKey: async (apiKey: string): Promise<void> => {
     await axiosInstance.post('/chat/api-key', { ApiKey: apiKey });
   },
+
+  storeUploadPaths: async (uploadId: string, mapping: { [filename: string]: string }) => {
+    try {
+      await axiosInstance.post(`/path-map/${uploadId}`, { Mapping: mapping });
+    } catch (error) {
+      return handleApiError(error, 'Failed to store upload path mappings');
+    }
+  },
+
+  getUploadPaths: async (uploadId: string) => {
+    try {
+      const { data } = await axiosInstance.get(`/path-map/${uploadId}`);
+      console.log('getUploadPaths', data);
+      return data.Mapping as { [filename: string]: string };
+    } catch (error) {
+      return handleApiError(error, 'Failed to fetch upload path mappings');
+    }
+  },
 };

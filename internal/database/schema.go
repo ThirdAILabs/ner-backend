@@ -167,3 +167,8 @@ type ChatHistory struct {
 	Timestamp   time.Time       `gorm:"autoCreateTime"`
 	Metadata    datatypes.JSON  `gorm:"type:jsonb"` // {"key": "value"}
 }
+
+type UploadPathMap struct {
+	ID       uuid.UUID         `gorm:"type:uuid;primaryKey"`
+	Mapping  datatypes.JSON `gorm:"type:jsonb"`
+}

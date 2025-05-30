@@ -80,6 +80,11 @@ func (s *BackendService) AddRoutes(r chi.Router) {
 		r.Get("/group", RestHandler(s.ValidateGroupDefinition))
 		r.Get("/s3", RestHandler(s.ValidateS3Access))
 	})
+
+	r.Route("/path-map", func(r chi.Router) {
+		r.Post("/{upload_id}", RestHandler(s.StoreUploadPathMap))
+		r.Get("/{upload_id}", RestHandler(s.GetUploadPathMap))
+	})
 }
 
 func (s *BackendService) ListModels(r *http.Request) (any, error) {
@@ -979,4 +984,48 @@ func (s *BackendService) ValidateS3Access(r *http.Request) (any, error) {
 		return nil, err
 	}
 	return nil, validateS3Access(req.S3Endpoint, req.S3Region, req.SourceS3Bucket, req.SourceS3Prefix)
+}
+
+func (s *BackendService) StoreUploadPathMap(r *http.Request) (any, error) {
+	uploadId, err := URLParamUUID(r, "upload_id")
+	if err != nil {
+		return nil, err
+	}
+	req, err := ParseRequest[api.UploadPathMap](r)
+	if err != nil {
+		return nil, CodedErrorf(http.StatusBadRequest, "invalid request body")
+	}
+	mappingJson, err := json.Marshal(req.Mapping)
+	if err != nil {
+		return nil, CodedErrorf(http.StatusBadRequest, "invalid mapping")
+	}
+	entry := database.UploadPathMap{
+		ID: uploadId,
+		Mapping:  mappingJson,
+	}
+	if err := s.db.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"mapping"}),
+	}).Create(&entry).Error; err != nil {
+		return nil, CodedErrorf(http.StatusInternalServerError, "failed to store path map")
+	}
+	return nil, nil
+}
+
+func (s *BackendService) GetUploadPathMap(r *http.Request) (any, error) {
+	uploadId, err := URLParamUUID(r, "upload_id")
+	if err != nil {
+		return nil, err
+	}
+	var entry database.UploadPathMap
+	if err := s.db.First(&entry, "id = ?", uploadId).Error; err != nil {
+		return nil, CodedErrorf(http.StatusNotFound, "not found")
+	}
+	var mapping map[string]string
+	if err := json.Unmarshal(entry.Mapping, &mapping); err != nil {
+		return nil, CodedErrorf(http.StatusInternalServerError, "invalid mapping data")
+	}
+	return api.UploadPathMap{
+		Mapping:  mapping,
+	}, nil
 }

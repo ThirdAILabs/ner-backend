@@ -201,6 +201,10 @@ ipcMain.handle('open-file-chooser', async (event, supportedTypes) => {
   return openFileChooser(supportedTypes);
 });
 
+ipcMain.handle('open-file', async (event, filePath) => {
+  return openFile(filePath);
+})
+
 // This method will be called when Electron has finished initialization
 app.whenReady().then(async () => {
   // Initialize user ID first

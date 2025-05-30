@@ -89,3 +89,10 @@ export const openFileChooser = async (supportedTypes) => {
 
   return result;
 } 
+
+export const openFile = async (filePath) => {
+  const error = await shell.openPath(filePath);
+  if (error) {
+    throw new Error(error);
+  }
+}

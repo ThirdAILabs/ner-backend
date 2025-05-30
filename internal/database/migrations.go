@@ -5,6 +5,7 @@ import (
 	"ner-backend/internal/database/versions/migration_0"
 	"ner-backend/internal/database/versions/migration_1"
 	"ner-backend/internal/database/versions/migration_2"
+	"ner-backend/internal/database/versions/migration_3"
 
 	"github.com/go-gormigrate/gormigrate/v2"
 	"gorm.io/gorm"
@@ -26,6 +27,11 @@ func GetMigrator(db *gorm.DB) *gormigrate.Gormigrate {
 			Migrate:  migration_2.Migration,
 			Rollback: migration_2.Rollback,
 		},
+		{
+			ID:       "3",
+			Migrate:  migration_3.Migration,
+			Rollback: migration_3.Rollback,
+		},
 	})
 
 	migrator.InitSchema(func(txn *gorm.DB) error {
@@ -36,7 +42,7 @@ func GetMigrator(db *gorm.DB) *gormigrate.Gormigrate {
 		log.Println("clean database detected, running full schema initialization")
 
 		return db.AutoMigrate(
-			&Model{}, &ModelTag{}, &Report{}, &ReportTag{}, &CustomTag{}, &ShardDataTask{}, &InferenceTask{}, &Group{}, &ObjectGroup{}, &ObjectEntity{}, &ReportError{}, &ObjectPreview{}, &ChatHistory{}, &ChatSession{},
+			&Model{}, &ModelTag{}, &Report{}, &ReportTag{}, &CustomTag{}, &ShardDataTask{}, &InferenceTask{}, &Group{}, &ObjectGroup{}, &ObjectEntity{}, &ReportError{}, &ObjectPreview{}, &ChatHistory{}, &ChatSession{}, &UploadPathMap{},
 		)
 	})
 

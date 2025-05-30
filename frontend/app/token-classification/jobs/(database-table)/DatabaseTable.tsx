@@ -46,7 +46,7 @@ function joinAdjacentEntities(entities: Entity[]) {
   return joinedEntities;
 }
 
-export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) {
+export function DatabaseTable({ groups: groupsProp, tags, uploadId }: DatabaseTableProps) {
   const searchParams = useSearchParams();
   const reportId: string = searchParams.get('jobId') as string;
   const groups = groupsProp.length > 0 ? [...groupsProp, NO_GROUP] : [];
@@ -66,6 +66,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
   const [viewMode, setViewMode] = useState<ViewMode>('object');
   const [query, setQuery] = useState('');
   const [filteredObjects, setFilteredObjects] = useState<string[]>([]);
+  const [pathMap, setPathMap] = useState<Record<string, string>>({});
 
   // Pagination states
   const [tokenOffset, setTokenOffset] = useState(0);
@@ -232,6 +233,23 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
     loadedInitialTokenRecords.current = true;
     loadedInitialObjectRecords.current = true;
   }, []);
+
+  // Load path map
+  useEffect(() => {
+    console.log('uploadId', uploadId);
+    if (uploadId) {
+      console.log('loading path map');
+      nerService
+        .getUploadPaths(uploadId)
+        .then((pathMap) => {
+          console.log('got path map', pathMap);
+          setPathMap(pathMap);
+        })
+        .catch((error) => {
+          console.error('Could not load path map:', error);
+        });
+    }
+  }, [uploadId]);
 
   // Scroll handler for infinite loading
   const handleTableScroll = () => {
@@ -400,6 +418,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
                   hasMoreObjects={hasMoreObjects}
                   onLoadMore={handleLoadMore}
                   showFilterContent={showFilterSection}
+                  pathMap={pathMap}
                 />
               </div>
             </div>
