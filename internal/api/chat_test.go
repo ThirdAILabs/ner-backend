@@ -402,6 +402,7 @@ func TestChatEndpoint(t *testing.T) {
 			defer wg.Done()
 			
 			// Prompt is slightly different each time so that GPT can't cache the response.
+			// This helps to ensure that the requests are concurrent.
 			message := fmt.Sprintf("Pretend like you're a robot with ID %s and introduce yourself in 30 words", randomString())
 			rec := sendMessage(t, router, sessionID, message)
 			
@@ -453,6 +454,7 @@ func TestChatEndpoint(t *testing.T) {
 			defer wg.Done()
 			
 			// Prompt is slightly different each time so that GPT can't cache the response.
+			// This helps to ensure that the requests are concurrent.
 			message := fmt.Sprintf("Pretend like you're a robot with ID %s and introduce yourself in 30 words", randomString())
 			rec := sendMessage(t, router, sessionID, message)
 			
