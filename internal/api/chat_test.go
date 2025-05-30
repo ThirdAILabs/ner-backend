@@ -469,7 +469,6 @@ func TestChatEndpoint(t *testing.T) {
 				failureCount++
 			}
 			mu.Unlock()
-
 		}
 		
 		wg.Add(2)
