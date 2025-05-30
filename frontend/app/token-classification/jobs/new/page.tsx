@@ -92,7 +92,6 @@ const GroupCard: React.FC<GroupProps> = ({ name, definition, onRemove }) => (
   </div>
 );
 
-
 interface SourceOptionProps {
   onClick: () => void;
   input?: React.ReactNode;
@@ -102,7 +101,14 @@ interface SourceOptionProps {
   disclaimer: string;
 }
 
-const SourceOption: React.FC<SourceOptionProps> = ({ onClick, input, icon, title, description, disclaimer }) => (
+const SourceOption: React.FC<SourceOptionProps> = ({
+  onClick,
+  input,
+  icon,
+  title,
+  description,
+  disclaimer,
+}) => (
   <div
     className="relative p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 transition-colors cursor-pointer"
     onClick={onClick}
@@ -133,28 +139,32 @@ interface FileSourcesProps {
   handleLocalFiles: (files: [File, string][]) => void;
 }
 
-const FileSources: React.FC<FileSourcesProps> = ({selectSource, handleLocalFiles}) => {
-  const s3 = <SourceOption
-    onClick={() => selectSource('s3')}
-    icon={
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
-      />
-    }
-    title="S3 Bucket"
-    description="Scan files from an S3 bucket"
-    disclaimer="Public buckets only without enterprise subscription."
-  />
+const FileSources: React.FC<FileSourcesProps> = ({ selectSource, handleLocalFiles }) => {
+  const s3 = (
+    <SourceOption
+      onClick={() => selectSource('s3')}
+      icon={
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
+        />
+      }
+      title="S3 Bucket"
+      description="Scan files from an S3 bucket"
+      disclaimer="Public buckets only without enterprise subscription."
+    />
+  );
 
-  const folderIcon = <path
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    strokeWidth="2"
-    d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-  />
+  const folderIcon = (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+    />
+  );
 
   // @ts-ignore
   if (window && window.electronAPI) {
@@ -171,7 +181,7 @@ const FileSources: React.FC<FileSourcesProps> = ({selectSource, handleLocalFiles
           disclaimer={`Supported: ${SUPPORTED_TYPES.join(', ')}`}
         />
         {s3}
-      </> 
+      </>
     );
   }
 
@@ -181,25 +191,29 @@ const FileSources: React.FC<FileSourcesProps> = ({selectSource, handleLocalFiles
       handleLocalFiles(Array.from(files).map((file) => [file, '']));
       e.target.value = '';
     }
-  }
+  };
 
-  const fileInput = <input
-    type="file"
-    id="file-upload"
-    multiple
-    onChange={handleFileChange}
-    className="hidden"
-    accept={SUPPORTED_TYPES.join(',')}
-  />
+  const fileInput = (
+    <input
+      type="file"
+      id="file-upload"
+      multiple
+      onChange={handleFileChange}
+      className="hidden"
+      accept={SUPPORTED_TYPES.join(',')}
+    />
+  );
 
-  const directoryInput = <input
-    type="file"
-    id="directory-upload"
-    {...({ webkitdirectory: '', directory: '' } as any)}
-    onChange={handleFileChange}
-    className="hidden"
-    accept={SUPPORTED_TYPES.join(',')}
-  />
+  const directoryInput = (
+    <input
+      type="file"
+      id="directory-upload"
+      {...({ webkitdirectory: '', directory: '' } as any)}
+      onChange={handleFileChange}
+      className="hidden"
+      accept={SUPPORTED_TYPES.join(',')}
+    />
+  );
 
   return (
     <>
@@ -492,17 +506,15 @@ export default function NewJobPage() {
     const newSelectedFiles = [...selectedFiles];
 
     files.forEach(([newFile, newFullPath]) => {
-      const existingIndex = newSelectedFiles.findIndex(
-        (existingFile) => {
-          // In practice, either both are empty or both are not empty
-          // If both are not empty, it means we are using electronAPI to choose files
-          // Otherwise, we are using the file input to choose files
-          if (existingFile[1] !== "" && newFullPath !== "") {
-            return existingFile[1] === newFullPath;
-          }
-          return existingFile[0].name === newFile.name;
+      const existingIndex = newSelectedFiles.findIndex((existingFile) => {
+        // In practice, either both are empty or both are not empty
+        // If both are not empty, it means we are using electronAPI to choose files
+        // Otherwise, we are using the file input to choose files
+        if (existingFile[1] !== '' && newFullPath !== '') {
+          return existingFile[1] === newFullPath;
         }
-      );
+        return existingFile[0].name === newFile.name;
+      });
 
       if (existingIndex !== -1) {
         // Duplicate file so, replace the existing file with the new one
@@ -516,16 +528,16 @@ export default function NewJobPage() {
     // This is to handle the case where there are multiple files with the same name
     // but different full paths.
     const newFileNames = uniqueFileNames(newSelectedFiles.map((file) => file[0].name));
-    
+
     setSelectedFiles(
       newSelectedFiles.map(([file, fullPath], index) => {
         const newFile = new File([file], newFileNames[index], {
           type: file.type,
-          lastModified: file.lastModified
+          lastModified: file.lastModified,
         });
         return [newFile, fullPath];
       })
-    )
+    );
   };
 
   // Update file handling to use file/directory input

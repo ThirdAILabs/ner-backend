@@ -30,31 +30,35 @@ export const formatFileSize = (bytes: number, space: boolean = false): string =>
 // Returns [file, fullPath] pairs
 export const getFilesFromElectron = async (): Promise<[File, string][]> => {
   // @ts-ignore
-  const results = await window.electronAPI.openFileChooser(SUPPORTED_TYPES.map(t => t.replace('.', '')));
+  const results = await window.electronAPI.openFileChooser(
+    SUPPORTED_TYPES.map((t) => t.replace('.', ''))
+  );
 
   // Convert the file data into proper File objects
-  const files = await Promise.all(results.allFiles.map(async (fileData: any, index: number) => {
-    // Convert base64 to ArrayBuffer
-    const binaryString = atob(fileData.data);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    
-    // Create a Blob from the ArrayBuffer
-    const blob = new Blob([bytes], { type: fileData.type });
-    
-    // Create a File object from the Blob
-    const file = new File([blob], fileData.name, {
-      type: fileData.type,
-      lastModified: fileData.lastModified
-    });
+  const files = await Promise.all(
+    results.allFiles.map(async (fileData: any, index: number) => {
+      // Convert base64 to ArrayBuffer
+      const binaryString = atob(fileData.data);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
 
-    return [file, results.allFilePaths[index]];
-  }));
-  
+      // Create a Blob from the ArrayBuffer
+      const blob = new Blob([bytes], { type: fileData.type });
+
+      // Create a File object from the Blob
+      const file = new File([blob], fileData.name, {
+        type: fileData.type,
+        lastModified: fileData.lastModified,
+      });
+
+      return [file, results.allFilePaths[index]];
+    })
+  );
+
   return files;
-}
+};
 
 export const uniqueFileNames = (fileNames: string[]): string[] => {
   const existingFileNameCount: Record<string, number> = {};
@@ -64,7 +68,10 @@ export const uniqueFileNames = (fileNames: string[]): string[] => {
       existingFileNameCount[fileName] = 0;
     } else {
       const ext_idx = fileName.lastIndexOf('.');
-      newFileName = fileName.substring(0, ext_idx) + ` (${existingFileNameCount[fileName]})` + fileName.substring(ext_idx);
+      newFileName =
+        fileName.substring(0, ext_idx) +
+        ` (${existingFileNameCount[fileName]})` +
+        fileName.substring(ext_idx);
       // This is to handle an edge case like [a/file.txt, b/file.txt, b/file (1).txt]
       // a/file.txt -> file.txt | b/file.txt -> file (1).txt | b/file (1).txt -> b/file (1) (1).txt
       existingFileNameCount[newFileName] = 1;
@@ -73,4 +80,4 @@ export const uniqueFileNames = (fileNames: string[]): string[] => {
     return newFileName;
   });
   return newFileNames;
-}
+};
