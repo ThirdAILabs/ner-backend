@@ -8,57 +8,72 @@ import (
 	"gorm.io/gorm"
 )
 
-// SQLite only supports one writer at a time, so we need a lock
-// whenever we write to the database
-var dbMutex sync.Mutex
+// ChatDB encapsulates the database connection and mutex for thread-safe operations
+type ChatDB struct {
+	db    *gorm.DB
+	mutex sync.Mutex
+}
 
-func GetSessions(db *gorm.DB) ([]database.ChatSession, error) {
+// NewChatDB creates a new ChatDB instance
+func NewChatDB(db *gorm.DB) *ChatDB {
+	return &ChatDB{
+		db: db,
+	}
+}
+
+func (c *ChatDB) GetSessions() ([]database.ChatSession, error) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	var sessions []database.ChatSession
-	err := db.Find(&sessions).Error
+	err := c.db.Find(&sessions).Error
 	return sessions, err
 }
 
-func CreateSession(db *gorm.DB, session *database.ChatSession) error {
-	dbMutex.Lock()
-	defer dbMutex.Unlock()
-	return db.Create(session).Error
+func (c *ChatDB) CreateSession(session *database.ChatSession) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return c.db.Create(session).Error
 }
 
-func GetSession(db *gorm.DB, sessionID uuid.UUID) (database.ChatSession, error) {
+func (c *ChatDB) GetSession(sessionID uuid.UUID) (database.ChatSession, error) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	var session database.ChatSession
-	err := db.First(&session, "id = ?", sessionID).Error
+	err := c.db.First(&session, "id = ?", sessionID).Error
 	return session, err
 }
 
-func UpdateSessionTitle(db *gorm.DB, sessionID uuid.UUID, title string) error {
-	dbMutex.Lock()
-	defer dbMutex.Unlock()
-	return db.Model(&database.ChatSession{ID: sessionID}).Update("title", title).Error
+func (c *ChatDB) UpdateSessionTitle(sessionID uuid.UUID, title string) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return c.db.Model(&database.ChatSession{ID: sessionID}).Update("title", title).Error
 }
 
-func UpdateSessionTagMetadata(db *gorm.DB, sessionID uuid.UUID, tagMetadata []byte) error {
-	dbMutex.Lock()
-	defer dbMutex.Unlock()
-	return db.Model(&database.ChatSession{ID: sessionID}).Update("tag_metadata", tagMetadata).Error
+func (c *ChatDB) UpdateSessionTagMetadata(sessionID uuid.UUID, tagMetadata []byte) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return c.db.Model(&database.ChatSession{ID: sessionID}).Update("tag_metadata", tagMetadata).Error
 }
 
-func DeleteSession(db *gorm.DB, sessionID uuid.UUID) error {
-	dbMutex.Lock()
-	defer dbMutex.Unlock()
-	if err := db.Delete(&database.ChatHistory{}, "session_id = ?", sessionID).Error; err != nil {
+func (c *ChatDB) DeleteSession(sessionID uuid.UUID) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	if err := c.db.Delete(&database.ChatHistory{}, "session_id = ?", sessionID).Error; err != nil {
 		return err
 	}
-	return db.Delete(&database.ChatSession{}, "id = ?", sessionID).Error
+	return c.db.Delete(&database.ChatSession{}, "id = ?", sessionID).Error
 }
 
-func GetChatHistory(db *gorm.DB, sessionID uuid.UUID) ([]database.ChatHistory, error) {
+func (c *ChatDB) GetChatHistory(sessionID uuid.UUID) ([]database.ChatHistory, error) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	var history []database.ChatHistory
-	err := db.Where("session_id = ?", sessionID).Order("timestamp ASC").Find(&history).Error
+	err := c.db.Where("session_id = ?", sessionID).Order("timestamp ASC").Find(&history).Error
 	return history, err
 }
 
-func SaveChatMessage(db *gorm.DB, message *database.ChatHistory) error {
-	dbMutex.Lock()
-	defer dbMutex.Unlock()
-	return db.Create(message).Error
+func (c *ChatDB) SaveChatMessage(message *database.ChatHistory) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return c.db.Create(message).Error
 }

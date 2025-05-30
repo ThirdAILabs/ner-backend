@@ -16,7 +16,6 @@ import (
 	"github.com/tmc/langchaingo/llms"
 	"github.com/tmc/langchaingo/llms/openai"
 	"gorm.io/datatypes"
-	"gorm.io/gorm"
 )
 
 var ErrStopStream = errors.New("stop stream")
@@ -36,7 +35,7 @@ func NewTagMetadata() TagMetadata {
 }
 
 type ChatSession struct {
-	db           *gorm.DB
+	db           *ChatDB
 	sessionID    uuid.UUID
 	model        string
 	apiKey       string
@@ -44,8 +43,8 @@ type ChatSession struct {
 	ner          core.Model
 }
 
-func NewChatSession(db *gorm.DB, sessionID uuid.UUID, model, apiKey string, ner core.Model) (*ChatSession, error) {
-	_, err := GetSession(db, sessionID)
+func NewChatSession(db *ChatDB, sessionID uuid.UUID, model, apiKey string, ner core.Model) (*ChatSession, error) {
+	_, err := db.GetSession(sessionID)
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +176,7 @@ func (session *ChatSession) ChatStream(userInput string) (ChatIterator, error) {
 }
 
 func (session *ChatSession) getTagMetadata() (TagMetadata, error) {
-	chatSession, err := GetSession(session.db, session.sessionID)
+	chatSession, err := session.db.GetSession(session.sessionID)
 	if err != nil {
 		return TagMetadata{}, err
 	}
@@ -195,7 +194,7 @@ func (session *ChatSession) updateTagMetadata(tagMetadata TagMetadata) error {
 	if err != nil {
 		return fmt.Errorf("error marshalling tag map: %v", err)
 	}
-	return UpdateSessionTagMetadata(session.db, session.sessionID, tagMetadataJSON)
+	return session.db.UpdateSessionTagMetadata(session.sessionID, tagMetadataJSON)
 }
 
 func (session *ChatSession) streamOpenAIResponse(ctx string) func(yield func(string, error) bool) {
@@ -233,9 +232,9 @@ func (session *ChatSession) saveMessage(messageType, content string, metadata ma
 		Content:     content,
 		Metadata:    metadataJSON,
 	}
-	return SaveChatMessage(session.db, &chatMessage)
+	return session.db.SaveChatMessage(&chatMessage)
 }
 
 func (session *ChatSession) getChatHistory() ([]database.ChatHistory, error) {
-	return GetChatHistory(session.db, session.sessionID)
+	return session.db.GetChatHistory(session.sessionID)
 }

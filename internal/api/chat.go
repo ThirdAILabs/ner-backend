@@ -21,16 +21,16 @@ import (
 
 type SessionLock struct {
 	mu sync.Mutex
-	sessions map[string]bool
+	sessions map[uuid.UUID]bool
 }
 
 func NewSessionLock() *SessionLock {
 	return &SessionLock{
-		sessions: make(map[string]bool),
+		sessions: make(map[uuid.UUID]bool),
 	}
 }
 
-func (l *SessionLock) Lock(sessionID string) error {
+func (l *SessionLock) Lock(sessionID uuid.UUID) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
@@ -41,26 +41,26 @@ func (l *SessionLock) Lock(sessionID string) error {
 	return nil
 }
 
-func (l *SessionLock) Unlock(sessionID string) {
+func (l *SessionLock) Unlock(sessionID uuid.UUID) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
 	delete(l.sessions, sessionID)
 }
 
-var sessionLock = NewSessionLock()
-
 type ChatService struct {
-	db      *gorm.DB
+	db      *chat.ChatDB
 	manager *chat.ChatSessionManager
 	model   core.Model
+	lock    *SessionLock
 }
 
 func NewChatService(db *gorm.DB, model core.Model) *ChatService {
 	return &ChatService{
-		db:      db,
+		db:      chat.NewChatDB(db),
 		manager: chat.NewChatSessionManager(db),
 		model:   model,
+		lock:    NewSessionLock(),
 	}
 }
 
@@ -80,7 +80,7 @@ func (s *ChatService) AddRoutes(r chi.Router) {
 }
 
 func (s *ChatService) GetSessions(r *http.Request) (any, error) {
-	sessions, err := chat.GetSessions(s.db)
+	sessions, err := s.db.GetSessions()
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +113,7 @@ func (s *ChatService) StartSession(r *http.Request) (any, error) {
 	}
 	
 	sessionID := uuid.New()
-	err = chat.CreateSession(s.db, &database.ChatSession{
+	err = s.db.CreateSession(&database.ChatSession{
 		ID:          sessionID,
 		Title:       req.Title,
 		TagMetadata: tagMetadataJSON,
@@ -131,12 +131,12 @@ func (s *ChatService) GetSession(r *http.Request) (any, error) {
 		return nil, err
 	}
 
-	if err := sessionLock.Lock(sessionID.String()); err != nil {
+	if err := s.lock.Lock(sessionID); err != nil {
 		return nil, err
 	}
-	defer sessionLock.Unlock(sessionID.String())
+	defer s.lock.Unlock(sessionID)
 
-	session, err := chat.GetSession(s.db, sessionID)
+	session, err := s.db.GetSession(sessionID)
 	if err != nil {
 		slog.Error("Error getting session", "error", err)
 		return nil, fmt.Errorf("error getting session: %v", err)
@@ -161,17 +161,17 @@ func (s *ChatService) RenameSession(r *http.Request) (any, error) {
 		return nil, err
 	}
 	
-	if err := sessionLock.Lock(sessionID.String()); err != nil {
+	if err := s.lock.Lock(sessionID); err != nil {
 		return nil, err
 	}
-	defer sessionLock.Unlock(sessionID.String())
+	defer s.lock.Unlock(sessionID)
 
 	req, err := ParseRequest[api.RenameSessionRequest](r)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := chat.UpdateSessionTitle(s.db, sessionID, req.Title); err != nil {
+	if err := s.db.UpdateSessionTitle(sessionID, req.Title); err != nil {
 		return nil, err
 	}
 
@@ -184,10 +184,10 @@ func (s *ChatService) SendMessageStream(r *http.Request) (StreamResponse, error)
 		return nil, err
 	}
 
-	if err := sessionLock.Lock(sessionID.String()); err != nil {
+	if err := s.lock.Lock(sessionID); err != nil {
 		return nil, err
 	}
-	defer sessionLock.Unlock(sessionID.String())
+	defer s.lock.Unlock(sessionID)
 
 	req, err := ParseRequest[api.ChatRequest](r)
 	if err != nil {
@@ -235,24 +235,24 @@ func (s *ChatService) GetHistory(r *http.Request) (any, error) {
 		return nil, err
 	}
 
-	if err := sessionLock.Lock(sessionID.String()); err != nil {
+	if err := s.lock.Lock(sessionID); err != nil {
 		return nil, err
 	}
-	defer sessionLock.Unlock(sessionID.String())
+	defer s.lock.Unlock(sessionID)
 
-	history, err := chat.GetChatHistory(s.db, sessionID)
+	history, err := s.db.GetChatHistory(sessionID)
 	if err != nil {
 		return nil, err
 	}
 
-	var resp []api.ChatHistoryItem
-	for _, msg := range history {
-		resp = append(resp, api.ChatHistoryItem{
-			MessageType: msg.MessageType,
-			Content:     msg.Content,
-			Timestamp:   msg.Timestamp,
-			Metadata:    msg.Metadata,
-		})
+	resp := make([]api.ChatHistoryItem, len(history))
+	for i, item := range history {
+		resp[i] = api.ChatHistoryItem{
+			MessageType: item.MessageType,
+			Content:     item.Content,
+			Timestamp:   item.Timestamp,
+			Metadata:    item.Metadata,
+		}
 	}
 
 	return resp, nil
@@ -264,12 +264,12 @@ func (s *ChatService) DeleteSession(r *http.Request) (any, error) {
 		return nil, err
 	}
 
-	if err := sessionLock.Lock(sessionID.String()); err != nil {
+	if err := s.lock.Lock(sessionID); err != nil {
 		return nil, err
 	}
-	defer sessionLock.Unlock(sessionID.String())
-	
-	if err := chat.DeleteSession(s.db, sessionID); err != nil {
+	defer s.lock.Unlock(sessionID)
+
+	if err := s.db.DeleteSession(sessionID); err != nil {
 		return nil, err
 	}
 
