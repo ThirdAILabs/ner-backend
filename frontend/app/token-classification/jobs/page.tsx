@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ArrowLeft, RefreshCw, Square } from 'lucide-react';
+import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
 import { DatabaseTable } from './(database-table)/DatabaseTable';
 import { nerService } from '@/lib/backend';
@@ -127,86 +127,6 @@ const GroupCard: React.FC<GroupProps> = ({ name, definition }) => (
 interface CustomTag {
   [key: string]: string;
 }
-
-const NewTagDialog: React.FC<{
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (tag: CustomTag) => void;
-  existingTags: string[];
-}> = ({ isOpen, onClose, onSubmit, existingTags }) => {
-  const [tagName, setTagName] = useState('');
-  const [pattern, setPattern] = useState('');
-  const [error, setError] = useState('');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (existingTags.includes(tagName)) {
-      setError('Tag name already exists');
-      return;
-    }
-
-    if (!tagName || !pattern) {
-      setError('Both fields are required');
-      return;
-    }
-
-    onSubmit({ name: tagName, pattern });
-    setTagName('');
-    setPattern('');
-    setError('');
-    onClose();
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Create Custom Tag</DialogTitle>
-          <DialogDescription>Define a new custom tag with a regex pattern.</DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="tagName">Tag Name</Label>
-              <Input
-                id="tagName"
-                value={tagName}
-                onChange={(e) => setTagName(e.target.value.toUpperCase())}
-                placeholder="CUSTOM_TAG_NAME"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="pattern">Regex Pattern</Label>
-              <Input
-                id="pattern"
-                value={pattern}
-                onChange={(e) => setPattern(e.target.value)}
-                placeholder="\b[A-Z]{2}\d{6}\b"
-              />
-              <p className="text-sm text-gray-500">
-                Example patterns:
-                <br />
-                Phone: \d{3}[-.]?\d{3}[-.]?\d{4}
-                <br />
-                Custom ID: [A-Z]{2}\d{6}
-              </p>
-            </div>
-            {error && <p className="text-red-500 text-sm">{error}</p>}
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="default" className="bg-blue-400 hover:bg-blue-500">
-              Create Tag
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-};
 
 function JobDetail() {
   const searchParams = useSearchParams();
