@@ -12,7 +12,7 @@ export const updateNerBaseUrl = async () => {
     const port = await window.electron.getPort();
     if (port) {
       axiosInstance.defaults.baseURL = `http://localhost:${port}/api/v1`;
-      return true
+      return true;
     }
   }
   return false;
