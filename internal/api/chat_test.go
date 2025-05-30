@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"log/slog"
 	"math/rand/v2"
 	"net/http"
 	"net/http/httptest"
@@ -407,8 +406,6 @@ func TestChatEndpoint(t *testing.T) {
 			// Prompt is slightly different each time so that GPT can't cache the response.
 			// This helps to ensure that the requests are concurrent.
 			rec := sendMessage(t, router, sessionID, uniquePrompt())
-			
-			slog.Info("Code: ", "code", rec.Code)
 			
 			// Wait for the stream to finish
 			if rec.Code == http.StatusOK {
