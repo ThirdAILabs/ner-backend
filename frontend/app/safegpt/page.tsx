@@ -80,8 +80,17 @@ function SafeGPTContent() {
   const selectedId = searchParams.get('id');
 
   const { apiKey, saveApiKey } = useApiKeyStore();
-  const { title, updateTitle, previews, messages, sendMessage, invalidApiKey, deleteChat, model, setModel } =
-    useSafeGPT(selectedId || 'new');
+  const {
+    title,
+    updateTitle,
+    previews,
+    messages,
+    sendMessage,
+    invalidApiKey,
+    deleteChat,
+    model,
+    setModel,
+  } = useSafeGPT(selectedId || 'new');
 
   const [showRedaction, setShowRedaction] = useState<boolean>(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
