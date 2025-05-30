@@ -290,18 +290,6 @@ export function TableContent({
               </TableCell>
             </TableRow>
           )}
-
-          {/* {filteredRecords.length > 0 && (
-            <TableRow>
-              <TableCell colSpan={2}>
-                <LoadMoreButton
-                  hasMore={hasMoreTokens}
-                  isLoading={isLoadingTokenRecords}
-                  onClick={onLoadMore ?? (() => {})}
-                />
-              </TableCell>
-            </TableRow>
-          )} */}
         </TableBody>
       </>
     );
@@ -339,7 +327,7 @@ export function TableContent({
                     }}
                     onClick={openFile}
                   >
-                    {fullPath}
+                    {fileIdentifier.split('/').slice(-1)}
                   </span>
                 ) : (
                   <span

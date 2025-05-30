@@ -71,27 +71,6 @@ const ModelOption: React.FC<ModelOptionProps> = ({
   </div>
 );
 
-// Group card component
-interface GroupProps {
-  name: string;
-  definition: string;
-  onRemove: () => void;
-}
-
-const GroupCard: React.FC<GroupProps> = ({ name, definition, onRemove }) => (
-  <div className="border border-gray-200 rounded-md overflow-hidden">
-    <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-      <h3 className="text-base font-medium">{name}</h3>
-      <Button variant="ghost" size="sm" onClick={onRemove} className="text-red-500">
-        Remove
-      </Button>
-    </div>
-    <div className="p-4">
-      <p className="text-sm font-mono">{definition}</p>
-    </div>
-  </div>
-);
-
 interface SourceOptionProps {
   onClick: () => void;
   input?: React.ReactNode;
@@ -275,9 +254,7 @@ export default function NewJobPage() {
 
   // Model selection
   const [models, setModels] = useState<any[]>([]);
-  //Bi-default Presidio model is selected.
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
-  const [selectedModel, setSelectedModel] = useState<any>(null);
 
   // Tags handling
   const [availableTags, setAvailableTags] = useState<string[]>([]);
@@ -348,8 +325,6 @@ export default function NewJobPage() {
       setIsTagsLoading(true);
       try {
         const model = await nerService.getModel(selectedModelId);
-        setSelectedModel(model);
-
         // Get tags from the model
         const modelTags = model.Tags || [];
         console.log('Tags from model:', modelTags);
