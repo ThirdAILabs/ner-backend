@@ -249,6 +249,11 @@ export const nerService = {
         formData.append('files', file);
       });
 
+      console.log('backend.ts', 'files', files);
+      formData.forEach((value, key) => {
+        console.log('backend.ts formData', 'key', key, 'value', value);
+      });
+
       const response = await axiosInstance.post(`/uploads`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -415,21 +420,18 @@ export const nerService = {
     await axiosInstance.post('/chat/api-key', { ApiKey: apiKey });
   },
 
-  storeUploadPaths: async (mappings: { fileIdentifier: string, fullPath: string }[]) => {
+  storeUploadPaths: async (uploadId: string, mapping: { [filename: string]: string }) => {
     try {
-      await axiosInstance.post('/upload-paths', mappings.map(m => ({
-        FileIdentifier: m.fileIdentifier,
-        FullPath: m.fullPath,
-      })));
+      await axiosInstance.post(`/path-map/${uploadId}`, { Mapping: mapping });
     } catch (error) {
       return handleApiError(error, 'Failed to store upload path mappings');
     }
   },
 
-  getUploadPaths: async (fileIdentifiers: string[]) => {
+  getUploadPaths: async (uploadId: string) => {
     try {
-      const { data } = await axiosInstance.post('/upload-paths', { FileIdentifiers: fileIdentifiers });
-      return data; // [{fileIdentifier, fullPath}]
+      const { data } = await axiosInstance.get(`/path-map/${uploadId}`);
+      return data.Mapping as { [filename: string]: string };
     } catch (error) {
       return handleApiError(error, 'Failed to fetch upload path mappings');
     }
