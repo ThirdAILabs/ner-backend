@@ -10,17 +10,7 @@ import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
 import { DatabaseTable } from './(database-table)/DatabaseTable';
 import { nerService } from '@/lib/backend';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Box } from '@mui/material';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import { Suspense } from 'react';
 import { floor } from 'lodash';
 
