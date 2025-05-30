@@ -41,13 +41,7 @@ const Loading = () => {
   return (
     <LoadingContainer>
       <PulsingLogo>
-        <Image
-          src="/thirdai-logo.png"
-          alt="Logo"
-          width={100}
-          height={100}
-          priority
-        />
+        <Image src="/thirdai-logo.png" alt="Logo" width={100} height={100} priority />
       </PulsingLogo>
       <Typography className="text-gray-500" variant="h6" sx={{ fontWeight: 600 }}>
         Warming up...
@@ -55,7 +49,6 @@ const Loading = () => {
     </LoadingContainer>
   );
 };
-
 
 interface HealthContextType {
   healthStatus: boolean;
@@ -103,9 +96,11 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  return <HealthContext.Provider value={{ healthStatus }}>
-    {healthStatus ? children : <Loading />}
-  </HealthContext.Provider>;
+  return (
+    <HealthContext.Provider value={{ healthStatus }}>
+      {healthStatus ? children : <Loading />}
+    </HealthContext.Provider>
+  );
 }
 
 export function useHealth() {
