@@ -3,7 +3,6 @@ package api
 import (
 	"bufio"
 	"bytes"
-	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -216,22 +215,24 @@ func processStreamResponse(t *testing.T, rec *httptest.ResponseRecorder) (redact
 	return redactedMessage, reply, tagMap
 }
 
-func randomString() string {
-	return fmt.Sprintf("%x", md5.Sum([]byte(time.Now().String())))[:8]
+func getHistory(t *testing.T, router chi.Router, sessionID string) []pkgapi.ChatHistoryItem {	
+	req := httptest.NewRequest(http.MethodGet, "/chat/sessions/"+sessionID+"/history", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+	
+	var history []pkgapi.ChatHistoryItem
+	if err := json.NewDecoder(rec.Body).Decode(&history); err != nil {
+		t.Fatalf("decode history: %v", err)
+	}
+	
+	return history
 }
 
-func getHistory(t *testing.T, router chi.Router, sessionID string) []pkgapi.ChatHistoryItem {	
-		req := httptest.NewRequest(http.MethodGet, "/chat/sessions/"+sessionID+"/history", nil)
-		rec := httptest.NewRecorder()
-		router.ServeHTTP(rec, req)
-		assert.Equal(t, http.StatusOK, rec.Code)
-	
-		var history []pkgapi.ChatHistoryItem
-		if err := json.NewDecoder(rec.Body).Decode(&history); err != nil {
-			t.Fatalf("decode history: %v", err)
-		}
-
-		return history
+func uniquePrompt() string {
+	now := time.Now()
+	return fmt.Sprintf("It is now %d:%02d. How much longer is it to the top of the hour? Briefly explain how you got the answer.", 
+		now.Hour(), now.Minute())
 }
 
 func TestChatEndpoint(t *testing.T) {
@@ -403,8 +404,7 @@ func TestChatEndpoint(t *testing.T) {
 			
 			// Prompt is slightly different each time so that GPT can't cache the response.
 			// This helps to ensure that the requests are concurrent.
-			message := fmt.Sprintf("Pretend like you're a robot with ID %s and introduce yourself in 30 words", randomString())
-			rec := sendMessage(t, router, sessionID, message)
+			rec := sendMessage(t, router, sessionID, uniquePrompt())
 			
 			slog.Info("Code: ", "code", rec.Code)
 			
@@ -455,8 +455,7 @@ func TestChatEndpoint(t *testing.T) {
 			
 			// Prompt is slightly different each time so that GPT can't cache the response.
 			// This helps to ensure that the requests are concurrent.
-			message := fmt.Sprintf("Pretend like you're a robot with ID %s and introduce yourself in 30 words", randomString())
-			rec := sendMessage(t, router, sessionID, message)
+			rec := sendMessage(t, router, sessionID, uniquePrompt())
 			
 			// Wait for the stream to finish
 			if rec.Code == http.StatusOK {
