@@ -11,7 +11,6 @@ import (
 	"ner-backend/internal/database"
 	"sort"
 	"strings"
-	"sync"
 
 	"github.com/google/uuid"
 	"github.com/tmc/langchaingo/llms"
@@ -21,37 +20,6 @@ import (
 )
 
 var ErrStopStream = errors.New("stop stream")
-
-type SessionLock struct {
-	mu sync.Mutex
-	sessions map[string]bool
-}
-
-func NewSessionLock() *SessionLock {
-	return &SessionLock{
-		sessions: make(map[string]bool),
-	}
-}
-
-func (l *SessionLock) Lock(sessionID string) error {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
-	if _, ok := l.sessions[sessionID]; ok {
-		return fmt.Errorf("session %s is currently in use", sessionID)
-	}
-	l.sessions[sessionID] = true
-	return nil
-}
-
-func (l *SessionLock) Unlock(sessionID string) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
-	delete(l.sessions, sessionID)
-}
-
-var sessionLock = NewSessionLock()
 
 type TagMetadata struct {
 	TagMap map[string]string 
@@ -77,13 +45,9 @@ type ChatSession struct {
 }
 
 func NewChatSession(db *gorm.DB, sessionID uuid.UUID, model, apiKey string, ner core.Model) (*ChatSession, error) {
-	var sessions []database.ChatSession
-	err := db.Where("id = ?", sessionID).Find(&sessions).Error
+	_, err := GetSession(db, sessionID)
 	if err != nil {
 		return nil, err
-	}
-	if len(sessions) == 0 {
-		return nil, fmt.Errorf("session not found")
 	}
 
 	client, err := openai.New(openai.WithToken(apiKey), openai.WithModel(model))
@@ -150,11 +114,6 @@ type ChatItem struct {
 type ChatIterator func(yield func(ChatItem, error) bool)
 
 func (session *ChatSession) ChatStream(userInput string) (ChatIterator, error) {
-	if err := sessionLock.Lock(session.sessionID.String()); err != nil {
-		return nil, err
-	}
-	defer sessionLock.Unlock(session.sessionID.String())
-
 	tagMetadata, err := session.getTagMetadata()
 	if err != nil {
 		return nil, fmt.Errorf("error getting tag metadata: %v", err)
@@ -218,8 +177,7 @@ func (session *ChatSession) ChatStream(userInput string) (ChatIterator, error) {
 }
 
 func (session *ChatSession) getTagMetadata() (TagMetadata, error) {
-	var chatSession database.ChatSession
-	err := session.db.Where("id = ?", session.sessionID).First(&chatSession).Error
+	chatSession, err := GetSession(session.db, session.sessionID)
 	if err != nil {
 		return TagMetadata{}, err
 	}
@@ -237,7 +195,7 @@ func (session *ChatSession) updateTagMetadata(tagMetadata TagMetadata) error {
 	if err != nil {
 		return fmt.Errorf("error marshalling tag map: %v", err)
 	}
-	return session.db.Model(&database.ChatSession{ID: session.sessionID}).Update("tag_metadata", tagMetadataJSON).Error
+	return UpdateSessionTagMetadata(session.db, session.sessionID, tagMetadataJSON)
 }
 
 func (session *ChatSession) streamOpenAIResponse(ctx string) func(yield func(string, error) bool) {
@@ -275,14 +233,9 @@ func (session *ChatSession) saveMessage(messageType, content string, metadata ma
 		Content:     content,
 		Metadata:    metadataJSON,
 	}
-	return session.db.Create(&chatMessage).Error
+	return SaveChatMessage(session.db, &chatMessage)
 }
 
 func (session *ChatSession) getChatHistory() ([]database.ChatHistory, error) {
-	var history []database.ChatHistory
-	err := session.db.Where("session_id = ?", session.sessionID).Order("timestamp ASC").Find(&history).Error
-	if err != nil {
-		return nil, err
-	}
-	return history, nil
+	return GetChatHistory(session.db, session.sessionID)
 }

@@ -24,18 +24,9 @@ import (
 )
 
 func initializeChatService() chi.Router {
-	// Enable shared cache and WAL to handle concurrent requests
-	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared&mode=memory&_journal=WAL&_timeout=5000&_busy_timeout=5000"), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared&mode=memory"), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
-	}
-
-	if err := db.Exec("PRAGMA journal_mode=WAL;").Error; err != nil {
-		log.Fatalf("Failed to enable WAL mode: %v", err)
-	}
-
-	if err := db.Exec("PRAGMA busy_timeout=5000;").Error; err != nil {
-		log.Fatalf("Failed to set busy timeout: %v", err)
 	}
 
 	if err := database.GetMigrator(db).Migrate(); err != nil {
