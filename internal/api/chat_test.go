@@ -389,18 +389,13 @@ func TestChatEndpoint(t *testing.T) {
 		failureCount := 0
 
 		mu := sync.Mutex{}
-		var startWg sync.WaitGroup
-		var endWg sync.WaitGroup
+		var wg sync.WaitGroup
 
 		routine := func() {
-			startWg.Done()
-			// Start when both goroutines are ready
-			startWg.Wait()
-
-			defer endWg.Done()
+			defer wg.Done()
 			
-			// 40 words is long enough to ensure that the requests will be concurrent
-			message := "Hello, introduce yourself in 40 words"
+			// 50 words is long enough to ensure that the requests will be concurrent
+			message := "Hello, introduce yourself in 50 words"
 			rec := sendMessage(t, router, sessionID, message)
 			
 			slog.Info("Code: ", "code", rec.Code)
@@ -419,11 +414,10 @@ func TestChatEndpoint(t *testing.T) {
 			mu.Unlock()
 		}
 		
-		startWg.Add(2)
-		endWg.Add(2)
+		wg.Add(2)
 		go routine()
 		go routine()
-		endWg.Wait()
+		wg.Wait()
 
 		// The server should only allow one request at a time per session
 		assert.Equal(t, 1, successCount)
@@ -446,18 +440,13 @@ func TestChatEndpoint(t *testing.T) {
 		failureCount := 0
 
 		mu := sync.Mutex{}
-		var startWg sync.WaitGroup
-		var endWg sync.WaitGroup
-		
-		routine := func(sessionID string) {
-			startWg.Done()
-			// Start when both goroutines are ready
-			startWg.Wait()
+		var wg sync.WaitGroup
 
-			defer endWg.Done()
+		routine := func(sessionID string) {
+			defer wg.Done()
 			
-			// 40 words is long enough to ensure that the requests will be concurrent
-			message := "Hello, introduce yourself in 40 words"
+			// 50 words is long enough to ensure that the requests will be concurrent
+			message := "Hello, introduce yourself in 50 words"
 			rec := sendMessage(t, router, sessionID, message)
 			
 			// Wait for the stream to finish
@@ -472,13 +461,13 @@ func TestChatEndpoint(t *testing.T) {
 				failureCount++
 			}
 			mu.Unlock()
+
 		}
 		
-		startWg.Add(2)
-		endWg.Add(2)
+		wg.Add(2)
 		go routine(sessionID1)
 		go routine(sessionID2)
-		endWg.Wait()
+		wg.Wait()
 
 		// The server allows concurrent requests to different sessions
 		assert.Equal(t, 2, successCount)
