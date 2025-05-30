@@ -205,6 +205,14 @@ export function TableContent({
     return { fullPath, openFile };
   };
 
+  const truncateFilePath = (filePath: string) => {
+    const maxLength = 50;
+    if (filePath.length > maxLength) {
+      return '...' + filePath.slice(filePath.length - maxLength, filePath.length);
+    }
+    return filePath;
+  };
+
   if (viewMode === 'classified-token') {
     const filteredRecords = tokenRecords.filter((record) =>
       filterRecords(record.groups, [record.tag])
@@ -254,7 +262,7 @@ export function TableContent({
                             title={fileIdentifier.split('/').slice(-1).join('')}
                             onClick={openFile}
                           >
-                            {fullPath}
+                            {truncateFilePath(fullPath)}
                           </span>
                         );
                       } else {
@@ -339,7 +347,7 @@ export function TableContent({
                     }}
                     onClick={openFile}
                   >
-                    {fullPath}
+                    {truncateFilePath(fullPath)}
                   </span>
                 ) : (
                   <span
