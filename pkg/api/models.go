@@ -150,11 +150,6 @@ type ValidateS3BucketRequest struct {
 	SourceS3Prefix string
 }
 
-type UploadPathMapping struct {
-	FileIdentifier string
-	FullPath string
-}
-
-type UploadPathMappingRequest struct {
-	FileIdentifiers []string
+type UploadPathMap struct {
+	Mapping  map[string]string `json:"mapping"`
 }

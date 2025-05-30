@@ -3,24 +3,25 @@ package migration_3
 import (
 	"fmt"
 
+	"github.com/google/uuid"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
-// Redefine UploadFilePath here to avoid import cycle
-type UploadFilePath struct {
-	FileIdentifier string `gorm:"primaryKey;size:300"`
-	FullPath string
+type UploadPathMap struct {
+	ID       uuid.UUID      `gorm:"type:uuid;primaryKey"`
+	Mapping  datatypes.JSON `gorm:"type:jsonb"`
 }
 
 func Migration(db *gorm.DB) error {
-	if err := db.AutoMigrate(&UploadFilePath{}); err != nil {
+	if err := db.AutoMigrate(&UploadPathMap{}); err != nil {
 		return fmt.Errorf("Migration3 failed: %w", err)
 	}
 	return nil
 }
 
 func Rollback(db *gorm.DB) error {
-	if err := db.Migrator().DropTable(&UploadFilePath{}); err != nil {
+	if err := db.Migrator().DropTable(&UploadPathMap{}); err != nil {
 		return fmt.Errorf("Rollback3 failed: %w", err)
 	}
 	return nil
