@@ -527,7 +527,30 @@ func TestGetReportPreviews(t *testing.T) {
 		Object:    "doc3.txt",
 		TokenTags: datatypes.JSON([]byte(`{"tokens":["foo"],"tags":["TAG2"]}`)),
 	}
-	db := createDB(t, p1, p2, p3)
+
+	e1 := &database.ObjectEntity{
+		ReportId: reportId,
+		Object:   "doc1.txt",
+		Start:    0, End: 1,
+		Label: "TAG1",
+		Text:  "",
+	}
+	e2 := &database.ObjectEntity{
+		ReportId: reportId,
+		Object:   "doc2.txt",
+		Start:    0, End: 1,
+		Label: "TAG1",
+		Text:  "",
+	}
+	e3 := &database.ObjectEntity{
+		ReportId: reportId,
+		Object:   "doc3.txt",
+		Start:    0, End: 1,
+		Label: "TAG2",
+		Text:  "",
+	}
+
+	db := createDB(t, p1, p2, p3, e1, e2, e3)
 
 	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
 	router := chi.NewRouter()
@@ -541,22 +564,12 @@ func TestGetReportPreviews(t *testing.T) {
 		router.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusOK, rec.Code)
-
 		var resp []api.ObjectPreviewResponse
-		err := json.Unmarshal(rec.Body.Bytes(), &resp)
-		require.NoError(t, err)
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
 
 		want := []api.ObjectPreviewResponse{
-			{
-				Object: "doc1.txt",
-				Tokens: []string{"foo", "bar", "baz"},
-				Tags:   []string{"O", "TAG1", "O"},
-			},
-			{
-				Object: "doc2.txt",
-				Tokens: []string{"foo", "bar", "baz"},
-				Tags:   []string{"O", "TAG1", "O"},
-			},
+			{Object: "doc1.txt", Tokens: []string{"foo", "bar", "baz"}, Tags: []string{"O", "TAG1", "O"}},
+			{Object: "doc2.txt", Tokens: []string{"foo", "bar", "baz"}, Tags: []string{"O", "TAG1", "O"}},
 		}
 		assert.ElementsMatch(t, want, resp)
 	})
@@ -569,17 +582,11 @@ func TestGetReportPreviews(t *testing.T) {
 		router.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusOK, rec.Code)
-
 		var resp []api.ObjectPreviewResponse
-		err := json.Unmarshal(rec.Body.Bytes(), &resp)
-		require.NoError(t, err)
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
 
 		want := []api.ObjectPreviewResponse{
-			{
-				Object: "doc3.txt",
-				Tokens: []string{"foo"},
-				Tags:   []string{"TAG2"},
-			},
+			{Object: "doc3.txt", Tokens: []string{"foo"}, Tags: []string{"TAG2"}},
 		}
 		assert.ElementsMatch(t, want, resp)
 	})
@@ -592,12 +599,8 @@ func TestGetReportPreviews(t *testing.T) {
 		router.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusOK, rec.Code)
-
 		var resp []api.ObjectPreviewResponse
-		err := json.Unmarshal(rec.Body.Bytes(), &resp)
-		require.NoError(t, err)
-
-		// Since no object has "TAG3", the result should be empty
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
 		assert.Len(t, resp, 0)
 	})
 
@@ -609,17 +612,11 @@ func TestGetReportPreviews(t *testing.T) {
 		router.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusOK, rec.Code)
-
 		var resp []api.ObjectPreviewResponse
-		err := json.Unmarshal(rec.Body.Bytes(), &resp)
-		require.NoError(t, err)
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
 
 		want := []api.ObjectPreviewResponse{
-			{
-				Object: "doc1.txt",
-				Tokens: []string{"foo", "bar", "baz"},
-				Tags:   []string{"O", "TAG1", "O"},
-			},
+			{Object: "doc1.txt", Tokens: []string{"foo", "bar", "baz"}, Tags: []string{"O", "TAG1", "O"}},
 		}
 		assert.ElementsMatch(t, want, resp)
 	})
