@@ -4,10 +4,8 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
-	"math/rand/v2"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -227,13 +225,6 @@ func getHistory(t *testing.T, router chi.Router, sessionID string) []pkgapi.Chat
 	}
 	
 	return history
-}
-
-func uniquePrompt() string {
-	now := time.Now()
-	numWords := rand.IntN(20) + 30 // Random number between 30-50
-	return fmt.Sprintf("It is now %d:%02d. How much longer is it to the top of the hour? Briefly explain how you got the answer in exactly %d words.", 
-		now.Hour(), now.Minute(), numWords)
 }
 
 func TestChatEndpoint(t *testing.T) {
