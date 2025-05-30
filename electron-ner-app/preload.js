@@ -17,4 +17,5 @@ contextBridge.exposeInMainWorld('electron', {
   sendTelemetry: (data) => ipcRenderer.invoke('telemetry', data),
   getUserId: () => ipcRenderer.invoke('get-user-id'),
   openFileChooser: (supportedTypes) => ipcRenderer.invoke('open-file-chooser', supportedTypes),
+  openLinkExternally: (url) => ipcRenderer.invoke('open-external-link', url),
 }); 

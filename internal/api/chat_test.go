@@ -6,10 +6,12 @@ import (
 	"encoding/json"
 	"io"
 	"log"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 
 	"ner-backend/internal/core"
@@ -23,7 +25,7 @@ import (
 )
 
 func initializeChatService() chi.Router {
-	db, err := gorm.Open(sqlite.Open("file::memory:"), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared&mode=memory"), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
@@ -141,7 +143,7 @@ func renameSession(t *testing.T, router chi.Router, sessionID string, title stri
 	assert.Equal(t, http.StatusOK, rec.Code)
 }
 
-func sendMessage(t *testing.T, router chi.Router, sessionID string, message string, apiKey string) (redactedMessage string, reply string, tagMap map[string]string) {
+func sendMessage(t *testing.T, router chi.Router, sessionID string, message string) *httptest.ResponseRecorder {
 	chatPayload := pkgapi.ChatRequest{
 		Model:   "gpt-3",
 		Message: message,
@@ -152,9 +154,12 @@ func sendMessage(t *testing.T, router chi.Router, sessionID string, message stri
 
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
-	assert.Equal(t, http.StatusOK, rec.Code)
 
-	// Read the streaming response
+	return rec
+}
+
+
+func processStreamResponse(t *testing.T, rec *httptest.ResponseRecorder) (redactedMessage string, reply string, tagMap map[string]string) {
 	reader := bufio.NewReader(rec.Body)
 	var streamResp StreamMessage
 	
@@ -313,7 +318,9 @@ func TestChatEndpoint(t *testing.T) {
 		assert.NotEmpty(t, sessionID)
 
 		message := "Hello, how are you today? I am Yashwanth and I work at ThirdAI and my email is yash@thirdai.com"
-		redactedMessage, reply, tagMap := sendMessage(t, router, sessionID, message, apiKey)
+		rec := sendMessage(t, router, sessionID, message)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		redactedMessage, reply, tagMap := processStreamResponse(t, rec)
 		
 		expectedRedacted := "Hello, how are you today? I am Yashwanth and I work at ThirdAI and my email is [EMAIL_1]"
 		assert.Equal(t, expectedRedacted, redactedMessage)
@@ -335,7 +342,9 @@ func TestChatEndpoint(t *testing.T) {
 		assert.NotEmpty(t, sessionID)
 		
 		message := "Hello, how are you today? I am Yashwanth and I work at ThirdAI and my email is yash@thirdai.com"
-		redactedMessage, reply, _ := sendMessage(t, router, sessionID, message, apiKey)
+		rec := sendMessage(t, router, sessionID, message)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		redactedMessage, reply, _ := processStreamResponse(t, rec)
 
 		history := getHistory(t, router, sessionID)
 		assert.Equal(t, 2, len(history))
@@ -357,11 +366,111 @@ func TestChatEndpoint(t *testing.T) {
 
 		message1 := "Hello, how are you today? I am Yashwanth and I work at ThirdAI and my email is yash@thirdai.com"
 		message2 := "Hello, how are you today? I am Tharun and I work at ThirdAI and my email is tharun@thirdai.com"
-		_, _, _ = sendMessage(t, router, sessionID, message1, apiKey)
-		_, _, _ = sendMessage(t, router, sessionID, message2, apiKey)
+		rec := sendMessage(t, router, sessionID, message1)
+		_, _, _ = processStreamResponse(t, rec) // Wait for the stream to finish
+		rec = sendMessage(t, router, sessionID, message2)
+		_, _, _ = processStreamResponse(t, rec) // Wait for the stream to finish
 
 		session := getSession(t, router, sessionID)
 		assert.Equal(t, "yash@thirdai.com", session.TagMap["[EMAIL_1]"])
 		assert.Equal(t, "tharun@thirdai.com", session.TagMap["[EMAIL_2]"])
+	})
+
+	t.Run("TestSendMessage_ConcurrentSameSession", func(t *testing.T) {
+		apiKey := os.Getenv("OPENAI_API_KEY")
+
+		setOpenAIAPIKey(t, router, apiKey)
+		defer deleteOpenAIAPIKey(t, router)
+
+		sessionID := startSession(t, router, "Test Session")
+		defer deleteSession(t, router, sessionID)
+
+		successCount := 0
+		failureCount := 0
+
+		mu := sync.Mutex{}
+		var wg sync.WaitGroup
+
+		routine := func() {
+			defer wg.Done()
+			
+			// 40 words is long enough to ensure that the requests will be concurrent
+			message := "Hello, introduce yourself in 40 words"
+			rec := sendMessage(t, router, sessionID, message)
+			
+			slog.Info("Code: ", "code", rec.Code)
+			
+			// Wait for the stream to finish
+			if rec.Code == http.StatusOK {
+				processStreamResponse(t, rec)
+			}
+			
+			mu.Lock()
+			if rec.Code == http.StatusOK {
+				successCount++
+			} else {
+				failureCount++
+			}
+			mu.Unlock()
+		}
+		
+		wg.Add(2)
+		go routine()
+		go routine()
+		wg.Wait()
+
+		// The server should only allow one request at a time per session
+		assert.Equal(t, 1, successCount)
+		assert.Equal(t, 1, failureCount)
+	})
+	
+	t.Run("TestSendMessage_ConcurrentDifferentSessions", func(t *testing.T) {
+		apiKey := os.Getenv("OPENAI_API_KEY")
+
+		setOpenAIAPIKey(t, router, apiKey)
+		defer deleteOpenAIAPIKey(t, router)
+
+		sessionID1 := startSession(t, router, "Test Session 1")
+		defer deleteSession(t, router, sessionID1)
+
+		sessionID2 := startSession(t, router, "Test Session 2")
+		defer deleteSession(t, router, sessionID2)
+
+		successCount := 0
+		failureCount := 0
+
+		mu := sync.Mutex{}
+		var wg sync.WaitGroup
+
+		routine := func(sessionID string) {
+			defer wg.Done()
+			
+			// 40 words is long enough to ensure that the requests will be concurrent
+			message := "Hello, introduce yourself in 40 words"
+			rec := sendMessage(t, router, sessionID, message)
+			
+			// Wait for the stream to finish
+			if rec.Code == http.StatusOK {
+				processStreamResponse(t, rec)
+			}
+			
+			mu.Lock()
+			if rec.Code == http.StatusOK {
+				successCount++
+			} else {
+				failureCount++
+			}
+			mu.Unlock()
+
+		}
+		
+		wg.Add(2)
+		go routine(sessionID1)
+		go routine(sessionID2)
+		wg.Wait()
+
+		// The server allows concurrent requests to different sessions
+		assert.Equal(t, 2, successCount)
+		assert.Equal(t, 0, failureCount)
 	})
 }

@@ -1,6 +1,7 @@
 import './globals.css';
 import { ErrorPopup } from '@/components/ui/ErrorPopup';
 import { Providers } from './Providers';
+import { DiscordButton } from '@/components/ui/DiscordButton';
 
 export const metadata = {
   title: 'PocketShield',
@@ -9,12 +10,16 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" data-theme="winter">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
           href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap"
+          rel="stylesheet"
+        />
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
           rel="stylesheet"
         />
       </head>
@@ -28,7 +33,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="fixed top-0 left-0 w-full h-[30px] titlebar" />
 
         <Providers>
-          {children}
+          <div className="flex flex-col min-h-screen">
+            <DiscordButton />
+            {children}
+          </div>
           <ErrorPopup autoCloseTime={7000} />
         </Providers>
       </body>
