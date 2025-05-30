@@ -33,6 +33,15 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Don't make API calls if health check hasn't passed
+  if (!healthStatus) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   // Models for the dropdown
   const [days, setDays] = useState<number>(7);
   const handleDaysChange = (e: SelectChangeEvent<number>) => {
