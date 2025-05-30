@@ -28,10 +28,11 @@ export const formatFileSize = (bytes: number, space: boolean = false): string =>
 };
 
 // Returns [file, fullPath] pairs
-export const getFilesFromElectron = async (): Promise<[File, string][]> => {
+export const getFilesFromElectron = async (supportedTypes: string[]): Promise<[File, string][]> => {
   // @ts-ignore
   const results = await window.electronAPI.openFileChooser(
-    SUPPORTED_TYPES.map((t) => t.replace('.', ''))
+    // Electron API does not expect '.' in the file extension
+    supportedTypes.map((t) => t.replace('.', ''))
   );
 
   // Convert the file data into proper File objects
