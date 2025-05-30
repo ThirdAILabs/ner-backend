@@ -79,7 +79,7 @@ export async function afterPack(context) {
       const frameworksPath = path.join(appPath, 'Contents', 'Frameworks');
       const libompPath = path.join(frameworksPath, 'libomp.dylib');
       
-      if (fs.existsSync(libompPath)) {
+      if (false) {
         console.log('Fixing libomp.dylib path in backend executable...');
         try {
           // Get the current install name
