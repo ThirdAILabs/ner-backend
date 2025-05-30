@@ -13,7 +13,7 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 // Expose telemetry API to renderer
-contextBridge.exposeInMainWorld('electronAPI', {
+contextBridge.exposeInMainWorld('electron', {
   sendTelemetry: (data) => ipcRenderer.invoke('telemetry', data),
   getUserId: () => ipcRenderer.invoke('get-user-id'),
   getPort: () => ipcRenderer.invoke('get-port'),

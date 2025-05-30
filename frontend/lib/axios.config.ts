@@ -9,8 +9,7 @@ const axiosInstance = axios.create({
 export const updateNerBaseUrl = async () => {
   if (typeof window !== 'undefined') {
     // @ts-ignore
-    const port = await window.electronAPI.getPort();
-    console.log('port', port);
+    const port = await window.electron.getPort();
     if (port) {
       axiosInstance.defaults.baseURL = `http://localhost:${port}/api/v1`;
       return true
