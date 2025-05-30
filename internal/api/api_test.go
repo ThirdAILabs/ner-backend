@@ -723,3 +723,39 @@ func TestValidateS3Bucket_InvalidBucket(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 	assert.Contains(t, rec.Body.String(), "failed to verify access to s3")
 }
+
+func TestStoreAndGetUploadPathMap(t *testing.T) {
+	db := createDB(t)
+	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	router := chi.NewRouter()
+	service.AddRoutes(router)
+	
+	// First test storing
+	uploadId := uuid.New()
+	testMap := map[string]string{
+		"file1.txt": "path/to/file1.txt",
+		"file2.txt": "path/to/file2.txt",
+	}
+
+	url := fmt.Sprintf("/path-map/%s", uploadId.String())
+	body, err := json.Marshal(api.UploadPathMap{Mapping: testMap})
+	assert.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodPost, url, bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	// Then test getting
+	req = httptest.NewRequest(http.MethodGet, url, nil)
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var resp api.UploadPathMap
+	err = json.Unmarshal(rec.Body.Bytes(), &resp)
+	assert.NoError(t, err)
+	assert.Equal(t, testMap, resp.Mapping)
+}
