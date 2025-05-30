@@ -679,18 +679,10 @@ func (s *BackendService) GetReportPreviews(r *http.Request) (any, error) {
 		}
 	}
 
-	var tags []string
-	if tagsParam := params["tags"]; len(tagsParam) > 0 {
-		tags = tagsParam
-	}
-
-	var object string
-	if objectParam := params.Get("object"); objectParam != "" {
-		object = objectParam
-	}
+	tags := params["tags"]
+	object := params.Get("object")
 
 	ctx := r.Context()
-	var previews []database.ObjectPreview
 	query := s.db.WithContext(ctx).
 		Where("report_id = ?", reportId).
 		Offset(offset).
@@ -699,24 +691,33 @@ func (s *BackendService) GetReportPreviews(r *http.Request) (any, error) {
 
 	dialect := s.db.Dialector.Name()
 	if len(tags) > 0 {
-		tagFilters := make([]string, len(tags))
-		for i, tag := range tags {
-			tagFilters[i] = fmt.Sprintf("\"%s\"", tag)
-		}
-		tagFilterJSON := fmt.Sprintf("[%s]", strings.Join(tagFilters, ","))
+		switch dialect {
+		case "postgres":
+			quoted := make([]string, len(tags))
+			for i, t := range tags {
+				quoted[i] = fmt.Sprintf("'%s'", t)
+			}
+			arrayLit := fmt.Sprintf("array[%s]::text[]", strings.Join(quoted, ","))
+			query = query.Where(
+				fmt.Sprintf("token_tags->'tags' ?| %s", arrayLit),
+			)
 
-		if dialect == "postgres" {
-			query = query.Where("token_tags->'tags' @> ?::jsonb", tagFilterJSON)
-		} else if dialect == "sqlite" || dialect == "sqlite3" {
-			query = query.Where("json_extract(token_tags, '$.tags') LIKE ?", "%"+strings.Join(tags, "%")+"%")
+		case "sqlite", "sqlite3":
+			var ors []string
+			var args []interface{}
+			for _, t := range tags {
+				ors = append(ors, "json_extract(token_tags, '$.tags') LIKE ?")
+				args = append(args, "%"+t+"%")
+			}
+			query = query.Where("("+strings.Join(ors, " OR ")+")", args...)
 		}
-
 	}
 
 	if object != "" {
 		query = query.Where("object = ?", object)
 	}
 
+	var previews []database.ObjectPreview
 	if err := query.Find(&previews).Error; err != nil {
 		slog.Error("error fetching previews", "report_id", reportId, "err", err)
 		return nil, CodedErrorf(http.StatusInternalServerError, "error %d: error retrieving previews", ErrCodeDB)
