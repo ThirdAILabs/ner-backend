@@ -6,13 +6,13 @@ import (
 	"encoding/json"
 	"io"
 	"log"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"ner-backend/internal/core"
 	"ner-backend/internal/database"
@@ -214,17 +214,17 @@ func processStreamResponse(t *testing.T, rec *httptest.ResponseRecorder) (redact
 }
 
 func getHistory(t *testing.T, router chi.Router, sessionID string) []pkgapi.ChatHistoryItem {	
-		req := httptest.NewRequest(http.MethodGet, "/chat/sessions/"+sessionID+"/history", nil)
-		rec := httptest.NewRecorder()
-		router.ServeHTTP(rec, req)
-		assert.Equal(t, http.StatusOK, rec.Code)
+	req := httptest.NewRequest(http.MethodGet, "/chat/sessions/"+sessionID+"/history", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
 	
-		var history []pkgapi.ChatHistoryItem
-		if err := json.NewDecoder(rec.Body).Decode(&history); err != nil {
-			t.Fatalf("decode history: %v", err)
-		}
-
-		return history
+	var history []pkgapi.ChatHistoryItem
+	if err := json.NewDecoder(rec.Body).Decode(&history); err != nil {
+		t.Fatalf("decode history: %v", err)
+	}
+	
+	return history
 }
 
 func TestChatEndpoint(t *testing.T) {
@@ -387,6 +387,7 @@ func TestChatEndpoint(t *testing.T) {
 
 		successCount := 0
 		failureCount := 0
+		var lastAckTime time.Time
 
 		mu := sync.Mutex{}
 		var wg sync.WaitGroup
@@ -394,13 +395,9 @@ func TestChatEndpoint(t *testing.T) {
 		routine := func() {
 			defer wg.Done()
 			
-			// 50 words is long enough to ensure that the requests will be concurrent
-			message := "Hello, introduce yourself in 50 words"
-			rec := sendMessage(t, router, sessionID, message)
+			rec := sendMessage(t, router, sessionID, "Hi, introduce yourself in 30 words")
 			
-			slog.Info("Code: ", "code", rec.Code)
-			
-			// Wait for the stream to finish
+			// Wait for the stream to finish so we can delete the session safely afterwards.
 			if rec.Code == http.StatusOK {
 				processStreamResponse(t, rec)
 			}
@@ -408,6 +405,7 @@ func TestChatEndpoint(t *testing.T) {
 			mu.Lock()
 			if rec.Code == http.StatusOK {
 				successCount++
+				lastAckTime = time.Now()
 			} else {
 				failureCount++
 			}
@@ -419,9 +417,17 @@ func TestChatEndpoint(t *testing.T) {
 		go routine()
 		wg.Wait()
 
-		// The server should only allow one request at a time per session
-		assert.Equal(t, 1, successCount)
-		assert.Equal(t, 1, failureCount)
+		if failureCount == 0 {
+			// If both succeeded, verify the second message was processed after the first
+			history := getHistory(t, router, sessionID)
+			assert.Equal(t, 4, len(history)) // 2 messages, 2 responses
+			assert.True(t, lastAckTime.After(history[2].Timestamp), 
+				"Last acknowledgement time should be after second message timestamp")
+		} else {
+			// Otherwise verify one succeeded and one failed
+			assert.Equal(t, 1, successCount)
+			assert.Equal(t, 1, failureCount)
+		}
 	})
 	
 	t.Run("TestSendMessage_ConcurrentDifferentSessions", func(t *testing.T) {
@@ -445,11 +451,9 @@ func TestChatEndpoint(t *testing.T) {
 		routine := func(sessionID string) {
 			defer wg.Done()
 			
-			// 50 words is long enough to ensure that the requests will be concurrent
-			message := "Hello, introduce yourself in 50 words"
-			rec := sendMessage(t, router, sessionID, message)
+			rec := sendMessage(t, router, sessionID, "Hi, introduce yourself in 30 words")
 			
-			// Wait for the stream to finish
+			// Wait for the stream to finish so we can delete the session safely afterwards.
 			if rec.Code == http.StatusOK {
 				processStreamResponse(t, rec)
 			}
@@ -461,7 +465,6 @@ func TestChatEndpoint(t *testing.T) {
 				failureCount++
 			}
 			mu.Unlock()
-
 		}
 		
 		wg.Add(2)

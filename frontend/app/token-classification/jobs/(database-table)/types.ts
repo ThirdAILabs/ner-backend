@@ -23,6 +23,7 @@ export interface ClassifiedTokenDatabaseRecord {
 export interface DatabaseTableProps {
   groups: string[];
   tags: Tag[];
+  uploadId?: string;
 }
 
 export interface TableContentProps {
@@ -38,6 +39,7 @@ export interface TableContentProps {
   hasMoreObjects?: boolean;
   onLoadMore?: () => void;
   showFilterContent: boolean;
+  pathMap?: Record<string, string>;
 }
 
 export type ViewMode = 'object' | 'classified-token';
