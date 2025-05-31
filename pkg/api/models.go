@@ -149,3 +149,7 @@ type ValidateS3BucketRequest struct {
 	SourceS3Bucket string
 	SourceS3Prefix string
 }
+
+type FileNameToPath struct {
+	Mapping  map[string]string
+}
