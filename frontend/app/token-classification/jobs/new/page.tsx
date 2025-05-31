@@ -7,8 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Box } from '@mui/material';
 import { ArrowLeft, Plus, RefreshCw, Edit } from 'lucide-react';
 import { nerService } from '@/lib/backend';
-import { NO_GROUP } from '@/lib/utils';
+import { NO_GROUP, uniqueFileNames, getFilesFromElectron } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
+
+const SUPPORTED_TYPES = ['.pdf', '.txt', '.csv', '.html', '.json', '.xml'];
 
 // Tag chip component - reused from the detail page but with interactive mode
 interface TagProps {
@@ -38,7 +40,7 @@ const Tag: React.FC<TagProps> = ({
 };
 
 // Source option card component - reused from the detail page
-interface SourceOptionProps {
+interface ModelOptionProps {
   title: string;
   description: React.ReactNode;
   isSelected?: boolean;
@@ -46,7 +48,7 @@ interface SourceOptionProps {
   onClick: () => void;
 }
 
-const SourceOption: React.FC<SourceOptionProps> = ({
+const ModelOption: React.FC<ModelOptionProps> = ({
   title,
   description,
   isSelected = false,
@@ -90,6 +92,165 @@ const GroupCard: React.FC<GroupProps> = ({ name, definition, onRemove }) => (
   </div>
 );
 
+interface SourceOptionProps {
+  onClick: () => void;
+  input?: React.ReactNode;
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  disclaimer: string;
+}
+
+const SourceOption: React.FC<SourceOptionProps> = ({
+  onClick,
+  input,
+  icon,
+  title,
+  description,
+  disclaimer,
+}) => (
+  <div
+    className="relative p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 transition-colors cursor-pointer"
+    onClick={onClick}
+  >
+    {input && input}
+    <div className="flex flex-col items-center justify-center space-y-4">
+      <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-50">
+        <svg
+          className="w-8 h-8 text-blue-500"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          {icon}
+        </svg>
+      </div>
+      <div className="text-center">
+        <h3 className="text-base font-medium mb-1">{title}</h3>
+        <p className="text-sm text-gray-500">{description}</p>
+        <p className="text-xs text-gray-400 mt-2">{disclaimer}</p>
+      </div>
+    </div>
+  </div>
+);
+
+interface FileSourcesProps {
+  selectSource: (source: 's3' | 'files' | 'directory') => void;
+  handleLocalFiles: (files: [File, string][]) => void;
+}
+
+const FileSources: React.FC<FileSourcesProps> = ({ selectSource, handleLocalFiles }) => {
+  const s3 = (
+    <SourceOption
+      onClick={() => selectSource('s3')}
+      icon={
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
+        />
+      }
+      title="S3 Bucket"
+      description="Scan files from an S3 bucket"
+      disclaimer="Public buckets only without enterprise subscription."
+    />
+  );
+
+  const folderIcon = (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+    />
+  );
+
+  // @ts-ignore
+  if (window && window.electron) {
+    return (
+      <>
+        <SourceOption
+          onClick={() => {
+            getFilesFromElectron(SUPPORTED_TYPES).then(handleLocalFiles);
+            selectSource('files');
+          }}
+          icon={folderIcon}
+          title="Local Files"
+          description="Scan files from your computer"
+          disclaimer={`Supported: ${SUPPORTED_TYPES.join(', ')}`}
+        />
+        {s3}
+      </>
+    );
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      handleLocalFiles(Array.from(files).map((file) => [file, '']));
+      e.target.value = '';
+    }
+  };
+
+  const fileInput = (
+    <input
+      type="file"
+      id="file-upload"
+      multiple
+      onChange={handleFileChange}
+      className="hidden"
+      accept={SUPPORTED_TYPES.join(',')}
+    />
+  );
+
+  const directoryInput = (
+    <input
+      type="file"
+      id="directory-upload"
+      {...({ webkitdirectory: '', directory: '' } as any)}
+      onChange={handleFileChange}
+      className="hidden"
+      accept={SUPPORTED_TYPES.join(',')}
+    />
+  );
+
+  return (
+    <>
+      <SourceOption
+        onClick={() => {
+          document.getElementById('file-upload')?.click();
+          selectSource('files');
+        }}
+        input={fileInput}
+        icon={
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+          />
+        }
+        title="Local Files"
+        description="Scan files from your computer"
+        disclaimer={`Supported: ${SUPPORTED_TYPES.join(', ')}`}
+      />
+      <SourceOption
+        onClick={() => {
+          document.getElementById('directory-upload')?.click();
+          selectSource('directory');
+        }}
+        input={directoryInput}
+        icon={folderIcon}
+        title="Local Directory"
+        description="Scan an entire directory"
+        disclaimer={`Supported: ${SUPPORTED_TYPES.join(', ')}`}
+      />
+      {s3}
+    </>
+  );
+};
+
 // Custom Tag interface
 interface CustomTag {
   name: string;
@@ -105,7 +266,8 @@ export default function NewJobPage() {
   const [sourceS3Region, setSourceS3Region] = useState('');
   const [sourceS3Bucket, setSourceS3Bucket] = useState('');
   const [sourceS3Prefix, setSourceS3Prefix] = useState('');
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  // [File object, full path] pairs. Full path may be empty if electron is not available.
+  const [selectedFiles, setSelectedFiles] = useState<[File, string][]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [existingReportName, setExistingReportName] = useState<string[]>([]);
   //Job Name
@@ -149,8 +311,6 @@ export default function NewJobPage() {
   const [patternType, setPatternType] = useState('string');
 
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
-
-  const SUPPORTED_TYPES = ['.pdf', '.txt', '.csv', '.html', '.json', '.xml'];
 
   const isFileSupported = (filename: string) => {
     return SUPPORTED_TYPES.some((ext) => filename.toLowerCase().endsWith(ext));
@@ -342,42 +502,53 @@ export default function NewJobPage() {
     setIsCustomTagDialogOpen(false);
   };
 
-  const addFiles = (files: File[]) => {
+  const addFiles = (files: [File, string][]) => {
     const newSelectedFiles = [...selectedFiles];
 
-    files.forEach((newFile) => {
-      const existingIndex = newSelectedFiles.findIndex(
-        (existingFile) => existingFile.name === newFile.name
-      );
+    files.forEach(([newFile, newFullPath]) => {
+      const existingIndex = newSelectedFiles.findIndex((existingFile) => {
+        // In practice, either both are empty or both are not empty
+        // If both are not empty, it means we are using electron to choose files
+        // Otherwise, we are using the file input to choose files
+        if (existingFile[1] !== '' && newFullPath !== '') {
+          return existingFile[1] === newFullPath;
+        }
+        return existingFile[0].name === newFile.name;
+      });
 
       if (existingIndex !== -1) {
         // Duplicate file so, replace the existing file with the new one
-        newSelectedFiles[existingIndex] = newFile;
+        newSelectedFiles[existingIndex] = [newFile, newFullPath];
       } else {
         // Add the new file
-        newSelectedFiles.push(newFile);
+        newSelectedFiles.push([newFile, newFullPath]);
       }
     });
 
-    setSelectedFiles(newSelectedFiles);
+    // This is to handle the case where there are multiple files with the same name
+    // but different full paths.
+    const newFileNames = uniqueFileNames(newSelectedFiles.map((file) => file[0].name));
+
+    setSelectedFiles(
+      newSelectedFiles.map(([file, fullPath], index) => {
+        const newFile = new File([file], newFileNames[index], {
+          type: file.type,
+          lastModified: file.lastModified,
+        });
+        return [newFile, fullPath];
+      })
+    );
   };
 
   // Update file handling to use file/directory input
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files) {
-      const fileArray = Array.from(files);
-      const supportedFiles = fileArray.filter((file) => isFileSupported(file.name));
+  const handleLocalFiles = (files: [File, string][]) => {
+    const supportedFiles = files.filter((file) => isFileSupported(file[0].name));
 
-      if (supportedFiles.length > 0) {
-        addFiles(supportedFiles);
-      } else {
-        setIsConfirmDialogOpen(true);
-      }
+    if (supportedFiles.length > 0) {
+      addFiles(supportedFiles);
+    } else {
+      setIsConfirmDialogOpen(true);
     }
-    // Reset the input value
-    const input = e.target as HTMLInputElement;
-    input.value = '';
   };
 
   const validateS3Bucket = async () => {
@@ -470,12 +641,24 @@ export default function NewJobPage() {
     setIsSubmitting(true);
 
     try {
-      let uploadId;
+      let uploadId: string | undefined;
 
       // Handle file/directory uploads if needed
       if (selectedSource === 'files' || selectedSource === 'directory') {
-        const uploadResponse = await nerService.uploadFiles(selectedFiles);
+        const uploadResponse = await nerService.uploadFiles(selectedFiles.map(([file, _]) => file));
         uploadId = uploadResponse.Id;
+
+        // Store file path mappings for local uploads if full path is available
+        const mapping: { [filename: string]: string } = {};
+        selectedFiles.forEach(([file, fullPath]) => {
+          if (fullPath) {
+            mapping[file.name] = fullPath;
+          }
+        });
+        if (Object.keys(mapping).length > 0) {
+          await nerService.storeFileNameToPath(uploadId, mapping);
+          console.log('stored upload paths', mapping);
+        }
       }
 
       // Create custom tags object for API
@@ -655,114 +838,7 @@ export default function NewJobPage() {
           <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
             <h2 className="text-2xl font-medium mb-4">Source</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              <div
-                className="relative p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 transition-colors cursor-pointer"
-                onClick={() => {
-                  document.getElementById('file-upload')?.click();
-                  setSelectedSource('files');
-                }}
-              >
-                <input
-                  type="file"
-                  id="file-upload"
-                  multiple
-                  onChange={handleFileChange}
-                  className="hidden"
-                  accept={SUPPORTED_TYPES.join(',')}
-                />
-                <div className="flex flex-col items-center justify-center space-y-4">
-                  <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-50">
-                    <svg
-                      className="w-8 h-8 text-blue-500"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                      />
-                    </svg>
-                  </div>
-                  <div className="text-center">
-                    <h3 className="text-base font-medium mb-1">Local Files</h3>
-                    <p className="text-sm text-gray-500">Scan files from your computer</p>
-                    <p className="text-xs text-gray-400 mt-2">
-                      Supported: {SUPPORTED_TYPES.join(', ')}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div
-                className="relative p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 transition-colors cursor-pointer"
-                onClick={() => {
-                  document.getElementById('directory-upload')?.click();
-                  setSelectedSource('directory');
-                }}
-              >
-                <input
-                  type="file"
-                  id="directory-upload"
-                  {...({ webkitdirectory: '', directory: '' } as any)}
-                  onChange={handleFileChange}
-                  className="hidden"
-                  accept={SUPPORTED_TYPES.join(',')}
-                />
-                <div className="flex flex-col items-center justify-center space-y-4">
-                  <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-50">
-                    <svg
-                      className="w-8 h-8 text-blue-500"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-                      />
-                    </svg>
-                  </div>
-                  <div className="text-center">
-                    <h3 className="text-base font-medium mb-1">Local Directory</h3>
-                    <p className="text-sm text-gray-500">Scan an entire directory</p>
-                    <p className="text-xs text-gray-400 mt-2">
-                      Supported: {SUPPORTED_TYPES.join(', ')}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div
-                className="relative p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 transition-colors cursor-pointer"
-                onClick={() => setSelectedSource('s3')}
-              >
-                <div className="flex flex-col items-center justify-center space-y-4">
-                  <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-50">
-                    <svg
-                      className="w-8 h-8 text-blue-500"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
-                      />
-                    </svg>
-                  </div>
-                  <div className="text-center">
-                    <h3 className="text-base font-medium mb-1">S3 Bucket</h3>
-                    <p className="text-sm text-gray-500">Scan files from an S3 bucket</p>
-                  </div>
-                </div>
-              </div>
+              <FileSources selectSource={setSelectedSource} handleLocalFiles={handleLocalFiles} />
             </div>
 
             {selectedFiles.length > 0 && (
@@ -781,14 +857,14 @@ export default function NewJobPage() {
                   </Button>
                 </div>
                 <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-md">
-                  {selectedFiles.map((file, index) => (
+                  {selectedFiles.map(([file, fullPath], index) => (
                     <div
-                      key={`${file.name}-${index}`}
+                      key={`${file.name}-${fullPath}-${index}`}
                       className="flex items-center justify-between px-4 py-2 border-b last:border-b-0 hover:bg-gray-50"
                     >
                       <div className="flex items-center">
                         <div className="text-sm text-gray-600">
-                          {file.name}
+                          {fullPath || file.name}
                           <span className="text-xs text-gray-400 ml-2">
                             ({(file.size / 1024).toFixed(1)} KB)
                           </span>
@@ -909,7 +985,7 @@ export default function NewJobPage() {
               <h2 className="text-2xl font-medium mb-4">Model</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {models.map((model) => (
-                  <SourceOption
+                  <ModelOption
                     key={model.Id}
                     title={model.Name[0].toUpperCase() + model.Name.slice(1)}
                     description={
@@ -920,7 +996,7 @@ export default function NewJobPage() {
                     disabled={model.Name === 'presidio'}
                   />
                 ))}
-                <SourceOption
+                <ModelOption
                   key={'Advanced-Model'}
                   title={'Advanced'}
                   description={

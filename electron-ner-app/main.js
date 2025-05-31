@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import serve from 'electron-serve';
 import { startBackend } from './scripts/start-backend.js';
+import { openFileChooser, openFile } from './scripts/file-utils.js';
 import { initTelemetry, insertTelemetryEvent, closeTelemetry } from './telemetry.js';
 import { initializeUserId, getCurrentUserId } from './userIdManager.js';
 import log from 'electron-log';
@@ -237,6 +238,14 @@ ipcMain.handle('telemetry', async (event, data) => {
 ipcMain.handle('get-user-id', async () => {
   return getCurrentUserId();
 });
+
+ipcMain.handle('open-file-chooser', async (event, supportedTypes) => {
+  return openFileChooser(supportedTypes);
+});
+
+ipcMain.handle('open-file', async (event, filePath) => {
+  return openFile(filePath);
+})
 
 // This method will be called when Electron has finished initialization
 app.whenReady().then(async () => {
