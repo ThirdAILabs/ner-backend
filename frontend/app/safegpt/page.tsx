@@ -144,14 +144,14 @@ function SafeGPTContent() {
   };
 
   return (
-    <div>
+    <div className="h-full flex flex-col">
       <div className="flex h-0 items-end">
         <div
           className="h-[30px] border-r border-gray-200 transition-all duration-100"
           style={{ width: isSidebarCollapsed ? '0px' : SIDEBAR_WIDTH }}
         />
       </div>
-      <div className="flex flex-row h-[40px] items-center justify-start relative bg-white">
+      <div className="flex flex-row h-[50px] items-center justify-start relative bg-white">
         <div
           className={`flex flex-row justify-start px-4 py-4 ${!isSidebarCollapsed && 'border-r'} border-gray-200 transition-all duration-100`}
           style={{ width: SIDEBAR_WIDTH }}
@@ -188,14 +188,14 @@ function SafeGPTContent() {
             onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           />
         </div>
-        <div className="flex-1 flex justify-center items-center mt-[-16px]">
+        <div className="flex-1 flex justify-center items-center">
           <ChatTitle title={title} setTitle={handleUpdateTitle} />
           <div className="absolute right-[20px]">
             <Toggle checked={showRedaction} onChange={handleToggleRedaction} />
           </div>
         </div>
       </div>
-      <div className="flex flex-row h-[calc(100vh-70px)] relative">
+      <div className="flex flex-row h-[calc(100vh-50px)] relative">
         <div
           className="transition-all duration-100 overflow-hidden"
           style={{ width: isSidebarCollapsed ? '0px' : SIDEBAR_WIDTH }}

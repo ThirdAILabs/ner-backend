@@ -24,7 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       {/* Top padding pushes the content down to make room for the title bar region of the electron app. */}
-      <body className="flex min-h-screen w-full flex-col bg-white pt-[30px]">
+      <body className="overflow-hidden w-full h-screen bg-white">
         {/*
           Draggable region of the app window. titlebar class is defined in globals.css
           Ideally, we should use the same element to push the content down and make it draggable,
@@ -33,7 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="fixed top-0 left-0 w-full h-[30px] titlebar" />
 
         <Providers>
-          <div className="flex flex-col min-h-screen">
+          <div className="h-[calc(100vh-30px)] mt-[30px] relative">
             <DiscordButton />
             {children}
           </div>
