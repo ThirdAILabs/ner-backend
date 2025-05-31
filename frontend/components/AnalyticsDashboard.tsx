@@ -27,7 +27,6 @@ export interface Tag {
   count: number;
 }
 interface AnalyticsDashboardProps {
-  progress: number;
   tokensProcessed: number; // This is actually bytes processed
   tags: Tag[];
   timeTaken: number;
@@ -62,7 +61,6 @@ const timeTakenToTextSize = (timeTaken: string) => {
 };
 
 export function AnalyticsDashboard({
-  progress,
   tokensProcessed,
   tags,
   timeTaken,
@@ -72,8 +70,9 @@ export function AnalyticsDashboard({
   dataProcessed,
 }: AnalyticsDashboardProps) {
   const tokenChartData = tags;
-  const filesSucceeded = ((succeededFileCount * 100) / totalFileCount).toFixed(0) || 0;
-  const filesFailed = ((failedFileCount * 100) / totalFileCount).toFixed(0) || 0;
+  const progress = ((succeededFileCount + failedFileCount) * 100) / totalFileCount || 0;
+  const filesSucceeded = (succeededFileCount * 100) / totalFileCount || 0;
+  const filesFailed = (failedFileCount * 100) / totalFileCount || 0;
 
   const formattedTime = formatTime(timeTaken);
 
@@ -87,7 +86,6 @@ export function AnalyticsDashboard({
             <div className="relative h-36 w-36">
               <svg className="h-full w-full" viewBox="0 0 120 120">
                 {/* Background circle */}
-                {/* <circle cx="60" cy="60" r="48" fill="none" stroke="#facc15" strokeWidth="10" /> */}
                 <circle cx="60" cy="60" r="48" fill="none" stroke="#dddddd" strokeWidth="10" />
 
                 {/* Success arc (green) */}
@@ -116,9 +114,11 @@ export function AnalyticsDashboard({
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center space-y-0">
-                <span className="text-xl font-bold text-gray-700">{progress}%</span>
-                <span className="text-xs  text-gray-400">{filesSucceeded}% processed</span>
-                <span className="text-xs  text-gray-400">{filesFailed}% failed</span>
+                <span className="text-xl font-bold text-gray-700">{progress.toFixed(1)}%</span>
+                <span className="text-xs  text-gray-400">
+                  {filesSucceeded.toFixed(1)}% processed
+                </span>
+                <span className="text-xs  text-gray-400">{filesFailed.toFixed(1)}% failed</span>
               </div>
             </div>
             <h3 className="mt-auto text-sm text-muted-foreground">File Progress</h3>
