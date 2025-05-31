@@ -33,7 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="fixed top-0 left-0 w-full h-[30px] titlebar" />
 
         <Providers>
-          <div className="flex flex-col min-h-screen">
+          <div className="flex flex-col min-h-[calc(100vh-30px)]">
             <DiscordButton />
             {children}
           </div>
