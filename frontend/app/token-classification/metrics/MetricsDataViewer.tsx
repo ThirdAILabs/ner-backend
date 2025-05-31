@@ -20,6 +20,15 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
   const [throughput, setThroughput] = useState<string | null>('-');
   const { healthStatus } = useHealth();
 
+  function getFontSize(value: string) {
+    if (!value) return '2rem';
+    if (value.length > 7) return '1.25rem';
+    if (value.length > 5) return '1.5rem';
+    if (value.length > 3) return '1.75rem';
+
+    return '2rem';
+  }
+
   useEffect(() => {
     let mounted = true;
 
@@ -113,6 +122,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
             boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
             bgcolor: 'white',
             borderRadius: '12px',
+            border: '1px solid #e5e7eb',
             transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
             '&:hover': {
               transform: 'translateY(-2px)',
@@ -143,7 +153,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
             >
               <Typography
                 sx={{
-                  fontSize: '2rem',
+                  fontSize: getFontSize(String(infMetrics.InProgress)),
                   fontWeight: 600,
                   color: '#4a5568',
                 }}
@@ -170,6 +180,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
             boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
             bgcolor: 'white',
             borderRadius: '12px',
+            border: '1px solid #e5e7eb',
             transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
             '&:hover': {
               transform: 'translateY(-2px)',
@@ -200,7 +211,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
             >
               <Typography
                 sx={{
-                  fontSize: '2rem',
+                  fontSize: getFontSize(String(infMetrics.Completed + infMetrics.Failed)),
                   fontWeight: 600,
                   color: '#4a5568',
                 }}
@@ -227,6 +238,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
             boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
             bgcolor: 'white',
             borderRadius: '12px',
+            border: '1px solid #e5e7eb',
             transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
             '&:hover': {
               transform: 'translateY(-2px)',
@@ -257,14 +269,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
             >
               <Typography
                 sx={{
-                  fontSize: (theme) =>
-                    throughput && throughput.length > 7
-                      ? '1.25rem'
-                      : throughput && throughput.length > 5
-                        ? '1.5rem'
-                        : throughput && throughput.length > 3
-                          ? '1.75rem'
-                          : '2rem',
+                  fontSize: getFontSize(throughput || ''),
                   fontWeight: 600,
                   color: '#4a5568',
 
@@ -293,6 +298,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
             boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
             bgcolor: 'white',
             borderRadius: '12px',
+            border: '1px solid #e5e7eb',
             transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
             '&:hover': {
               transform: 'translateY(-2px)',
@@ -324,7 +330,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
               <Typography
                 sx={{
                   textAlign: 'center',
-                  fontSize: '2rem',
+                  fontSize: getFontSize(formatFileSize(infMetrics.DataProcessedMB * 1024 * 1024)),
                   fontWeight: 600,
                   color: '#4a5568',
                 }}
@@ -351,6 +357,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
             boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
             bgcolor: 'white',
             borderRadius: '12px',
+            border: '1px solid #e5e7eb',
             transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
             '&:hover': {
               transform: 'translateY(-2px)',
@@ -381,10 +388,9 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
             >
               <Typography
                 sx={{
-                  fontSize: '2rem',
+                  fontSize: getFontSize(formatFileSize(infMetrics.TokensProcessed)),
                   fontWeight: 600,
                   color: '#4a5568',
-
                   textAlign: 'center',
                 }}
               >
