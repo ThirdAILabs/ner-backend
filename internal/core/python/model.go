@@ -11,6 +11,7 @@ import (
 	"ner-backend/plugin/shared"
 	"os"
 	"os/exec"
+	"time"
 
 	"github.com/hashicorp/go-plugin"
 )
@@ -34,6 +35,7 @@ func LoadPythonModel(PythonExecutable, PluginScript, PluginModelName, KwargsJSON
 	}
 
 	client := plugin.NewClient(&plugin.ClientConfig{
+		StartTimeout:    5 * time.Minute,
 		HandshakeConfig: shared.Handshake,
 		Plugins:         shared.PluginMap,
 		Cmd:             cmd,
