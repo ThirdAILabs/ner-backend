@@ -43,9 +43,6 @@ const Loading = () => {
       <PulsingLogo>
         <Image src="/thirdai-logo.png" alt="Logo" width={100} height={100} priority />
       </PulsingLogo>
-      <Typography className="text-gray-500" variant="h6" sx={{ fontWeight: 600 }}>
-        Warming up...
-      </Typography>
     </LoadingContainer>
   );
 };
