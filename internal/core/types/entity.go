@@ -1,8 +1,6 @@
 package types
 
-import (
-	"strings"
-)
+import "strings"
 
 const contextLength = 20
 
