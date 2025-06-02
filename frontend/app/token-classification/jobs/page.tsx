@@ -461,7 +461,6 @@ function JobDetail() {
 
         <TabsContent value="analytics">
           <AnalyticsDashboard
-            progress={calculateProgress(reportData)}
             tokensProcessed={getProcessedTokens(reportData)}
             tags={availableTagsCount}
             timeTaken={timeTaken}
