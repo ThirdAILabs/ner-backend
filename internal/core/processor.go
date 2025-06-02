@@ -515,33 +515,49 @@ func (proc *TaskProcessor) createObjectPreview(
 }
 
 func coalesceEntities(labelToEntities map[string][]types.Entity) []types.Entity {
+	maxEntityGap := 3
+	flattenedEntities := make([]types.Entity, 0)
 	coalescedEntities := make([]types.Entity, 0)
 
 	for _, ents := range labelToEntities {
-		sort.Slice(ents, func(i, j int) bool {
-			return ents[i].Start < ents[j].Start
-		})
-
-		currentEnt := ents[0]
-		for i := 1; i < len(ents); i++ {
-			if currentEnt.End >= ents[i].Start {
-				if currentEnt.End < ents[i].End {
-					// Entities overlaps
-					currentEnt.End = ents[i].End
-					currentEnt.Text += ents[i].Text[currentEnt.End-ents[i].Start:]
-					currentEnt.RContext = ents[i].RContext
-				}
-			} else if ok, betweenText := types.AreEntitiesAdjacent(currentEnt, ents[i]); ok {
-				currentEnt.End = ents[i].End
-				currentEnt.Text += betweenText + ents[i].Text
-				currentEnt.RContext = ents[i].RContext
-			} else {
-				coalescedEntities = append(coalescedEntities, currentEnt)
-				currentEnt = ents[i]
-			}
-		}
-		coalescedEntities = append(coalescedEntities, currentEnt)
+		flattenedEntities = append(flattenedEntities, ents...)
 	}
+
+	sort.Slice(flattenedEntities, func(i, j int) bool {
+		return flattenedEntities[i].Start < flattenedEntities[j].Start
+	})
+
+	currentEnt := flattenedEntities[0]
+	for i := 1; i < len(flattenedEntities); i++ {
+		if currentEnt.Label != flattenedEntities[i].Label {
+			// current entity does not match the next one
+			coalescedEntities = append(coalescedEntities, currentEnt)
+			currentEnt = flattenedEntities[i]
+			continue
+		}
+
+		if currentEnt.End >= flattenedEntities[i].Start {
+			if currentEnt.End < flattenedEntities[i].End {
+				// Entities partially overlap
+				currentEnt.End = flattenedEntities[i].End
+				currentEnt.Text += flattenedEntities[i].Text[currentEnt.End-flattenedEntities[i].Start:]
+				currentEnt.RContext = flattenedEntities[i].RContext
+			} else {
+				// complete overlap, skip the next entity
+			}
+		} else if flattenedEntities[i].Start-currentEnt.End <= min(maxEntityGap, len(currentEnt.RContext)) {
+			betweenText := currentEnt.RContext[:flattenedEntities[i].Start-currentEnt.End]
+			currentEnt.End = flattenedEntities[i].End
+			currentEnt.Text += betweenText + flattenedEntities[i].Text
+			currentEnt.RContext = flattenedEntities[i].RContext
+		} else {
+			// Entities are not adjacent
+			coalescedEntities = append(coalescedEntities, currentEnt)
+			currentEnt = flattenedEntities[i]
+		}
+	}
+	// last entry
+	coalescedEntities = append(coalescedEntities, currentEnt)
 
 	return coalescedEntities
 }
