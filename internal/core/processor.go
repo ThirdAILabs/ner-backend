@@ -539,8 +539,6 @@ func coalesceEntities(labelToEntities map[string][]types.Entity) []types.Entity 
 				currentEnt.End = flattenedEntities[i].End
 				currentEnt.Text += flattenedEntities[i].Text[currentEnt.End-flattenedEntities[i].Start:]
 				currentEnt.RContext = flattenedEntities[i].RContext
-			} else {
-				// complete overlap, skip the next entity
 			}
 		} else if flattenedEntities[i].Start-currentEnt.End <= min(maxEntityGap, len(currentEnt.RContext)) {
 			betweenText := currentEnt.RContext[:flattenedEntities[i].Start-currentEnt.End]
