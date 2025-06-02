@@ -91,7 +91,7 @@ func createQueue(db *gorm.DB) *messaging.InMemoryQueue {
 	return queue
 }
 
-func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publisher, port int) *http.Server {
+func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publisher, port int, modelDir string) *http.Server {
 	r := chi.NewRouter()
 
 	// Middleware
@@ -110,8 +110,17 @@ func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publish
 
 	apiHandler := api.NewBackendService(db, storage, queue, chunkTargetBytes)
 
+	loaders := core.NewModelLoaders("python", "plugin/plugin-python/plugin.py")
+	//Whatever model you want to load, just add it to the loaders map
+	nerModel, err := loaders["bolt"](modelDir)
+	if err != nil {
+		log.Fatalf("could not load NER model: %v", err)
+	}
+	chatHandler := api.NewChatService(db, nerModel)
+
 	r.Route("/api/v1", func(r chi.Router) {
 		apiHandler.AddRoutes(r)
+		chatHandler.AddRoutes(r)
 	})
 
 	return &http.Server{
@@ -167,13 +176,27 @@ func main() {
 		cmd.InitializePresidioModel(db)
 	}
 
+	if err := cmd.RemoveExcludedTagsFromAllModels(db); err != nil {
+		log.Fatalf("Failed to remove excluded tags from all models: %v", err)
+	}
+
 	queue := createQueue(db)
 
 	licensing := cmd.CreateLicenseVerifier(db, cfg.License)
 
 	worker := core.NewTaskProcessor(db, storage, queue, queue, licensing, filepath.Join(cfg.Root, "models"), modelBucket, core.NewModelLoaders("python", "plugin/plugin-python/plugin.py"))
 
-	server := createServer(db, storage, queue, cfg.Port)
+	var basicModel database.Model
+	if err := db.Where("name = ?", "basic").First(&basicModel).Error; err != nil {
+		log.Fatalf("could not lookup bolt model: %v", err)
+	}
+
+	boltDir := filepath.Join(cfg.Root, "models", basicModel.Id.String())
+	if err := storage.DownloadDir(context.Background(), modelBucket, basicModel.Id.String(), boltDir); err != nil {
+		log.Fatalf("failed to download bolt model: %v", err)
+	}
+
+	server := createServer(db, storage, queue, cfg.Port, boltDir)
 
 	slog.Info("starting worker")
 	go worker.Start()

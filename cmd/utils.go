@@ -38,6 +38,22 @@ func LoadEnvFile() {
 	}
 }
 
+func RemoveExcludedTagsFromAllModels(db *gorm.DB) error {
+	excludedTags := make([]string, 0, len(core.ExcludedTags))
+	for tag := range core.ExcludedTags {
+		excludedTags = append(excludedTags, tag)
+	}
+
+	if err := db.
+		Where("tag IN ?", excludedTags).
+		Delete(&database.ModelTag{}).Error; err != nil {
+		return fmt.Errorf("failed to remove excluded tags %v: %w", excludedTags, err)
+	}
+
+	log.Printf("Removed excluded tags from model_tags: %v", excludedTags)
+	return nil
+}
+
 func InitializePresidioModel(db *gorm.DB) {
 	presidio, err := core.NewPresidioModel()
 	if err != nil {
@@ -48,10 +64,12 @@ func InitializePresidioModel(db *gorm.DB) {
 
 	var tags []database.ModelTag
 	for _, tag := range presidio.GetTags() {
-		tags = append(tags, database.ModelTag{
-			ModelId: modelId,
-			Tag:     tag,
-		})
+		if _, exists := core.ExcludedTags[tag]; !exists {
+			tags = append(tags, database.ModelTag{
+				ModelId: modelId,
+				Tag:     tag,
+			})
+		}
 	}
 
 	var model database.Model
@@ -74,6 +92,16 @@ var commonModelTags = []string{
 	"SSN", "URL", "VIN", "O",
 }
 
+func filterExcludedTags(tags []string) []string {
+	var filteredTags []string
+	for _, tag := range tags {
+		if _, exists := core.ExcludedTags[tag]; !exists {
+			filteredTags = append(filteredTags, tag)
+		}
+	}
+	return filteredTags
+}
+
 func initializeModel(
 	ctx context.Context,
 	db *gorm.DB,
@@ -84,6 +112,7 @@ func initializeModel(
 	localDir string,
 	tags []string,
 ) error {
+	tags = filterExcludedTags(tags)
 	var model database.Model
 	result := db.
 		Preload("Tags").
@@ -164,8 +193,10 @@ func InitializeBoltModel(db *gorm.DB, s3 storage.Provider, modelBucket, name, ho
 
 	modelId := uuid.New()
 
+	tags := filterExcludedTags(commonModelTags)
+
 	var modelTags []database.ModelTag
-	for _, tag := range commonModelTags {
+	for _, tag := range tags {
 		modelTags = append(modelTags, database.ModelTag{
 			ModelId: modelId,
 			Tag:     tag,

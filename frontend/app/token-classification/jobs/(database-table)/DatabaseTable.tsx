@@ -46,7 +46,7 @@ function joinAdjacentEntities(entities: Entity[]) {
   return joinedEntities;
 }
 
-export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) {
+export function DatabaseTable({ groups: groupsProp, tags, uploadId }: DatabaseTableProps) {
   const searchParams = useSearchParams();
   const reportId: string = searchParams.get('jobId') as string;
   const groups = groupsProp.length > 0 ? [...groupsProp, NO_GROUP] : [];
@@ -63,9 +63,9 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
   // Data states
   const [tokenRecords, setTokenRecords] = useState<ClassifiedTokenDatabaseRecord[]>([]);
   const [objectRecords, setObjectRecords] = useState<ObjectDatabaseRecord[]>([]);
-  const [viewMode, setViewMode] = useState<ViewMode>('classified-token');
+  const [viewMode, setViewMode] = useState<ViewMode>('object');
   const [query, setQuery] = useState('');
-  const [filteredObjects, setFilteredObjects] = useState<string[]>([]);
+  const [pathMap, setPathMap] = useState<Record<string, string>>({});
 
   // Pagination states
   const [tokenOffset, setTokenOffset] = useState(0);
@@ -73,7 +73,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
   const [objectOffset, setObjectOffset] = useState(0);
   const [hasMoreObjects, setHasMoreObjects] = useState(true);
   const TOKENS_LIMIT = 25; // Number of token records to fetch per request
-  const OBJECTS_LIMIT = 10; // Number of object records to fetch per request
+  const OBJECTS_LIMIT = 25; // Number of object records to fetch per request
 
   // Filter states
   const [groupFilters, setGroupFilters] = useState<Record<string, boolean>>(() =>
@@ -149,7 +149,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
       .getReportObjects(reportId, {
         offset: newOffset,
         limit: limit,
-        ...(objectsFilter && { tags: objectsFilter }),
+        tags: objectsFilter,
       })
       .then((objects) => {
         console.log(`Loaded ${objects.length} object records from offset ${newOffset}`);
@@ -157,7 +157,8 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
         // Map API objects to our record format
         const mappedRecords = objects.map((obj) => ({
           sourceObject: obj.object,
-          taggedTokens: obj.tokens.map((token, i) => [token, obj.tags[i]] as [string, string]),
+          taggedTokens:
+            obj.tokens?.map((token, i) => [token, obj.tags[i]] as [string, string]) || [],
           groups: [], // This would need to be populated from somewhere if needed
         }));
 
@@ -183,24 +184,21 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
   const handleSearch = async (searchQuery: string) => {
     if (!searchQuery.trim()) {
       // If empty query, reset filters and reload data
-      setFilteredObjects([]);
       resetPagination();
       loadTokenRecords(0, toActiveTagList(tagFilters));
-      loadObjectRecords(0);
+      loadObjectRecords(0, toActiveTagList(tagFilters));
       return;
     }
 
     setIsSearching(true);
     try {
       const result = await nerService.searchReport(reportId, searchQuery);
-      setFilteredObjects(result.Objects || []);
-
       // Reset pagination and clear existing records
       resetPagination();
 
       // Load records filtered by the object names
       if (result.Objects?.length) {
-        loadObjectRecords(0, result.Objects);
+        loadObjectRecords(0, toActiveTagList(tagFilters));
         // For token records, we'll let them load unfiltered first
         // then filter them in the TableContent component
         loadTokenRecords(0, toActiveTagList(tagFilters));
@@ -228,10 +226,24 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
     console.log('Component mounted, loading initial data');
     resetPagination();
     loadTokenRecords(0, toActiveTagList(tagFilters));
-    loadObjectRecords(0);
+    loadObjectRecords(0, toActiveTagList(tagFilters));
     loadedInitialTokenRecords.current = true;
     loadedInitialObjectRecords.current = true;
   }, []);
+
+  // Load path map
+  useEffect(() => {
+    if (uploadId) {
+      nerService
+        .getFileNameToPath(uploadId)
+        .then((pathMap) => {
+          setPathMap(pathMap);
+        })
+        .catch((error) => {
+          console.error('Could not load path map:', error);
+        });
+    }
+  }, [uploadId]);
 
   // Scroll handler for infinite loading
   const handleTableScroll = () => {
@@ -245,7 +257,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
       if (scrollHeight - (scrollTop + clientHeight) < bottomThreshold) {
         // Load more records based on view mode
         if (viewMode === 'object' && !isLoadingObjectRecords && hasMoreObjects) {
-          loadObjectRecords(objectOffset, filteredObjects.length ? filteredObjects : undefined);
+          loadObjectRecords(objectOffset, toActiveTagList(tagFilters));
         } else if (viewMode === 'classified-token' && !isLoadingTokenRecords && hasMoreTokens) {
           loadTokenRecords(tokenOffset, toActiveTagList(tagFilters));
         }
@@ -256,7 +268,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
   // Load more handler for manual loading (can be used with a button)
   const handleLoadMore = () => {
     if (viewMode === 'object' && !isLoadingObjectRecords && hasMoreObjects) {
-      loadObjectRecords(objectOffset, filteredObjects.length ? filteredObjects : undefined);
+      loadObjectRecords(objectOffset, toActiveTagList(tagFilters));
     } else if (viewMode === 'classified-token' && !isLoadingTokenRecords && hasMoreTokens) {
       loadTokenRecords(tokenOffset, toActiveTagList(tagFilters));
     }
@@ -279,7 +291,6 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
 
       const activeTagList = toActiveTagList(newFilters);
 
-      setFilteredObjects([]);
       resetPagination();
       loadTokenRecords(0, activeTagList);
       loadObjectRecords(0, activeTagList);
@@ -301,15 +312,15 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
   const handleSelectAllTags = () => {
     const newFilters = Object.fromEntries(tags.map((tag) => [tag.type, true]));
     setTagFilters(newFilters);
-    setFilteredObjects([]);
     resetPagination();
     loadTokenRecords(0, toActiveTagList(newFilters));
-    loadObjectRecords(0);
+    loadObjectRecords(0, toActiveTagList(newFilters));
   };
 
   const handleDeselectAllTags = () => {
     const newFilters = Object.fromEntries(tags.map((tag) => [tag.type, false]));
     setTagFilters(newFilters);
+    resetPagination();
   };
 
   // Handle view mode changes
@@ -318,7 +329,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
 
     // Load data if we haven't loaded any for this view mode yet
     if (newMode === 'object' && objectRecords.length === 0) {
-      loadObjectRecords(0);
+      loadObjectRecords(0, toActiveTagList(tagFilters));
     } else if (newMode === 'classified-token' && tokenRecords.length === 0) {
       loadTokenRecords(0, toActiveTagList(tagFilters));
     }
@@ -400,6 +411,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
                   hasMoreObjects={hasMoreObjects}
                   onLoadMore={handleLoadMore}
                   showFilterContent={showFilterSection}
+                  pathMap={pathMap}
                 />
               </div>
             </div>

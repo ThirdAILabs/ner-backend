@@ -11,9 +11,10 @@ import (
 )
 
 type ParsedChunk struct {
-	Text   string
-	Offset int
-	Error  error
+	Text    string
+	Offset  int
+	Error   error
+	RawSize int64
 }
 
 type Parser interface {
@@ -88,9 +89,10 @@ func (parser *DefaultParser) parsePdf(object string, data io.Reader, output chan
 	}
 
 	output <- ParsedChunk{
-		Text:   strings.Join(pages, "\n\n"),
-		Offset: 0,
-		Error:  nil,
+		Text:    strings.Join(pages, "\n\n"),
+		Offset:  0,
+		Error:   nil,
+		RawSize: int64(n),
 	}
 }
 
@@ -107,9 +109,10 @@ func (parser *DefaultParser) parsePlaintext(filename string, data io.Reader, out
 		}
 
 		output <- ParsedChunk{
-			Text:   string(chunk[:n]),
-			Offset: offset,
-			Error:  err,
+			Text:    string(chunk[:n]),
+			Offset:  offset,
+			Error:   err,
+			RawSize: int64(n),
 		}
 		offset += n
 

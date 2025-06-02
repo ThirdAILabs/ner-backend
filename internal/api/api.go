@@ -80,6 +80,11 @@ func (s *BackendService) AddRoutes(r chi.Router) {
 		r.Get("/group", RestHandler(s.ValidateGroupDefinition))
 		r.Get("/s3", RestHandler(s.ValidateS3Access))
 	})
+
+	r.Route("/file-name-to-path", func(r chi.Router) {
+		r.Post("/{upload_id}", RestHandler(s.StoreFileNameToPath))
+		r.Get("/{upload_id}", RestHandler(s.GetFileNameToPath))
+	})
 }
 
 func (s *BackendService) ListModels(r *http.Request) (any, error) {
@@ -161,6 +166,15 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 
 		return nil
 	}); err != nil {
+		return nil, err
+	}
+
+	var tags []string
+	for _, ti := range req.Tags {
+		tags = append(tags, ti.Name)
+	}
+	if err := database.SetModelTags(ctx, s.db, model.Id, tags); err != nil {
+		slog.Error("failed to set tags on finetuned model", "model_id", model.Id, "error", err)
 		return nil, err
 	}
 
@@ -376,7 +390,9 @@ func (s *BackendService) GetInferenceTime(ctx context.Context, reportId uuid.UUI
 	query := s.db.WithContext(ctx).
 		Model(&database.InferenceTask{}).
 		Select("MIN(start_time) AS min_start, MAX(completion_time) AS max_end").
-		Where("report_id = ? AND start_time IS NOT NULL AND completion_time IS NOT NULL", reportId)
+		Where("report_id = ? AND start_time IS NOT NULL", reportId)
+
+	var startingTime time.Time
 
 	switch dbType {
 	case "sqlite", "sqlite3":
@@ -401,9 +417,14 @@ func (s *BackendService) GetInferenceTime(ctx context.Context, reportId uuid.UUI
 			slog.Error("error parsing max_end", "raw", infBounds.MaxEnd, "err", err)
 		}
 
+		if !startTime.IsZero() {
+			startingTime = startTime
+		}
+
 		if !startTime.IsZero() && !endTime.IsZero() {
 			return endTime.Sub(startTime).Seconds()
 		}
+
 	case "postgres":
 		var infBounds struct {
 			MinStart sql.NullTime `gorm:"column:min_start"`
@@ -414,10 +435,19 @@ func (s *BackendService) GetInferenceTime(ctx context.Context, reportId uuid.UUI
 			slog.Error("error fetching time bounds", "err", err)
 		}
 
+		if infBounds.MinStart.Valid {
+			startingTime = infBounds.MinStart.Time
+		}
+
 		if infBounds.MinStart.Valid && infBounds.MaxEnd.Valid {
 			return infBounds.MaxEnd.Time.Sub(infBounds.MinStart.Time).Seconds()
 		}
 	}
+
+	if !startingTime.IsZero() {
+		return time.Now().UTC().Sub(startingTime).Seconds()
+	}
+
 	return 0
 }
 
@@ -443,16 +473,17 @@ func (s *BackendService) GetReport(r *http.Request) (any, error) {
 	}
 
 	type taskStatusCategory struct {
-		Status string
-		Count  int
-		Total  int
+		Status    string
+		Count     int
+		Total     int
+		Completed int
 	}
 
 	var statusCategories []taskStatusCategory
 
 	if err := s.db.WithContext(ctx).Model(&database.InferenceTask{}).
 		Where("report_id = ?", reportId).
-		Select("status, COUNT(*) as count, sum(total_size) as total").
+		Select("status, COUNT(*) as count, sum(total_size) as total, SUM(completed_size) as completed").
 		Group("status").
 		Find(&statusCategories).Error; err != nil {
 		slog.Error("error getting inference task statuses", "report_id", reportId, "error", err)
@@ -463,8 +494,9 @@ func (s *BackendService) GetReport(r *http.Request) (any, error) {
 	apiReport.InferenceTaskStatuses = make(map[string]api.TaskStatusCategory)
 	for _, category := range statusCategories {
 		apiReport.InferenceTaskStatuses[category.Status] = api.TaskStatusCategory{
-			TotalTasks: category.Count,
-			TotalSize:  category.Total,
+			TotalTasks:    category.Count,
+			TotalSize:     category.Total,
+			CompletedSize: category.Completed,
 		}
 	}
 
@@ -650,14 +682,40 @@ func (s *BackendService) GetReportPreviews(r *http.Request) (any, error) {
 		}
 	}
 
+	tags := params["tags"]
+	objectFilter := params.Get("object")
+
 	ctx := r.Context()
+
+	query := s.db.WithContext(ctx).
+		Where("report_id = ?", reportId)
+
+	if len(tags) > 0 {
+		var matchingObjects []string
+		if err := s.db.WithContext(ctx).
+			Model(&database.ObjectEntity{}).
+			Distinct("object").
+			Where("report_id = ? AND label IN ?", reportId, tags).
+			Pluck("object", &matchingObjects).Error; err != nil {
+			slog.Error("error fetching entities for tag filter", "report_id", reportId, "tags", tags, "error", err)
+			return nil, CodedErrorf(http.StatusInternalServerError, "error %d: error applying tag filter", ErrCodeDB)
+		}
+
+		if len(matchingObjects) == 0 {
+			return []api.ObjectPreviewResponse{}, nil
+		}
+
+		query = query.Where("object IN ?", matchingObjects)
+	}
+
+	if objectFilter != "" {
+		query = query.Where("object = ?", objectFilter)
+	}
+
+	query = query.Offset(offset).Limit(limit).Order("object")
+
 	var previews []database.ObjectPreview
-	if err := s.db.WithContext(ctx).
-		Where("report_id = ?", reportId).
-		Offset(offset).
-		Limit(limit).
-		Order("object").
-		Find(&previews).Error; err != nil {
+	if err := query.Find(&previews).Error; err != nil {
 		slog.Error("error fetching previews", "report_id", reportId, "err", err)
 		return nil, CodedErrorf(http.StatusInternalServerError, "error %d: error retrieving previews", ErrCodeDB)
 	}
@@ -952,4 +1010,48 @@ func (s *BackendService) ValidateS3Access(r *http.Request) (any, error) {
 		return nil, err
 	}
 	return nil, validateS3Access(req.S3Endpoint, req.S3Region, req.SourceS3Bucket, req.SourceS3Prefix)
+}
+
+func (s *BackendService) StoreFileNameToPath(r *http.Request) (any, error) {
+	uploadId, err := URLParamUUID(r, "upload_id")
+	if err != nil {
+		return nil, err
+	}
+	req, err := ParseRequest[api.FileNameToPath](r)
+	if err != nil {
+		return nil, CodedErrorf(http.StatusBadRequest, "invalid request body")
+	}
+	mappingJson, err := json.Marshal(req.Mapping)
+	if err != nil {
+		return nil, CodedErrorf(http.StatusBadRequest, "invalid mapping")
+	}
+	entry := database.FileNameToPath{
+		ID: uploadId,
+		Mapping:  mappingJson,
+	}
+	if err := s.db.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"mapping"}),
+	}).Create(&entry).Error; err != nil {
+		return nil, CodedErrorf(http.StatusInternalServerError, "failed to store path map")
+	}
+	return nil, nil
+}
+
+func (s *BackendService) GetFileNameToPath(r *http.Request) (any, error) {
+	uploadId, err := URLParamUUID(r, "upload_id")
+	if err != nil {
+		return nil, err
+	}
+	var entry database.FileNameToPath
+	if err := s.db.First(&entry, "id = ?", uploadId).Error; err != nil {
+		return nil, CodedErrorf(http.StatusNotFound, "not found")
+	}
+	var mapping map[string]string
+	if err := json.Unmarshal(entry.Mapping, &mapping); err != nil {
+		return nil, CodedErrorf(http.StatusInternalServerError, "invalid mapping data")
+	}
+	return api.FileNameToPath{
+		Mapping:  mapping,
+	}, nil
 }

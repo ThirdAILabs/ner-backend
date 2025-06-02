@@ -75,6 +75,10 @@ func main() {
 		log.Fatalf("Failed to init & upload Transformer model: %v", err)
 	}
 
+	if err := cmd.RemoveExcludedTagsFromAllModels(db); err != nil {
+		log.Fatalf("Failed to remove excluded tags from all models: %v", err)
+	}
+
 	// Initialize RabbitMQ Publisher
 	publisher, err := messaging.NewRabbitMQPublisher(cfg.RabbitMQURL)
 	if err != nil {

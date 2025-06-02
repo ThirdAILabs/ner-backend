@@ -24,8 +24,9 @@ type Group struct {
 }
 
 type TaskStatusCategory struct {
-	TotalTasks int
-	TotalSize  int
+	TotalTasks    int
+	TotalSize     int
+	CompletedSize int
 }
 
 type Report struct {
@@ -147,4 +148,8 @@ type ValidateS3BucketRequest struct {
 	S3Region       string
 	SourceS3Bucket string
 	SourceS3Prefix string
+}
+
+type FileNameToPath struct {
+	Mapping  map[string]string
 }

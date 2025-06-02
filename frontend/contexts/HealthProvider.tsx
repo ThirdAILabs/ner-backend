@@ -1,7 +1,54 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { nerService } from '@/lib/backend';
+
+import Image from 'next/image';
+import { keyframes } from '@emotion/react';
+import styled from '@emotion/styled';
+import { Typography } from '@mui/material';
+
+const pulse = keyframes`
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+`;
+
+const LoadingContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  height: 100vh;
+  padding: 25vh 0;
+`;
+
+const PulsingLogo = styled.div`
+  animation: ${pulse} 2s ease-in-out infinite;
+  margin: auto 0;
+`;
+
+const Loading = () => {
+  return (
+    <LoadingContainer>
+      <PulsingLogo>
+        <Image src="/thirdai-logo.png" alt="Logo" width={100} height={100} priority />
+      </PulsingLogo>
+      <Typography className="text-gray-500" variant="h6" sx={{ fontWeight: 600 }}>
+        Warming up...
+      </Typography>
+    </LoadingContainer>
+  );
+};
 
 interface HealthContextType {
   healthStatus: boolean;
@@ -13,6 +60,7 @@ const HealthContext = createContext<HealthContextType>({
 
 export function HealthProvider({ children }: { children: React.ReactNode }) {
   const [healthStatus, setHealthStatus] = useState<boolean>(false);
+  const fails = useRef<number>(0);
 
   useEffect(() => {
     const checkHealth = async () => {
@@ -20,7 +68,10 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
         const response = await nerService.checkHealth();
         return response.status === 200;
       } catch (error) {
-        console.error('Health check failed:', error);
+        fails.current++;
+        if (fails.current >= 5) {
+          console.error(`Health check failed ${fails.current} times`, error);
+        }
         return false;
       }
     };
@@ -36,8 +87,7 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    // Delay first health check by 5 seconds
-    timeoutId = setTimeout(pollHealth, 5000);
+    pollHealth();
 
     return () => {
       if (timeoutId) {
@@ -46,7 +96,11 @@ export function HealthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  return <HealthContext.Provider value={{ healthStatus }}>{children}</HealthContext.Provider>;
+  return (
+    <HealthContext.Provider value={{ healthStatus }}>
+      {healthStatus ? children : <Loading />}
+    </HealthContext.Provider>
+  );
 }
 
 export function useHealth() {

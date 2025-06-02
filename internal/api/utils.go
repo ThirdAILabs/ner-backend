@@ -85,6 +85,78 @@ func RestHandler(handler func(r *http.Request) (any, error)) http.HandlerFunc {
 	}
 }
 
+type StreamResponse func(yield func(any, error) bool)
+
+type StreamMessage struct {
+	Data    interface{}
+	Error   string
+	Code    int
+}
+
+func RestStreamHandler(handler func(r *http.Request) (StreamResponse, error)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		stream, err := handler(r)
+		if err != nil {
+			var cerr *codedError
+			if errors.As(err, &cerr) {
+				http.Error(w, err.Error(), cerr.code)
+				if cerr.code == http.StatusInternalServerError {
+					slog.Error("internal server error received in endpoint", "error", err)
+				}
+			} else {
+				slog.Error("recieved non coded error from endpoint", "error", err)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+
+			}
+			return
+		}
+
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			slog.Error("response writer does not support flushing")
+			http.Error(w, "streaming not supported", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+
+		for data, err := range stream {
+			var msg StreamMessage
+			if err != nil {
+				var cerr *codedError
+				if errors.As(err, &cerr) {
+					msg = StreamMessage{
+						Error: err.Error(),
+						Code:  cerr.code,
+					}
+					if cerr.code == http.StatusInternalServerError {
+						slog.Error("internal server error received in endpoint", "error", err)
+					}
+				} else {
+					msg = StreamMessage{
+						Error: err.Error(),
+						Code:  http.StatusInternalServerError,
+					}
+					slog.Error("received non coded error from endpoint", "error", err)
+				}
+			} else {
+				msg = StreamMessage{
+					Data: data,
+					Code: http.StatusOK,
+				}
+			}
+
+			if writeErr := json.NewEncoder(w).Encode(msg); writeErr != nil {
+				slog.Error("error writing json response", "error", writeErr)
+				return
+			}
+			
+			flusher.Flush()
+		}
+	}
+}
+
 func WriteJsonResponse(w http.ResponseWriter, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
