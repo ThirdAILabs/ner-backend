@@ -385,6 +385,7 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 
 			var matched int
 			for _, e := range entities {
+				t.Logf("Found entity: %s", e.Text)
 				if _, ok := expectedSet[e.Text]; ok {
 					matched++
 				}
