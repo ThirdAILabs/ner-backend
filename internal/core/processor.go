@@ -686,9 +686,6 @@ func (proc *TaskProcessor) runInferenceOnObject(
 			result.TagCount[entity.Label]++
 		}
 	}
-	sort.Slice(allEntities, func(i, j int) bool {
-		return allEntities[i].Start < allEntities[j].Start
-	})
 
 	result.Entities = allEntities
 	result.Groups = groups
