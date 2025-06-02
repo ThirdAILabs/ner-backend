@@ -15,17 +15,6 @@ import _ from 'lodash';
 
 import { formatFileSize, formatNumber } from '@/lib/utils';
 
-interface ClusterSpecs {
-  cpus: number;
-  vendorId: string;
-  modelName: string;
-  cpuMhz: number;
-}
-
-export interface Tag {
-  type: string;
-  count: number;
-}
 interface AnalyticsDashboardProps {
   progress: number;
   tokensProcessed: number; // This is actually bytes processed

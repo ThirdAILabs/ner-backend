@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import { TableHead, TableRow, TableHeader, TableBody, TableCell } from '@/components/ui/table';
 import { Loader2 } from 'lucide-react';
-import { TableContentProps } from './types';
 import { Button } from '@/components/ui/button';
 import { NO_GROUP } from '@/lib/utils';
 import { ChevronRight } from 'lucide-react';
