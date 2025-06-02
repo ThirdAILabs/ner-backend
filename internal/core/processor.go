@@ -518,7 +518,7 @@ func coalesceEntities(labelToEntities map[string][]types.Entity, reportId uuid.U
 		for i := 1; i < len(ents); i++ {
 			if currentEnt.End >= ents[i].Start {
 				if currentEnt.End < ents[i].End {
-					// Entity overlaps
+					// Entities overlaps
 					currentEnt.End = ents[i].End
 					currentEnt.Text += ents[i].Text[currentEnt.End-ents[i].Start:]
 					currentEnt.RContext = ents[i].RContext
