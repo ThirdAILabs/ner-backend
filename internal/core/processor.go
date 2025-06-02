@@ -531,10 +531,9 @@ func coalesceEntities(labelToEntities map[string][]types.Entity) []types.Entity 
 					currentEnt.Text += ents[i].Text[currentEnt.End-ents[i].Start:]
 					currentEnt.RContext = ents[i].RContext
 				}
-			} else if currentEnt.End+1 == ents[i].Start {
-				// Entities are adjacent (assuming have a whitespace between them)
+			} else if ok, betweenText := types.AreEntitiesAdjacent(currentEnt, ents[i]); ok {
 				currentEnt.End = ents[i].End
-				currentEnt.Text += " " + ents[i].Text
+				currentEnt.Text += betweenText + ents[i].Text
 				currentEnt.RContext = ents[i].RContext
 			} else {
 				coalescedEntities = append(coalescedEntities, currentEnt)
@@ -671,6 +670,9 @@ func (proc *TaskProcessor) runInferenceOnObject(
 			result.TagCount[entity.Label]++
 		}
 	}
+	sort.Slice(allEntities, func(i, j int) bool {
+		return allEntities[i].Start < allEntities[j].Start
+	})
 
 	result.Entities = allEntities
 	result.Groups = groups
