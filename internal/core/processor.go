@@ -506,6 +506,57 @@ func (proc *TaskProcessor) createObjectPreview(
 	}).Error
 }
 
+func coalesceEntities(labelToEntities map[string][]types.Entity, reportId uuid.UUID, object string) []database.ObjectEntity {
+	objEntities := make([]database.ObjectEntity, 0)
+
+	for _, ents := range labelToEntities {
+		sort.Slice(ents, func(i, j int) bool {
+			return ents[i].Start < ents[j].Start
+		})
+
+		currentEnt := ents[0]
+		for i := 1; i < len(ents); i++ {
+			if currentEnt.End >= ents[i].Start {
+				if currentEnt.End < ents[i].End {
+					// Entity overlaps
+					currentEnt.End = ents[i].End
+					currentEnt.Text += ents[i].Text[currentEnt.End-ents[i].Start:]
+					currentEnt.RContext = ents[i].RContext
+				}
+			} else if currentEnt.End+1 == ents[i].Start {
+				// Entities are adjacent (assuming have a whitespace between them)
+				currentEnt.End = ents[i].End
+				currentEnt.Text += " " + ents[i].Text
+				currentEnt.RContext = ents[i].RContext
+			} else {
+				objEntities = append(objEntities, database.ObjectEntity{
+					ReportId: reportId,
+					Label:    currentEnt.Label,
+					Text:     currentEnt.Text,
+					Start:    currentEnt.Start,
+					End:      currentEnt.End,
+					Object:   object,
+					LContext: currentEnt.LContext,
+					RContext: currentEnt.RContext,
+				})
+				currentEnt = ents[i]
+			}
+		}
+		objEntities = append(objEntities, database.ObjectEntity{
+			ReportId: reportId,
+			Label:    currentEnt.Label,
+			Text:     currentEnt.Text,
+			Start:    currentEnt.Start,
+			End:      currentEnt.End,
+			Object:   object,
+			LContext: currentEnt.LContext,
+			RContext: currentEnt.RContext,
+		})
+	}
+
+	return objEntities
+}
+
 type InferenceResult struct {
 	TotalTokens    int64
 	TotalSize      int64
@@ -561,7 +612,6 @@ func (proc *TaskProcessor) runInferenceOnObject(
 				entity.Start += chunk.Offset
 				entity.End += chunk.Offset
 				labelToEntities[entity.Label] = append(labelToEntities[entity.Label], entity)
-				result.TagCount[entity.Label]++
 			}
 		}
 
@@ -577,7 +627,6 @@ func (proc *TaskProcessor) runInferenceOnObject(
 					LContext: strings.ToValidUTF8(chunk.Text[max(0, start-20):start], ""),
 					RContext: strings.ToValidUTF8(chunk.Text[end:min(len(chunk.Text), end+20)], ""),
 				})
-				result.CustomTagCount[tag]++
 			}
 		}
 
@@ -611,19 +660,13 @@ func (proc *TaskProcessor) runInferenceOnObject(
 		}
 	}
 
-	allEntities := make([]database.ObjectEntity, 0)
-	for _, entities := range labelToEntities {
-		for _, entity := range entities {
-			allEntities = append(allEntities, database.ObjectEntity{
-				ReportId: reportId,
-				Label:    entity.Label,
-				Text:     entity.Text,
-				Start:    entity.Start,
-				End:      entity.End,
-				Object:   object,
-				LContext: entity.LContext,
-				RContext: entity.RContext,
-			})
+	allEntities := coalesceEntities(labelToEntities, reportId, object)
+
+	for _, objEnt := range allEntities {
+		if _, exists := customTags[objEnt.Label]; exists {
+			result.CustomTagCount[objEnt.Label]++
+		} else {
+			result.TagCount[objEnt.Label]++
 		}
 	}
 
