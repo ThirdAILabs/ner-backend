@@ -5,6 +5,7 @@ import { Box, Card, CardContent, Typography, CircularProgress } from '@mui/mater
 import { nerService, InferenceMetrics, ThroughputMetrics } from '@/lib/backend';
 import { formatFileSize, formatNumber } from '@/lib/utils';
 import { useHealth } from '@/contexts/HealthProvider';
+import MetricsDataViewerCard from '@/components/ui/MetricsDataViewerCard';
 
 interface MetricsDataViewerProps {
   modelId?: string;
@@ -117,298 +118,31 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
         }}
       >
         {/* In-Progress Tasks */}
-        <Card
-          sx={{
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            bgcolor: 'white',
-            borderRadius: '12px',
-            border: '1px solid #e5e7eb',
-            transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
-            '&:hover': {
-              transform: 'translateY(-2px)',
-              boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-            },
-          }}
-        >
-          <CardContent
-            sx={{
-              p: 3,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: '100%',
-              '&:last-child': { pb: 3 },
-            }}
-          >
-            <Box
-              sx={{
-                height: '128px',
-                width: '128px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                mb: 2,
-              }}
-            >
-              <Typography
-                sx={{
-                  fontSize: getFontSize(String(infMetrics.InProgress)),
-                  fontWeight: 600,
-                  color: '#4a5568',
-                }}
-              >
-                {infMetrics.InProgress}
-              </Typography>
-            </Box>
-            <Typography
-              sx={{
-                textAlign: 'center',
-                fontSize: '0.875rem',
-                color: '#64748b',
-                fontWeight: 500,
-              }}
-            >
-              In-Progress Reports
-            </Typography>
-          </CardContent>
-        </Card>
+        <MetricsDataViewerCard value={infMetrics.InProgress} label="In-Progress Reports" />
 
         {/* Completed Tasks */}
-        <Card
-          sx={{
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            bgcolor: 'white',
-            borderRadius: '12px',
-            border: '1px solid #e5e7eb',
-            transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
-            '&:hover': {
-              transform: 'translateY(-2px)',
-              boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-            },
-          }}
-        >
-          <CardContent
-            sx={{
-              p: 3,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: '100%',
-              '&:last-child': { pb: 3 },
-            }}
-          >
-            <Box
-              sx={{
-                height: '128px',
-                width: '128px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                mb: 2,
-              }}
-            >
-              <Typography
-                sx={{
-                  fontSize: getFontSize(String(infMetrics.Completed + infMetrics.Failed)),
-                  fontWeight: 600,
-                  color: '#4a5568',
-                }}
-              >
-                {infMetrics.Completed + infMetrics.Failed}
-              </Typography>
-            </Box>
-            <Typography
-              sx={{
-                textAlign: 'center',
-                fontSize: '0.875rem',
-                color: '#64748b',
-                fontWeight: 500,
-              }}
-            >
-              Completed Reports
-            </Typography>
-          </CardContent>
-        </Card>
+        <MetricsDataViewerCard
+          value={infMetrics.Completed + infMetrics.Failed}
+          label="Completed Reports"
+        />
 
         {/* Throughput */}
-        <Card
-          sx={{
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            bgcolor: 'white',
-            borderRadius: '12px',
-            border: '1px solid #e5e7eb',
-            transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
-            '&:hover': {
-              transform: 'translateY(-2px)',
-              boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-            },
-          }}
-        >
-          <CardContent
-            sx={{
-              p: 3,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: '100%',
-              '&:last-child': { pb: 3 },
-            }}
-          >
-            <Box
-              sx={{
-                height: '128px',
-                width: '128px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                mb: 2,
-              }}
-            >
-              <Typography
-                sx={{
-                  fontSize: getFontSize(throughput || ''),
-                  fontWeight: 600,
-                  color: '#4a5568',
-
-                  textAlign: 'center',
-                }}
-              >
-                {throughput === '-' ? '-' : `${throughput}/Hour`}
-              </Typography>
-            </Box>
-            <Typography
-              sx={{
-                textAlign: 'center',
-                fontSize: '0.875rem',
-                color: '#64748b',
-                fontWeight: 500,
-              }}
-            >
-              Throughput
-            </Typography>
-          </CardContent>
-        </Card>
+        <MetricsDataViewerCard
+          value={throughput === '-' ? '-' : `${throughput}/Hour`}
+          label="Throughput"
+        />
 
         {/* Data Processed */}
-        <Card
-          sx={{
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            bgcolor: 'white',
-            borderRadius: '12px',
-            border: '1px solid #e5e7eb',
-            transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
-            '&:hover': {
-              transform: 'translateY(-2px)',
-              boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-            },
-          }}
-        >
-          <CardContent
-            sx={{
-              p: 3,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: '100%',
-              '&:last-child': { pb: 3 },
-            }}
-          >
-            <Box
-              sx={{
-                height: '128px',
-                width: '128px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                mb: 2,
-              }}
-            >
-              <Typography
-                sx={{
-                  textAlign: 'center',
-                  fontSize: getFontSize(formatFileSize(infMetrics.DataProcessedMB * 1024 * 1024)),
-                  fontWeight: 600,
-                  color: '#4a5568',
-                }}
-              >
-                {formatFileSize(infMetrics.DataProcessedMB * 1024 * 1024)}
-              </Typography>
-            </Box>
-            <Typography
-              sx={{
-                textAlign: 'center',
-                fontSize: '0.875rem',
-                color: '#64748b',
-                fontWeight: 500,
-              }}
-            >
-              Data Processed
-            </Typography>
-          </CardContent>
-        </Card>
+        <MetricsDataViewerCard
+          value={formatFileSize(infMetrics.DataProcessedMB * 1024 * 1024)}
+          label="Data Processed"
+        />
 
         {/* Tokens Processed */}
-        <Card
-          sx={{
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            bgcolor: 'white',
-            borderRadius: '12px',
-            border: '1px solid #e5e7eb',
-            transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
-            '&:hover': {
-              transform: 'translateY(-2px)',
-              boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-            },
-          }}
-        >
-          <CardContent
-            sx={{
-              p: 3,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: '100%',
-              '&:last-child': { pb: 3 },
-            }}
-          >
-            <Box
-              sx={{
-                height: '128px',
-                width: '128px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                mb: 2,
-              }}
-            >
-              <Typography
-                sx={{
-                  fontSize: getFontSize(formatFileSize(infMetrics.TokensProcessed)),
-                  fontWeight: 600,
-                  color: '#4a5568',
-                  textAlign: 'center',
-                }}
-              >
-                {formatNumber(infMetrics.TokensProcessed)}
-              </Typography>
-            </Box>
-            <Typography
-              sx={{
-                textAlign: 'center',
-                fontSize: '0.875rem',
-                color: '#64748b',
-                fontWeight: 500,
-              }}
-            >
-              Tokens Processed
-            </Typography>
-          </CardContent>
-        </Card>
+        <MetricsDataViewerCard
+          value={formatNumber(infMetrics.TokensProcessed)}
+          label="Tokens Processed"
+        />
       </Box>
     </Box>
   );

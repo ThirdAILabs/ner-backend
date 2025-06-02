@@ -52,7 +52,7 @@ function PageContents() {
 
   return (
     // 30px is the height of the title bar
-    <div style={{ width: '75%', minHeight: 'calc(100vh - 30px)', margin: '0 auto' }}>
+    <div style={{ width: '90%', minHeight: 'calc(100vh - 30px)', margin: '0 auto' }}>
       <header
         style={{
           width: '100%',
@@ -101,7 +101,7 @@ function PageContents() {
         </div>
       </header>
 
-      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px' }}>
+      <main style={{ margin: '0 auto', padding: '16px' }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
           <Tabs
             value={tabValue}
