@@ -86,17 +86,17 @@ export function AnalyticsDashboard({
             <div className="relative h-36 w-36">
               <svg className="h-full w-full" viewBox="0 0 120 120">
                 {/* Background circle */}
-                <circle cx="60" cy="60" r="48" fill="none" stroke="#dddddd" strokeWidth="10" />
+                <circle cx="60" cy="60" r="52" fill="none" stroke="#dddddd" strokeWidth="10" />
 
                 {/* Success arc (green) */}
                 <circle
                   cx="60"
                   cy="60"
-                  r="48"
+                  r="52"
                   fill="none"
                   stroke="#4caf50"
                   strokeWidth="10"
-                  strokeDasharray={`${(succeededFileCount / totalFileCount) * 301.592} 301.592`}
+                  strokeDasharray={`${(succeededFileCount / totalFileCount) * 326.725} 326.725`}
                   transform="rotate(-90 60 60)"
                 />
 
@@ -104,12 +104,12 @@ export function AnalyticsDashboard({
                 <circle
                   cx="60"
                   cy="60"
-                  r="48"
+                  r="52"
                   fill="none"
                   stroke="#ef4444"
                   strokeWidth="10"
-                  strokeDasharray={`${(failedFileCount / totalFileCount) * 301.592} 301.592`}
-                  strokeDashoffset={-((succeededFileCount / totalFileCount) * 301.592)}
+                  strokeDasharray={`${(failedFileCount / totalFileCount) * 326.725} 326.725`}
+                  strokeDashoffset={-((succeededFileCount / totalFileCount) * 326.725)}
                   transform="rotate(-90 60 60)"
                 />
               </svg>
