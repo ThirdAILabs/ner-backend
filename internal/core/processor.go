@@ -461,8 +461,16 @@ func (proc *TaskProcessor) createObjectPreview(
 		return fmt.Errorf("preview inference error: %w", err)
 	}
 
-	sort.Slice(spans, func(i, j int) bool {
-		return spans[i].Start < spans[j].Start
+	// converting spans to a map for coalescing
+	spanEntityMap := make(map[string][]types.Entity)
+	for _, span := range spans {
+		spanEntityMap[span.Label] = append(spanEntityMap[span.Label], span)
+	}
+
+	coalescedSpans := coalesceEntities(spanEntityMap)
+
+	sort.Slice(coalescedSpans, func(i, j int) bool {
+		return coalescedSpans[i].Start < coalescedSpans[j].Start
 	})
 
 	var (
@@ -471,7 +479,7 @@ func (proc *TaskProcessor) createObjectPreview(
 		cursor = 0
 		length = len(previewText)
 	)
-	for _, e := range spans {
+	for _, e := range coalescedSpans {
 		if _, exists := ExcludedTags[e.Label]; exists {
 			continue
 		}
@@ -506,8 +514,8 @@ func (proc *TaskProcessor) createObjectPreview(
 	}).Error
 }
 
-func coalesceEntities(labelToEntities map[string][]types.Entity, reportId uuid.UUID, object string) []database.ObjectEntity {
-	objEntities := make([]database.ObjectEntity, 0)
+func coalesceEntities(labelToEntities map[string][]types.Entity) []types.Entity {
+	coalescedEntities := make([]types.Entity, 0)
 
 	for _, ents := range labelToEntities {
 		sort.Slice(ents, func(i, j int) bool {
@@ -529,32 +537,14 @@ func coalesceEntities(labelToEntities map[string][]types.Entity, reportId uuid.U
 				currentEnt.Text += " " + ents[i].Text
 				currentEnt.RContext = ents[i].RContext
 			} else {
-				objEntities = append(objEntities, database.ObjectEntity{
-					ReportId: reportId,
-					Label:    currentEnt.Label,
-					Text:     currentEnt.Text,
-					Start:    currentEnt.Start,
-					End:      currentEnt.End,
-					Object:   object,
-					LContext: currentEnt.LContext,
-					RContext: currentEnt.RContext,
-				})
+				coalescedEntities = append(coalescedEntities, currentEnt)
 				currentEnt = ents[i]
 			}
 		}
-		objEntities = append(objEntities, database.ObjectEntity{
-			ReportId: reportId,
-			Label:    currentEnt.Label,
-			Text:     currentEnt.Text,
-			Start:    currentEnt.Start,
-			End:      currentEnt.End,
-			Object:   object,
-			LContext: currentEnt.LContext,
-			RContext: currentEnt.RContext,
-		})
+		coalescedEntities = append(coalescedEntities, currentEnt)
 	}
 
-	return objEntities
+	return coalescedEntities
 }
 
 type InferenceResult struct {
@@ -660,13 +650,25 @@ func (proc *TaskProcessor) runInferenceOnObject(
 		}
 	}
 
-	allEntities := coalesceEntities(labelToEntities, reportId, object)
+	coalescedEntities := coalesceEntities(labelToEntities)
 
-	for _, objEnt := range allEntities {
-		if _, exists := customTags[objEnt.Label]; exists {
-			result.CustomTagCount[objEnt.Label]++
+	allEntities := make([]database.ObjectEntity, 0)
+	for _, entity := range coalescedEntities {
+		allEntities = append(allEntities, database.ObjectEntity{
+			ReportId: reportId,
+			Label:    entity.Label,
+			Text:     entity.Text,
+			Start:    entity.Start,
+			End:      entity.End,
+			Object:   object,
+			LContext: entity.LContext,
+			RContext: entity.RContext,
+		})
+
+		if _, exists := customTags[entity.Label]; exists {
+			result.CustomTagCount[entity.Label]++
 		} else {
-			result.TagCount[objEnt.Label]++
+			result.TagCount[entity.Label]++
 		}
 	}
 
