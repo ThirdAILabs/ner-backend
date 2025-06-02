@@ -468,10 +468,7 @@ func (proc *TaskProcessor) createObjectPreview(
 	}
 
 	coalescedSpans := coalesceEntities(spanEntityMap)
-
-	sort.Slice(coalescedSpans, func(i, j int) bool {
-		return coalescedSpans[i].Start < coalescedSpans[j].Start
-	})
+	// coalescedSpans will be already sorted by start position
 
 	var (
 		tokens []string
