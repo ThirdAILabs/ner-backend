@@ -168,7 +168,7 @@ const Dashboard = () => {
                 onChange={(e) => setDays(Number(e.target.value))}
                 displayEmpty
                 sx={{
-                  bgcolor: '#f8fafc',
+                  bgcolor: 'white',
                   '&:hover': {
                     bgcolor: '#f1f5f9',
                   },
@@ -214,7 +214,7 @@ const Dashboard = () => {
                   val === '' ? 'All Models' : models.find((m) => m.Id === val)?.Name || val
                 }
                 sx={{
-                  bgcolor: '#f8fafc',
+                  bgcolor: 'white',
                   '&:hover': {
                     bgcolor: '#f1f5f9',
                   },
