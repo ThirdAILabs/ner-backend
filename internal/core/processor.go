@@ -662,9 +662,9 @@ func (proc *TaskProcessor) runInferenceOnObject(
 
 	coalescedEntities := coalesceEntities(labelToEntities)
 
-	allEntities := make([]database.ObjectEntity, 0)
-	for _, entity := range coalescedEntities {
-		allEntities = append(allEntities, database.ObjectEntity{
+	allEntities := make([]database.ObjectEntity, len(coalescedEntities))
+	for i, entity := range coalescedEntities {
+		allEntities[i] = database.ObjectEntity{
 			ReportId: reportId,
 			Label:    entity.Label,
 			Text:     entity.Text,
@@ -673,7 +673,7 @@ func (proc *TaskProcessor) runInferenceOnObject(
 			Object:   object,
 			LContext: entity.LContext,
 			RContext: entity.RContext,
-		})
+		}
 
 		if _, exists := customTags[entity.Label]; exists {
 			result.CustomTagCount[entity.Label]++
