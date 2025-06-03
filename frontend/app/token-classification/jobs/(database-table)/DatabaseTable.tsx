@@ -318,6 +318,10 @@ export function DatabaseTable({ groups: groupsProp, tags, uploadId }: DatabaseTa
   };
 
   const handleDeselectAllTags = () => {
+    // We need to explicitly set the objectRecords & tokenRecords to empty arrays (resetPagination handles that).
+    // If we reuse the useEffect logic, it will set all the filters to false, which are then
+    // ignored and not sent to the backend, so the backend assumes that there are no filters
+    // and returns all the records.
     const newFilters = Object.fromEntries(tags.map((tag) => [tag.type, false]));
     setTagFilters(newFilters);
     resetPagination();
