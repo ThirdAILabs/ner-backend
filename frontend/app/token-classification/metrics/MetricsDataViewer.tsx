@@ -2,10 +2,13 @@
 
 import React, { useEffect, useState } from 'react';
 import { Box, Card, CardContent, Typography, CircularProgress } from '@mui/material';
-import { nerService, InferenceMetrics, ThroughputMetrics } from '@/lib/backend';
+import { nerService } from '@/lib/backend';
+import type { InferenceMetrics, ThroughputMetrics } from './inferenceTypes';
 import { formatFileSize, formatNumber } from '@/lib/utils';
 import { useHealth } from '@/contexts/HealthProvider';
 import MetricsDataViewerCard from '@/components/ui/MetricsDataViewerCard';
+import { TokenFeedback, mockFeedbackData } from './types';
+import { Table, TableBody, TableCell, TableHead, TableRow } from '@/components/ui/table';
 
 interface MetricsDataViewerProps {
   modelId?: string;
@@ -20,6 +23,9 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
   const [error, setError] = useState<string | null>(null);
   const [throughput, setThroughput] = useState<string | null>('-');
   const { healthStatus } = useHealth();
+  
+  // State for feedback data
+  const [feedbackData] = useState<TokenFeedback[]>(mockFeedbackData);
 
   function getFontSize(value: string) {
     if (!value) return '2rem';
@@ -88,6 +94,30 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
     };
   }, [modelId, days, healthStatus]);
 
+  const renderHighlightedToken = (token: string, tag: string) => {
+    if (tag === 'O') {
+      return token;
+    }
+    return (
+      <span>
+        {token}
+        <span
+          style={{
+            backgroundColor: '#65CFD0',
+            color: 'white',
+            fontSize: '11px',
+            fontWeight: 'bold',
+            borderRadius: '2px',
+            marginLeft: '4px',
+            padding: '1px 3px',
+          }}
+        >
+          {tag}
+        </span>
+      </span>
+    );
+  };
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
@@ -109,42 +139,83 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(5, 1fr)',
-          gap: 3,
-        }}
-      >
-        {/* In-Progress Tasks */}
-        <MetricsDataViewerCard value={infMetrics.InProgress} label="In-Progress Reports" />
+    <>
+      <Box sx={{ p: 3 }}>
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(5, 1fr)',
+            gap: 3,
+          }}
+        >
+          {/* In-Progress Tasks */}
+          <MetricsDataViewerCard value={infMetrics.InProgress} label="In-Progress Reports" />
+          
+          {/* Completed Tasks */}
+          <MetricsDataViewerCard
+            value={infMetrics.Completed + infMetrics.Failed}
+            label="Completed Reports"
+          />
+          
+          {/* Throughput */}
+          <MetricsDataViewerCard
+            value={throughput === '-' ? '-' : `${throughput}/Hour`}
+            label="Throughput"
+          />
+          
+          {/* Data Processed */}
+          <MetricsDataViewerCard
+            value={formatFileSize(infMetrics.DataProcessedMB * 1024 * 1024)}
+            label="Data Processed"
+          />
+          
+          {/* Tokens Processed */}
+          <MetricsDataViewerCard
+            value={formatNumber(infMetrics.TokensProcessed)}
+            label="Tokens Processed"
+          />
+        </Box>
 
-        {/* Completed Tasks */}
-        <MetricsDataViewerCard
-          value={infMetrics.Completed + infMetrics.Failed}
-          label="Completed Reports"
-        />
-
-        {/* Throughput */}
-        <MetricsDataViewerCard
-          value={throughput === '-' ? '-' : `${throughput}/Hour`}
-          label="Throughput"
-        />
-
-        {/* Data Processed */}
-        <MetricsDataViewerCard
-          value={formatFileSize(infMetrics.DataProcessedMB * 1024 * 1024)}
-          label="Data Processed"
-        />
-
-        {/* Tokens Processed */}
-        <MetricsDataViewerCard
-          value={formatNumber(infMetrics.TokensProcessed)}
-          label="Tokens Processed"
-        />
+        {/* Fine-tuned Feedback Data */}
+        <Box sx={{ mt: 4 }}>
+          <Typography 
+            variant="h6"
+            sx={{
+              fontWeight: 600,
+              fontSize: '1.25rem',
+              color: '#4a5568',
+              mb: 2
+            }}
+          >
+            Fine-tuned Feedback Data
+          </Typography>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableHead>Prediction</TableHead>
+                <TableHead>Source Object</TableHead>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {feedbackData.map((feedback, index) => (
+                <TableRow key={index}>
+                  <TableCell className="w-3/5">
+                    {feedback.tokens.map((token, tokenIndex) => (
+                      <span key={tokenIndex}>
+                        {renderHighlightedToken(token, feedback.tags[tokenIndex])}
+                      </span>
+                    ))}
+                  </TableCell>
+                  <TableCell className="w-2/5">
+                    {feedback.object}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Box>
       </Box>
-    </Box>
+    </>
   );
 };
 
