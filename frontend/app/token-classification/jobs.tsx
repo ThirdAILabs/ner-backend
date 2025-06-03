@@ -25,6 +25,7 @@ import { IconButton, Tooltip } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useHealth } from '@/contexts/HealthProvider';
 import { alpha } from '@mui/material/styles';
+import { FileSearch } from 'lucide-react';
 
 export default function Jobs() {
   const searchParams = useSearchParams();
@@ -47,14 +48,14 @@ export default function Jobs() {
           prev.map((r) =>
             r.Id === report.Id
               ? {
-                  ...r,
-                  SucceededFileCount: detailedReport.SucceededFileCount,
-                  detailedStatus: {
-                    ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
-                    InferenceTaskStatuses: detailedReport.InferenceTaskStatuses,
-                  },
-                  isLoadingStatus: false,
-                }
+                ...r,
+                SucceededFileCount: detailedReport.SucceededFileCount,
+                detailedStatus: {
+                  ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
+                  InferenceTaskStatuses: detailedReport.InferenceTaskStatuses,
+                },
+                isLoadingStatus: false,
+              }
               : r
           )
         );
@@ -114,7 +115,7 @@ export default function Jobs() {
       }
     };
     if (healthStatus) fetchReports();
-    return () => {};
+    return () => { };
   }, [healthStatus]);
 
   if (loading) {
@@ -350,8 +351,8 @@ export default function Jobs() {
   return (
     <Card
       sx={{
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        bgcolor: 'white',
+        boxShadow: '0 1px 3px rgba(0,0,0,0)',
+        background: 'linear-gradient(to bottom, #f8fafc, #f1f5f9)',
         borderRadius: '12px',
         mx: 'auto',
         maxWidth: '1400px',
@@ -419,11 +420,11 @@ export default function Jobs() {
         >
           <Table>
             <TableHead>
-              <TableRow sx={{ bgcolor: '#f8fafc' }}>
+              <TableRow sx={{ bgcolor: 'black' }}>
                 <TableCell
                   sx={{
                     fontWeight: 600,
-                    color: '#475569',
+                    color: 'white',
                     fontSize: '0.875rem',
                   }}
                 >
@@ -432,7 +433,7 @@ export default function Jobs() {
                 <TableCell
                   sx={{
                     fontWeight: 600,
-                    color: '#475569',
+                    color: 'white',
                     fontSize: '0.875rem',
                   }}
                 >
@@ -441,7 +442,7 @@ export default function Jobs() {
                 <TableCell
                   sx={{
                     fontWeight: 600,
-                    color: '#475569',
+                    color: 'white',
                     fontSize: '0.875rem',
                   }}
                 >
@@ -450,7 +451,7 @@ export default function Jobs() {
                 <TableCell
                   sx={{
                     fontWeight: 600,
-                    color: '#475569',
+                    color: 'white',
                     fontSize: '0.875rem',
                   }}
                 >
@@ -459,7 +460,7 @@ export default function Jobs() {
                 <TableCell
                   sx={{
                     fontWeight: 600,
-                    color: '#475569',
+                    color: 'white',
                     fontSize: '0.875rem',
                     width: '120px',
                   }}
@@ -578,7 +579,7 @@ export default function Jobs() {
                   <TableCell
                     colSpan={5}
                     sx={{
-                      py: 8,
+                      py: 12,
                       textAlign: 'center',
                     }}
                   >
@@ -590,13 +591,22 @@ export default function Jobs() {
                         gap: 2,
                       }}
                     >
+                      <FileSearch
+                        size={48}
+                        strokeWidth={1.5}
+                        style={{
+                          color: '#1a73e8',
+                        }}
+                      />
                       <Typography
                         sx={{
-                          color: '#475569',
-                          fontSize: '0.875rem',
+                          color: 'rgb(80,80,80)',
+                          fontSize: '1 rem',
+                          fontWeight: 550,
+                          fontFamily: "serif"
                         }}
                       >
-                        -
+                        No reports found
                       </Typography>
                     </Box>
                   </TableCell>

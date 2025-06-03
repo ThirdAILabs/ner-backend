@@ -95,8 +95,8 @@ const Dashboard = () => {
   return (
     <Card
       sx={{
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        bgcolor: 'white',
+        boxShadow: '0 1px 3px rgba(0,0,0,0)',
+        background: 'linear-gradient(to bottom, #f8fafc, #f1f5f9)',
         borderRadius: '12px',
         mx: 'auto',
         maxWidth: '1400px',
