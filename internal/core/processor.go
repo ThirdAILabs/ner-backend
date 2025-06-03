@@ -512,49 +512,39 @@ func (proc *TaskProcessor) createObjectPreview(
 }
 
 func coalesceEntities(labelToEntities map[string][]types.Entity) []types.Entity {
-	maxEntityGap := 3
-	flattenedEntities := make([]types.Entity, 0)
-	coalescedEntities := make([]types.Entity, 0)
+    flattenedEntities := make([]types.Entity, 0, len(labelToEntities))
+    for _, ents := range labelToEntities {
+        flattenedEntities = append(flattenedEntities, ents...)
+    }
+    if len(flattenedEntities) == 0 {
+        return nil
+    }
 
-	for _, ents := range labelToEntities {
-		flattenedEntities = append(flattenedEntities, ents...)
-	}
+    sort.Slice(flattenedEntities, func(i, j int) bool {
+        return flattenedEntities[i].Start < flattenedEntities[j].Start
+    })
 
-	sort.Slice(flattenedEntities, func(i, j int) bool {
-		return flattenedEntities[i].Start < flattenedEntities[j].Start
-	})
+    coalescedEntities := make([]types.Entity, 0, len(flattenedEntities))
+    currentEnt := flattenedEntities[0]
 
-	currentEnt := flattenedEntities[0]
-	for i := 1; i < len(flattenedEntities); i++ {
-		if currentEnt.Label != flattenedEntities[i].Label {
-			// current entity does not match the next one
-			coalescedEntities = append(coalescedEntities, currentEnt)
-			currentEnt = flattenedEntities[i]
-			continue
-		}
+    for i := 1; i < len(flattenedEntities); i++ {
+        nextEnt := flattenedEntities[i]
 
-		if currentEnt.End >= flattenedEntities[i].Start {
-			if currentEnt.End < flattenedEntities[i].End {
-				// Entities partially overlap
-				currentEnt.End = flattenedEntities[i].End
-				currentEnt.Text += flattenedEntities[i].Text[currentEnt.End-flattenedEntities[i].Start:]
-				currentEnt.RContext = flattenedEntities[i].RContext
-			}
-		} else if flattenedEntities[i].Start-currentEnt.End <= min(maxEntityGap, len(currentEnt.RContext)) {
-			betweenText := currentEnt.RContext[:flattenedEntities[i].Start-currentEnt.End]
-			currentEnt.End = flattenedEntities[i].End
-			currentEnt.Text += betweenText + flattenedEntities[i].Text
-			currentEnt.RContext = flattenedEntities[i].RContext
-		} else {
-			// Entities are not adjacent
-			coalescedEntities = append(coalescedEntities, currentEnt)
-			currentEnt = flattenedEntities[i]
-		}
-	}
-	// last entry
-	coalescedEntities = append(coalescedEntities, currentEnt)
+        // Merge only if they are exactly adjacent (no gap) and share the same label
+        if currentEnt.Label == nextEnt.Label && currentEnt.End == nextEnt.Start {
+            // Extend currentEnt to include nextEnt
+            currentEnt.Text += nextEnt.Text
+            currentEnt.End = nextEnt.End
+            currentEnt.RContext = nextEnt.RContext
+        } else {
+            // Different label or non-adjacent: flush currentEnt and start a new one
+            coalescedEntities = append(coalescedEntities, currentEnt)
+            currentEnt = nextEnt
+        }
+    }
 
-	return coalescedEntities
+    coalescedEntities = append(coalescedEntities, currentEnt)
+    return coalescedEntities
 }
 
 type InferenceResult struct {
