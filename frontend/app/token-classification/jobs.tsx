@@ -48,14 +48,14 @@ export default function Jobs() {
           prev.map((r) =>
             r.Id === report.Id
               ? {
-                ...r,
-                SucceededFileCount: detailedReport.SucceededFileCount,
-                detailedStatus: {
-                  ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
-                  InferenceTaskStatuses: detailedReport.InferenceTaskStatuses,
-                },
-                isLoadingStatus: false,
-              }
+                  ...r,
+                  SucceededFileCount: detailedReport.SucceededFileCount,
+                  detailedStatus: {
+                    ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
+                    InferenceTaskStatuses: detailedReport.InferenceTaskStatuses,
+                  },
+                  isLoadingStatus: false,
+                }
               : r
           )
         );
@@ -115,7 +115,7 @@ export default function Jobs() {
       }
     };
     if (healthStatus) fetchReports();
-    return () => { };
+    return () => {};
   }, [healthStatus]);
 
   if (loading) {
@@ -603,7 +603,7 @@ export default function Jobs() {
                           color: 'rgb(80,80,80)',
                           fontSize: '1 rem',
                           fontWeight: 550,
-                          fontFamily: "serif"
+                          fontFamily: 'serif',
                         }}
                       >
                         No reports found

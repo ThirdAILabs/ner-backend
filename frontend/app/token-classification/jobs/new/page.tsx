@@ -58,9 +58,10 @@ const ModelOption: React.FC<ModelOptionProps> = ({
   <div
     className={`relative p-6 border rounded-md transition-all
       ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200 border-2'}
-      ${disabled
-        ? 'opacity-70 cursor-not-allowed bg-white'
-        : 'cursor-pointer hover:border-blue-300 bg-white'
+      ${
+        disabled
+          ? 'opacity-70 cursor-not-allowed bg-white'
+          : 'cursor-pointer hover:border-blue-300 bg-white'
       }
     `}
     onClick={() => !disabled && onClick()}
@@ -674,14 +675,14 @@ export default function NewJobPage() {
         CustomTags: customTagsObj,
         ...(selectedSource === 's3'
           ? {
-            S3Endpoint: sourceS3Endpoint,
-            S3Region: sourceS3Region,
-            SourceS3Bucket: sourceS3Bucket,
-            SourceS3Prefix: sourceS3Prefix || undefined,
-          }
+              S3Endpoint: sourceS3Endpoint,
+              S3Region: sourceS3Region,
+              SourceS3Bucket: sourceS3Bucket,
+              SourceS3Prefix: sourceS3Prefix || undefined,
+            }
           : {
-            UploadId: uploadId,
-          }),
+              UploadId: uploadId,
+            }),
         Groups: groups,
         report_name: jobName,
       });
@@ -803,11 +804,14 @@ export default function NewJobPage() {
       ) : (
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Job Name Field */}
-          <Box sx={{
-            p: 3, borderRadius: 3,
-            boxShadow: '0 2px 4px rgba(0,0,0,0)',
-            background: 'linear-gradient(to bottom, #f8fafc, #f1f5f9)'
-          }}>
+          <Box
+            sx={{
+              p: 3,
+              borderRadius: 3,
+              boxShadow: '0 2px 4px rgba(0,0,0,0)',
+              background: 'linear-gradient(to bottom, #f8fafc, #f1f5f9)',
+            }}
+          >
             <h2 className="text-2xl font-medium mb-4">Report Name</h2>
             <div className="w-full">
               <input
@@ -819,8 +823,9 @@ export default function NewJobPage() {
                   validateJobName(value);
                 }}
                 onBlur={() => validateJobName(jobName)}
-                className={`w-full p-2 border ${nameError ? 'border-red-500' : 'border-gray-300'
-                  } rounded`}
+                className={`w-full p-2 border ${
+                  nameError ? 'border-red-500' : 'border-gray-300'
+                } rounded`}
                 placeholder="Enter_Report_Name"
                 required
               />
@@ -837,11 +842,14 @@ export default function NewJobPage() {
             </div>
           </Box>
 
-          <Box sx={{
-            p: 3, borderRadius: 3,
-            boxShadow: '0 2px 4px rgba(0,0,0,0)',
-            background: 'linear-gradient(to bottom, #f8fafc, #f1f5f9)'
-          }}>
+          <Box
+            sx={{
+              p: 3,
+              borderRadius: 3,
+              boxShadow: '0 2px 4px rgba(0,0,0,0)',
+              background: 'linear-gradient(to bottom, #f8fafc, #f1f5f9)',
+            }}
+          >
             <h2 className="text-2xl font-medium mb-4">Source</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <FileSources selectSource={setSelectedSource} handleLocalFiles={handleLocalFiles} />
@@ -986,11 +994,14 @@ export default function NewJobPage() {
           </Box>
 
           {/* Model Selection */}
-          <Box sx={{
-            p: 3, borderRadius: 3,
-            boxShadow: '0 2px 4px rgba(0,0,0,0)',
-            background: 'linear-gradient(to bottom, #f8fafc, #f1f5f9)'
-          }}>
+          <Box
+            sx={{
+              p: 3,
+              borderRadius: 3,
+              boxShadow: '0 2px 4px rgba(0,0,0,0)',
+              background: 'linear-gradient(to bottom, #f8fafc, #f1f5f9)',
+            }}
+          >
             <div>
               <h2 className="text-2xl font-medium mb-4">Model</h2>
               <div className="grid grid-cols-3 gap-4">
@@ -1032,7 +1043,7 @@ export default function NewJobPage() {
                     </>
                   }
                   isSelected={false}
-                  onClick={() => { }}
+                  onClick={() => {}}
                   disabled={true}
                 />
               </div>
@@ -1105,11 +1116,14 @@ export default function NewJobPage() {
           </Box>
 
           {/* Custom Tags Section */}
-          <Box sx={{
-            p: 3, borderRadius: 3,
-            boxShadow: '0 2px 4px rgba(0,0,0,0)',
-            background: 'linear-gradient(to bottom, #f8fafc, #f1f5f9)'
-          }}>
+          <Box
+            sx={{
+              p: 3,
+              borderRadius: 3,
+              boxShadow: '0 2px 4px rgba(0,0,0,0)',
+              background: 'linear-gradient(to bottom, #f8fafc, #f1f5f9)',
+            }}
+          >
             <h2 className="text-2xl font-medium mb-4">
               Custom Tags
               <span className="text-sm font-normal text-gray-500 ml-2">(Optional)</span>
@@ -1195,8 +1209,9 @@ export default function NewJobPage() {
                         value={customTagName}
                         onChange={(e) => handleTagNameChange(e.target.value)}
                         onBlur={(e) => handleTagNameChange(e.target.value)}
-                        className={`w-full p-2 border ${nameError ? 'border-red-500' : 'border-gray-300'
-                          } rounded`}
+                        className={`w-full p-2 border ${
+                          nameError ? 'border-red-500' : 'border-gray-300'
+                        } rounded`}
                         placeholder="CUSTOM_TAG_NAME"
                         required
                       />
@@ -1292,11 +1307,14 @@ export default function NewJobPage() {
           </Box>
 
           {/* Groups Section */}
-          <Box sx={{
-            p: 3, borderRadius: 3,
-            boxShadow: '0 2px 4px rgba(0,0,0,0)',
-            background: 'linear-gradient(to bottom, #f8fafc, #f1f5f9)'
-          }}>
+          <Box
+            sx={{
+              p: 3,
+              borderRadius: 3,
+              boxShadow: '0 2px 4px rgba(0,0,0,0)',
+              background: 'linear-gradient(to bottom, #f8fafc, #f1f5f9)',
+            }}
+          >
             <h2 className="text-2xl font-medium mb-4">
               Groups
               <span className="text-sm font-normal text-gray-500 ml-2">(Optional)</span>
@@ -1305,7 +1323,10 @@ export default function NewJobPage() {
             {/* Display defined groups */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {Object.entries(groups).map(([name, query]) => (
-                <div key={name} className="border border-gray-200 bg-white rounded-md overflow-hidden">
+                <div
+                  key={name}
+                  className="border border-gray-200 bg-white rounded-md overflow-hidden"
+                >
                   <div className="py-1 px-4 border-b border-gray-200 flex justify-between items-center">
                     <span className="font-medium">{name}</span>
                     <div className="flex items-center space-x-1">
