@@ -98,21 +98,40 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
     if (tag === 'O') {
       return token;
     }
+    
+    // Use the same pastel colors as in TableContent
+    const tagColor = {
+      text: '#A6E6E7',  // Light blue pastel
+      tag: '#65CFD0'    // Darker blue
+    };
+
     return (
       <span>
-        {token}
         <span
           style={{
-            backgroundColor: '#65CFD0',
-            color: 'white',
-            fontSize: '11px',
-            fontWeight: 'bold',
+            backgroundColor: tagColor.text,
+            padding: '2px 4px',
             borderRadius: '2px',
-            marginLeft: '4px',
-            padding: '1px 3px',
+            userSelect: 'none',
+            display: 'inline-flex',
+            alignItems: 'center',
+            wordBreak: 'break-word',
           }}
         >
-          {tag}
+          {token}
+          <span
+            style={{
+              backgroundColor: tagColor.tag,
+              color: 'white',
+              fontSize: '11px',
+              fontWeight: 'bold',
+              borderRadius: '2px',
+              marginLeft: '4px',
+              padding: '1px 3px',
+            }}
+          >
+            {tag}
+          </span>
         </span>
       </span>
     );
