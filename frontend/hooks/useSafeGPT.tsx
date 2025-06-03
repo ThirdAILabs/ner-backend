@@ -93,6 +93,7 @@ export default function useSafeGPT(chatId: string) {
   const [previews, setPreviews] = useState<ChatPreview[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [invalidApiKey, setInvalidApiKey] = useState<boolean>(false);
+  const [model, setModel] = useState<'gpt-4o-mini' | 'gpt-4o'>('gpt-4o-mini');
 
   useEffect(() => {
     getChatPreviews().then(setPreviews);
@@ -168,7 +169,7 @@ export default function useSafeGPT(chatId: string) {
     // If the chat is new, create a new chat session.
     let sessionId = chatId;
     if (chatId === NEW_CHAT_ID) {
-      sessionId = await nerService.startChatSession('gpt-4', title);
+      sessionId = await nerService.startChatSession(model, title);
     }
 
     // Save the current state of messages to restore if the request fails.
@@ -232,7 +233,7 @@ export default function useSafeGPT(chatId: string) {
     };
 
     try {
-      await nerService.sendChatMessageStream(sessionId, 'gpt-4', message, handleChunk);
+      await nerService.sendChatMessageStream(sessionId, model, message, handleChunk);
     } catch (error) {
       if ((error as Error).message.toLowerCase().includes('api key')) {
         setInvalidApiKey(true);
@@ -299,5 +300,7 @@ export default function useSafeGPT(chatId: string) {
     sendMessage,
     invalidApiKey,
     deleteChat,
+    model,
+    setModel,
   };
 }
