@@ -420,12 +420,19 @@ export default function Jobs() {
         >
           <Table>
             <TableHead>
-              <TableRow sx={{ bgcolor: 'black' }}>
+              <TableRow sx={{ bgcolor: '#334155' }}>
                 <TableCell
                   sx={{
                     fontWeight: 600,
                     color: 'white',
                     fontSize: '0.875rem',
+                    borderBottom: 'none',
+                    '&:first-of-type': {
+                      borderTopLeftRadius: '8px',
+                    },
+                    '&:last-child': {
+                      borderTopRightRadius: '8px',
+                    },
                   }}
                 >
                   Name
@@ -435,6 +442,7 @@ export default function Jobs() {
                     fontWeight: 600,
                     color: 'white',
                     fontSize: '0.875rem',
+                    borderBottom: 'none',
                   }}
                 >
                   Model
@@ -444,6 +452,7 @@ export default function Jobs() {
                     fontWeight: 600,
                     color: 'white',
                     fontSize: '0.875rem',
+                    borderBottom: 'none',
                   }}
                 >
                   Progress
@@ -453,6 +462,7 @@ export default function Jobs() {
                     fontWeight: 600,
                     color: 'white',
                     fontSize: '0.875rem',
+                    borderBottom: 'none',
                   }}
                 >
                   Created At
@@ -463,6 +473,7 @@ export default function Jobs() {
                     color: 'white',
                     fontSize: '0.875rem',
                     width: '120px',
+                    borderBottom: 'none',
                   }}
                 >
                   Actions
