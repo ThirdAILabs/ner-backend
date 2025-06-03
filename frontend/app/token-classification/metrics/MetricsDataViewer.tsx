@@ -8,7 +8,7 @@ import { formatFileSize, formatNumber } from '@/lib/utils';
 import { useHealth } from '@/contexts/HealthProvider';
 import MetricsDataViewerCard from '@/components/ui/MetricsDataViewerCard';
 import { TokenFeedback, mockFeedbackData } from './types';
-import { Table, TableBody, TableCell, TableHead, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface MetricsDataViewerProps {
   modelId?: string;
@@ -189,30 +189,32 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
           >
             Fine-tuned Feedback Data
           </Typography>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableHead>Prediction</TableHead>
-                <TableHead>Source Object</TableHead>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {feedbackData.map((feedback, index) => (
-                <TableRow key={index}>
-                  <TableCell className="w-3/5">
-                    {feedback.tokens.map((token, tokenIndex) => (
-                      <span key={tokenIndex}>
-                        {renderHighlightedToken(token, feedback.tags[tokenIndex])}
-                      </span>
-                    ))}
-                  </TableCell>
-                  <TableCell className="w-2/5">
-                    {feedback.object}
-                  </TableCell>
+          <div className="border rounded-md">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[70%]">Prediction</TableHead>
+                  <TableHead className="w-[30%]">Source Object</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {feedbackData.map((feedback, index) => (
+                  <TableRow key={index}>
+                    <TableCell>
+                      {feedback.tokens.map((token, tokenIndex) => (
+                        <span key={tokenIndex}>
+                          {renderHighlightedToken(token, feedback.tags[tokenIndex])}
+                        </span>
+                      ))}
+                    </TableCell>
+                    <TableCell className="truncate">
+                      {feedback.object}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </Box>
       </Box>
     </>
