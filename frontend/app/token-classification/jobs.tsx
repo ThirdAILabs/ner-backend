@@ -26,49 +26,6 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { useHealth } from '@/contexts/HealthProvider';
 import { alpha } from '@mui/material/styles';
 
-// Import the TaskStatusCategory from backend.ts
-interface TaskStatusCategory {
-  TotalTasks: number;
-  TotalSize: number;
-}
-
-// Using the Report interface from backend.ts
-interface ReportWithStatus {
-  Id: string;
-  Model: {
-    Id: string;
-    Name: string;
-    Status: string;
-    BaseModelId?: string;
-    Tags?: string[];
-  };
-  SourceS3Bucket: string;
-  SourceS3Prefix?: string;
-  CreationTime: string;
-  FileCount: number;
-  SucceededFileCount: number;
-  FailedFileCount: number;
-  Tags?: string[];
-  CustomTags?: { [key: string]: string };
-  Groups?: {
-    Id: string;
-    Name: string;
-    Query: string;
-    Objects?: string[];
-  }[];
-  ShardDataTaskStatus?: string;
-  InferenceTaskStatuses?: { [key: string]: TaskStatusCategory };
-  Errors?: string[];
-
-  // Additional fields for UI
-  detailedStatus?: {
-    ShardDataTaskStatus?: string;
-    InferenceTaskStatuses?: { [key: string]: TaskStatusCategory };
-  };
-  isLoadingStatus?: boolean;
-  ReportName: string;
-}
-
 export default function Jobs() {
   const searchParams = useSearchParams();
   const deploymentId = searchParams.get('deploymentId');
