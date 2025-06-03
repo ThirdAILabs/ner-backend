@@ -153,7 +153,7 @@ func TestProvider_DownloadDir(t *testing.T) {
 		require.NoError(t, os.WriteFile(filePath, []byte("content"), os.ModePerm))
 	}
 
-	err := provider.DownloadDir(context.Background(), bucket, prefix, destDir)
+	err := provider.DownloadDir(context.Background(), bucket, prefix, destDir, false)
 	require.NoError(t, err)
 
 	// Verify files were downloaded
@@ -163,4 +163,38 @@ func TestProvider_DownloadDir(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "content", string(data))
 	}
+}
+
+func TestProvider_DownloadDir_Overwrite(t *testing.T) {
+	provider, baseDir := setupTestProvider(t)
+
+	bucket := "test-bucket"
+	prefix := "to-download"
+	destDir := t.TempDir()
+
+	// First create a file in the destination
+	destFile := filepath.Join(destDir, "file1.txt")
+	require.NoError(t, os.WriteFile(destFile, []byte("original"), os.ModePerm))
+
+	// Create test files in the provider
+	files := []string{"file1.txt", "file2.txt"}
+	for _, file := range files {
+		filePath := filepath.Join(baseDir, bucket, prefix, file)
+		require.NoError(t, os.MkdirAll(filepath.Dir(filePath), os.ModePerm))
+		require.NoError(t, os.WriteFile(filePath, []byte("new"), os.ModePerm))
+	}
+
+	// Try without overwrite first
+	err := provider.DownloadDir(context.Background(), bucket, prefix, destDir, false)
+	require.Error(t, err)
+	data, err := os.ReadFile(destFile)
+	require.NoError(t, err)
+	assert.Equal(t, "original", string(data), "File should not be overwritten when overwrite=false")
+
+	// Now try with overwrite
+	err = provider.DownloadDir(context.Background(), bucket, prefix, destDir, true)
+	require.NoError(t, err)
+	data, err = os.ReadFile(destFile)
+	require.NoError(t, err)
+	assert.Equal(t, "new", string(data), "File should be overwritten when overwrite=true")
 }

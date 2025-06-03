@@ -432,7 +432,7 @@ func (proc *TaskProcessor) loadModel(ctx context.Context, modelId uuid.UUID, mod
 		if _, err := os.Stat(localDir); os.IsNotExist(err) {
 			slog.Info("model not found locally, downloading from S3", "modelId", modelId)
 
-			if err := proc.storage.DownloadDir(ctx, proc.modelBucket, modelId.String(), localDir); err != nil {
+			if err := proc.storage.DownloadDir(ctx, proc.modelBucket, modelId.String(), localDir, false); err != nil {
 				return nil, fmt.Errorf("failed to download model from S3: %w", err)
 			}
 		}

@@ -186,7 +186,16 @@ func (s *S3Provider) PutObject(ctx context.Context, bucket, key string, data io.
 	return nil
 }
 
-func (s *S3Provider) DownloadDir(ctx context.Context, bucket, prefix, dest string) error {
+func (s *S3Provider) DownloadDir(ctx context.Context, bucket, prefix, dest string, overwrite bool) error {
+	if _, err := os.Stat(dest); err == nil {
+		if !overwrite {
+			return fmt.Errorf("destination %s already exists and overwrite is false", dest)
+		}
+		if err := os.RemoveAll(dest); err != nil {
+			return fmt.Errorf("failed to remove existing destination: %w", err)
+		}
+	}
+
 	if err := os.MkdirAll(dest, os.ModePerm); err != nil {
 		return fmt.Errorf("failed to create directory %s: %w", dest, err)
 	}
