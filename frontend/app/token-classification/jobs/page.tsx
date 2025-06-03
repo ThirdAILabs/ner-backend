@@ -65,9 +65,10 @@ const SourceOption: React.FC<SourceOptionProps> = ({
   <div
     className={`relative p-6 border rounded-md transition-all
       ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200'}
-      ${disabled
-        ? 'opacity-50 cursor-not-allowed bg-gray-50'
-        : 'cursor-pointer hover:border-blue-300'
+      ${
+        disabled
+          ? 'opacity-50 cursor-not-allowed bg-gray-50'
+          : 'cursor-pointer hover:border-blue-300'
       }
     `}
     onClick={() => !disabled && onClick()}
@@ -230,8 +231,8 @@ function JobDetail() {
     if (report) {
       setDataProcessed(
         (report.InferenceTaskStatuses?.COMPLETED?.CompletedSize || 0) +
-        (report.InferenceTaskStatuses?.FAILED?.CompletedSize || 0) +
-        (report.InferenceTaskStatuses?.RUNNING?.CompletedSize || 0)
+          (report.InferenceTaskStatuses?.FAILED?.CompletedSize || 0) +
+          (report.InferenceTaskStatuses?.RUNNING?.CompletedSize || 0)
       );
     }
   }
@@ -351,7 +352,13 @@ function JobDetail() {
         <TabsContent value="configuration" className="mt-0">
           {/* STARTS */}
           {/* Source */}
-          <Box sx={{ p: 3, borderRadius: 3, background: 'linear-gradient(to bottom, #f8fafc, #f1f5f9)', }}>
+          <Box
+            sx={{
+              p: 3,
+              borderRadius: 3,
+              background: 'linear-gradient(to bottom, #f8fafc, #f1f5f9)',
+            }}
+          >
             <h2 className="text-2xl font-medium mb-4">Source</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {selectedSource === 's3' && reportData?.SourceS3Bucket && (
@@ -382,7 +389,14 @@ function JobDetail() {
           </Box>
 
           {/* Tags */}
-          <Box sx={{ p: 3, borderRadius: 3, marginTop: 3, background: 'linear-gradient(to bottom, #f8fafc, #f1f5f9)', }}>
+          <Box
+            sx={{
+              p: 3,
+              borderRadius: 3,
+              marginTop: 3,
+              background: 'linear-gradient(to bottom, #f8fafc, #f1f5f9)',
+            }}
+          >
             <h2 className="text-2xl font-medium mb-4">Tags</h2>
             <div className="flex justify-between items-center mb-4">
               {isLoading ? (
@@ -402,7 +416,14 @@ function JobDetail() {
           </Box>
 
           {/* Custom Tags */}
-          <Box sx={{ p: 3, borderRadius: 3, marginTop: 3, background: 'linear-gradient(to bottom, #f8fafc, #f1f5f9)', }}>
+          <Box
+            sx={{
+              p: 3,
+              borderRadius: 3,
+              marginTop: 3,
+              background: 'linear-gradient(to bottom, #f8fafc, #f1f5f9)',
+            }}
+          >
             <h2 className="text-2xl font-medium mb-4">Custom Tags</h2>
             <div className="flex justify-between items-center mb-4">
               {isLoading ? (
@@ -434,7 +455,14 @@ function JobDetail() {
           </Box>
 
           {/* Groups */}
-          <Box sx={{ p: 3, borderRadius: 3, marginTop: 3, background: 'linear-gradient(to bottom, #f8fafc, #f1f5f9)', }}>
+          <Box
+            sx={{
+              p: 3,
+              borderRadius: 3,
+              marginTop: 3,
+              background: 'linear-gradient(to bottom, #f8fafc, #f1f5f9)',
+            }}
+          >
             <h2 className="text-2xl font-medium mb-4">Groups</h2>
             <div className="flex justify-between items-center mb-4">
               {isLoading ? (
