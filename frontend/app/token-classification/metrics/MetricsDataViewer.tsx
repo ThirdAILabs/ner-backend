@@ -206,14 +206,14 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
               mb: 2
             }}
           >
-            Fine-tuned Feedback Data
+            User Feedback
           </Typography>
           <div className="border rounded-md">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[70%]">Prediction</TableHead>
-                  <TableHead className="w-[30%]">Source Object</TableHead>
+                  <TableHead>Feedback Text</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -226,8 +226,17 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
                         </span>
                       ))}
                     </TableCell>
-                    <TableCell className="truncate">
-                      {feedback.object}
+                    <TableCell className="text-right">
+                      <button
+                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                        onClick={() => {
+                          // TODO: Implement delete functionality when backend is ready
+                          console.log('Delete feedback:', feedback);
+                        }}
+                        title="Delete feedback"
+                      >
+                        ✕
+                      </button>
                     </TableCell>
                   </TableRow>
                 ))}
