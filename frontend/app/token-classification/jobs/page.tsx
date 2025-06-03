@@ -65,10 +65,9 @@ const SourceOption: React.FC<SourceOptionProps> = ({
   <div
     className={`relative p-6 border rounded-md transition-all
       ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200'}
-      ${
-        disabled
-          ? 'opacity-50 cursor-not-allowed bg-gray-50'
-          : 'cursor-pointer hover:border-blue-300'
+      ${disabled
+        ? 'opacity-50 cursor-not-allowed bg-gray-50'
+        : 'cursor-pointer hover:border-blue-300'
       }
     `}
     onClick={() => !disabled && onClick()}
@@ -114,7 +113,7 @@ interface GroupProps {
 }
 
 const GroupCard: React.FC<GroupProps> = ({ name, definition }) => (
-  <div className="border border-gray-200 rounded-md overflow-hidden">
+  <div className="border bg-white border-gray-200 rounded-md overflow-hidden">
     <div className="p-4 border-b border-gray-200">
       <h3 className="text-base font-medium">{name}</h3>
     </div>
@@ -231,8 +230,8 @@ function JobDetail() {
     if (report) {
       setDataProcessed(
         (report.InferenceTaskStatuses?.COMPLETED?.CompletedSize || 0) +
-          (report.InferenceTaskStatuses?.FAILED?.CompletedSize || 0) +
-          (report.InferenceTaskStatuses?.RUNNING?.CompletedSize || 0)
+        (report.InferenceTaskStatuses?.FAILED?.CompletedSize || 0) +
+        (report.InferenceTaskStatuses?.RUNNING?.CompletedSize || 0)
       );
     }
   }
@@ -352,14 +351,14 @@ function JobDetail() {
         <TabsContent value="configuration" className="mt-0">
           {/* STARTS */}
           {/* Source */}
-          <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3 }}>
+          <Box sx={{ p: 3, borderRadius: 3, background: 'linear-gradient(to bottom, #f8fafc, #f1f5f9)', }}>
             <h2 className="text-2xl font-medium mb-4">Source</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {selectedSource === 's3' && reportData?.SourceS3Bucket && (
                 <Box
                   sx={{
                     p: 2,
-                    bgcolor: 'grey.50',
+                    bgcolor: 'white',
                     borderRadius: 2,
                     boxShadow: 1,
                   }}
@@ -374,7 +373,7 @@ function JobDetail() {
               )}
 
               {selectedSource === 'local' && (
-                <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 2 }}>
+                <Box sx={{ p: 2, bgcolor: 'white', borderRadius: 2 }}>
                   <h3 className="text-lg font-medium mb-1">Local Files</h3>
                   {/* <p className="text-sm text-gray-600">File Location...</p> */}
                 </Box>
@@ -383,7 +382,7 @@ function JobDetail() {
           </Box>
 
           {/* Tags */}
-          <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3, marginTop: 3 }}>
+          <Box sx={{ p: 3, borderRadius: 3, marginTop: 3, background: 'linear-gradient(to bottom, #f8fafc, #f1f5f9)', }}>
             <h2 className="text-2xl font-medium mb-4">Tags</h2>
             <div className="flex justify-between items-center mb-4">
               {isLoading ? (
@@ -403,8 +402,8 @@ function JobDetail() {
           </Box>
 
           {/* Custom Tags */}
-          <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3, marginTop: 3 }}>
-            <h2 className="text-2xl font-medium mb-4">Tags</h2>
+          <Box sx={{ p: 3, borderRadius: 3, marginTop: 3, background: 'linear-gradient(to bottom, #f8fafc, #f1f5f9)', }}>
+            <h2 className="text-2xl font-medium mb-4">Custom Tags</h2>
             <div className="flex justify-between items-center mb-4">
               {isLoading ? (
                 <div className="flex justify-center py-4">
@@ -415,7 +414,7 @@ function JobDetail() {
                   {customTags.map((customTag) => (
                     <div
                       key={customTag.name}
-                      className="border border-gray-300 rounded-md overflow-hidden"
+                      className="border border-gray-300 bg-white rounded-md overflow-hidden"
                     >
                       <div className="p-4 border-b border-gray-300  flex justify-between items-center">
                         <Tag tag={customTag.name} custom displayOnly={true} />
@@ -427,7 +426,7 @@ function JobDetail() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-10 bg-gray-50 border border-dashed border-gray-200 rounded-lg w-[400px]">
+                <div className="text-center py-10 bg-white border border-dashed border-gray-200 rounded-lg w-[400px]">
                   <p className="text-gray-500">No custom tags defined for this report</p>
                 </div>
               )}
@@ -435,7 +434,7 @@ function JobDetail() {
           </Box>
 
           {/* Groups */}
-          <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3, marginTop: 3 }}>
+          <Box sx={{ p: 3, borderRadius: 3, marginTop: 3, background: 'linear-gradient(to bottom, #f8fafc, #f1f5f9)', }}>
             <h2 className="text-2xl font-medium mb-4">Groups</h2>
             <div className="flex justify-between items-center mb-4">
               {isLoading ? (
@@ -449,7 +448,7 @@ function JobDetail() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-10 bg-gray-50 border border-dashed border-gray-200 rounded-lg w-[400px]">
+                <div className="text-center py-10 bg-white border border-dashed border-gray-200 rounded-lg w-[400px]">
                   <p className="text-gray-500">No groups defined for this report</p>
                 </div>
               )}
