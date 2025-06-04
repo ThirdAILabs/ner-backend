@@ -1,18 +1,12 @@
 # --- Frontend Build Stage ---
-FROM ubuntu:24.04 as frontend-builder
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    nodejs \
-    npm \
-    && rm -rf /var/lib/apt/lists/*
-
+FROM node:22-alpine AS frontend-builder
 WORKDIR /frontend
-
+    
 COPY ../frontend/package*.json ./
 RUN npm install --force
-
+    
 COPY ../frontend .
-
+    
 RUN npm run build
 
 
