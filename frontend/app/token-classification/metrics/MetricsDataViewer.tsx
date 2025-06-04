@@ -228,7 +228,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
                     </TableCell>
                     <TableCell className="text-right">
                       <button
-                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                        className="text-gray-700 hover:text-gray-700 transition-colors"
                         onClick={() => {
                           // TODO: Implement delete functionality when backend is ready
                           console.log('Delete feedback:', feedback);
