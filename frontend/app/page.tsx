@@ -74,11 +74,14 @@ export default function Page() {
       <main
         style={{
           height: '80%',
-          margin: '0 auto',
+          margin: '20px auto',
           padding: '50px',
+          paddingBottom: "128px",
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          background: 'linear-gradient(to bottom, #f8fafc, #f1f5f9)',
+          borderRadius: '12px'
         }}
       >
         <Box sx={{ position: 'relative' }}>
