@@ -460,6 +460,7 @@ func (proc *TaskProcessor) createObjectPreview(
 	if err != nil {
 		return fmt.Errorf("preview inference error: %w", err)
 	}
+	spans = FilterEntities(previewText, spans)
 
 	sort.Slice(spans, func(i, j int) bool {
 		return spans[i].Start < spans[j].Start
@@ -543,6 +544,7 @@ func (proc *TaskProcessor) runInferenceOnObject(
 
 		start := time.Now()
 		chunkEntities, err := model.Predict(chunk.Text)
+		chunkEntities = FilterEntities(chunk.Text, chunkEntities)
 		duration := time.Since(start)
 		sizeMB := float64(chunk.RawSize) / float64(bytesPerMB)
 		slog.Info("processed chunk",
