@@ -7,19 +7,9 @@ concurrency:
 
 on:
   push:
-    branches:
-      - main
-      - npm-build-check
-      - 'feature/**'
-      - 'fix/**'
-      - 'dev/**'
-    paths:
-      - 'frontend/**'
+    branches: [ main ]
   pull_request:
-    branches:
-      - main
-    paths:
-      - 'frontend/**'
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
