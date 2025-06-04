@@ -512,6 +512,7 @@ func (proc *TaskProcessor) createObjectPreview(
 }
 
 func coalesceEntities(labelToEntities map[string][]types.Entity) []types.Entity {
+	maxEntityGap := 1 // Assuming this gap is less that any entity.Rcontext length.
 	flattenedEntities := make([]types.Entity, 0, len(labelToEntities))
 	for _, ents := range labelToEntities {
 		flattenedEntities = append(flattenedEntities, ents...)
@@ -530,10 +531,10 @@ func coalesceEntities(labelToEntities map[string][]types.Entity) []types.Entity 
 	for i := 1; i < len(flattenedEntities); i++ {
 		nextEnt := flattenedEntities[i]
 
-		// Merge only if they are adjacent (at most 1 gap) and share the same label
-		if currentEnt.Label == nextEnt.Label && currentEnt.End-nextEnt.Start <= 1 {
+		// Merge only if they are adjacent (at most maxEntityGap) and share the same label.
+		if currentEnt.Label == nextEnt.Label && currentEnt.End-nextEnt.Start <= maxEntityGap {
 			// Extend currentEnt to include nextEnt
-			currentEnt.Text += nextEnt.Text
+			currentEnt.Text += currentEnt.RContext[:currentEnt.End-nextEnt.Start] + nextEnt.Text
 			currentEnt.End = nextEnt.End
 			currentEnt.RContext = nextEnt.RContext
 		} else {
