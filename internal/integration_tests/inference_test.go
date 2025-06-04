@@ -383,8 +383,10 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 
 			entities := getReportEntities(t, router, reportID)
 
+			t.Logf("model: %s", m.label)
 			var matched int
 			for _, e := range entities {
+				t.Logf("found entity: %s", e.Text)
 				if _, ok := expectedSet[e.Text]; ok {
 					matched++
 				}

@@ -512,39 +512,39 @@ func (proc *TaskProcessor) createObjectPreview(
 }
 
 func coalesceEntities(labelToEntities map[string][]types.Entity) []types.Entity {
-    flattenedEntities := make([]types.Entity, 0, len(labelToEntities))
-    for _, ents := range labelToEntities {
-        flattenedEntities = append(flattenedEntities, ents...)
-    }
-    if len(flattenedEntities) == 0 {
-        return nil
-    }
+	flattenedEntities := make([]types.Entity, 0, len(labelToEntities))
+	for _, ents := range labelToEntities {
+		flattenedEntities = append(flattenedEntities, ents...)
+	}
+	if len(flattenedEntities) == 0 {
+		return nil
+	}
 
-    sort.Slice(flattenedEntities, func(i, j int) bool {
-        return flattenedEntities[i].Start < flattenedEntities[j].Start
-    })
+	sort.Slice(flattenedEntities, func(i, j int) bool {
+		return flattenedEntities[i].Start < flattenedEntities[j].Start
+	})
 
-    coalescedEntities := make([]types.Entity, 0, len(flattenedEntities))
-    currentEnt := flattenedEntities[0]
+	coalescedEntities := make([]types.Entity, 0, len(flattenedEntities))
+	currentEnt := flattenedEntities[0]
 
-    for i := 1; i < len(flattenedEntities); i++ {
-        nextEnt := flattenedEntities[i]
+	for i := 1; i < len(flattenedEntities); i++ {
+		nextEnt := flattenedEntities[i]
 
-        // Merge only if they are exactly adjacent (no gap) and share the same label
-        if currentEnt.Label == nextEnt.Label && currentEnt.End == nextEnt.Start {
-            // Extend currentEnt to include nextEnt
-            currentEnt.Text += nextEnt.Text
-            currentEnt.End = nextEnt.End
-            currentEnt.RContext = nextEnt.RContext
-        } else {
-            // Different label or non-adjacent: flush currentEnt and start a new one
-            coalescedEntities = append(coalescedEntities, currentEnt)
-            currentEnt = nextEnt
-        }
-    }
+		// Merge only if they are adjacent (at most 1 gap) and share the same label
+		if currentEnt.Label == nextEnt.Label && currentEnt.End-nextEnt.Start <= 1 {
+			// Extend currentEnt to include nextEnt
+			currentEnt.Text += nextEnt.Text
+			currentEnt.End = nextEnt.End
+			currentEnt.RContext = nextEnt.RContext
+		} else {
+			// Different label or non-adjacent: flush currentEnt and start a new one
+			coalescedEntities = append(coalescedEntities, currentEnt)
+			currentEnt = nextEnt
+		}
+	}
 
-    coalescedEntities = append(coalescedEntities, currentEnt)
-    return coalescedEntities
+	coalescedEntities = append(coalescedEntities, currentEnt)
+	return coalescedEntities
 }
 
 type InferenceResult struct {
