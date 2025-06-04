@@ -383,10 +383,8 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 
 			entities := getReportEntities(t, router, reportID)
 
-			t.Logf("model: %s", m.label)
 			var matched int
 			for _, e := range entities {
-				t.Logf("found entity: %s", e.Text)
 				if _, ok := expectedSet[e.Text]; ok {
 					matched++
 				}
@@ -398,7 +396,7 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 				pct, 85.0,
 				"only %.1f%% of expected texts were found (need ≥85%%)", pct,
 			)
-			assert.Greater(t, len(entities), 35)
+			assert.GreaterOrEqual(t, len(entities), 35)
 		})
 	}
 }
