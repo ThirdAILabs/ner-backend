@@ -182,10 +182,14 @@ func main() {
 	}
 
 	boltDir := filepath.Join(cfg.Root, "models", basicModel.Id.String())
+	// If the model directory already exists, then backend is unable to start, so we first remove the
+	// old directory to ensure a fresh download.
+	if err := os.RemoveAll(boltDir); err != nil {
+		log.Fatalf("failed to remove existing model directory: %v", err)
+	}
 	if err := storage.DownloadDir(context.Background(), modelBucket, basicModel.Id.String(), boltDir); err != nil {
 		log.Fatalf("failed to download bolt model: %v", err)
 	}
-
 	server := createServer(db, storage, queue, cfg.Port, boltDir)
 
 	slog.Info("starting worker")
