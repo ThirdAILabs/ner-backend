@@ -60,8 +60,9 @@ function SidebarToggle({ collapsed, onClick }: { collapsed: boolean; onClick: ()
     <Button
       variant="ghost"
       size="icon"
-      className={`absolute ${!collapsed ? 'left-56' : 'left-[90px]'
-        } top-[19px] transform -translate-y-1/2 translate-x-1/2 rounded-full border border-gray-200 bg-white hover:bg-gray-50 transition-colors z-20 w-7 h-7 p-0`}
+      className={`absolute ${
+        !collapsed ? 'left-56' : 'left-[90px]'
+      } top-[19px] transform -translate-y-1/2 translate-x-1/2 rounded-full border border-gray-200 bg-white hover:bg-gray-50 transition-colors z-20 w-7 h-7 p-0`}
       onClick={onClick}
     >
       {!collapsed ? (
@@ -152,7 +153,7 @@ function SafeGPTContent() {
       </div>
       <div className="flex flex-row h-[40px] items-center justify-start relative ">
         <div
-          className={`flex flex-row justify-start px-4 py-4 ${!isSidebarCollapsed && 'border-r'} ${!isSidebarCollapsed&&'bg-[rgb(252,252,249)]'} border-gray-200 transition-all duration-100`}
+          className={`flex flex-row justify-start px-4 py-4 ${!isSidebarCollapsed && 'border-r'} ${!isSidebarCollapsed && 'bg-[rgb(252,252,249)]'} border-gray-200 transition-all duration-100`}
           style={{ width: SIDEBAR_WIDTH }}
         >
           <Link
