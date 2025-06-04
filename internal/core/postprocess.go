@@ -15,10 +15,6 @@ var (
 			`(?: *(?:x|ext|extension) *[0-9]{1,6})?`,
 	)
 
-	cardRegex = regexp.MustCompile(
-		`[0-9 \-]{12,19}`,
-	)
-
 	creditScoreRegex = regexp.MustCompile(`\b[0-9]{2,3}\b`)
 
 	ssnRegex = regexp.MustCompile(
