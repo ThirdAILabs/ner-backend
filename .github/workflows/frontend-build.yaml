@@ -26,7 +26,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '23.11.0'
 
       - name: Install pnpm
         uses: pnpm/action-setup@v2
@@ -47,7 +47,14 @@ jobs:
             ${{ runner.os }}-pnpm-store-
 
       - name: Install dependencies
-        run: pnpm install
+        run: |
+          if ! pnpm install --frozen-lockfile; then
+            echo "Frozen install failed. This usually means the lockfile needs updating."
+            echo "Running regular install to generate updated lockfile..."
+            pnpm install
+            echo "::error::Lockfile is out of date. Please run 'pnpm install' locally and commit the updated pnpm-lock.yaml"
+            exit 1
+          fi
 
       - name: Build frontend
         run: pnpm build
