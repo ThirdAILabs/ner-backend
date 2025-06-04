@@ -16,6 +16,10 @@ const { autoUpdater } = electronUpdater;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Enhanced logging for debugging
+log.transports.file.level = 'debug';
+log.transports.console.level = 'debug';
+
 const pendingUpdateFile = path.join(app.getPath('userData'), 'pending-update.json');
 const installedUpdateFile = path.join(app.getPath('userData'), 'update-installed.json');
 
@@ -39,10 +43,24 @@ if (!isDev) {
   console.log('Setting NODE_ENV to production');
 }
 
+// Log startup information
+console.log('=== App Starting ===');
+console.log('App version:', app.getVersion());
+console.log('Electron version:', process.versions.electron);
+console.log('Node version:', process.versions.node);
+console.log('Platform:', process.platform);
+console.log('Arch:', process.arch);
+console.log('isDev:', isDev);
+console.log('isPackaged:', app.isPackaged);
+console.log('execPath:', process.execPath);
+console.log('resourcesPath:', process.resourcesPath);
+console.log('userData:', app.getPath('userData'));
+
 // Keep a global reference of the window object to prevent it from being garbage collected
 let mainWindow;
 let backendProcess = null;
 let backendStarted = false;
+let isQuitting = false;
 
 // Handle external links
 ipcMain.handle('open-external-link', async (_, url) => {
@@ -123,23 +141,48 @@ async function ensureBackendStarted() {
     console.log('Starting backend...');
     try {
       backendProcess = await startBackend();
-      if (backendProcess) {
+      if (backendProcess && backendProcess.isRunning && backendProcess.isRunning()) {
         console.log('Backend started successfully');
         backendStarted = true;
       } else {
-        const errorMsg = 'Failed to start backend process. Backend executable not found.';
+        const errorMsg = 'Failed to start backend process. Backend executable failed to run.';
         log.error(errorMsg);
+        
+        // Check the backend log for more details
+        const backendLogPath = path.join(
+          process.resourcesPath || __dirname,
+          '..',
+          'logs',
+          'ner-backend.log'
+        );
+        
+        try {
+          if (fs.existsSync(backendLogPath)) {
+            const logContent = fs.readFileSync(backendLogPath, 'utf-8');
+            const lastLines = logContent.split('\n').slice(-10).join('\n');
+            log.error('Recent backend log output:', lastLines);
+          }
+        } catch (logError) {
+          log.error('Could not read backend log:', logError.message);
+        }
         
         // Show error dialog in GUI mode
         if (mainWindow) {
           dialog.showErrorBox('Backend Error', 
-            `Failed to start the backend service. The application may not function correctly.
-            
-Please try running the install script:
-sudo mkdir -p "/Applications/PocketShield.app/Contents/Resources/bin"
-sudo cp "/path/to/main" "/Applications/PocketShield.app/Contents/Resources/bin/main"
-sudo chmod 755 "/Applications/PocketShield.app/Contents/Resources/bin/main"`);
+            `Failed to start the backend service. The application cannot function without it.
+
+The backend process exited immediately. This could be due to:
+- Missing dependencies
+- Incorrect permissions
+- Port conflicts
+- Missing model files
+
+Please check the logs at: ${backendLogPath}
+
+You may need to reinstall the application.`);
         }
+        
+        return null; // Return null to indicate failure
       }
     } catch (error) {
       log.error('Error starting backend:', error);
@@ -148,9 +191,11 @@ sudo chmod 755 "/Applications/PocketShield.app/Contents/Resources/bin/main"`);
       if (mainWindow) {
         dialog.showErrorBox('Backend Error', 
           `Error starting backend service: ${error.message}
-          
-Please try running the install script from the terminal.`);
+
+Please check the application logs and try reinstalling.`);
       }
+      
+      return null; // Return null to indicate failure
     }
   }
   return backendProcess;
@@ -161,15 +206,46 @@ let updateHandled = false;
 // Ensure logger is set up for auto-updater
 autoUpdater.logger = log;
 autoUpdater.logger.transports.file.level = 'info';
-autoUpdater.autoDownload = true;
+autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = false;
+
+// REMOVE THE ALLOWPRERELEASE TAG BEFORE MERGING TO MAIN
+autoUpdater.allowPrerelease = true; // Allow pre-release updates if needed
 
 // Set up auto-updater event listeners
 autoUpdater.on('checking-for-update', () => {
   console.log('Checking for update...');
 });
-autoUpdater.on('update-available', (info) => {
+autoUpdater.on('update-available', async (info) => {
   console.log('Update available:', info);
-  dialog.showMessageBox({ type: 'info', title: 'Update available', message: `A new version (${info.version}) is available. Downloading now...` });
+  // dialog.showMessageBox({ type: 'info', title: 'Update available', message: `A new version (${info.version}) is available. Downloading now...` });
+
+  const result = await dialog.showMessageBox(mainWindow, {
+    type: 'question',
+    buttons: [
+      'Download Now',      // response = 0
+      'Remind Me Later',  // response = 1
+    ],
+    defaultId: 0,
+    cancelId: 1,
+    title: 'Update Available',
+    message: `Version ${info.version} is available. Would you like to download it now?`,
+  });
+
+  if (result.response === 0) {
+    try {
+      fs.writeFileSync(installedUpdateFile, JSON.stringify({ version: info.version }), 'utf-8');
+    } catch (e) {
+      console.error('Failed to write update-installed file', e);
+    }
+    autoUpdater.downloadUpdate()
+  } else {
+    try {
+      fs.writeFileSync(pendingUpdateFile, JSON.stringify({ version: info.version }), 'utf-8');
+    } catch (e) {
+      console.error('Failed to save pending-update file', e);
+    }
+  }
 });
 autoUpdater.on('update-not-available', (info) => {
   console.log('Update not available:', info);
@@ -209,10 +285,8 @@ autoUpdater.on('update-downloaded', async (info) => {
   } else if (result.response === 1) {
     // Do nothing — since autoInstallOnAppQuit = true by default,
     // the update will be applied next time the user quits the app.
+    autoUpdater.autoInstallOnAppQuit = true;
   } else {
-    // “Remind Me Later” — disable auto-install on quit so it won’t sneak in
-    autoUpdater.autoInstallOnAppQuit = false;
-
     try {
       fs.writeFileSync(pendingUpdateFile, JSON.stringify({ version: info.version }), 'utf-8');
     } catch (e) {
@@ -247,6 +321,25 @@ ipcMain.handle('open-file', async (event, filePath) => {
   return openFile(filePath);
 })
 
+// Log all app events for debugging
+app.on('ready', () => console.log('App event: ready'));
+app.on('window-all-closed', () => console.log('App event: window-all-closed'));
+app.on('activate', () => console.log('App event: activate'));
+app.on('before-quit', () => console.log('App event: before-quit'));
+app.on('will-quit', () => console.log('App event: will-quit'));
+app.on('quit', () => console.log('App event: quit'));
+
+// Catch uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  log.error('Uncaught Exception:', error);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  log.error('Unhandled Rejection:', reason);
+});
+
 // This method will be called when Electron has finished initialization
 app.whenReady().then(async () => {
   // Initialize user ID first
@@ -256,11 +349,13 @@ app.whenReady().then(async () => {
   await initTelemetry();
   
   // Always start the backend first, regardless of dev/prod mode
-  try {
-    await ensureBackendStarted();
-  } catch (err) {
-    log.error('Backend failed to start, quitting.', err);
-    return app.quit();
+  const backend = await ensureBackendStarted();
+  if (!backend) {
+    log.error('Backend failed to start, cannot continue');
+    // Don't quit immediately, let user see the error dialog
+    // The app will be limited in functionality but still show UI
+    // You could also uncomment the next line to quit:
+    // return app.quit();
   }
 
   createWindow();
@@ -307,7 +402,7 @@ app.whenReady().then(async () => {
     } catch (e) {
       console.error('Error handling pending-update file', e);
     } finally {
-      // remove it so we don’t keep asking for the same version
+      // remove it so we don't keep asking for the same version
       try { fs.unlinkSync(pendingUpdateFile); } catch (_) {}
     }
   }
@@ -329,28 +424,65 @@ app.whenReady().then(async () => {
 
 });
 
+// Improved quit handling
+app.on('before-quit', async (event) => {
+  if (isQuitting) return;
+  
+  console.log('App is about to quit, cleaning up...');
+  event.preventDefault();
+  isQuitting = true;
+
+  try {
+    // Clean up backend process
+    if (backendProcess && backendProcess.kill) {
+      console.log('Sending SIGTERM to backend process...');
+      backendProcess.kill('SIGTERM');
+      
+      // Wait for backend to close gracefully
+      await new Promise((resolve) => {
+        const timeout = setTimeout(() => {
+          console.log('Backend cleanup timeout, force killing...');
+          if (backendProcess && backendProcess.kill) {
+            backendProcess.kill('SIGKILL');
+          }
+          resolve();
+        }, 3000);
+
+        if (backendProcess && backendProcess.process) {
+          backendProcess.process.on('exit', () => {
+            clearTimeout(timeout);
+            resolve();
+          });
+        } else {
+          clearTimeout(timeout);
+          resolve();
+        }
+      });
+    }
+
+    // Close telemetry
+    await closeTelemetry();
+    
+    console.log('Cleanup complete, quitting app...');
+    app.quit();
+    
+  } catch (error) {
+    console.error('Error during cleanup:', error);
+    app.quit(); // Force quit if cleanup fails
+  }
+});
+
 // Quit when all windows are closed, except on macOS
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-// Clean up backend on app quit
-app.on('will-quit', () => {
-  console.log('App is quitting, cleaning up backend...');
-  if (backendProcess && backendProcess.kill) {
-    console.log('Sending SIGINT to backend process...');
-    backendProcess.kill('SIGINT');
+// Simplify will-quit handler
+app.on('will-quit', async (event) => {
+  if (!isQuitting) {
+    console.log('Will quit triggered, but cleanup not complete');
+    event.preventDefault();
+    // Trigger before-quit cleanup
+    app.emit('before-quit', event);
   }
-});
-
-// Handle app quit
-app.on('quit', async () => {
-  console.log('App is quitting, ensuring backend is cleaned up...');
-  if (backendProcess && backendProcess.kill) {
-    console.log('Sending SIGTERM to backend process...');
-    backendProcess.kill('SIGTERM');
-  }
-  
-  // Close telemetry connection
-  await closeTelemetry();
 });
