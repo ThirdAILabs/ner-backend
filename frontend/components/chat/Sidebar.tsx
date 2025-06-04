@@ -12,7 +12,7 @@ interface SidebarProps {
 
 export default function Sidebar({ items, onSelect, selectedId, padding, onDelete }: SidebarProps) {
   return (
-    <div className="w-full h-full overflow-y-auto bg-white border-r border-gray-200">
+    <div className="w-full h-full overflow-y-auto bg-[rgb(252,252,249)] border-r border-gray-200">
       <ul className="flex flex-col mt-8">
         {items.map((item) => (
           <li key={item.id}>
