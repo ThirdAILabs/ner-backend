@@ -530,15 +530,28 @@ func coalesceEntities(labelToEntities map[string][]types.Entity) []types.Entity 
 
 	for i := 1; i < len(flattenedEntities); i++ {
 		nextEnt := flattenedEntities[i]
+		if currentEnt.Label != nextEnt.Label {
+			// Different label: flush currentEnt and start a new one
+			coalescedEntities = append(coalescedEntities, currentEnt)
+			currentEnt = nextEnt
+			continue
+		}
 
-		// Merge only if they are adjacent (at most maxEntityGap) and share the same label.
-		if currentEnt.Label == nextEnt.Label && currentEnt.End-nextEnt.Start <= maxEntityGap {
-			// Extend currentEnt to include nextEnt
+		if nextEnt.Start < currentEnt.End {
+			// partially overlapping entities, we can merge them
+			if nextEnt.End > currentEnt.End {
+				// Extend currentEnt to include nextEnt
+				currentEnt.Text += currentEnt.RContext[:currentEnt.End-nextEnt.Start] + nextEnt.Text
+				currentEnt.End = nextEnt.End
+				currentEnt.RContext = nextEnt.RContext
+			}
+		} else if currentEnt.End-nextEnt.Start <= maxEntityGap {
+			// Merge only if they are adjacent (at most maxEntityGap) and share the same label.
 			currentEnt.Text += currentEnt.RContext[:currentEnt.End-nextEnt.Start] + nextEnt.Text
 			currentEnt.End = nextEnt.End
 			currentEnt.RContext = nextEnt.RContext
 		} else {
-			// Different label or non-adjacent: flush currentEnt and start a new one
+			// No overlap or adjacency: flush currentEnt and start a new one
 			coalescedEntities = append(coalescedEntities, currentEnt)
 			currentEnt = nextEnt
 		}
