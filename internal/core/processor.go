@@ -461,9 +461,14 @@ func (proc *TaskProcessor) createObjectPreview(
 		return fmt.Errorf("preview inference error: %w", err)
 	}
 
-	sort.Slice(spans, func(i, j int) bool {
-		return spans[i].Start < spans[j].Start
-	})
+	// converting spans to a map for coalescing
+	spanEntityMap := make(map[string][]types.Entity)
+	for _, span := range spans {
+		spanEntityMap[span.Label] = append(spanEntityMap[span.Label], span)
+	}
+
+	coalescedSpans := coalesceEntities(spanEntityMap)
+	// coalescedSpans will be already sorted by start position
 
 	var (
 		tokens []string
@@ -471,7 +476,7 @@ func (proc *TaskProcessor) createObjectPreview(
 		cursor = 0
 		length = len(previewText)
 	)
-	for _, e := range spans {
+	for _, e := range coalescedSpans {
 		if _, exists := ExcludedTags[e.Label]; exists {
 			continue
 		}
@@ -504,6 +509,43 @@ func (proc *TaskProcessor) createObjectPreview(
 		Object:    object,
 		TokenTags: datatypes.JSON(b),
 	}).Error
+}
+
+func coalesceEntities(labelToEntities map[string][]types.Entity) []types.Entity {
+	maxEntityGap := 1 // Assuming this gap is less that any entity.Rcontext length
+	flattenedEntities := make([]types.Entity, 0, len(labelToEntities))
+	for _, ents := range labelToEntities {
+		flattenedEntities = append(flattenedEntities, ents...)
+	}
+	if len(flattenedEntities) == 0 {
+		return nil
+	}
+
+	sort.Slice(flattenedEntities, func(i, j int) bool {
+		return flattenedEntities[i].Start < flattenedEntities[j].Start
+	})
+
+	coalescedEntities := make([]types.Entity, 0, len(flattenedEntities))
+	currentEnt := flattenedEntities[0]
+
+	for i := 1; i < len(flattenedEntities); i++ {
+		nextEnt := flattenedEntities[i]
+
+		// Merge only if they are adjacent (at most maxEntityGap) and share the same label.
+		if currentEnt.Label == nextEnt.Label && nextEnt.Start >= currentEnt.End && nextEnt.Start-currentEnt.End <= maxEntityGap {
+			// Extend currentEnt to include nextEnt
+			currentEnt.Text += currentEnt.RContext[:nextEnt.Start-currentEnt.End] + nextEnt.Text
+			currentEnt.End = nextEnt.End
+			currentEnt.RContext = nextEnt.RContext
+		} else {
+			// Different label or non-adjacent: flush currentEnt and start a new one
+			coalescedEntities = append(coalescedEntities, currentEnt)
+			currentEnt = nextEnt
+		}
+	}
+
+	coalescedEntities = append(coalescedEntities, currentEnt)
+	return coalescedEntities
 }
 
 type InferenceResult struct {
@@ -561,7 +603,6 @@ func (proc *TaskProcessor) runInferenceOnObject(
 				entity.Start += chunk.Offset
 				entity.End += chunk.Offset
 				labelToEntities[entity.Label] = append(labelToEntities[entity.Label], entity)
-				result.TagCount[entity.Label]++
 			}
 		}
 
@@ -577,7 +618,6 @@ func (proc *TaskProcessor) runInferenceOnObject(
 					LContext: strings.ToValidUTF8(chunk.Text[max(0, start-20):start], ""),
 					RContext: strings.ToValidUTF8(chunk.Text[end:min(len(chunk.Text), end+20)], ""),
 				})
-				result.CustomTagCount[tag]++
 			}
 		}
 
@@ -611,19 +651,25 @@ func (proc *TaskProcessor) runInferenceOnObject(
 		}
 	}
 
-	allEntities := make([]database.ObjectEntity, 0)
-	for _, entities := range labelToEntities {
-		for _, entity := range entities {
-			allEntities = append(allEntities, database.ObjectEntity{
-				ReportId: reportId,
-				Label:    entity.Label,
-				Text:     entity.Text,
-				Start:    entity.Start,
-				End:      entity.End,
-				Object:   object,
-				LContext: entity.LContext,
-				RContext: entity.RContext,
-			})
+	coalescedEntities := coalesceEntities(labelToEntities)
+
+	allEntities := make([]database.ObjectEntity, len(coalescedEntities))
+	for i, entity := range coalescedEntities {
+		allEntities[i] = database.ObjectEntity{
+			ReportId: reportId,
+			Label:    entity.Label,
+			Text:     entity.Text,
+			Start:    entity.Start,
+			End:      entity.End,
+			Object:   object,
+			LContext: entity.LContext,
+			RContext: entity.RContext,
+		}
+
+		if _, exists := customTags[entity.Label]; exists {
+			result.CustomTagCount[entity.Label]++
+		} else {
+			result.TagCount[entity.Label]++
 		}
 	}
 
