@@ -26,36 +26,70 @@ var (
 	)
 )
 
-func FilterEntities(fullText string, entities []types.Entity) []types.Entity {
+func FilterEntities(fullText string, tokenEntities []types.Entity) []types.Entity {
 	var out []types.Entity
+	n := len(tokenEntities)
+	i := 0
 
-	for _, ent := range entities {
-		label := ent.Label
-		snippet := ent.Text
+	for i < n {
+		ent := tokenEntities[i]
+		lbl := ent.Label
 
-		switch label {
-		case "PHONENUMBER":
-			if isValidPhone(snippet) {
-				out = append(out, ent)
+		switch lbl {
+		case "PHONENUMBER", "CARD_NUMBER", "SSN":
+			groupLabel := lbl
+			groupStartChar := ent.Start
+			groupEndChar := ent.End
+
+			j := i + 1
+			for j < n && tokenEntities[j].Label == groupLabel {
+				prevEnd := tokenEntities[j-1].End
+				nextStart := tokenEntities[j].Start
+				if nextStart == prevEnd || nextStart == prevEnd+1 {
+					groupEndChar = tokenEntities[j].End
+					j++
+				} else {
+					break
+				}
 			}
-		case "CARD_NUMBER":
-			if isValidCard(snippet) {
-				out = append(out, ent)
+
+			mergedText := fullText[groupStartChar:groupEndChar]
+			keepGroup := false
+			switch groupLabel {
+			case "PHONENUMBER":
+				if isValidPhone(mergedText) {
+					keepGroup = true
+				}
+			case "CARD_NUMBER":
+				if isValidCard(mergedText) {
+					keepGroup = true
+				}
+			case "SSN":
+				if isValidSSN(mergedText) {
+					keepGroup = true
+				}
 			}
+
+			if keepGroup {
+				out = append(out, tokenEntities[i:j]...)
+			}
+			i = j
+
 		case "EMAIL":
-			if isValidEmail(snippet) {
+			if isValidEmail(ent.Text) {
 				out = append(out, ent)
 			}
-		case "SSN":
-			if isValidSSN(snippet) {
-				out = append(out, ent)
-			}
+			i++
+
 		case "CREDIT_SCORE":
-			if isValidCreditScore(snippet, fullText, ent.Start, ent.End) {
+			if isValidCreditScore(ent.Text, fullText, ent.Start, ent.End) {
 				out = append(out, ent)
 			}
+			i++
+
 		default:
 			out = append(out, ent)
+			i++
 		}
 	}
 
@@ -90,7 +124,6 @@ func isValidCreditScore(score, full string, s, e int) bool {
 	if !creditScoreRegex.MatchString(score) {
 		return false
 	}
-	// context: 20 chars before and after
 	startCtx := s - 20
 	if startCtx < 0 {
 		startCtx = 0
