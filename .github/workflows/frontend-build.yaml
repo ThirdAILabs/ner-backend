@@ -8,12 +8,8 @@ concurrency:
 on:
   push:
     branches: [ main ]
-    paths:
-      - 'frontend/**'
   pull_request:
     branches: [ main ]
-    paths:
-      - 'frontend/**'
   workflow_dispatch:
 
 jobs:
@@ -35,7 +31,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
-          version: 8
+          version: 9.11.0
 
       - name: Get pnpm store directory
         shell: bash
@@ -51,7 +47,14 @@ jobs:
             ${{ runner.os }}-pnpm-store-
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          if ! pnpm install --frozen-lockfile; then
+            echo "Frozen install failed. This usually means the lockfile needs updating."
+            echo "Running regular install to generate updated lockfile..."
+            pnpm install
+            echo "::error::Lockfile is out of date. Please run 'pnpm install' locally and commit the updated pnpm-lock.yaml"
+            exit 1
+          fi
 
       - name: Build frontend
         run: pnpm build
