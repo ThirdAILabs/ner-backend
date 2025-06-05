@@ -193,15 +193,6 @@ func main() {
 
 	onnxDir := filepath.Join(cfg.Root, "storage", "models", onnxModel.Id.String())
 
-	// If the model directory already exists, then backend is unable to start, so we first remove the
-	// old directory to ensure a fresh download.
-	if err := os.RemoveAll(onnxDir); err != nil {
-		log.Fatalf("failed to remove existing model directory: %v", err)
-	}
-	if err := storage.DownloadDir(context.Background(), modelBucket, onnxModel.Id.String(), onnxDir); err != nil {
-		log.Fatalf("failed to download bolt model: %v", err)
-	}
-
 	server := createServer(db, storage, queue, cfg.Port, onnxDir)
 
 	slog.Info("starting worker")
