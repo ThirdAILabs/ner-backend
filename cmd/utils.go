@@ -295,6 +295,7 @@ func InitializeOnnxModel(
 	}
 	if res.RowsAffected == 0 && model.Status == database.ModelTrained {
 		slog.Info("onnx model already exists, uploading to existing model id", "model_id", model.Id)
+		modelId = model.Id
 	}
 
 	// upload the .onnx file
