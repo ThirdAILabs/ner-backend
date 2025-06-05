@@ -154,21 +154,29 @@ type ReportError struct {
 }
 
 type ChatSession struct {
-	ID          uuid.UUID         `gorm:"type:uuid;primaryKey"`
-	Title       string            `gorm:"not null"`
-	TagMetadata datatypes.JSON    `gorm:"type:jsonb"`
+	ID          uuid.UUID      `gorm:"type:uuid;primaryKey"`
+	Title       string         `gorm:"not null"`
+	TagMetadata datatypes.JSON `gorm:"type:jsonb"`
 }
 
 type ChatHistory struct {
-	ID          uint            `gorm:"primary_key"`
-	SessionID   uuid.UUID       `gorm:"index"`
-	MessageType string          // 'user' or 'ai'
+	ID          uint      `gorm:"primary_key"`
+	SessionID   uuid.UUID `gorm:"index"`
+	MessageType string    // 'user' or 'ai'
 	Content     string
-	Timestamp   time.Time       `gorm:"autoCreateTime"`
-	Metadata    datatypes.JSON  `gorm:"type:jsonb"` // {"key": "value"}
+	Timestamp   time.Time      `gorm:"autoCreateTime"`
+	Metadata    datatypes.JSON `gorm:"type:jsonb"` // {"key": "value"}
 }
 
 type FileNameToPath struct {
-	ID       uuid.UUID         `gorm:"type:uuid;primaryKey"`
-	Mapping  datatypes.JSON `gorm:"type:jsonb"`
+	ID      uuid.UUID      `gorm:"type:uuid;primaryKey"`
+	Mapping datatypes.JSON `gorm:"type:jsonb"`
+}
+
+type FeedbackSample struct {
+	ID           uuid.UUID      `gorm:"type:uuid;primaryKey"`
+	ModelId      uuid.UUID      `gorm:"type:uuid;index;not null"`
+	Tokens       datatypes.JSON `gorm:"type:jsonb;not null"` // JSON‐encoded []string
+	Labels       datatypes.JSON `gorm:"type:jsonb;not null"` // JSON‐encoded []string
+	CreationTime time.Time      `gorm:"autoCreateTime"`
 }

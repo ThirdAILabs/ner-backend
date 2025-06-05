@@ -21,15 +21,15 @@ import (
 var ErrStopStream = errors.New("stop stream")
 
 type TagMetadata struct {
-	TagMap map[string]string 
-	Assigned map[string]string
+	TagMap      map[string]string
+	Assigned    map[string]string
 	LabelCounts map[string]int
 }
 
 func NewTagMetadata() TagMetadata {
 	return TagMetadata{
-		TagMap: make(map[string]string),
-		Assigned: make(map[string]string),
+		TagMap:      make(map[string]string),
+		Assigned:    make(map[string]string),
 		LabelCounts: make(map[string]int),
 	}
 }
@@ -69,6 +69,7 @@ func (session *ChatSession) Redact(text string, tagMetadata TagMetadata) (string
 	if err != nil {
 		return "", TagMetadata{}, fmt.Errorf("error predicting entities: %w", err)
 	}
+	entities = core.FilterEntities(text, entities)
 
 	sort.Slice(entities, func(i, j int) bool {
 		if entities[i].Start == entities[j].Start {
@@ -107,8 +108,8 @@ func (session *ChatSession) Redact(text string, tagMetadata TagMetadata) (string
 
 type ChatItem struct {
 	RedactedText string
-	Reply string
-	TagMap map[string]string
+	Reply        string
+	TagMap       map[string]string
 }
 type ChatIterator func(yield func(ChatItem, error) bool)
 
@@ -126,18 +127,18 @@ func (session *ChatSession) ChatStream(userInput string) (ChatIterator, error) {
 	if err := session.updateTagMetadata(newTagMetadata); err != nil {
 		return nil, fmt.Errorf("error updating tag map: %v", err)
 	}
-	
+
 	history, err := session.getChatHistory()
 	if err != nil {
 		return nil, fmt.Errorf("error getting chat history: %v", err)
 	}
-	
+
 	context := ""
 	for _, msg := range history {
 		context += fmt.Sprintf("%s: %s\n", msg.MessageType, msg.Content)
 	}
 	context += fmt.Sprintf("User: %s\n", redactedText)
-	
+
 	iterator := func(yield func(ChatItem, error) bool) {
 		// First yield the non-streaming components
 		// TODO: Will this the tag map get too big? Should we only yield
@@ -146,7 +147,7 @@ func (session *ChatSession) ChatStream(userInput string) (ChatIterator, error) {
 			log.Printf("Failed to yield redacted text and tag map")
 			return
 		}
-		
+
 		// Then stream the OpenAI response
 		openaiResp := ""
 		for chunk, err := range session.streamOpenAIResponse(context) {
@@ -157,7 +158,7 @@ func (session *ChatSession) ChatStream(userInput string) (ChatIterator, error) {
 			openaiResp += chunk
 			yield(ChatItem{Reply: chunk}, nil)
 		}
-		
+
 		// Only save messages if the whole process was successful.
 		// This gives the illusion of atomicity; a request either succeeds or fails entirely.
 		// We still yield the error so the frontend can process accordingly.
@@ -165,7 +166,7 @@ func (session *ChatSession) ChatStream(userInput string) (ChatIterator, error) {
 			yield(ChatItem{}, err)
 			return
 		}
-		
+
 		if err := session.saveMessage("ai", openaiResp, nil); err != nil {
 			yield(ChatItem{}, err)
 			return
@@ -180,12 +181,12 @@ func (session *ChatSession) getTagMetadata() (TagMetadata, error) {
 	if err != nil {
 		return TagMetadata{}, err
 	}
-		
+
 	var tagMetadata TagMetadata
 	if err := json.Unmarshal(chatSession.TagMetadata, &tagMetadata); err != nil {
 		return TagMetadata{}, err
 	}
-	
+
 	return tagMetadata, nil
 }
 
@@ -210,9 +211,9 @@ func (session *ChatSession) streamOpenAIResponse(ctx string) func(yield func(str
 			}
 			return nil
 		}))
-		if err != nil && !errors.Is(err, ErrStopStream) {  // this might not be needed, but it might pass the error returned from the streaming func back here
+		if err != nil && !errors.Is(err, ErrStopStream) { // this might not be needed, but it might pass the error returned from the streaming func back here
 			slog.Error("error during openai generation", "error", err)
-			yield("", err) // return doesn't matter since there are no more yield calls 
+			yield("", err) // return doesn't matter since there are no more yield calls
 		}
 	}
 }

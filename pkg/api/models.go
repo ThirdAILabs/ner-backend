@@ -151,5 +151,10 @@ type ValidateS3BucketRequest struct {
 }
 
 type FileNameToPath struct {
-	Mapping  map[string]string
+	Mapping map[string]string
+}
+
+type FeedbackRequest struct {
+	Tokens []string `json:"tokens"`
+	Labels []string `json:"labels"`
 }

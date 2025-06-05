@@ -97,6 +97,7 @@ func TestFinetuning(t *testing.T) {
 	})
 	defer stop()
 
+	// No in-body samples; just do a normal finetune request
 	ftReq := api.FinetuneRequest{
 		Name:       "finetuned-model",
 		TaskPrompt: "finetuning test",
@@ -137,39 +138,72 @@ func TestFinetuningAllModels(t *testing.T) {
 	)
 	defer stop()
 
-	models := []string{"bolt", "cnn", "transformer"}
+	modelTypes := []string{"bolt", "cnn", "transformer"}
 
-	for _, modelType := range models {
+	for _, modelType := range modelTypes {
 		var modelName string
 		if modelType == "bolt" {
-			require.NoError(t, cmd.InitializeBoltModel(db, s3, modelBucket, "basic", filepath.Join(os.Getenv("HOST_MODEL_DIR"), "model.bin")))
+			require.NoError(t,
+				cmd.InitializeBoltModel(db, s3, modelBucket, "basic",
+					filepath.Join(os.Getenv("HOST_MODEL_DIR"), "model.bin")),
+			)
 			modelName = "basic"
 		} else if modelType == "cnn" {
-			require.NoError(t, cmd.InitializeCnnNerExtractor(ctx, db, s3, modelBucket, os.Getenv("HOST_MODEL_DIR")))
+			require.NoError(t,
+				cmd.InitializeCnnNerExtractor(ctx, db, s3, modelBucket,
+					os.Getenv("HOST_MODEL_DIR")),
+			)
 			modelName = "advanced"
-		} else if modelType == "transformer" {
-			require.NoError(t, cmd.InitializeTransformerModel(ctx, db, s3, modelBucket, os.Getenv("HOST_MODEL_DIR")))
+		} else { // transformer
+			require.NoError(t,
+				cmd.InitializeTransformerModel(ctx, db, s3, modelBucket,
+					os.Getenv("HOST_MODEL_DIR")),
+			)
 			modelName = "ultra"
-		} else {
-			t.Fatalf("Invalid model type: %s", modelType)
 		}
+
 		var base database.Model
 		require.NoError(t, db.Where("name = ?", modelName).First(&base).Error)
+
+		samples := []api.Sample{
+			{
+				Tokens: []string{"I", "started", "working", "at", "ThirdAI", "in", "2022"},
+				Labels: []string{"O", "O", "O", "O", "COMPANY", "O", "DATE"},
+			},
+			{
+				Tokens: []string{"I", "started", "working", "at", "ThirdAI", "in", "2022"},
+				Labels: []string{"O", "O", "O", "O", "COMPANY", "O", "DATE"},
+			},
+		}
+		for _, sample := range samples {
+			feedbackReq := api.FeedbackRequest(sample)
+			require.NoError(t, httpRequest(
+				router,
+				"POST",
+				fmt.Sprintf("/models/%s/feedback", base.Id.String()),
+				feedbackReq,
+				nil,
+			))
+		}
+
+		var saved []api.FeedbackRequest
+		require.NoError(t, httpRequest(
+			router,
+			"GET",
+			fmt.Sprintf("/models/%s/feedback", base.Id.String()),
+			nil,
+			&saved,
+		))
+		require.Len(t, saved, 2)
+		assert.Equal(t, samples[0].Tokens, saved[0].Tokens)
+		assert.Equal(t, samples[0].Labels, saved[0].Labels)
+		assert.Equal(t, samples[1].Tokens, saved[1].Tokens)
+		assert.Equal(t, samples[1].Labels, saved[1].Labels)
 
 		ftReq := api.FinetuneRequest{
 			Name:       fmt.Sprintf("finetuned-%s", modelType),
 			TaskPrompt: fmt.Sprintf("%s finetune test", modelType),
 			Tags:       []api.TagInfo{{Name: "xyz"}},
-			Samples: []api.Sample{
-				{
-					Tokens: []string{"I", "started", "working", "at", "ThirdAI", "in", "2022"},
-					Labels: []string{"O", "O", "O", "O", "COMPANY", "O", "DATE"},
-				},
-				{
-					Tokens: []string{"I", "started", "working", "at", "ThirdAI", "in", "2022"},
-					Labels: []string{"O", "O", "O", "O", "COMPANY", "O", "DATE"},
-				},
-			},
 		}
 
 		_, model := finetune(
