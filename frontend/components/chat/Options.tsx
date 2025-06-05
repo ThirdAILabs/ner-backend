@@ -136,7 +136,7 @@ export default function Options({
           </div>
         </div>
 
-        <div className="inline font-semibold p-1">GPT</div>
+        <div className="inline font-semibold p-1">GPT Model</div>
         <div className="flex flex-row w-full gap-2">
           <div className="w-full">
             <ModelOption

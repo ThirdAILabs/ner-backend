@@ -52,30 +52,40 @@ function PageContents() {
 
   return (
     // 30px is the height of the title bar
-    <div style={{ width: '75%', minHeight: 'calc(100vh - 30px)', margin: '0 auto' }}>
+    <div
+      style={{
+        width: '90%',
+        minHeight: 'calc(100vh - 30px)',
+        margin: '0 auto',
+      }}
+    >
       <header
         style={{
           width: '100%',
           padding: '16px',
           borderBottom: '1px solid #e0e0e0',
           display: 'flex',
-          flexDirection: 'row',
+          alignItems: 'center',
+          position: 'relative',
         }}
       >
-        <Button variant="outline" size="sm" asChild>
-          <Link href={`/`} className="flex items-center">
-            <ArrowLeft className="mr-1 h-4 w-4" /> Back
-          </Link>
-        </Button>
+        {/* Left - Back Button */}
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start' }}>
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/`} className="flex items-center">
+              <ArrowLeft className="mr-1 h-4 w-4" /> Back
+            </Link>
+          </Button>
+        </div>
+
+        {/* Center - Logo and Title */}
         <div
           style={{
-            maxWidth: '1200px',
-            margin: '0 auto',
-            marginBottom: '8px',
             display: 'flex',
-            flexDirection: 'row',
+            alignItems: 'center',
             gap: '20px',
-            marginLeft: '30%',
+            justifyContent: 'center',
+            margin: '0 auto',
           }}
         >
           <Image
@@ -88,20 +98,22 @@ function PageContents() {
           />
           <Typography
             variant="h5"
-            title={'PocketShield'}
+            title="PocketShield"
             sx={{
-              mt: 0.5,
               fontFamily: '"Plus Jakarta Sans", sans-serif',
               fontWeight: 600,
               color: 'rgb(85,152,229)',
             }}
           >
-            {'PocketShield'}
+            PocketShield
           </Typography>
         </div>
+
+        {/* Right - Empty to balance */}
+        <div style={{ flex: 1 }} />
       </header>
 
-      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '16px' }}>
+      <main style={{ margin: '0 auto', padding: '16px' }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
           <Tabs
             value={tabValue}

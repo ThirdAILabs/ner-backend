@@ -2,6 +2,8 @@ package database
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -79,4 +81,49 @@ func SetModelTags(ctx context.Context, db *gorm.DB, modelId uuid.UUID, tags []st
 	}
 
 	return nil
+}
+
+func SaveFeedbackSample(ctx context.Context, db *gorm.DB, modelId uuid.UUID, tokens []string, labels []string) error {
+	bTokens, err := json.Marshal(tokens)
+	if err != nil {
+		return fmt.Errorf("could not marshal tokens: %w", err)
+	}
+	bLabels, err := json.Marshal(labels)
+	if err != nil {
+		return fmt.Errorf("could not marshal labels: %w", err)
+	}
+
+	fs := FeedbackSample{
+		ID:      uuid.New(),
+		ModelId: modelId,
+		Tokens:  bTokens,
+		Labels:  bLabels,
+	}
+	if err := db.WithContext(ctx).Create(&fs).Error; err != nil {
+		return fmt.Errorf("failed to save feedback sample: %w", err)
+	}
+	return nil
+}
+
+func GetFeedbackSamples(ctx context.Context, db *gorm.DB, modelId uuid.UUID) ([][]string, [][]string, error) {
+	var rows []FeedbackSample
+	if err := db.WithContext(ctx).Where("model_id = ?", modelId).Find(&rows).Error; err != nil {
+		return nil, nil, fmt.Errorf("could not query feedback samples: %w", err)
+	}
+
+	allTokens := make([][]string, 0, len(rows))
+	allLabels := make([][]string, 0, len(rows))
+	for _, r := range rows {
+		var toks []string
+		var labs []string
+		if err := json.Unmarshal(r.Tokens, &toks); err != nil {
+			return nil, nil, fmt.Errorf("invalid tokens JSON: %w", err)
+		}
+		if err := json.Unmarshal(r.Labels, &labs); err != nil {
+			return nil, nil, fmt.Errorf("invalid labels JSON: %w", err)
+		}
+		allTokens = append(allTokens, toks)
+		allLabels = append(allLabels, labs)
+	}
+	return allTokens, allLabels, nil
 }
