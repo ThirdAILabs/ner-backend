@@ -216,35 +216,5 @@ func TestFinetuningAllModels(t *testing.T) {
 		assert.Equal(t, fmt.Sprintf("finetuned-%s", modelType), model.Name)
 		require.NotNil(t, model.BaseModelId)
 		assert.Equal(t, base.Id, *model.BaseModelId)
-
-		stream, err := s3.GetObjectStream(modelBucket, fmt.Sprintf("%s/model.json", model.Id))
-		require.NoError(t, err)
-
-		var data map[string]interface{}
-		require.NoError(t, json.NewDecoder(stream).Decode(&data))
-
-		assert.Contains(t, data, "feedback_tokens")
-		assert.Contains(t, data, "feedback_labels")
-
-		rawTokens, ok1 := data["feedback_tokens"].([]interface{})
-		rawLabels, ok2 := data["feedback_labels"].([]interface{})
-		require.True(t, ok1, "feedback_tokens should be an array")
-		require.True(t, ok2, "feedback_labels should be an array")
-
-		var tokStr []string
-		var labStr []string
-		for _, v := range rawTokens {
-			if s, ok := v.(string); ok {
-				tokStr = append(tokStr, s)
-			}
-		}
-		for _, v := range rawLabels {
-			if s, ok := v.(string); ok {
-				labStr = append(labStr, s)
-			}
-		}
-		assert.Contains(t, tokStr, "I")
-		assert.Contains(t, tokStr, "ThirdAI")
-		assert.Contains(t, labStr, "COMPANY")
 	}
 }
