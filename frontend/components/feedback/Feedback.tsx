@@ -1,0 +1,236 @@
+/**
+ * A text box where tokens can be highlighted and assigned a tag.
+ */
+
+import React, { useState, useRef, useMemo } from 'react';
+import { Menu, MenuItem } from '@mui/material';
+
+interface Token {
+  text: string;
+  tag: string;
+}
+
+interface HighlightColor {
+  text: string;
+  tag: string;
+}
+
+interface FeedbackProps {
+  tokens: Token[];
+  availableTags: string[];
+  onTagAssign?: (startIndex: number, endIndex: number, newTag: string) => void;
+}
+
+const SELECTING_COLOR = '#EFEFEF';
+const PASTELS = ['#E5A49C', '#F6C886', '#FBE7AA', '#99E3B5', '#A6E6E7', '#A5A1E1', '#D8A4E2'];
+const DARKERS = ['#D34F3E', '#F09336', '#F7CF5F', '#5CC96E', '#65CFD0', '#597CE2', '#B64DC8'];
+const DEFAULT_COLOR = { text: 'white', tag: '#A0A0A0' };
+
+export const Feedback: React.FC<FeedbackProps> = ({
+  tokens,
+  availableTags,
+  onTagAssign,
+}) => {
+  const [selectionStart, setSelectionStart] = useState<number | null>(null);
+  const [selectionEnd, setSelectionEnd] = useState<number | null>(null);
+  const [isSelecting, setIsSelecting] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState<{ x: number; y: number } | null>(null);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [query, setQuery] = useState('');
+  const containerRef = useRef<HTMLDivElement>(null);
+  
+  const tagColors = useMemo(() => {
+    const colors: Record<string, HighlightColor> = {};
+    availableTags
+      .filter((tag) => tag !== 'O')
+      .forEach((tag, index) => {
+        colors[tag] = {
+          text: PASTELS[index % PASTELS.length],
+          tag: DARKERS[index % DARKERS.length],
+        };
+      });
+    colors['O'] = DEFAULT_COLOR;
+    return colors;
+  }, [availableTags]);
+
+  const handleMouseDown = (index: number) => {
+    setSelectionStart(index);
+    setSelectionEnd(index);
+    setIsSelecting(true);
+  };
+
+  const handleMouseOver = (index: number) => {
+    setHoveredIndex(index);
+    if (selectionStart !== null) {
+      setSelectionEnd(index);
+    }
+  };
+
+  const handleMouseLeaveToken = (e: React.MouseEvent) => {
+    setHoveredIndex(null);
+    e.stopPropagation();
+  };
+
+  const handleMouseLeaveFeedbackBox = () => {
+    setIsSelecting(false);
+    setSelectionStart(null);
+    setSelectionEnd(null);
+  };
+
+  const handleMouseUp = (event: React.MouseEvent) => {
+    if (isSelecting) {
+      setDropdownPosition({
+        x: event.clientX,
+        y: event.clientY
+      });
+      setShowDropdown(true);
+      setIsSelecting(false);
+    }
+  };
+
+  const handleTagSelect = (tag: string) => {
+    if (selectionStart === null || selectionEnd === null) return;
+    const start = Math.min(selectionStart, selectionEnd);
+    const end = Math.max(selectionStart, selectionEnd);
+    setQuery('');
+    if (onTagAssign) {
+      onTagAssign(start, end, tag);
+    }
+    setShowDropdown(false);
+    setSelectionStart(null);
+    setSelectionEnd(null);
+    setDropdownPosition(null);
+  };
+
+  const filteredTags = query
+    ? availableTags.filter((tag) => tag.toLowerCase().includes(query.toLowerCase()))
+    : availableTags;
+
+  const queryMatchesTag = query && availableTags.some(tag => tag.toLowerCase() === query.toLowerCase());
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setQuery(e.target.value);
+  };
+
+  return (
+    <div
+      ref={containerRef}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseLeaveFeedbackBox}
+    >
+      <div className="flex flex-wrap gap-0.5">
+        {tokens.map((token, index) => {
+          const startIndex = selectionStart && selectionEnd ? Math.min(selectionStart, selectionEnd) : tokens.length;
+          const endIndex = selectionStart && selectionEnd ? Math.max(selectionStart, selectionEnd) : -1;
+          const isSelected = index >= startIndex && index <= endIndex;
+          return (
+            <span
+              key={index}
+              onMouseOver={() => handleMouseOver(index)}
+              onMouseLeave={handleMouseLeaveToken}
+              className={[
+                `inline-flex items-center cursor-pointer select-none rounded-sm m-0 py-0.5 ${token.tag === 'O' ? 'px-0.5' : 'px-1'}`,
+              ].join(' ')}
+              style={{
+                backgroundColor:
+                  isSelected
+                    ? SELECTING_COLOR
+                    : hoveredIndex === index
+                    ? '#EFEFEF'
+                    : tagColors[token.tag]?.text || DEFAULT_COLOR.text,
+                color: 'black',
+              }}
+              onMouseDown={() => handleMouseDown(index)}
+            >
+              {token.text}
+              {token.tag !== 'O' && (
+                index === tokens.length - 1 || tokens[index + 1]?.tag !== token.tag
+              ) && (
+                <span
+                  className="ml-1 rounded-sm px-1.5 py-0.5 text-xs font-bold"
+                  style={{
+                    backgroundColor: tagColors[token.tag]?.tag || DEFAULT_COLOR.tag,
+                    color: 'white',
+                  }}
+                >
+                  {token.tag}
+                </span>
+              )}
+            </span>
+          );
+        })}
+      </div>
+
+      {showDropdown && dropdownPosition && (
+        <Menu
+          open={showDropdown && dropdownPosition !== null}
+          anchorReference="anchorPosition"
+          anchorPosition={{
+            top: dropdownPosition.y,
+            left: dropdownPosition.x,
+          }}
+          onClose={() => {
+            setShowDropdown(false);
+            setSelectionStart(null);
+            setSelectionEnd(null);
+            setDropdownPosition(null);
+            setQuery('');
+          }}
+          PaperProps={{
+            sx: {
+              borderRadius: '8px',
+              overflow: 'hidden',
+            }
+          }}
+        >
+          <div className="p-2 w-[200px]">
+            <input
+              type="text"
+              value={query}
+              onChange={handleInputChange}
+              className="w-full p-2 border border-gray-300 rounded mb-1 bg-white text-base"
+              placeholder="Search tags..."
+              autoFocus
+            />
+          </div>
+
+          {query && !queryMatchesTag && (
+            <MenuItem
+              onClick={() => handleTagSelect(query)}
+              className="flex items-center justify-between font-bold text-black bg-white rounded-md mx-2 my-0.5 px-3 py-2 transition-colors hover:bg-gray-100"
+            >
+              <span>{query}</span>
+              <span
+                className="ml-3 bg-gray-200 text-gray-700 rounded-full text-xs font-medium px-3 py-0.5"
+              >
+                new
+              </span>
+            </MenuItem>
+          )}
+
+          {filteredTags.map((tag) => (
+            <MenuItem
+              key={tag}
+              onClick={() => handleTagSelect(tag)}
+              className="flex items-center justify-between font-bold text-black bg-white rounded-md mx-2 my-0.5 px-3 py-2 transition-colors group hover:bg-opacity-100 hover:bg-[var(--tag-pastel)]"
+              style={{
+                ['--tag-pastel' as any]: tagColors[tag]?.text || DEFAULT_COLOR.text,
+              }}
+            >
+              <span>{tag}</span>
+              <span
+                className="ml-3 inline-block rounded-full transition-colors w-2.5 h-2.5 group-hover:bg-[var(--tag-dark)]"
+                style={{
+                  background: tagColors[tag]?.text || DEFAULT_COLOR.text,
+                  ['--tag-dark' as any]: tagColors[tag]?.tag || DEFAULT_COLOR.tag,
+                }}
+              />
+            </MenuItem>
+          ))}
+        </Menu>
+      )}
+    </div>
+  );
+};
+

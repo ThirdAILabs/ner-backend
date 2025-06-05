@@ -5,6 +5,7 @@ import { TableContentProps } from './types';
 import { Button } from '@/components/ui/button';
 import { NO_GROUP } from '@/lib/utils';
 import { ChevronRight } from 'lucide-react';
+import { Feedback } from '@/components/feedback/Feedback';
 
 const PASTELS = ['#E5A49C', '#F6C886', '#FBE7AA', '#99E3B5', '#A6E6E7', '#A5A1E1', '#D8A4E2'];
 const DARKERS = ['#D34F3E', '#F09336', '#F7CF5F', '#5CC96E', '#65CFD0', '#597CE2', '#B64DC8'];
@@ -357,7 +358,19 @@ export function TableContent({
               </div>
             </summary>
             <div className="p-4">
-              {record.taggedTokens.map((token, tokenIndex) => {
+              <Feedback
+                tokens={record.taggedTokens.flatMap((token) => { 
+                  if (token[1] === 'O') {
+                    return token[0].split(/\s+/).filter((word) => word.trim() !== '').map((word) => ({ text: word, tag: 'O' }));
+                  }
+                  return [{ text: token[0], tag: token[1] }];
+                })}
+                availableTags={tags.map((tag) => tag.type)}
+                onTagAssign={(startIndex: number, endIndex: number, newTag: string) => {
+                  console.log(`Assigning tag ${newTag} to tokens from index ${startIndex} to ${endIndex}`);
+                }}
+              />
+              {/* {record.taggedTokens.map((token, tokenIndex) => {
                 const isLastToken = tokenIndex === record.taggedTokens.length - 1;
                 const nextNonWhitespaceTokenIndex = record.taggedTokens.findIndex(
                   (t, i) => i > tokenIndex && t[0].trim() !== ''
@@ -376,7 +389,7 @@ export function TableContent({
                     labeled={isLastToken || differentTagThanNext}
                   />
                 );
-              })}
+              })} */}
               ...
               <p className="text-gray-500 text-xs">
                 Truncated File View. Please open the original file for the entire content.
