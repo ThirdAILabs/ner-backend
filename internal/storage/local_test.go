@@ -143,7 +143,7 @@ func TestProvider_DownloadDir(t *testing.T) {
 
 	bucket := "test-bucket"
 	prefix := "to-download"
-	destDir := t.TempDir()
+	destDir := filepath.Join(t.TempDir(), "download-target")
 
 	// Create test files in the provider
 	files := []string{"file1.txt", "file2.txt", "subdir/file3.txt"}
