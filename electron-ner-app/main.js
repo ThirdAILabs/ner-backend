@@ -108,6 +108,8 @@ autoUpdater.logger = log;
 autoUpdater.logger.transports.file.level = 'info';
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = false;
+
+// !!!! REMOVE THE FOLLWOWING LINE IN PRODUCTION !!!
 autoUpdater.allowPrerelease = true;
 
 autoUpdater.on('checking-for-update', () => console.log('Checking for update...'));

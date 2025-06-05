@@ -99,7 +99,10 @@ export async function startBackend() {
   log.debug(`Using fixed port: ${FIXED_PORT}`);
 
   const backendPath = getBackendPath();
-  const backendDir = path.dirname(backendPath);
+  const backendDir  = path.dirname(backendPath);
+
+  await app.whenReady();
+  const appDataDir = app.getPath('userData');
 
   if (!fs.existsSync(backendPath)) {
     log.error(`Backend executable not found at: ${backendPath}`);
