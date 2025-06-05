@@ -294,8 +294,7 @@ func InitializeOnnxModel(
 		return fmt.Errorf("db create/find onnx model: %w", err)
 	}
 	if res.RowsAffected == 0 && model.Status == database.ModelTrained {
-		slog.Info("onnx model already exists, skipping upload", "model_id", model.Id)
-		return nil
+		slog.Info("onnx model already exists, uploading to existing model id", "model_id", model.Id)
 	}
 
 	// upload the .onnx file

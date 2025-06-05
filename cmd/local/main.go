@@ -33,12 +33,8 @@ type Config struct {
 	Root          string `env:"ROOT" envDefault:"./pocket-shield"`
 	Port          int    `env:"PORT" envDefault:"3001"`
 	License       string `env:"LICENSE_KEY" envDefault:""`
-<<<<<<< HEAD
 	OnnxModelPath string `env:"MODEL_PATH" envDefault:""`
-=======
-	BoltModelPath string `env:"MODEL_PATH" envDefault:""`
 	AppDataDir    string `env:"APP_DATA_DIR" envDefault:"./pocket-shield"`
->>>>>>> main
 }
 
 const (
@@ -196,15 +192,15 @@ func main() {
 	}
 
 	onnxDir := filepath.Join(cfg.Root, "storage", "models", onnxModel.Id.String())
+
 	// If the model directory already exists, then backend is unable to start, so we first remove the
 	// old directory to ensure a fresh download.
 	if err := os.RemoveAll(onnxDir); err != nil {
 		log.Fatalf("failed to remove existing model directory: %v", err)
 	}
-	if err := storage.DownloadDir(context.Background(), modelBucket, basicModel.Id.String(), onnxDir); err != nil {
+	if err := storage.DownloadDir(context.Background(), modelBucket, onnxModel.Id.String(), onnxDir); err != nil {
 		log.Fatalf("failed to download bolt model: %v", err)
 	}
-	
 
 	server := createServer(db, storage, queue, cfg.Port, onnxDir)
 
