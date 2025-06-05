@@ -29,7 +29,7 @@ export const formatFileSize = (bytes: number, space: boolean = false): string =>
 
 // Returns [file, fullPath] pairs
 export const getFilesFromElectron = async (
-  supportedTypes: string[],
+  supportedTypes: string[]
 ): Promise<{ files: [File, string][]; wasDirectorySelected: boolean }> => {
   // @ts-ignore
   const results = await window.electron.openFileChooser(
