@@ -460,6 +460,7 @@ func (proc *TaskProcessor) createObjectPreview(
 	if err != nil {
 		return fmt.Errorf("preview inference error: %w", err)
 	}
+	spans = FilterEntities(previewText, spans)
 
 	// converting spans to a map for coalescing
 	spanEntityMap := make(map[string][]types.Entity)
@@ -585,6 +586,7 @@ func (proc *TaskProcessor) runInferenceOnObject(
 
 		start := time.Now()
 		chunkEntities, err := model.Predict(chunk.Text)
+		chunkEntities = FilterEntities(chunk.Text, chunkEntities)
 		duration := time.Since(start)
 		sizeMB := float64(chunk.RawSize) / float64(bytesPerMB)
 		slog.Info("processed chunk",
