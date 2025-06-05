@@ -1,15 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import type {
-  TrainReportData,
-  LabelMetrics,
-  ExampleCategories,
-  TrainingExample,
-} from '@/lib/types';
-import {
-  ObjectDatabaseRecord,
-  ClassifiedTokenDatabaseRecord,
-} from '@/app/token-classification/jobs/(database-table)/types';
+
 import {
   mockWorkflows,
   mockPredictionResponses,

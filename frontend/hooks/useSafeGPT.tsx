@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ChatResponse, nerService } from '@/lib/backend';
+import { nerService } from '@/lib/backend';
 
 export interface ChatPreview {
   id: string;
@@ -286,11 +286,11 @@ export default function useSafeGPT(chatId: string) {
     previews: [
       ...(chatId === NEW_CHAT_ID
         ? [
-            {
-              id: NEW_CHAT_ID,
-              title: 'New Chat',
-            },
-          ]
+          {
+            id: NEW_CHAT_ID,
+            title: 'New Chat',
+          },
+        ]
         : []),
       ...previews,
     ],
