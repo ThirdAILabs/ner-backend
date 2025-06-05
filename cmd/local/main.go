@@ -33,6 +33,7 @@ type Config struct {
 	Port          int    `env:"PORT" envDefault:"3001"`
 	License       string `env:"LICENSE_KEY" envDefault:""`
 	BoltModelPath string `env:"MODEL_PATH" envDefault:""`
+	AppDataDir    string `env:"APP_DATA_DIR" envDefault:"./pocket-shield"`
 }
 
 const (
@@ -149,9 +150,9 @@ func main() {
 
 	log.SetOutput(io.MultiWriter(f, os.Stderr))
 
-	slog.Info("starting backend", "root", cfg.Root, "port", cfg.Port)
+	slog.Info("starting backend", "root", cfg.Root, "port", cfg.Port, "app_data_dir", cfg.AppDataDir)
 
-	db := createDatabase(cfg.Root)
+	db := createDatabase(cfg.AppDataDir)
 
 	storage, err := storage.NewLocalProvider(filepath.Join(cfg.Root, "storage"))
 	if err != nil {

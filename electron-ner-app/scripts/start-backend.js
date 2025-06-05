@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { app } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -140,6 +141,7 @@ export async function startBackend() {
         ...process.env,
         PORT: FIXED_PORT.toString(),
         MODEL_PATH: getDefaultModelPath(),
+        APP_DATA_DIR: appDataDir,
       },
       stdio: ['pipe', 'pipe', 'pipe']
     }
