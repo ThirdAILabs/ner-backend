@@ -111,6 +111,7 @@ autoUpdater.autoInstallOnAppQuit = false;
 autoUpdater.allowPrerelease = true;
 
 autoUpdater.on('checking-for-update', () => console.log('Checking for update...'));
+
 autoUpdater.on('update-available', async (info) => {
     console.log('Update available:', info);
     const result = await dialog.showMessageBox(mainWindow, {
@@ -134,15 +135,16 @@ autoUpdater.on('update-downloaded', async (info) => {
     updateHandled = true;
 
     if (isUpdateInstall) {
+        // Will this ever hit??
         await shutdownBackend();
-        setTimeout(() => app.exit(0), 1000);
+        // setTimeout(() => app.exit(0), 1000);
         autoUpdater.quitAndInstall();
         return;
     }
 
     const result = await dialog.showMessageBox(mainWindow, {
         type: 'question',
-        buttons: ['Install & Restart Now', 'Install on Quit'],
+        buttons: ['Install & Restart Now', 'Later'],
         defaultId: 0,
         cancelId: 1,
         title: 'Update Ready',
@@ -153,14 +155,13 @@ autoUpdater.on('update-downloaded', async (info) => {
         isUpdateInstall = true;
         await shutdownBackend();
         autoUpdater.quitAndInstall();
-    } else if (result.response === 1) {
-        autoUpdater.autoInstallOnAppQuit = true;
     } else {
         fs.writeFileSync(pendingUpdateFile, JSON.stringify({ version: info.version }), 'utf-8');
     }
 });
 
 autoUpdater.on('error', (err) => log.error('Error in auto-updater:', err));
+
 autoUpdater.on('download-progress', (progress) => {
     console.log(`Download speed: ${progress.bytesPerSecond} - Downloaded ${Math.round(progress.percent)}%`);
 });
@@ -192,21 +193,23 @@ app.whenReady().then(async () => {
 
     if (fs.existsSync(pendingUpdateFile)) {
         try {
-            const { version } = JSON.parse(fs.readFileSync(pendingUpdateFile, 'utf-8'));
-            if (version && version !== currentVersion) {
-                const reminder = await dialog.showMessageBox(mainWindow, {
-                    type: 'question',
-                    buttons: ['Download Now', 'Later'],
-                    defaultId: 0,
-                    cancelId: 1,
-                    title: 'Update Ready',
-                    message: `Version ${version} is available.`
-                });
-                if (reminder.response === 0) {
-                    isUpdateInstall = true;
-                    autoUpdater.downloadUpdate();
-                }
-            }
+            dialog.showMessageBox({ type: 'info', title: 'Update available', message: `A new version (${info.version}) is available.` });
+
+            // const { version } = JSON.parse(fs.readFileSync(pendingUpdateFile, 'utf-8'));
+            // if (version && version !== currentVersion) {
+            //     const reminder = await dialog.showMessageBox(mainWindow, {
+            //         type: 'question',
+            //         buttons: ['Download Now', 'Later'],
+            //         defaultId: 0,
+            //         cancelId: 1,
+            //         title: 'Update Ready',
+            //         message: `Version ${version} is available.`
+            //     });
+            //     if (reminder.response === 0) {
+            //         isUpdateInstall = true;
+            //         autoUpdater.downloadUpdate();
+            //     }
+            // }
         } catch (e) {
             console.error('Error reading pending-update file:', e);
         } finally {
