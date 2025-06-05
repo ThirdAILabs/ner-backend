@@ -65,9 +65,10 @@ const SourceOption: React.FC<SourceOptionProps> = ({
   <div
     className={`relative p-6 border rounded-md transition-all
       ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200'}
-      ${disabled
-        ? 'opacity-50 cursor-not-allowed bg-gray-50'
-        : 'cursor-pointer hover:border-blue-300'
+      ${
+        disabled
+          ? 'opacity-50 cursor-not-allowed bg-gray-50'
+          : 'cursor-pointer hover:border-blue-300'
       }
     `}
     onClick={() => !disabled && onClick()}
@@ -230,8 +231,8 @@ function JobDetail() {
     if (report) {
       setDataProcessed(
         (report.InferenceTaskStatuses?.COMPLETED?.TotalSize || 0) +
-        (report.InferenceTaskStatuses?.FAILED?.TotalSize || 0) +
-        (report.InferenceTaskStatuses?.RUNNING?.TotalSize || 0)
+          (report.InferenceTaskStatuses?.FAILED?.TotalSize || 0) +
+          (report.InferenceTaskStatuses?.RUNNING?.TotalSize || 0)
       );
     }
   }

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 
 // Mock data for training reports

@@ -286,11 +286,11 @@ export default function useSafeGPT(chatId: string) {
     previews: [
       ...(chatId === NEW_CHAT_ID
         ? [
-          {
-            id: NEW_CHAT_ID,
-            title: 'New Chat',
-          },
-        ]
+            {
+              id: NEW_CHAT_ID,
+              title: 'New Chat',
+            },
+          ]
         : []),
       ...previews,
     ],
