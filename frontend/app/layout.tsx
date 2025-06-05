@@ -31,12 +31,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           but I couldn't get the styling right.
         */}
         <div className="fixed top-0 left-0 w-full h-[30px] titlebar" />
-
         <Providers>
           <div className="flex flex-col min-h-[calc(100vh-30px)]">
-            <DiscordButton />
+            {/* Main content */}
             {children}
           </div>
+
+          {/* Discord button fixed to bottom-left */}
+          <div className="fixed bottom-[2px] left-[2px] z-50">
+            <DiscordButton />
+          </div>
+
+          {/* Error popup */}
           <ErrorPopup autoCloseTime={7000} />
         </Providers>
       </body>

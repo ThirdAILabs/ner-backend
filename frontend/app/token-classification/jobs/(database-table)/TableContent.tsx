@@ -315,75 +315,81 @@ export function TableContent({
   }
 
   const filteredRecords = objectRecords.filter((record) =>
-    filterRecords(
-      record.groups,
-      record.taggedTokens.map((token) => token[1])
-    )
+    filterRecords(record.groups, [
+      ...new Set(record.taggedTokens.map((token) => token[1]).filter((tag) => tag !== 'O')),
+    ])
   );
 
   return (
     <div className="mt-4">
-      {filteredRecords.map((record, index) => {
-        const fileIdentifier = record.sourceObject;
-        const { fullPath, openFile } = handleFullPath(fileIdentifier);
-        return (
-          <details
-            key={index}
-            className="group text-sm leading-relaxed bg-white rounded border border-gray-100 shadow-sm mb-4"
-          >
-            <summary className="p-3 cursor-pointer bg-gray-100 flex items-center">
-              <div className="flex items-center gap-2">
-                <ChevronRight className="w-4 h-4 transition-transform group-open:rotate-90" />
-                {/* @ts-ignore */}
-                {fullPath && typeof window !== 'undefined' && window.electron ? (
-                  <span
-                    className="font-semibold"
-                    style={{
-                      textDecoration: 'underline',
-                      color: 'inherit',
-                      cursor: 'pointer',
-                      userSelect: 'none',
-                    }}
-                    onClick={openFile}
-                  >
-                    {truncateFilePath(fullPath)}
-                  </span>
-                ) : (
-                  <span className="font-semibold" style={{ color: 'inherit', userSelect: 'none' }}>
-                    {fileIdentifier.split('/').slice(-1)}
-                  </span>
-                )}
+      {filteredRecords.length === 0 ? (
+        <div className="text-gray-500">No records match the current filters.</div>
+      ) : (
+        filteredRecords.map((record, index) => {
+          const fileIdentifier = record.sourceObject;
+          const { fullPath, openFile } = handleFullPath(fileIdentifier);
+          return (
+            <details
+              key={index}
+              className="group text-sm leading-relaxed bg-white rounded border border-gray-100 shadow-sm mb-4"
+            >
+              <summary className="p-3 cursor-pointer bg-gray-100 flex items-center">
+                <div className="flex items-center gap-2">
+                  <ChevronRight className="w-4 h-4 transition-transform group-open:rotate-90" />
+                  {/* @ts-ignore */}
+                  {fullPath && typeof window !== 'undefined' && window.electron ? (
+                    <span
+                      className="font-semibold"
+                      style={{
+                        textDecoration: 'underline',
+                        color: 'inherit',
+                        cursor: 'pointer',
+                        userSelect: 'none',
+                      }}
+                      onClick={openFile}
+                    >
+                      {truncateFilePath(fullPath)}
+                    </span>
+                  ) : (
+                    <span
+                      className="font-semibold"
+                      style={{ color: 'inherit', userSelect: 'none' }}
+                    >
+                      {fileIdentifier.split('/').slice(-1)}
+                    </span>
+                  )}
+                </div>
+              </summary>
+              <div className="p-4">
+                {record.taggedTokens.map((token, tokenIndex) => {
+                  const isLastToken = tokenIndex === record.taggedTokens.length - 1;
+                  const nextNonWhitespaceTokenIndex = record.taggedTokens.findIndex(
+                    (t, i) => i > tokenIndex && t[0].trim() !== ''
+                  );
+                  const nextToken =
+                    nextNonWhitespaceTokenIndex !== -1
+                      ? record.taggedTokens[nextNonWhitespaceTokenIndex]
+                      : null;
+                  const differentTagThanNext = nextToken !== null && nextToken[1] !== token[1];
+                  return (
+                    <HighlightedToken
+                      key={`${index}-${tokenIndex}`}
+                      token={token[0]}
+                      tag={tagFilters[token[1]] ? token[1] : 'O'}
+                      tagColors={tagColors}
+                      labeled={isLastToken || differentTagThanNext}
+                    />
+                  );
+                })}
+                ...
+                <p className="text-gray-500 text-xs">
+                  Truncated File View. Please open the original file for the entire content.
+                </p>
               </div>
-            </summary>
-            <div className="p-4">
-              {record.taggedTokens.map((token, tokenIndex) => {
-                const isLastToken = tokenIndex === record.taggedTokens.length - 1;
-                const nextNonWhitespaceTokenIndex = record.taggedTokens.findIndex(
-                  (t, i) => i > tokenIndex && t[0].trim() !== ''
-                );
-                const nextToken =
-                  nextNonWhitespaceTokenIndex !== -1
-                    ? record.taggedTokens[nextNonWhitespaceTokenIndex]
-                    : null;
-                const differentTagThanNext = nextToken !== null && nextToken[1] !== token[1];
-                return (
-                  <HighlightedToken
-                    key={`${index}-${tokenIndex}`}
-                    token={token[0]}
-                    tag={tagFilters[token[1]] ? token[1] : 'O'}
-                    tagColors={tagColors}
-                    labeled={isLastToken || differentTagThanNext}
-                  />
-                );
-              })}
-              ...
-              <p className="text-gray-500 text-xs">
-                Truncated File View. Please open the original file for the entire content.
-              </p>
-            </div>
-          </details>
-        );
-      })}
+            </details>
+          );
+        })
+      )}
     </div>
   );
 }
