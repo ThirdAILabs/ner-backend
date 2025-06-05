@@ -201,7 +201,7 @@ func LoadOnnxModel(modelDir string) (Model, error) {
 }
 
 func (m *OnnxModel) Predict(text string) ([]types.Entity, error) {
-	cleanedText, spans := CleanTextWithSpans(text)
+	cleanedText, originalSpans := CleanTextWithSpans(text)
 	enc := m.tokenizer.EncodeWithOptions(cleanedText, false, tokenizers.WithReturnAllAttributes())
 	ids := make([]int64, len(enc.IDs))
 	for i, v := range enc.IDs {
@@ -260,19 +260,35 @@ func (m *OnnxModel) Predict(text string) ([]types.Entity, error) {
 		}
 	}
 
+	spans := make([][2]int, len(groups))
+	for wid, offs := range groups {
+		if len(offs) == 0 {
+			spans[wid] = [2]int{0, 0}
+		} else {
+			spans[wid] = [2]int{
+				int(offs[0][0]),
+				int(offs[len(offs)-1][1]),
+			}
+		}
+	}
+
 	wordTags = FilterWordTags(cleanedText, spans, wordTags)
 
 	var ents []types.Entity
-	for i, tag := range wordTags {
-		if tag == "O" || i >= len(spans) {
+	for wid, offs := range groups {
+		if len(offs) == 0 {
 			continue
 		}
-		start, end := spans[i][0], spans[i][1]
+		tag := wordTags[wid]
+		if tag == "O" {
+			continue
+		}
+
 		ents = append(ents, types.CreateEntity(
 			tag,
-			text[start:end],
-			start,
-			end,
+			text,
+			originalSpans[wid][0],
+			originalSpans[wid][1],
 		))
 	}
 	return ents, nil
