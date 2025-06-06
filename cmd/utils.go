@@ -221,8 +221,9 @@ func InitializeBoltModel(db *gorm.DB, s3 storage.Provider, modelBucket, name, ho
 	}
 
 	if result.RowsAffected == 0 && model.Status == database.ModelTrained {
-		slog.Info("bolt model already exists, skipping initialization", "model_id", modelId)
-		return nil
+		// TODO: only overwrite the blob store if there are any changes to the model
+		slog.Info("bolt model already exists in db, overwriting blob store", "model_id", model.Id)
+		modelId = model.Id
 	}
 
 	status := database.ModelFailed

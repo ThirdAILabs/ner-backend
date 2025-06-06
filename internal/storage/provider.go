@@ -21,7 +21,7 @@ type Provider interface {
 
 	PutObject(ctx context.Context, bucket, key string, data io.Reader) error
 
-	DownloadDir(ctx context.Context, bucket, prefix, dest string) error
+	DownloadDir(ctx context.Context, bucket, prefix, dest string, overwrite bool) error
 
 	UploadDir(ctx context.Context, bucket, prefix, src string) error
 
