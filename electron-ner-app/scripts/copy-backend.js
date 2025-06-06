@@ -15,7 +15,7 @@ const backendExecutable = path.join(goProjectDir, 'main');
 const targetExecutable = path.join(binDir, 'main');
 
 // Plugin paths
-const pluginDir = path.join(projectRoot, 'plugin');
+const pluginDir = path.join(projectRoot, '..', 'plugin/plugin-python/dist/plugin');
 const targetPluginDir = path.join(binDir, 'plugin');
 
 // Ensure bin directory exists

@@ -173,7 +173,7 @@ func initializeModel(
 }
 
 func InitializeCnnNerExtractor(ctx context.Context, db *gorm.DB, s3p storage.Provider, bucket, name, hostModelDir string) error {
-	slog.Info("initializing bolt model", "model_name", "cnn_model", "local_model_path", filepath.Join(hostModelDir, "cnn_model"))
+	slog.Info("initializing CNN model", "model_name", "cnn_model", "local_model_path", filepath.Join(hostModelDir, "cnn_model"))
 	return initializeModel(ctx, db, s3p, bucket,
 		name, "cnn", filepath.Join(hostModelDir, "cnn_model"),
 		commonModelTags,
