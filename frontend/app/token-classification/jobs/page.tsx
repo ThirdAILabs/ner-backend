@@ -230,9 +230,9 @@ function JobDetail() {
   function setDataProcessedFromReport(report: Report | null) {
     if (report) {
       setDataProcessed(
-        (report.InferenceTaskStatuses?.COMPLETED?.TotalSize || 0) +
-          (report.InferenceTaskStatuses?.FAILED?.TotalSize || 0) +
-          (report.InferenceTaskStatuses?.RUNNING?.TotalSize || 0)
+        (report.InferenceTaskStatuses?.COMPLETED?.CompletedSize || 0) +
+          (report.InferenceTaskStatuses?.FAILED?.CompletedSize || 0) +
+          (report.InferenceTaskStatuses?.RUNNING?.CompletedSize || 0)
       );
     }
   }
