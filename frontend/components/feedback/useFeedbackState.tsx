@@ -75,16 +75,21 @@ const useFeedbackState = (modelId: string, reportId: string) => {
     setFeedback(feedback.filter((feedback) => feedback.id !== id));
   }
 
-  const displayedFeedback: { id: string; tokens: DisplayedToken[] }[] = feedback.map((f) => {
+  const displayedFeedback: { id: string; tokens: DisplayedToken[]; spotlightStartIndex: number; spotlightEndIndex: number }[] = feedback.map((f) => {
+    const toWords = (text: string) => {
+      return text.split(/\s+/).filter((word) => word.trim() !== '');
+    }
+    const leftContextWords = toWords(f.body.leftContext);
+    const highlightedWords = toWords(f.body.highlightedText);
+    const rightContextWords = toWords(f.body.rightContext);
+    const spotlightStartIndex = leftContextWords.length;
+    const spotlightEndIndex = spotlightStartIndex + highlightedWords.length - 1;
     const tokens = [
-      { text: f.body.leftContext, tag: 'O' },
-      { text: f.body.highlightedText, tag: f.body.tag },
-      { text: f.body.rightContext, tag: 'O' }
-    ].flatMap((token) => { 
-      const {text, tag} = token;
-      return text.split(/\s+/).filter((word) => word.trim() !== '').map((word) => ({ text: word, tag }));
-    })
-    return { id: f.id, tokens };
+      ...leftContextWords.map((word) => ({ text: word, tag: 'O' })),
+      ...highlightedWords.map((word) => ({ text: word, tag: f.body.tag })),
+      ...rightContextWords.map((word) => ({ text: word, tag: 'O' }))
+    ];
+    return { id: f.id, tokens, spotlightStartIndex, spotlightEndIndex };
   });
 
   return {

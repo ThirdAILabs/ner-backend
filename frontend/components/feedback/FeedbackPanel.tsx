@@ -8,7 +8,7 @@ interface Token {
 }
 
 interface FeedbackPanelProps {
-  feedbacks: { id: string; tokens: Token[] }[];
+  feedbacks: { id: string; tokens: Token[]; spotlightStartIndex: number; spotlightEndIndex: number }[];
   availableTags: string[];
   onDelete: (id: string) => void;
   onSubmit: () => void;
@@ -18,10 +18,12 @@ interface FeedbackRowProps {
   id: string;
   tokens: Token[];
   availableTags: string[];
+  spotlightStartIndex: number;
+  spotlightEndIndex: number;
   onDelete: (id: string) => void;
 }
 
-const FeedbackRow: React.FC<FeedbackRowProps> = ({ id, tokens, availableTags, onDelete }) => {
+const FeedbackRow: React.FC<FeedbackRowProps> = ({ id, tokens, availableTags, spotlightStartIndex, spotlightEndIndex, onDelete }) => {
   const [confirm, setConfirm] = useState(false);
   const confirmBtnRef = useRef<HTMLButtonElement | null>(null);
 
@@ -42,7 +44,7 @@ const FeedbackRow: React.FC<FeedbackRowProps> = ({ id, tokens, availableTags, on
   return (
     <div className="flex items-start justify-between w-full gap-2 py-2">
       <div className="flex-grow min-w-0">
-        <TokenHighlighter tokens={tokens} availableTags={availableTags} />
+        <TokenHighlighter tokens={tokens} availableTags={availableTags} spotlightStartIndex={spotlightStartIndex} spotlightEndIndex={spotlightEndIndex} />
       </div>
       <div className="flex-shrink-0 ml-2 flex mt-1">
         {confirm ? (
@@ -69,11 +71,13 @@ const FeedbackRow: React.FC<FeedbackRowProps> = ({ id, tokens, availableTags, on
 
 export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({ feedbacks, availableTags, onDelete, onSubmit }) => {
   const [collapsed, setCollapsed] = useState(feedbacks.length === 0);
+  const prevFeedbackCountRef = useRef(feedbacks.length);
 
   useEffect(() => {
-    if (feedbacks.length > 0) {
-        setCollapsed(false);
+    if (prevFeedbackCountRef.current === 0 && feedbacks.length > 0) {
+      setCollapsed(false);
     }
+    prevFeedbackCountRef.current = feedbacks.length;
   }, [feedbacks]);
 
   return (
@@ -112,6 +116,8 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({ feedbacks, availab
                 id={fb.id}
                 tokens={fb.tokens}
                 availableTags={availableTags}
+                spotlightStartIndex={fb.spotlightStartIndex}
+                spotlightEndIndex={fb.spotlightEndIndex}
                 onDelete={onDelete}
               />
             ))}

@@ -14,6 +14,8 @@ interface HighlightColor {
 interface TokenHighlighterProps {
   tokens: DisplayedToken[];
   availableTags: string[];
+  spotlightStartIndex?: number;
+  spotlightEndIndex?: number;
   editable?: boolean;
   onTagAssign?: (startIndex: number, endIndex: number, newTag: string) => void;
 }
@@ -22,10 +24,13 @@ const SELECTING_COLOR = '#EFEFEF';
 const PASTELS = ['#E5A49C', '#F6C886', '#FBE7AA', '#99E3B5', '#A6E6E7', '#A5A1E1', '#D8A4E2'];
 const DARKERS = ['#D34F3E', '#F09336', '#F7CF5F', '#5CC96E', '#65CFD0', '#597CE2', '#B64DC8'];
 const DEFAULT_COLOR = { text: 'transparent', tag: '#A0A0A0' };
+const REMOVE_TAG_NAME = 'Remove Tag';
 
 export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
   tokens,
   availableTags,
+  spotlightStartIndex,
+  spotlightEndIndex,
   editable = false,
   onTagAssign,
 }) => {
@@ -95,6 +100,9 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
   const handleTagSelect = (tag: string) => {
     if (!editable) return;
     if (selectionStart === null || selectionEnd === null) return;
+    if (tag === REMOVE_TAG_NAME) {
+      tag = 'O';
+    }
     const start = Math.min(selectionStart, selectionEnd);
     const end = Math.max(selectionStart, selectionEnd);
     setQuery('');
@@ -107,9 +115,13 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
     setDropdownPosition(null);
   };
 
-  const filteredTags = query
-    ? availableTags.filter((tag) => tag.toLowerCase().includes(query.toLowerCase()))
-    : availableTags;
+  const filteredTags = [
+    REMOVE_TAG_NAME,
+    ...(query
+      ? availableTags.filter((tag) => tag.toLowerCase().includes(query.toLowerCase()))
+      : availableTags
+    )
+  ];
 
   const queryMatchesTag = query && availableTags.some(tag => tag.toLowerCase() === query.toLowerCase());
 
@@ -128,6 +140,7 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
           const startIndex = selectionStart && selectionEnd ? Math.min(selectionStart, selectionEnd) : tokens.length;
           const endIndex = selectionStart && selectionEnd ? Math.max(selectionStart, selectionEnd) : -1;
           const isSelected = index >= startIndex && index <= endIndex;
+          const isSpotlighted = spotlightStartIndex && spotlightEndIndex && index >= spotlightStartIndex && index <= spotlightEndIndex;
           return (
             <span
               key={index}
@@ -144,6 +157,7 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
                     ? '#EFEFEF'
                     : tagColors[token.tag]?.text || DEFAULT_COLOR.text,
                 color: 'black',
+                border: isSpotlighted && token.tag === 'O' ? '1px dotted #666' : 'none'
               }}
               onMouseDown={() => handleMouseDown(index)}
             >
