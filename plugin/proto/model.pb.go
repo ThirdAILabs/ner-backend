@@ -484,6 +484,7 @@ func (x *FinetuneResponse) GetSuccess() bool {
 type SaveRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Dir           string                 `protobuf:"bytes,1,opt,name=dir,proto3" json:"dir,omitempty"`
+	ExportOnnx    bool                   `protobuf:"varint,2,opt,name=export_onnx,json=exportOnnx,proto3" json:"export_onnx,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -523,6 +524,13 @@ func (x *SaveRequest) GetDir() string {
 		return x.Dir
 	}
 	return ""
+}
+
+func (x *SaveRequest) GetExportOnnx() bool {
+	if x != nil {
+		return x.ExportOnnx
+	}
+	return false
 }
 
 type SaveResponse struct {
@@ -599,9 +607,11 @@ const file_model_proto_rawDesc = "" +
 	"\x04tags\x18\x02 \x03(\v2\x0e.proto.TagInfoR\x04tags\x12'\n" +
 	"\asamples\x18\x03 \x03(\v2\r.proto.SampleR\asamples\",\n" +
 	"\x10FinetuneResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\"\x1f\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"@\n" +
 	"\vSaveRequest\x12\x10\n" +
-	"\x03dir\x18\x01 \x01(\tR\x03dir\"(\n" +
+	"\x03dir\x18\x01 \x01(\tR\x03dir\x12\x1f\n" +
+	"\vexport_onnx\x18\x02 \x01(\bR\n" +
+	"exportOnnx\"(\n" +
 	"\fSaveResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess2\xf8\x01\n" +
 	"\x05Model\x128\n" +
