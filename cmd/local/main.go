@@ -168,7 +168,7 @@ func main() {
 	}
 
 	if cfg.OnnxModelPath != "" {
-		if err := cmd.InitializeOnnxModel(db, storage, modelBucket, "advanced", cfg.OnnxModelPath); err != nil {
+		if err := cmd.InitializeOnnxModel(db, storage, modelBucket, "basic", cfg.OnnxModelPath); err != nil {
 			log.Fatalf("failed to init ONNX model: %v", err)
 		}
 	} else {
@@ -182,7 +182,7 @@ func main() {
 	worker := core.NewTaskProcessor(db, storage, queue, queue, licensing, filepath.Join(cfg.Root, "models"), modelBucket, core.NewModelLoaders("python", "plugin/plugin-python/plugin.py"))
 
 	var onnxModel database.Model
-	if err := db.Where("name = ?", "advanced").First(&onnxModel).Error; err != nil {
+	if err := db.Where("name = ?", "basic").First(&onnxModel).Error; err != nil {
 		log.Fatalf("could not lookup onnx model: %v", err)
 	}
 
