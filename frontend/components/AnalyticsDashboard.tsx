@@ -83,17 +83,24 @@ export function AnalyticsDashboard({
       <div className="grid grid-cols-3 gap-4">
         {/* Progress Widget */}
         <Card className="flex flex-col justify-between hover:shadow-lg transition-all duration-300 bg-gradient-to-br from-white to-gray-50/50">
-          <CardContent className="flex flex-col pt-4 pb-3 h-full"> {/* Reduced padding */}
-            <div className="flex items-center space-x-2 mb-4"> {/* Reduced margin */}
-              <div className="p-1.5 bg-indigo-100 rounded-lg"> {/* Reduced padding */}
+          <CardContent className="flex flex-col pt-4 pb-3 h-full">
+            {' '}
+            {/* Reduced padding */}
+            <div className="flex items-center space-x-2 mb-4">
+              {' '}
+              {/* Reduced margin */}
+              <div className="p-1.5 bg-indigo-100 rounded-lg">
+                {' '}
+                {/* Reduced padding */}
                 <CheckCircle2 className="h-4 w-4 text-indigo-600" /> {/* Smaller icon */}
               </div>
               <h3 className="text-sm font-semibold text-gray-700">Processing Status</h3>
             </div>
-
             <div className="flex-1 flex items-center justify-between">
               {/* Progress Circle - Made smaller */}
-              <div className="relative h-28 w-28"> {/* Reduced size */}
+              <div className="relative h-28 w-28">
+                {' '}
+                {/* Reduced size */}
                 <svg className="h-full w-full -rotate-90 transform" viewBox="0 0 120 120">
                   {/* Gradient Definitions */}
                   <defs>
@@ -133,42 +140,45 @@ export function AnalyticsDashboard({
                     className="transition-all duration-500 ease-in-out"
                   />
                 </svg>
-
                 {/* Adjusted center text size */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-xl font-bold text-gray-800">
-                    {progress.toFixed(0)}%
-                  </span>
+                  <span className="text-xl font-bold text-gray-800">{progress.toFixed(0)}%</span>
                   <span className="text-[10px] font-medium text-gray-500">Complete</span>
                 </div>
               </div>
 
               {/* Stats Section - Adjusted spacing */}
-              <div className="flex flex-col space-y-3 pl-4"> {/* Reduced spacing */}
+              <div className="flex flex-col space-y-3 pl-4">
+                {' '}
+                {/* Reduced spacing */}
                 <div className="flex flex-col">
                   <div className="flex items-center space-x-2">
                     <div className="h-2.5 w-2.5 rounded-full bg-gradient-to-r from-green-500 to-green-600"></div>
                     <span className="text-xs font-medium text-gray-600">Success</span>
                   </div>
-                  <span className="text-xl font-bold text-gray-800 ml-4"> {/* Smaller text */}
+                  <span className="text-xl font-bold text-gray-800 ml-4">
+                    {' '}
+                    {/* Smaller text */}
                     {filesSucceeded.toFixed(1)}%
                   </span>
                 </div>
-
                 <div className="flex flex-col">
                   <div className="flex items-center space-x-2">
                     <div className="h-2.5 w-2.5 rounded-full bg-gradient-to-r from-red-500 to-red-600"></div>
                     <span className="text-xs font-medium text-gray-600">Failed</span>
                   </div>
-                  <span className="text-xl font-bold text-gray-800 ml-4"> {/* Smaller text */}
+                  <span className="text-xl font-bold text-gray-800 ml-4">
+                    {' '}
+                    {/* Smaller text */}
                     {filesFailed.toFixed(1)}%
                   </span>
                 </div>
               </div>
             </div>
-
             {/* Status text */}
-            <div className="mt-3 text-center"> {/* Reduced margin */}
+            <div className="mt-3 text-center">
+              {' '}
+              {/* Reduced margin */}
               <span className="text-xs font-medium text-gray-500">
                 {totalFileCount} Total Files
               </span>
@@ -183,9 +193,7 @@ export function AnalyticsDashboard({
               <div className="p-2 bg-blue-100 rounded-lg">
                 <HardDrive className="h-5 w-5 text-blue-600" />
               </div>
-              <h3 className="text-sm font-semibold text-gray-700">
-                Data Successfully Processed
-              </h3>
+              <h3 className="text-sm font-semibold text-gray-700">Data Successfully Processed</h3>
             </div>
             <div className="flex-1 flex items-center justify-center pb-4">
               <div className="flex flex-col items-center">
@@ -226,19 +234,17 @@ export function AnalyticsDashboard({
               <div className="p-2 bg-purple-100 rounded-lg">
                 <Clock className="h-5 w-5 text-purple-600" />
               </div>
-              <h3 className="text-sm font-semibold text-gray-700">
-                Processing Duration
-              </h3>
+              <h3 className="text-sm font-semibold text-gray-700">Processing Duration</h3>
             </div>
             <div className="flex-1 flex flex-col items-center justify-center pb-4">
-              <span className={`font-bold tracking-tight bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent ${timeTakenToTextSize(formattedTime)}`}>
+              <span
+                className={`font-bold tracking-tight bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent ${timeTakenToTextSize(formattedTime)}`}
+              >
                 {formattedTime}
               </span>
               <div className="flex items-center space-x-2 mt-2">
                 <span className="px-2 py-1 bg-purple-100 rounded-full text-sm font-medium text-purple-800">
-                  {timeTaken < 60 ? 'Seconds' :
-                    timeTaken < 3600 ? 'Minutes' :
-                      'Hours'}
+                  {timeTaken < 60 ? 'Seconds' : timeTaken < 3600 ? 'Minutes' : 'Hours'}
                 </span>
                 <span className="text-sm text-gray-500">Elapsed</span>
               </div>
