@@ -85,19 +85,15 @@ export function AnalyticsDashboard({
         <Card className="flex flex-col justify-between hover:shadow-lg transition-all duration-300 bg-gradient-to-br from-white to-gray-50/50">
           <CardContent className="flex flex-col pt-4 pb-3 h-full">
             {' '}
-            {/* Reduced padding */}
             <div className="flex items-center space-x-2 mb-4">
               {' '}
-              {/* Reduced margin */}
               <div className="p-1.5 bg-indigo-100 rounded-lg">
                 {' '}
-                {/* Reduced padding */}
-                <CheckCircle2 className="h-4 w-4 text-indigo-600" /> {/* Smaller icon */}
+                <CheckCircle2 className="h-4 w-4 text-indigo-600" />
               </div>
-              <h3 className="text-sm font-semibold text-gray-700">Processing Status</h3>
+              <h3 className="text-sm font-semibold text-gray-700">File Progress</h3>
             </div>
             <div className="flex-1 flex items-center justify-between">
-              {/* Progress Circle - Made smaller */}
               <div className="relative h-28 w-28">
                 {' '}
                 {/* Reduced size */}
