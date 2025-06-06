@@ -56,7 +56,6 @@ class CNNModel:
             os.makedirs(onnx_dir, exist_ok=True)
             export(
                 self.model,
-                self.tag2idx,
                 onnx_dir,
             )
 

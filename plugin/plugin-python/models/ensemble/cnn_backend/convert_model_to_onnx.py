@@ -47,7 +47,7 @@ class EmissionModel(nn.Module):
         return emissions
 
 
-def export(model: CNNNERModelSentenceTokenized, tag2idx:dict, onnx_out: str, max_seq_len: int = 128):
+def export(model: CNNNERModelSentenceTokenized, onnx_out: str, max_seq_len: int = 128):
     device = torch.device("cpu")
     model.eval()
 
