@@ -1,4 +1,5 @@
 import { Tag } from '@/components/AnalyticsDashboard';
+import { FeedbackMetadata } from '@/components/feedback/useFeedbackState';
 
 export interface ObjectDatabaseRecord {
   taggedTokens: [string, string][];
@@ -24,6 +25,7 @@ export interface DatabaseTableProps {
   groups: string[];
   tags: Tag[];
   uploadId?: string;
+  addFeedback: (tokens: FeedbackMetadata, objectTokens: string[], objectTags: string[]) => void;
 }
 
 export interface TableContentProps {
@@ -40,6 +42,7 @@ export interface TableContentProps {
   onLoadMore?: () => void;
   showFilterContent: boolean;
   pathMap?: Record<string, string>;
+  addFeedback: (tokens: FeedbackMetadata, objectTokens: string[], objectTags: string[]) => void;
 }
 
 export type ViewMode = 'object' | 'classified-token';

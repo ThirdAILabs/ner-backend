@@ -4,31 +4,29 @@
 
 import React, { useState, useRef, useMemo } from 'react';
 import { Menu, MenuItem } from '@mui/material';
-
-interface Token {
-  text: string;
-  tag: string;
-}
+import { DisplayedToken } from '@/components/feedback/useFeedbackState';
 
 interface HighlightColor {
   text: string;
   tag: string;
 }
 
-interface FeedbackProps {
-  tokens: Token[];
+interface TokenHighlighterProps {
+  tokens: DisplayedToken[];
   availableTags: string[];
+  editable?: boolean;
   onTagAssign?: (startIndex: number, endIndex: number, newTag: string) => void;
 }
 
 const SELECTING_COLOR = '#EFEFEF';
 const PASTELS = ['#E5A49C', '#F6C886', '#FBE7AA', '#99E3B5', '#A6E6E7', '#A5A1E1', '#D8A4E2'];
 const DARKERS = ['#D34F3E', '#F09336', '#F7CF5F', '#5CC96E', '#65CFD0', '#597CE2', '#B64DC8'];
-const DEFAULT_COLOR = { text: 'white', tag: '#A0A0A0' };
+const DEFAULT_COLOR = { text: 'transparent', tag: '#A0A0A0' };
 
-export const Feedback: React.FC<FeedbackProps> = ({
+export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
   tokens,
   availableTags,
+  editable = false,
   onTagAssign,
 }) => {
   const [selectionStart, setSelectionStart] = useState<number | null>(null);
@@ -55,12 +53,14 @@ export const Feedback: React.FC<FeedbackProps> = ({
   }, [availableTags]);
 
   const handleMouseDown = (index: number) => {
+    if (!editable) return;
     setSelectionStart(index);
     setSelectionEnd(index);
     setIsSelecting(true);
   };
 
   const handleMouseOver = (index: number) => {
+    if (!editable) return;
     setHoveredIndex(index);
     if (selectionStart !== null) {
       setSelectionEnd(index);
@@ -68,17 +68,20 @@ export const Feedback: React.FC<FeedbackProps> = ({
   };
 
   const handleMouseLeaveToken = (e: React.MouseEvent) => {
+    if (!editable) return;
     setHoveredIndex(null);
     e.stopPropagation();
   };
 
   const handleMouseLeaveFeedbackBox = () => {
+    if (!editable) return;
     setIsSelecting(false);
     setSelectionStart(null);
     setSelectionEnd(null);
   };
 
   const handleMouseUp = (event: React.MouseEvent) => {
+    if (!editable) return;
     if (isSelecting) {
       setDropdownPosition({
         x: event.clientX,
@@ -90,6 +93,7 @@ export const Feedback: React.FC<FeedbackProps> = ({
   };
 
   const handleTagSelect = (tag: string) => {
+    if (!editable) return;
     if (selectionStart === null || selectionEnd === null) return;
     const start = Math.min(selectionStart, selectionEnd);
     const end = Math.max(selectionStart, selectionEnd);
@@ -130,13 +134,13 @@ export const Feedback: React.FC<FeedbackProps> = ({
               onMouseOver={() => handleMouseOver(index)}
               onMouseLeave={handleMouseLeaveToken}
               className={[
-                `inline-flex items-center cursor-pointer select-none rounded-sm m-0 py-0.5 ${token.tag === 'O' ? 'px-0.5' : 'px-1'}`,
+                `inline-flex items-center ${editable ? 'cursor-pointer' : 'cursor-default'} select-none rounded-sm m-0 py-0.5 ${token.tag === 'O' ? 'px-0.5' : 'px-1'}`,
               ].join(' ')}
               style={{
                 backgroundColor:
                   isSelected
                     ? SELECTING_COLOR
-                    : hoveredIndex === index
+                    : hoveredIndex === index && editable
                     ? '#EFEFEF'
                     : tagColors[token.tag]?.text || DEFAULT_COLOR.text,
                 color: 'black',

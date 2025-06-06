@@ -96,6 +96,11 @@ export interface ChatResponse {
   TagMap: Record<string, string>;
 }
 
+export interface Feedback {
+  tokens: string[];
+  labels: string[];
+}
+
 // Add a utility function to handle API errors with custom messages
 const handleApiError = (error: unknown, customMessage?: string): never => {
   console.error('API Error:', error);
@@ -429,5 +434,10 @@ export const nerService = {
     const { data } = await axiosInstance.get(`/file-name-to-path/${uploadId}`);
     console.log('getFileNameToPath', data);
     return data.Mapping as { [filename: string]: string };
+  },
+
+  submitFeedback: async (modelId: string, feedback: Feedback) => {
+    const { data } = await axiosInstance.post(`/models/${modelId}/feedback`, feedback);
+    return data;
   },
 };

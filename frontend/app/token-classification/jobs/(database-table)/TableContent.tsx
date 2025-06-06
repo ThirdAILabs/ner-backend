@@ -5,7 +5,8 @@ import { TableContentProps } from './types';
 import { Button } from '@/components/ui/button';
 import { NO_GROUP } from '@/lib/utils';
 import { ChevronRight } from 'lucide-react';
-import { Feedback } from '@/components/feedback/Feedback';
+import { TokenHighlighter } from '@/components/feedback/TokenHighlighter';
+import * as _ from 'lodash';
 
 const PASTELS = ['#E5A49C', '#F6C886', '#FBE7AA', '#99E3B5', '#A6E6E7', '#A5A1E1', '#D8A4E2'];
 const DARKERS = ['#D34F3E', '#F09336', '#F7CF5F', '#5CC96E', '#65CFD0', '#597CE2', '#B64DC8'];
@@ -175,6 +176,7 @@ export function TableContent({
   onLoadMore,
   showFilterContent,
   pathMap,
+  addFeedback,
 }: TableContentProps) {
   const tagColors = useMemo(() => {
     const colors: Record<string, HighlightColor> = {};
@@ -229,22 +231,19 @@ export function TableContent({
         </TableHeader>
         <TableBody>
           {filteredRecords.length > 0 ? (
-            filteredRecords.map((record, index) => (
+            filteredRecords.map((record, index) => {
+              let tokens = [
+                [record.context?.left || '', 'O'],
+                [record.token, record.tag],
+                [record.context?.right || '', 'O'],
+              ].flatMap((token) => token[0].split(/\s+/).filter((word) => word.trim() !== '').map((word) => ({ text: word, tag: token[1] })));
+              return(
               <TableRow key={index}>
                 <TableCell className="w-3/5">
-                  {record.context ? (
-                    <TokenContext
-                      context={{
-                        left: record.context.left,
-                        right: record.context.right,
-                        token: record.token,
-                        tag: record.tag,
-                      }}
-                      tagColors={tagColors}
-                    />
-                  ) : (
-                    <span className="text-red-400 text-xs">Missing context</span>
-                  )}
+                  <TokenHighlighter
+                    tokens={tokens}
+                    availableTags={tags.map((tag) => tag.type)}
+                  />
                 </TableCell>
                 <TableCell className="w-1/5 px-4">
                   <div className="relative group">
@@ -280,7 +279,8 @@ export function TableContent({
                   </div>
                 </TableCell>
               </TableRow>
-            ))
+            )
+          })
           ) : (
             <TableRow>
               <TableCell colSpan={2} className="text-center py-8 text-gray-500">
@@ -299,18 +299,6 @@ export function TableContent({
               </TableCell>
             </TableRow>
           )}
-
-          {/* {filteredRecords.length > 0 && (
-            <TableRow>
-              <TableCell colSpan={2}>
-                <LoadMoreButton
-                  hasMore={hasMoreTokens}
-                  isLoading={isLoadingTokenRecords}
-                  onClick={onLoadMore ?? (() => {})}
-                />
-              </TableCell>
-            </TableRow>
-          )} */}
         </TableBody>
       </>
     );
@@ -330,6 +318,30 @@ export function TableContent({
         filteredRecords.map((record, index) => {
           const fileIdentifier = record.sourceObject;
           const { fullPath, openFile } = handleFullPath(fileIdentifier);
+          const tokens = record.taggedTokens.flatMap((token) => { 
+            const [text, tag] = token;
+            return text.split(/\s+/).filter((word) => word.trim() !== '').map((word) => ({ text: word, tag }));
+          });
+
+          const onTagAssign = (startIndex: number, endIndex: number, newTag: string) => {
+            const leftContext = tokens.slice(Math.max(0, startIndex - 5), startIndex).map(t => t.text).join(' ');
+            const highlightedText = tokens.slice(startIndex, endIndex + 1).map(t => t.text).join(' ');
+            const rightContext = tokens.slice(endIndex + 1, Math.min(endIndex + 6, tokens.length)).map(t => t.text).join(' ');
+            addFeedback(
+              {
+                highlightedText,
+                tag: newTag,
+                leftContext,
+                rightContext,
+                startIndex,
+                endIndex,
+                objectId: fileIdentifier,
+              },
+              tokens.map((token) => token.text),
+              tokens.map((token) => token.tag)
+            );
+          };
+
           return (
             <details
               key={index}
@@ -363,17 +375,11 @@ export function TableContent({
                 </div>
               </summary>
               <div className="p-4">
-                <Feedback
-                  tokens={record.taggedTokens.flatMap((token) => { 
-                    if (token[1] === 'O') {
-                      return token[0].split(/\s+/).filter((word) => word.trim() !== '').map((word) => ({ text: word, tag: 'O' }));
-                    }
-                    return [{ text: token[0], tag: token[1] }];
-                  })}
+                <TokenHighlighter
+                  tokens={tokens}
+                  editable
                   availableTags={tags.map((tag) => tag.type)}
-                  onTagAssign={(startIndex: number, endIndex: number, newTag: string) => {
-                    console.log(`Assigning tag ${newTag} to tokens from index ${startIndex} to ${endIndex}`);
-                  }}
+                  onTagAssign={onTagAssign}
                 />
                 ...
                 <p className="text-gray-500 text-xs">
