@@ -113,7 +113,7 @@ func (ner *NER) Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sa
 	return nil
 }
 
-func (ner *NER) Save(path string) error {
+func (ner *NER) Save(path string, exportOnnx bool) error {
 	modelPath := filepath.Join(path, "model.bin")
 	cPath := C.CString(modelPath)
 	defer C.free(unsafe.Pointer(cPath))

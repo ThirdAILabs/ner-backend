@@ -484,6 +484,7 @@ func (x *FinetuneResponse) GetSuccess() bool {
 type SaveRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Dir           string                 `protobuf:"bytes,1,opt,name=dir,proto3" json:"dir,omitempty"`
+	ExportOnnx bool                    	 `protobuf:"varint,2,opt,name=export_onnx,json=exportOnnx,proto3" json:"export_onnx,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

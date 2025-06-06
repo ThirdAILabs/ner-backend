@@ -68,7 +68,7 @@ func (m *regexModel) Finetune(taskPrompt string, tags []api.TagInfo, samples []a
 	return nil
 }
 
-func (m *regexModel) Save(modelDir string) error {
+func (m *regexModel) Save(modelDir string, exportOnnx bool) error {
 	data := make(map[string]string)
 	for label, pattern := range m.patterns {
 		data[label] = pattern.String()

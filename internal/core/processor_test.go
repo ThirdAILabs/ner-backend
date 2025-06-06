@@ -42,7 +42,7 @@ func (m *regexModel) Finetune(taskPrompt string, tags []api.TagInfo, samples []a
 	return nil
 }
 
-func (m *regexModel) Save(path string) error {
+func (m *regexModel) Save(path string, exportOnnx bool) error {
 	return nil
 }
 

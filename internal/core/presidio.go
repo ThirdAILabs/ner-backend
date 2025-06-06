@@ -246,7 +246,7 @@ func (m *PresidioModel) Finetune(taskPrompt string, tags []api.TagInfo, samples 
 	return fmt.Errorf("finetune not supported for presidio model")
 }
 
-func (m *PresidioModel) Save(path string) error {
+func (m *PresidioModel) Save(path string, exportOnnx bool) error {
 	return fmt.Errorf("save not supported for presidio model")
 }
 

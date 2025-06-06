@@ -5,7 +5,7 @@ import os
 from transformers import AutoTokenizer
 
 from .impl import CNNNERModelSentenceTokenized
-
+from .convert_model_to_onnx import export
 
 class CNNModel:
     def __init__(
@@ -48,5 +48,15 @@ class CNNModel:
             batch_size=batch_size,
         )
 
-    def save(self, dir: str) -> None:
-        torch.save(self.model.state_dict(), os.path.join(dir, "cnn_model.pth"))
+    def save(self, dir: str, export_onnx: bool = False) -> None:
+        cnn_model_path = os.path.join(dir, "cnn_model.pth")
+        torch.save(self.model.state_dict(), cnn_model_path)
+        if export_onnx:
+            onnx_dir = os.path.join(dir, "onnx")
+            os.makedirs(onnx_dir, exist_ok=True)
+            export(
+                self.model,
+                self.tag2idx,
+                onnx_dir,
+            )
+

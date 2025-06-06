@@ -20,7 +20,7 @@ type Model interface {
 
 	Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sample) error
 
-	Save(path string) error
+	Save(path string, exportOnnx bool) error
 
 	Release()
 }
