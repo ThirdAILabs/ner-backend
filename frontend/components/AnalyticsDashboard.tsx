@@ -207,9 +207,37 @@ export function AnalyticsDashboard({
                   dataKey="count"
                   fill="#3b82f6"
                   radius={[0, 4, 4, 0]}
-                  onClick={(_, index) => {
-                    setTab?.('output');
-                    setSelectedTab?.(tokenChartData[index].type);
+                  shape={(props: any) => {
+                    const { x, y, width, height, index } = props;
+                    return (
+                      <g
+                        onClick={() => {
+                          if (tokenChartData[index].count > 0) {
+                            setTab?.('output');
+                            setSelectedTab?.(tokenChartData[index].type);
+                          }
+                        }}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <rect
+                          x={x}
+                          y={y}
+                          width={width}
+                          height={height}
+                          fill="#3b82f6"
+                          rx="4"
+                          ry="4"
+                        />
+                        <rect
+                          x={0}
+                          y={y}
+                          width="100%"
+                          height={height}
+                          fill="transparent"
+                          // fill="green"
+                        />
+                      </g>
+                    );
                   }}
                 />
               </BarChart>
