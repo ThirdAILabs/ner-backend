@@ -35,7 +35,7 @@ interface AnalyticsDashboardProps {
   totalFileCount: number;
   dataProcessed: number;
   setTab?: (tab: string) => void;
-  setSelectedTab?: (tab: string) => void;
+  setSelectedTag?: (tag: string) => void;
 }
 
 const formatTime = (time: number): string => {
@@ -71,7 +71,7 @@ export function AnalyticsDashboard({
   totalFileCount,
   dataProcessed,
   setTab,
-  setSelectedTab,
+  setSelectedTag,
 }: AnalyticsDashboardProps) {
   const tokenChartData = tags;
   const progress = ((succeededFileCount + failedFileCount) * 100) / totalFileCount || 0;
@@ -214,7 +214,7 @@ export function AnalyticsDashboard({
                         onClick={() => {
                           if (tokenChartData[index].count > 0) {
                             setTab?.('output');
-                            setSelectedTab?.(tokenChartData[index].type);
+                            setSelectedTag?.(tokenChartData[index].type);
                           }
                         }}
                         style={{ cursor: 'pointer' }}

@@ -213,7 +213,7 @@ function JobDetail() {
   const reportId: string = searchParams.get('jobId') as string;
   const [tabValue, setTabValue] = useState('analytics');
   const [selectedSource, setSelectedSource] = useState<'s3' | 'local'>('s3');
-  const [selectedTab, setSelectedTab] = useState<string | null>(null);
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
   // Remove selectedTags state, just keep availableTags
   const [availableTags, setAvailableTags] = useState<string[]>([]);
@@ -470,7 +470,7 @@ function JobDetail() {
             totalFileCount={reportData?.FileCount || 1}
             dataProcessed={dataProcessed || 0}
             setTab={setTabValue}
-            setSelectedTab={setSelectedTab}
+            setSelectedTag={setSelectedTag}
           />
         </TabsContent>
 
@@ -479,7 +479,7 @@ function JobDetail() {
             groups={reportData?.Groups?.map((g) => g.Name) || []}
             tags={availableTagsCount}
             uploadId={reportData?.IsUpload ? reportData?.SourceS3Prefix : ''}
-            initialSelectedTag={selectedTab}
+            initialSelectedTag={selectedTag}
           />
         </TabsContent>
       </Tabs>
