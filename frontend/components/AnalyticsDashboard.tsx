@@ -96,9 +96,7 @@ export function AnalyticsDashboard({
             <div className="flex-1 flex items-center justify-between">
               <div className="relative h-28 w-28">
                 {' '}
-                {/* Reduced size */}
                 <svg className="h-full w-full -rotate-90 transform" viewBox="0 0 120 120">
-                  {/* Gradient Definitions */}
                   <defs>
                     <linearGradient id="successGradient" x1="0%" y1="0%" x2="100%" y2="0%">
                       <stop offset="0%" stopColor="#22c55e" />
@@ -110,7 +108,6 @@ export function AnalyticsDashboard({
                     </linearGradient>
                   </defs>
 
-                  {/* Adjusted circle radius and stroke width */}
                   <circle cx="60" cy="60" r="52" fill="none" stroke="#f3f4f6" strokeWidth="6" />
                   <circle
                     cx="60"
@@ -136,17 +133,14 @@ export function AnalyticsDashboard({
                     className="transition-all duration-500 ease-in-out"
                   />
                 </svg>
-                {/* Adjusted center text size */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <span className="text-xl font-bold text-gray-800">{progress.toFixed(0)}%</span>
                   <span className="text-[10px] font-medium text-gray-500">Complete</span>
                 </div>
               </div>
 
-              {/* Stats Section - Adjusted spacing */}
               <div className="flex flex-col space-y-3 pl-4">
                 {' '}
-                {/* Reduced spacing */}
                 <div className="flex flex-col">
                   <div className="flex items-center space-x-2">
                     <div className="h-2.5 w-2.5 rounded-full bg-gradient-to-r from-green-500 to-green-600"></div>
@@ -154,7 +148,6 @@ export function AnalyticsDashboard({
                   </div>
                   <span className="text-xl font-bold text-gray-800 ml-4">
                     {' '}
-                    {/* Smaller text */}
                     {filesSucceeded.toFixed(1)}%
                   </span>
                 </div>
@@ -165,16 +158,13 @@ export function AnalyticsDashboard({
                   </div>
                   <span className="text-xl font-bold text-gray-800 ml-4">
                     {' '}
-                    {/* Smaller text */}
                     {filesFailed.toFixed(1)}%
                   </span>
                 </div>
               </div>
             </div>
-            {/* Status text */}
             <div className="mt-3 text-center">
               {' '}
-              {/* Reduced margin */}
               <span className="text-xs font-medium text-gray-500">
                 {totalFileCount} Total Files
               </span>
