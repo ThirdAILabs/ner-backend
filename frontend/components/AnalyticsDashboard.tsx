@@ -82,7 +82,7 @@ export function AnalyticsDashboard({
       {/* Top Widgets */}
       <div className="grid grid-cols-3 gap-4">
         {/* Progress Widget */}
-        <Card className="flex flex-col justify-between hover:shadow-lg transition-all duration-300 bg-gradient-to-br from-white to-gray-50/50">
+        <Card className="flex flex-col justify-between transition-all duration-300 bg-gradient-to-br from-white to-gray-50/50">
           <CardContent className="flex flex-col pt-4 pb-3 h-full">
             {' '}
             <div className="flex items-center space-x-2 mb-4">
@@ -173,7 +173,7 @@ export function AnalyticsDashboard({
         </Card>
 
         {/* Data Processed Widget */}
-        <Card className="flex flex-col justify-between hover:shadow-lg transition-all duration-300 bg-gradient-to-br from-white to-gray-50/50">
+        <Card className="flex flex-col justify-between transition-all duration-300 bg-gradient-to-br from-white to-gray-50/50">
           <CardContent className="flex flex-col pt-6 h-full">
             <div className="flex items-center space-x-2 mb-6">
               <div className="p-2 bg-blue-100 rounded-lg">
@@ -214,7 +214,7 @@ export function AnalyticsDashboard({
         </Card>
 
         {/* Time Taken Widget */}
-        <Card className="flex flex-col justify-between hover:shadow-lg transition-all duration-300 bg-gradient-to-br from-white to-gray-50/50">
+        <Card className="flex flex-col justify-between transition-all duration-300 bg-gradient-to-br from-white to-gray-50/50">
           <CardContent className="flex flex-col pt-6 h-full">
             <div className="flex items-center space-x-2 mb-6">
               <div className="p-2 bg-purple-100 rounded-lg">
