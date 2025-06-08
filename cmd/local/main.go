@@ -194,7 +194,7 @@ func main() {
 
 	boltDir := filepath.Join(cfg.Root, "models", basicModel.Id.String())
 	if err := storage.DownloadDir(context.Background(), modelBucket, basicModel.Id.String(), boltDir, true); err != nil {
-		log.Fatalf("failed to download bolt model: %v", err)
+		log.Fatalf("failed to download model: %v", err)
 	}
 	server := createServer(db, storage, queue, cfg.Port, boltDir)
 

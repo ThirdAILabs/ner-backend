@@ -131,8 +131,7 @@ func initializeModel(
 	}
 
 	if result.RowsAffected == 0 && model.Status == database.ModelTrained {
-		slog.Info("model already exists, skipping initialization", "model_id", model.Id)
-		return nil
+		slog.Info("model already exists, overwriting blob store", "model_id", model.Id)
 	}
 
 	if result.RowsAffected > 0 {
