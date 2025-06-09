@@ -184,11 +184,10 @@ function getBackendPath() {
   return path.join(binPath, 'main');
 }
 
-// Get the path to the default model file
-function getDefaultModelPath() {
+function getModelConfigPath() {
   const binPath = getBinPath();
   if (!binPath) return null;
-  return path.join(binPath, 'udt_complete.model');
+  return path.join(binPath, 'model_config.json');
 }
 
 export async function startBackend() {
@@ -205,8 +204,18 @@ export async function startBackend() {
   const backendPath = getBackendPath();
   const backendDir  = path.dirname(backendPath);
   const appDataDir = app.getPath('userData');
+  const modelConfigPath = getModelConfigPath();
 
   log.debug('Spawning backend with cwd:', backendDir);
+
+  let modelType = 'cnn_model';  // Default model type
+  try {
+    const modelConfig = JSON.parse(fs.readFileSync(modelConfigPath, 'utf8'));
+    modelType = modelConfig.model_type || modelType;
+    log.debug('Loaded model type from config:', modelType);
+  } catch (error) {
+    log.warn('Failed to load model config, using default:', error.message);
+  }
 
   let backendLogPath = path.join(
     process.resourcesPath || __dirname,
@@ -230,7 +239,7 @@ export async function startBackend() {
         ...process.env,
         PORT:       FIXED_PORT.toString(),
         MODEL_DIR: getBinPath(),
-        MODEL_TYPE: 'cnn_model',
+        MODEL_TYPE: modelType,
         PLUGIN_SERVER: pluginPath,
         APP_DATA_DIR: appDataDir,
       },
@@ -275,4 +284,4 @@ export async function startBackend() {
 // Start the backend if this script is called directly
 if (import.meta.url === import.meta.main) {
   startBackend();
-} 
+}

@@ -53,6 +53,15 @@ try {
     preserveTimestamps: true
   });
   console.log(`${modelType} model directory copied successfully!`);
+
+  // Create model_config.json
+  const configPath = path.join(binDir, 'model_config.json');
+  const config = {
+    model_type: modelType
+  };
+  
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+  console.log(`Created model configuration at ${configPath}`);
 } catch (error) {
   console.error('Failed to copy model files:', error.message);
   process.exit(1);

@@ -92,7 +92,7 @@ func createQueue(db *gorm.DB) *messaging.InMemoryQueue {
 	return queue
 }
 
-func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publisher, port int, modelDir string) *http.Server {
+func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publisher, port int, modelDir, modelType string) *http.Server {
 	r := chi.NewRouter()
 
 	// Middleware
@@ -112,11 +112,22 @@ func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publish
 	apiHandler := api.NewBackendService(db, storage, queue, chunkTargetBytes)
 
 	loaders := core.NewModelLoaders("python", "plugin/plugin-python/plugin.py")
-	//Whatever model you want to load, just add it to the loaders map
-	nerModel, err := loaders["cnn"](modelDir)
+
+	var loaderType string
+	switch {
+	case modelType == "udt_model":
+		loaderType = "bolt"
+	case modelType == "cnn_model":
+		loaderType = "cnn"
+	default:
+		log.Fatalf("Unknown model type in directory: %s", modelDir)
+	}
+
+	nerModel, err := loaders[loaderType](modelDir)
 	if err != nil {
 		log.Fatalf("could not load NER model: %v", err)
 	}
+
 	chatHandler := api.NewChatService(db, nerModel)
 
 	r.Route("/api/v1", func(r chi.Router) {
@@ -164,11 +175,11 @@ func main() {
 		switch cfg.ModelType {
 		case "udt_model":
 			if err := cmd.InitializeBoltModel(db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
-				log.Fatalf("Failed to initialize basic model: %v", err)
+				log.Fatalf("Failed to init & upload bolt model: %v", err)
 			}
 		case "cnn_model":
 			if err := cmd.InitializeCnnNerExtractor(context.Background(), db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
-				log.Fatalf("Failed to init & upload CNN NER model: %v", err)
+				log.Fatalf("Failed to init & upload CNN model: %v", err)
 			}
 		default:
 			log.Fatalf("Invalid model type: %s. Must be either 'bolt' or 'cnn'", cfg.ModelType)
@@ -189,14 +200,14 @@ func main() {
 
 	var basicModel database.Model
 	if err := db.Where("name = ?", "basic").First(&basicModel).Error; err != nil {
-		log.Fatalf("could not lookup bolt model: %v", err)
+		log.Fatalf("could not lookup basic model: %v", err)
 	}
 
-	boltDir := filepath.Join(cfg.Root, "models", basicModel.Id.String())
-	if err := storage.DownloadDir(context.Background(), modelBucket, basicModel.Id.String(), boltDir, true); err != nil {
+	basicModelDir := filepath.Join(cfg.Root, "models", basicModel.Id.String())
+	if err := storage.DownloadDir(context.Background(), modelBucket, basicModel.Id.String(), basicModelDir, true); err != nil {
 		log.Fatalf("failed to download model: %v", err)
 	}
-	server := createServer(db, storage, queue, cfg.Port, boltDir)
+	server := createServer(db, storage, queue, cfg.Port, basicModelDir, cfg.ModelType)
 
 	slog.Info("starting worker")
 	go worker.Start()
