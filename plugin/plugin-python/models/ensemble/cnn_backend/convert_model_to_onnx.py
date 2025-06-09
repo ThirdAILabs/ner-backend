@@ -2,7 +2,7 @@
 
 import json
 import torch
-import argparse
+import os
 import torch.nn as nn
 from ...utils import build_tag_vocab
 from .backend import CNNNERModelSentenceTokenized
@@ -58,7 +58,7 @@ def export(model: CNNNERModelSentenceTokenized, onnx_out: str, max_seq_len: int 
     torch.onnx.export(
         wrapper,
         dummy,
-        onnx_out,
+        os.path.join(onnx_out, "cnn_emissions.onnx"),
         input_names=["input_ids"],
         output_names=["emissions"],
         dynamic_axes={
@@ -70,5 +70,5 @@ def export(model: CNNNERModelSentenceTokenized, onnx_out: str, max_seq_len: int 
     )
 
     transitions = model.crf.transitions.cpu().detach().numpy().tolist()
-    with open("crf_transitions.json", "w") as f:
+    with open(os.path.join(onnx_out, "crf_transitions.json", "w")) as f:
         json.dump(transitions, f)
