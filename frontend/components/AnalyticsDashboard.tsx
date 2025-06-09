@@ -67,7 +67,7 @@ export function AnalyticsDashboard({
   const filesFailed = (failedFileCount * 100) / totalFileCount || 0;
 
   const formattedTime = formatTime(timeTaken);
-
+  console.log("Ha ha ha...", (failedFileCount / totalFileCount));
   return (
     <div className="space-y-6 w-full">
       {/* Top Widgets */}
@@ -111,18 +111,20 @@ export function AnalyticsDashboard({
                     strokeDasharray={`${(succeededFileCount / totalFileCount) * 326.725} 326.725`}
                     className="transition-all duration-500 ease-in-out"
                   />
-                  <circle
-                    cx="60"
-                    cy="60"
-                    r="52"
-                    fill="none"
-                    stroke="url(#failureGradient)"
-                    strokeWidth="6"
-                    strokeLinecap="round"
-                    strokeDasharray={`${(failedFileCount / totalFileCount) * 326.725} 326.725`}
-                    strokeDashoffset={-((succeededFileCount / totalFileCount) * 326.725)}
-                    className="transition-all duration-500 ease-in-out"
-                  />
+                  {failedFileCount > 0 && (
+                    <circle
+                      cx="60"
+                      cy="60"
+                      r="52"
+                      fill="none"
+                      stroke="url(#failureGradient)"
+                      strokeWidth="6"
+                      strokeLinecap="round"
+                      strokeDasharray={`${(failedFileCount / totalFileCount) * 326.725} 326.725`}
+                      strokeDashoffset={-((succeededFileCount / totalFileCount) * 326.725)}
+                      className="transition-all duration-500 ease-in-out"
+                    />
+                  )}
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <span className="text-xl font-bold text-gray-800">{progress.toFixed(0)}%</span>
@@ -139,13 +141,12 @@ export function AnalyticsDashboard({
                     <span className="text-xs font-medium text-gray-600">Succeeded</span>
                   </div>
                   <span
-                    className={`text-xl font-bold ml-4 ${
-                      filesSucceeded > 80
-                        ? 'text-green-600'
-                        : filesSucceeded > 50
-                          ? 'text-green-500'
-                          : 'text-green-400'
-                    }`}
+                    className={`text-xl font-bold ml-4 ${filesSucceeded > 80
+                      ? 'text-green-600'
+                      : filesSucceeded > 50
+                        ? 'text-green-500'
+                        : 'text-green-400'
+                      }`}
                   >
                     {' '}
                     {filesSucceeded.toFixed(1)}%
@@ -157,13 +158,12 @@ export function AnalyticsDashboard({
                     <span className="text-xs font-medium text-gray-600">Failed</span>
                   </div>
                   <span
-                    className={`text-xl font-bold ml-4 ${
-                      filesFailed > 20
-                        ? 'text-red-600'
-                        : filesFailed > 10
-                          ? 'text-red-500'
-                          : 'text-red-400'
-                    }`}
+                    className={`text-xl font-bold ml-4 ${filesFailed > 20
+                      ? 'text-red-600'
+                      : filesFailed > 10
+                        ? 'text-red-500'
+                        : 'text-red-400'
+                      }`}
                   >
                     {' '}
                     {filesFailed.toFixed(1)}%
