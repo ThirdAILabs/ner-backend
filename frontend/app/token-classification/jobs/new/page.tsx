@@ -791,7 +791,7 @@ export default function NewJobPage() {
       <div className="flex items-center justify-between mb-6">
         <Button variant="outline" size="sm" asChild>
           <Link href={`/token-classification/landing?tab=jobs`} className="flex items-center">
-            <ArrowLeft className="mr-1 h-4 w-4" /> Back to Reports
+            <ArrowLeft className="mr-1 h-4 w-4" /> Back to Scans
           </Link>
         </Button>
       </div>
@@ -804,7 +804,7 @@ export default function NewJobPage() {
 
       {success ? (
         <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-6">
-          Scanning in progress! Redirecting to Reports Dashboard...
+          Scanning in progress! Redirecting to Scans Dashboard...
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-8">

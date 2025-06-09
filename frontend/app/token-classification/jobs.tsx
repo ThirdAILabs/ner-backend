@@ -375,7 +375,7 @@ export default function Jobs() {
                 color: '#4a5568',
               }}
             >
-              Reports
+              Scans
             </Typography>
           </Box>
           <Link href={`/token-classification/jobs/new`} passHref>
@@ -397,7 +397,7 @@ export default function Jobs() {
               }}
               disabled={!healthStatus}
             >
-              New Report
+              New Scan
             </Button>
           </Link>
         </Box>
