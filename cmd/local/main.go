@@ -34,6 +34,7 @@ type Config struct {
 	Port          int    `env:"PORT" envDefault:"3001"`
 	License       string `env:"LICENSE_KEY" envDefault:""`
 	OnnxModelPath string `env:"MODEL_PATH" envDefault:""`
+	AppDataDir    string `env:"APP_DATA_DIR" envDefault:"./pocket-shield"`
 }
 
 const (
@@ -158,9 +159,9 @@ func main() {
 
 	log.SetOutput(io.MultiWriter(f, os.Stderr))
 
-	slog.Info("starting backend", "root", cfg.Root, "port", cfg.Port)
+	slog.Info("starting backend", "root", cfg.Root, "port", cfg.Port, "app_data_dir", cfg.AppDataDir)
 
-	db := createDatabase(cfg.Root)
+	db := createDatabase(cfg.AppDataDir)
 
 	storage, err := storage.NewLocalProvider(filepath.Join(cfg.Root, "storage"))
 	if err != nil {
@@ -175,6 +176,10 @@ func main() {
 		cmd.InitializePresidioModel(db)
 	}
 
+	if err := cmd.RemoveExcludedTagsFromAllModels(db); err != nil {
+		log.Fatalf("Failed to remove excluded tags from all models: %v", err)
+	}
+
 	queue := createQueue(db)
 
 	licensing := cmd.CreateLicenseVerifier(db, cfg.License)
@@ -186,8 +191,10 @@ func main() {
 		log.Fatalf("could not lookup onnx model: %v", err)
 	}
 
-	onnxDir := filepath.Join(cfg.Root, "storage", "models", onnxModel.Id.String())
-
+	onnxDir := filepath.Join(cfg.Root, "models", onnxModel.Id.String())
+	if err := storage.DownloadDir(context.Background(), modelBucket, onnxDir.Id.String(), onnxDir, true); err != nil {
+		log.Fatalf("failed to download bolt model: %v", err)
+	}
 	server := createServer(db, storage, queue, cfg.Port, onnxDir)
 
 	slog.Info("starting worker")

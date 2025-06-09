@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import { TableHead, TableRow, TableHeader, TableBody, TableCell } from '@/components/ui/table';
 import { Loader2 } from 'lucide-react';
-import { TableContentProps } from './types';
 import { Button } from '@/components/ui/button';
 import { NO_GROUP } from '@/lib/utils';
 import { ChevronRight } from 'lucide-react';
@@ -173,6 +172,7 @@ export function TableContent({
   hasMoreObjects = false,
   onLoadMore,
   showFilterContent,
+  pathMap,
 }: TableContentProps) {
   const tagColors = useMemo(() => {
     const colors: Record<string, HighlightColor> = {};
@@ -193,6 +193,23 @@ export function TableContent({
     const matchUserDefinedGroup = recordGroups.some((group) => groupFilters[group] !== false);
     const noGroupConfigured = Object.keys(groupFilters).length === 0;
     return matchTags && (matchNoGroup || matchUserDefinedGroup || noGroupConfigured);
+  };
+
+  const handleFullPath = (fileIdentifier: string) => {
+    const fullPath = pathMap?.[fileIdentifier.split('/').slice(-1).join('')];
+    const openFile = () => {
+      // @ts-ignore
+      window.electron?.openFile?.(fullPath);
+    };
+    return { fullPath, openFile };
+  };
+
+  const truncateFilePath = (filePath: string) => {
+    const maxLength = 50;
+    if (filePath.length > maxLength) {
+      return '...' + filePath.slice(filePath.length - maxLength, filePath.length);
+    }
+    return filePath;
   };
 
   if (viewMode === 'classified-token') {
@@ -229,12 +246,35 @@ export function TableContent({
                 </TableCell>
                 <TableCell className="w-1/5 px-4">
                   <div className="relative group">
-                    <span
-                      className="block max-w-[200px] truncate"
-                      title={record.sourceObject.split('/').slice(-1).join('')}
-                    >
-                      {record.sourceObject.split('/').slice(-1)}
-                    </span>
+                    {(() => {
+                      const fileIdentifier = record.sourceObject;
+                      const { fullPath, openFile } = handleFullPath(fileIdentifier);
+                      // @ts-ignore
+                      if (fullPath && typeof window !== 'undefined' && window.electron) {
+                        return (
+                          <span
+                            style={{
+                              textDecoration: 'underline',
+                              color: 'inherit',
+                              cursor: 'pointer',
+                            }}
+                            title={fileIdentifier.split('/').slice(-1).join('')}
+                            onClick={openFile}
+                          >
+                            {truncateFilePath(fullPath)}
+                          </span>
+                        );
+                      } else {
+                        return (
+                          <span
+                            style={{ color: 'inherit' }}
+                            title={fileIdentifier.split('/').slice(-1).join('')}
+                          >
+                            {fileIdentifier.split('/').slice(-1)}
+                          </span>
+                        );
+                      }
+                    })()}
                   </div>
                 </TableCell>
               </TableRow>
@@ -275,54 +315,81 @@ export function TableContent({
   }
 
   const filteredRecords = objectRecords.filter((record) =>
-    filterRecords(
-      record.groups,
-      record.taggedTokens.map((token) => token[1])
-    )
+    filterRecords(record.groups, [
+      ...new Set(record.taggedTokens.map((token) => token[1]).filter((tag) => tag !== 'O')),
+    ])
   );
 
   return (
     <div className="mt-4">
-      {filteredRecords.map((record, index) => {
-        return (
-          <details className="group text-sm leading-relaxed bg-white rounded border border-gray-100 shadow-sm mb-4">
-            <summary className="p-3 cursor-pointer bg-gray-100 flex items-center">
-              <div className="flex items-center gap-2">
-                <ChevronRight className="w-4 h-4 transition-transform group-open:rotate-90" />
-                <span className="font-semibold" style={{ userSelect: 'none' }}>
-                  {record.sourceObject.split('/').slice(-1)}
-                </span>
+      {filteredRecords.length === 0 ? (
+        <div className="text-gray-500">No records match the current filters.</div>
+      ) : (
+        filteredRecords.map((record, index) => {
+          const fileIdentifier = record.sourceObject;
+          const { fullPath, openFile } = handleFullPath(fileIdentifier);
+          return (
+            <details
+              key={index}
+              className="group text-sm leading-relaxed bg-white rounded border border-gray-100 shadow-sm mb-4"
+            >
+              <summary className="p-3 cursor-pointer bg-gray-100 flex items-center">
+                <div className="flex items-center gap-2">
+                  <ChevronRight className="w-4 h-4 transition-transform group-open:rotate-90" />
+                  {/* @ts-ignore */}
+                  {fullPath && typeof window !== 'undefined' && window.electron ? (
+                    <span
+                      className="font-semibold"
+                      style={{
+                        textDecoration: 'underline',
+                        color: 'inherit',
+                        cursor: 'pointer',
+                        userSelect: 'none',
+                      }}
+                      onClick={openFile}
+                    >
+                      {truncateFilePath(fullPath)}
+                    </span>
+                  ) : (
+                    <span
+                      className="font-semibold"
+                      style={{ color: 'inherit', userSelect: 'none' }}
+                    >
+                      {fileIdentifier.split('/').slice(-1)}
+                    </span>
+                  )}
+                </div>
+              </summary>
+              <div className="p-4">
+                {record.taggedTokens.map((token, tokenIndex) => {
+                  const isLastToken = tokenIndex === record.taggedTokens.length - 1;
+                  const nextNonWhitespaceTokenIndex = record.taggedTokens.findIndex(
+                    (t, i) => i > tokenIndex && t[0].trim() !== ''
+                  );
+                  const nextToken =
+                    nextNonWhitespaceTokenIndex !== -1
+                      ? record.taggedTokens[nextNonWhitespaceTokenIndex]
+                      : null;
+                  const differentTagThanNext = nextToken !== null && nextToken[1] !== token[1];
+                  return (
+                    <HighlightedToken
+                      key={`${index}-${tokenIndex}`}
+                      token={token[0]}
+                      tag={tagFilters[token[1]] ? token[1] : 'O'}
+                      tagColors={tagColors}
+                      labeled={isLastToken || differentTagThanNext}
+                    />
+                  );
+                })}
+                ...
+                <p className="text-gray-500 text-xs">
+                  Truncated File View. Please open the original file for the entire content.
+                </p>
               </div>
-            </summary>
-            <div className="p-4">
-              {record.taggedTokens.map((token, tokenIndex) => {
-                const isLastToken = tokenIndex === record.taggedTokens.length - 1;
-                const nextNonWhitespaceTokenIndex = record.taggedTokens.findIndex(
-                  (t, i) => i > tokenIndex && t[0].trim() !== ''
-                );
-                const nextToken =
-                  nextNonWhitespaceTokenIndex !== -1
-                    ? record.taggedTokens[nextNonWhitespaceTokenIndex]
-                    : null;
-                const differentTagThanNext = nextToken !== null && nextToken[1] !== token[1];
-                return (
-                  <HighlightedToken
-                    key={`${index}-${tokenIndex}`}
-                    token={token[0]}
-                    tag={tagFilters[token[1]] ? token[1] : 'O'}
-                    tagColors={tagColors}
-                    labeled={isLastToken || differentTagThanNext}
-                  />
-                );
-              })}
-              ...
-              <p className="text-gray-500 text-xs">
-                Truncated File View. Please open the original file for the entire content.
-              </p>
-            </div>
-          </details>
-        );
-      })}
+            </details>
+          );
+        })
+      )}
     </div>
   );
 }

@@ -26,3 +26,63 @@ export const formatFileSize = (bytes: number, space: boolean = false): string =>
 
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + (space ? ' ' : '') + sizes[i];
 };
+
+// Returns [file, fullPath] pairs
+export const getFilesFromElectron = async (
+  supportedTypes: string[]
+): Promise<{ files: [File, string][]; isUploaded: boolean }> => {
+  // @ts-ignore
+  const results = await window.electron.openFileChooser(
+    // Electron API does not expect '.' in the file extension
+    supportedTypes.map((t) => t.replace('.', ''))
+  );
+
+  const isUploaded = !!results?.directlySelected?.length;
+
+  // Convert the file data into proper File objects
+  const files = await Promise.all(
+    results.allFiles.map(async (fileData: any, index: number) => {
+      // Convert base64 to ArrayBuffer
+      const binaryString = atob(fileData.data);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      // Create a Blob from the ArrayBuffer
+      const blob = new Blob([bytes], { type: fileData.type });
+
+      // Create a File object from the Blob
+      const file = new File([blob], fileData.name, {
+        type: fileData.type,
+        lastModified: fileData.lastModified,
+      });
+
+      return [file, results.allFilePaths[index]];
+    })
+  );
+
+  return { files, isUploaded };
+};
+
+export const uniqueFileNames = (fileNames: string[]): string[] => {
+  const existingFileNameCount: Record<string, number> = {};
+  const newFileNames = fileNames.map((fileName) => {
+    let newFileName = fileName;
+    if (existingFileNameCount[fileName] === undefined) {
+      existingFileNameCount[fileName] = 0;
+    } else {
+      const ext_idx = fileName.lastIndexOf('.');
+      newFileName =
+        fileName.substring(0, ext_idx) +
+        ` (${existingFileNameCount[fileName]})` +
+        fileName.substring(ext_idx);
+      // This is to handle an edge case like [a/file.txt, b/file.txt, b/file (1).txt]
+      // a/file.txt -> file.txt | b/file.txt -> file (1).txt | b/file (1).txt -> b/file (1) (1).txt
+      existingFileNameCount[newFileName] = 1;
+    }
+    existingFileNameCount[newFileName]++;
+    return newFileName;
+  });
+  return newFileNames;
+};

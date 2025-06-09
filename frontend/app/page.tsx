@@ -36,16 +36,16 @@ function Choice({
 export default function Page() {
   return (
     // Height is 100vh - 30px to account for the title bar region of the electron app.
-    <div style={{ width: '75%', minHeight: 'calc(100vh-30px)', margin: '0 auto' }}>
+    <div style={{ width: '90%', minHeight: 'calc(100vh-30px)', margin: '0 auto' }}>
       <header style={{ width: '100%', padding: '16px', borderBottom: '1px solid #e0e0e0' }}>
         <div
           style={{
-            maxWidth: '1200px',
             margin: '0 auto',
             marginBottom: '8px',
             display: 'flex',
             flexDirection: 'row',
             gap: '20px',
+            justifyContent: 'center',
           }}
         >
           <Image
@@ -73,7 +73,6 @@ export default function Page() {
 
       <main
         style={{
-          maxWidth: '1200px',
           height: '80%',
           margin: '0 auto',
           padding: '50px',

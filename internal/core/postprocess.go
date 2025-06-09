@@ -1,63 +1,91 @@
-// core/postprocess.go
 package core
 
 import (
+	"ner-backend/internal/core/types"
 	"regexp"
 	"strings"
 	"unicode"
 )
 
 var (
-	// exactly the Python PHONE_REGEX, with \d→[0-9], \s→space, no anchors
 	phoneRegex = regexp.MustCompile(
-		`(?:\+?[0-9]{1,3}[ .-]?)?` + // optional country code
-			`(?:[0-9]{1,3}[ .-]?){2,5}` + // 2–5 groups of 1–3 digits + sep
-			`[0-9]{1,4}` + // final block
-			`(?: *(?:x|ext|extension) *[0-9]{1,6})?`, // optional extension
+		`(?:\+?[0-9]{1,3}[ .-]?)?` +
+			`(?:[0-9]{1,3}[ .-]?){2,5}` +
+			`[0-9]{1,4}` +
+			`(?: *(?:x|ext|extension) *[0-9]{1,6})?`,
 	)
 
-	// exactly the Python CARD_REGEX
-	cardRegex = regexp.MustCompile(
-		`[0-9 \-]{12,19}`,
-	)
+	creditScoreRegex = regexp.MustCompile(`\b[0-9]{2,3}\b`)
 
-	// exactly the Python CREDIT_SCORE_REGEX
-	creditScoreRegex = regexp.MustCompile(
-		`\b[0-9]{2,3}\b`,
-	)
-
-	// Python SSN_REGEX but without \1 (just allow any of the three separators)
 	ssnRegex = regexp.MustCompile(
 		`(?:[0-9]{3}[- .][0-9]{2}[- .][0-9]{4}|[0-9]{9})`,
 	)
 )
 
-func FilterWordTags(text string, spans [][2]int, tags []string) []string {
-	out := make([]string, len(tags))
-	copy(out, tags)
+func FilterEntities(fullText string, tokenEntities []types.Entity) []types.Entity {
+	var out []types.Entity
+	n := len(tokenEntities)
+	i := 0
 
-	rules := []struct {
-		label    string
-		validate func(snippet, full string, s, e int) bool
-		single   bool
-	}{
-		{"PHONENUMBER", func(sn, _ string, _, _ int) bool { return isValidPhone(sn) }, false},
-		{"CARD_NUMBER", func(sn, _ string, _, _ int) bool { return isValidCard(sn) }, false},
-		{"EMAIL", func(sn, _ string, _, _ int) bool { return isValidEmail(sn) }, true},
-		{"SSN", func(sn, _ string, _, _ int) bool { return isValidSSN(sn) }, false},
-		{"CREDIT_SCORE", isValidCreditScore, true},
-	}
+	for i < n {
+		ent := tokenEntities[i]
+		lbl := ent.Label
 
-	for _, rule := range rules {
-		for _, grp := range groupConsecutiveIndices(out, spans, rule.label, rule.single) {
-			startIdx, endIdx := grp[0], grp[1]
-			s, e := spans[startIdx][0], spans[endIdx][1]
-			snippet := text[s:e]
-			if !rule.validate(snippet, text, s, e) {
-				for i := startIdx; i <= endIdx; i++ {
-					out[i] = "O"
+		switch lbl {
+		case "PHONENUMBER", "CARD_NUMBER", "SSN":
+			groupLabel := lbl
+			groupStartChar := ent.Start
+			groupEndChar := ent.End
+
+			j := i + 1
+			for j < n && tokenEntities[j].Label == groupLabel {
+				prevEnd := tokenEntities[j-1].End
+				nextStart := tokenEntities[j].Start
+				if nextStart == prevEnd || nextStart == prevEnd+1 {
+					groupEndChar = tokenEntities[j].End
+					j++
+				} else {
+					break
 				}
 			}
+
+			mergedText := fullText[groupStartChar:groupEndChar]
+			keepGroup := false
+			switch groupLabel {
+			case "PHONENUMBER":
+				if isValidPhone(mergedText) {
+					keepGroup = true
+				}
+			case "CARD_NUMBER":
+				if isValidCard(mergedText) {
+					keepGroup = true
+				}
+			case "SSN":
+				if isValidSSN(mergedText) {
+					keepGroup = true
+				}
+			}
+
+			if keepGroup {
+				out = append(out, tokenEntities[i:j]...)
+			}
+			i = j
+
+		case "EMAIL":
+			if isValidEmail(ent.Text) {
+				out = append(out, ent)
+			}
+			i++
+
+		case "CREDIT_SCORE":
+			if isValidCreditScore(ent.Text, fullText, ent.Start, ent.End) {
+				out = append(out, ent)
+			}
+			i++
+
+		default:
+			out = append(out, ent)
+			i++
 		}
 	}
 
@@ -92,7 +120,6 @@ func isValidCreditScore(score, full string, s, e int) bool {
 	if !creditScoreRegex.MatchString(score) {
 		return false
 	}
-	// context: 20 chars before and after
 	startCtx := s - 20
 	if startCtx < 0 {
 		startCtx = 0
@@ -145,25 +172,4 @@ func luhnValid(digits string) bool {
 		sum += d
 	}
 	return sum%10 == 0
-}
-
-func groupConsecutiveIndices(tags []string, spans [][2]int, label string, single bool) [][2]int {
-	var groups [][2]int
-	n := len(tags)
-	for i := 0; i < n; {
-		if tags[i] == label {
-			start := i
-			j := i
-			for !single && j+1 < n &&
-				tags[j+1] == label &&
-				(spans[j+1][0] == spans[j][1] || spans[j+1][0] == spans[j][1]+1) {
-				j++
-			}
-			groups = append(groups, [2]int{start, j})
-			i = j + 1
-		} else {
-			i++
-		}
-	}
-	return groups
 }

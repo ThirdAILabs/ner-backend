@@ -1,11 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  DatabaseTableProps,
-  ViewMode,
-  ClassifiedTokenDatabaseRecord,
-  ObjectDatabaseRecord,
-} from './types';
 import { FilterSection } from './FilterSection';
 import { HeaderContent } from './HeaderContent';
 import { TableContent } from './TableContent';
@@ -13,40 +7,7 @@ import { nerService } from '@/lib/backend';
 import { useSearchParams } from 'next/navigation';
 import { NO_GROUP } from '@/lib/utils';
 
-function joinAdjacentEntities(entities: Entity[]) {
-  if (entities.length === 0) {
-    return [];
-  }
-
-  const joinedEntities: Entity[] = [entities[0]];
-  // We need to keep track of the previous *unjoined* entity.
-  let prevEntity = entities[0];
-
-  for (let i = 1; i < entities.length; i++) {
-    const numSpacesAfterPrevEntity = (prevEntity.RContext || '').match(/^\s*/)?.[0].length || 0;
-    if (
-      prevEntity.Object === entities[i].Object &&
-      entities[i].Start - prevEntity.End === numSpacesAfterPrevEntity &&
-      prevEntity.Label === entities[i].Label
-    ) {
-      const lastJoinedEntity = joinedEntities[joinedEntities.length - 1];
-      const whitespace = prevEntity.RContext?.substring(0, numSpacesAfterPrevEntity) || '';
-      joinedEntities[joinedEntities.length - 1] = {
-        ...lastJoinedEntity,
-        Text: lastJoinedEntity.Text + whitespace + entities[i].Text,
-        End: entities[i].End,
-        RContext: entities[i].RContext,
-      };
-    } else {
-      joinedEntities.push(entities[i]);
-    }
-    prevEntity = entities[i];
-  }
-
-  return joinedEntities;
-}
-
-export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) {
+export function DatabaseTable({ groups: groupsProp, tags, uploadId }: DatabaseTableProps) {
   const searchParams = useSearchParams();
   const reportId: string = searchParams.get('jobId') as string;
   const groups = groupsProp.length > 0 ? [...groupsProp, NO_GROUP] : [];
@@ -65,7 +26,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
   const [objectRecords, setObjectRecords] = useState<ObjectDatabaseRecord[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('object');
   const [query, setQuery] = useState('');
-  const [filteredObjects, setFilteredObjects] = useState<string[]>([]);
+  const [pathMap, setPathMap] = useState<Record<string, string>>({});
 
   // Pagination states
   const [tokenOffset, setTokenOffset] = useState(0);
@@ -108,7 +69,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
       .then((entities) => {
         console.log(`Loaded ${entities.length} token records from offset ${newOffset}`);
 
-        const mappedRecords = joinAdjacentEntities(entities).map((entity) => ({
+        const mappedRecords = entities.map((entity) => ({
           token: entity.Text,
           tag: entity.Label,
           sourceObject: entity.Object,
@@ -117,6 +78,8 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
             left: entity.LContext || '',
             right: entity.RContext || '',
           },
+          start: entity.Start,
+          end: entity.End,
         }));
 
         if (newOffset === 0) {
@@ -157,7 +120,8 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
         // Map API objects to our record format
         const mappedRecords = objects.map((obj) => ({
           sourceObject: obj.object,
-          taggedTokens: obj.tokens.map((token, i) => [token, obj.tags[i]] as [string, string]),
+          taggedTokens:
+            obj.tokens?.map((token, i) => [token, obj.tags[i]] as [string, string]) || [],
           groups: [], // This would need to be populated from somewhere if needed
         }));
 
@@ -183,7 +147,6 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
   const handleSearch = async (searchQuery: string) => {
     if (!searchQuery.trim()) {
       // If empty query, reset filters and reload data
-      setFilteredObjects([]);
       resetPagination();
       loadTokenRecords(0, toActiveTagList(tagFilters));
       loadObjectRecords(0, toActiveTagList(tagFilters));
@@ -193,8 +156,6 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
     setIsSearching(true);
     try {
       const result = await nerService.searchReport(reportId, searchQuery);
-      setFilteredObjects(result.Objects || []);
-
       // Reset pagination and clear existing records
       resetPagination();
 
@@ -232,6 +193,20 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
     loadedInitialTokenRecords.current = true;
     loadedInitialObjectRecords.current = true;
   }, []);
+
+  // Load path map
+  useEffect(() => {
+    if (uploadId) {
+      nerService
+        .getFileNameToPath(uploadId)
+        .then((pathMap) => {
+          setPathMap(pathMap);
+        })
+        .catch((error) => {
+          console.error('Could not load path map:', error);
+        });
+    }
+  }, [uploadId]);
 
   // Scroll handler for infinite loading
   const handleTableScroll = () => {
@@ -279,7 +254,6 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
 
       const activeTagList = toActiveTagList(newFilters);
 
-      setFilteredObjects([]);
       resetPagination();
       loadTokenRecords(0, activeTagList);
       loadObjectRecords(0, activeTagList);
@@ -301,15 +275,19 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
   const handleSelectAllTags = () => {
     const newFilters = Object.fromEntries(tags.map((tag) => [tag.type, true]));
     setTagFilters(newFilters);
-    setFilteredObjects([]);
     resetPagination();
     loadTokenRecords(0, toActiveTagList(newFilters));
-    loadObjectRecords(0, toActiveTagList(tagFilters));
+    loadObjectRecords(0, toActiveTagList(newFilters));
   };
 
   const handleDeselectAllTags = () => {
+    // We need to explicitly set the objectRecords & tokenRecords to empty arrays (resetPagination handles that).
+    // If we reuse the useEffect logic, it will set all the filters to false, which are then
+    // ignored and not sent to the backend, so the backend assumes that there are no filters
+    // and returns all the records.
     const newFilters = Object.fromEntries(tags.map((tag) => [tag.type, false]));
     setTagFilters(newFilters);
+    resetPagination();
   };
 
   // Handle view mode changes
@@ -400,6 +378,7 @@ export function DatabaseTable({ groups: groupsProp, tags }: DatabaseTableProps) 
                   hasMoreObjects={hasMoreObjects}
                   onLoadMore={handleLoadMore}
                   showFilterContent={showFilterSection}
+                  pathMap={pathMap}
                 />
               </div>
             </div>

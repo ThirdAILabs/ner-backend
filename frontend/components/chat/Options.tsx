@@ -32,6 +32,8 @@ function ModelOption({ children, onClick, selected, disabled }: ModelOptionProps
 interface OptionsDropdownProps {
   handleBasicMode: () => void;
   handleAdvancedMode: () => void;
+  model: 'gpt-4o-mini' | 'gpt-4o';
+  onSelectModel: (model: 'gpt-4o-mini' | 'gpt-4o') => void;
   apiKey: string;
   invalidApiKey: boolean;
   onEditApiKey: () => void;
@@ -40,6 +42,8 @@ interface OptionsDropdownProps {
 }
 
 export default function Options({
+  model,
+  onSelectModel,
   handleBasicMode,
   handleAdvancedMode,
   apiKey,
@@ -111,8 +115,7 @@ export default function Options({
   return (
     <div className="w-full bg-white rounded-xl shadow-lg border border-gray-200">
       <div className="p-4 flex flex-col gap-1">
-        <div className="inline font-semibold p-1">Redaction Model</div>
-
+        <div className="inline font-semibold p-1">Local Guardrail</div>
         <div className="flex flex-row w-full gap-2">
           <div className="w-full">
             <ModelOption onClick={handleBasicMode} selected={true}>
@@ -130,6 +133,25 @@ export default function Options({
                 </ModelOption>
               </span>
             </Tooltip>
+          </div>
+        </div>
+
+        <div className="inline font-semibold p-1">GPT Model</div>
+        <div className="flex flex-row w-full gap-2">
+          <div className="w-full">
+            <ModelOption
+              onClick={() => onSelectModel('gpt-4o-mini')}
+              selected={model === 'gpt-4o-mini'}
+            >
+              <MessageSquare className="w-4 h-4" />
+              <span>GPT-4o mini</span>
+            </ModelOption>
+          </div>
+          <div className="w-full">
+            <ModelOption onClick={() => onSelectModel('gpt-4o')} selected={model === 'gpt-4o'}>
+              <MessageSquare className="w-4 h-4" />
+              <span>GPT-4o</span>
+            </ModelOption>
           </div>
         </div>
 

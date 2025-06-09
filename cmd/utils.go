@@ -38,6 +38,22 @@ func LoadEnvFile() {
 	}
 }
 
+func RemoveExcludedTagsFromAllModels(db *gorm.DB) error {
+	excludedTags := make([]string, 0, len(core.ExcludedTags))
+	for tag := range core.ExcludedTags {
+		excludedTags = append(excludedTags, tag)
+	}
+
+	if err := db.
+		Where("tag IN ?", excludedTags).
+		Delete(&database.ModelTag{}).Error; err != nil {
+		return fmt.Errorf("failed to remove excluded tags %v: %w", excludedTags, err)
+	}
+
+	log.Printf("Removed excluded tags from model_tags: %v", excludedTags)
+	return nil
+}
+
 func InitializePresidioModel(db *gorm.DB) {
 	presidio, err := core.NewPresidioModel()
 	if err != nil {
@@ -203,8 +219,9 @@ func InitializeBoltModel(db *gorm.DB, s3 storage.Provider, modelBucket, name, lo
 	}
 
 	if result.RowsAffected == 0 && model.Status == database.ModelTrained {
-		slog.Info("bolt model already exists, skipping initialization", "model_id", modelId)
-		return nil
+		// TODO: only overwrite the blob store if there are any changes to the model
+		slog.Info("bolt model already exists in db, overwriting blob store", "model_id", model.Id)
+		modelId = model.Id
 	}
 
 	status := database.ModelFailed
