@@ -28,12 +28,16 @@ export const formatFileSize = (bytes: number, space: boolean = false): string =>
 };
 
 // Returns [file, fullPath] pairs
-export const getFilesFromElectron = async (supportedTypes: string[]): Promise<[File, string][]> => {
+export const getFilesFromElectron = async (
+  supportedTypes: string[]
+): Promise<{ files: [File, string][]; isUploaded: boolean }> => {
   // @ts-ignore
   const results = await window.electron.openFileChooser(
     // Electron API does not expect '.' in the file extension
     supportedTypes.map((t) => t.replace('.', ''))
   );
+
+  const isUploaded = !!results?.directlySelected?.length;
 
   // Convert the file data into proper File objects
   const files = await Promise.all(
@@ -58,7 +62,7 @@ export const getFilesFromElectron = async (supportedTypes: string[]): Promise<[F
     })
   );
 
-  return files;
+  return { files, isUploaded };
 };
 
 export const uniqueFileNames = (fileNames: string[]): string[] => {

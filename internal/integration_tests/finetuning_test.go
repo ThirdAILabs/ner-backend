@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -97,10 +96,12 @@ func TestFinetuning(t *testing.T) {
 	})
 	defer stop()
 
+	tp := "Finetuning test"
+
 	// No in-body samples; just do a normal finetune request
 	ftReq := api.FinetuneRequest{
 		Name:       "finetuned-model",
-		TaskPrompt: "finetuning test",
+		TaskPrompt: &tp,
 		Tags:       []api.TagInfo{{Name: "xyz"}},
 	}
 	_, model := finetune(t, router, baseID.String(), ftReq, 10, 100*time.Millisecond)
@@ -143,22 +144,13 @@ func TestFinetuningAllModels(t *testing.T) {
 	for _, modelType := range modelTypes {
 		var modelName string
 		if modelType == "bolt" {
-			require.NoError(t,
-				cmd.InitializeBoltModel(db, s3, modelBucket, "basic",
-					filepath.Join(os.Getenv("HOST_MODEL_DIR"), "model.bin")),
-			)
+			require.NoError(t, cmd.InitializeBoltModel(db, s3, modelBucket, "basic", os.Getenv("HOST_MODEL_DIR")))
 			modelName = "basic"
 		} else if modelType == "cnn" {
-			require.NoError(t,
-				cmd.InitializeCnnNerExtractor(ctx, db, s3, modelBucket,
-					os.Getenv("HOST_MODEL_DIR")),
-			)
+			require.NoError(t, cmd.InitializeCnnNerExtractor(ctx, db, s3, modelBucket, "advanced", os.Getenv("HOST_MODEL_DIR")))
 			modelName = "advanced"
-		} else { // transformer
-			require.NoError(t,
-				cmd.InitializeTransformerModel(ctx, db, s3, modelBucket,
-					os.Getenv("HOST_MODEL_DIR")),
-			)
+		} else if modelType == "transformer" {
+			require.NoError(t, cmd.InitializeTransformerModel(ctx, db, s3, modelBucket, "ultra", os.Getenv("HOST_MODEL_DIR")))
 			modelName = "ultra"
 		}
 
@@ -200,9 +192,11 @@ func TestFinetuningAllModels(t *testing.T) {
 		assert.Equal(t, samples[1].Tokens, saved[1].Tokens)
 		assert.Equal(t, samples[1].Labels, saved[1].Labels)
 
+		tp := fmt.Sprintf("%s finetune test", modelType)
+
 		ftReq := api.FinetuneRequest{
 			Name:       fmt.Sprintf("finetuned-%s", modelType),
-			TaskPrompt: fmt.Sprintf("%s finetune test", modelType),
+			TaskPrompt: &tp,
 			Tags:       []api.TagInfo{{Name: "xyz"}},
 		}
 

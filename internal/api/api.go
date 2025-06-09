@@ -171,13 +171,15 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 		return nil, err
 	}
 
-	var tags []string
-	for _, ti := range req.Tags {
-		tags = append(tags, ti.Name)
-	}
-	if err := database.SetModelTags(ctx, s.db, model.Id, tags); err != nil {
-		slog.Error("failed to set tags on finetuned model", "model_id", model.Id, "error", err)
-		return nil, err
+	if len(req.Tags) > 0 {
+		tagNames := make([]string, len(req.Tags))
+		for i, t := range req.Tags {
+			tagNames[i] = t.Name
+		}
+		if err := database.SetModelTags(ctx, s.db, model.Id, tagNames); err != nil {
+			slog.Error("failed to set tags", "model", model.Id, "err", err)
+			return nil, err
+		}
 	}
 
 	tokensList, labelsList, err := database.GetFeedbackSamples(ctx, s.db, modelId)
@@ -193,13 +195,17 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 		})
 	}
 
-	if err := s.publisher.PublishFinetuneTask(ctx, messaging.FinetuneTaskPayload{
+	payload := messaging.FinetuneTaskPayload{
 		ModelId:     model.Id,
 		BaseModelId: model.BaseModelId.UUID,
-		TaskPrompt:  req.TaskPrompt,
 		Tags:        req.Tags,
 		Samples:     req.Samples,
-	}); err != nil {
+	}
+	if req.TaskPrompt != nil {
+		payload.TaskPrompt = *req.TaskPrompt
+	}
+
+	if err := s.publisher.PublishFinetuneTask(ctx, payload); err != nil {
 		slog.Error("error queueing finetune task", "error", err)
 		_ = database.UpdateModelStatus(ctx, s.db, model.Id, database.ModelFailed)
 		return nil, CodedErrorf(http.StatusInternalServerError, "failed to queue finetune task")

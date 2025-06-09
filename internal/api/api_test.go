@@ -110,9 +110,10 @@ func TestFinetuneModel(t *testing.T) {
 
 	var response api.FinetuneResponse
 	t.Run("Finetuning", func(t *testing.T) {
+		tp := "Finetuning test"
 		payload := api.FinetuneRequest{
 			Name:       "FinetunedModel",
-			TaskPrompt: "Finetuning test",
+			TaskPrompt: &tp,
 			Tags:       []api.TagInfo{{Name: "tag1"}},
 		}
 		body, err := json.Marshal(payload)
@@ -797,7 +798,7 @@ func TestStoreAndGetFileNameToPath(t *testing.T) {
 	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
-	
+
 	// First test storing
 	uploadId := uuid.New()
 	testMap := map[string]string{
