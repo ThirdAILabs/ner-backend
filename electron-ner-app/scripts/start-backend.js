@@ -124,7 +124,7 @@ export async function startBackend() {
 
   log.debug('Spawning backend with cwd:', backendDir);
 
-  const modelType = 'cnn_model';  // Default model type
+  let modelType = 'cnn_model';  // Default model type
   try {
     const modelConfig = JSON.parse(fs.readFileSync(modelConfigPath, 'utf8'));
     modelType = modelConfig.model_type || modelType;
