@@ -1,5 +1,9 @@
-import { Tag } from '@/components/AnalyticsDashboard';
 import { FeedbackMetadata } from '@/components/feedback/useFeedbackState';
+
+interface Tag {
+  type: string;
+  count: number;
+}
 
 interface ObjectDatabaseRecord {
   taggedTokens: [string, string][];

@@ -21,6 +21,7 @@ interface Group {
 interface TaskStatusCategory {
   TotalTasks: number;
   TotalSize: number;
+  CompletedSize: number;
 }
 
 interface Report {

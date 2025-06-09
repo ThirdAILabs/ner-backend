@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import _ from 'lodash';
 
 import { formatFileSize, formatNumber } from '@/lib/utils';
+import type { Tag } from '@/types/analyticsTypes';
 
 interface AnalyticsDashboardProps {
   tokensProcessed: number; // This is actually bytes processed

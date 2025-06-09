@@ -97,7 +97,7 @@ export default function Jobs() {
         setLoading(true);
         const reportsData = await nerService.listReports();
         reportsData.sort(
-          (a: ReportWithStatus, b: ReportWithStatus) =>
+          (a, b) =>
             new Date(b.CreationTime).getTime() - new Date(a.CreationTime).getTime()
         );
         setReports(reportsData as ReportWithStatus[]);
