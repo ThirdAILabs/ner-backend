@@ -7,7 +7,7 @@ import { nerService } from '@/lib/backend';
 import { useSearchParams } from 'next/navigation';
 import { NO_GROUP } from '@/lib/utils';
 
-export function DatabaseTable({ groups: groupsProp, tags, uploadId }: DatabaseTableProps) {
+export function DatabaseTable({ groups: groupsProp, tags, uploadId, addFeedback }: DatabaseTableProps) {
   const searchParams = useSearchParams();
   const reportId: string = searchParams.get('jobId') as string;
   const groups = groupsProp.length > 0 ? [...groupsProp, NO_GROUP] : [];
@@ -379,6 +379,7 @@ export function DatabaseTable({ groups: groupsProp, tags, uploadId }: DatabaseTa
                   onLoadMore={handleLoadMore}
                   showFilterContent={showFilterSection}
                   pathMap={pathMap}
+                  addFeedback={addFeedback}
                 />
               </div>
             </div>
