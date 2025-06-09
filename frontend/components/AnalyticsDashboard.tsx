@@ -228,14 +228,7 @@ export function AnalyticsDashboard({
                           rx="4"
                           ry="4"
                         />
-                        <rect
-                          x={0}
-                          y={y}
-                          width="100%"
-                          height={height}
-                          fill="transparent"
-                          // fill="green"
-                        />
+                        <rect x={0} y={y} width="100%" height={height} fill="transparent" />
                       </g>
                     );
                   }}
