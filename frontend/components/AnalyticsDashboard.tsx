@@ -24,7 +24,6 @@ interface AnalyticsDashboardProps {
   failedFileCount: number;
   totalFileCount: number;
   dataProcessed: number;
-  // isJobComplete: boolean;
 }
 
 const formatTime = (time: number): string => {
@@ -59,7 +58,6 @@ export function AnalyticsDashboard({
   failedFileCount,
   totalFileCount,
   dataProcessed,
-  // isJobComplete,
 }: AnalyticsDashboardProps) {
   const tokenChartData = tags;
   const progress = ((succeededFileCount + failedFileCount) * 100) / totalFileCount || 0;
@@ -134,19 +132,19 @@ export function AnalyticsDashboard({
 
               <div className="flex flex-col space-y-3 pl-2">
                 {' '}
-                {/* Reduced padding */}{' '}
                 <div className="flex flex-col">
                   <div className="flex items-center space-x-2">
                     <div className="h-2.5 w-2.5 rounded-full bg-gradient-to-r from-green-500 to-green-600"></div>
                     <span className="text-xs font-medium text-gray-600">Succeeded</span>
                   </div>
                   <span
-                    className={`text-xl font-bold ml-4 ${filesSucceeded > 80
-                      ? 'text-green-600'
-                      : filesSucceeded > 50
-                        ? 'text-green-500'
-                        : 'text-green-400'
-                      }`}
+                    className={`text-xl font-bold ml-4 ${
+                      filesSucceeded > 80
+                        ? 'text-green-600'
+                        : filesSucceeded > 50
+                          ? 'text-green-500'
+                          : 'text-green-400'
+                    }`}
                   >
                     {' '}
                     {filesSucceeded.toFixed(1)}%
@@ -158,12 +156,13 @@ export function AnalyticsDashboard({
                     <span className="text-xs font-medium text-gray-600">Failed</span>
                   </div>
                   <span
-                    className={`text-xl font-bold ml-4 ${filesFailed > 20
-                      ? 'text-red-600'
-                      : filesFailed > 10
-                        ? 'text-red-500'
-                        : 'text-red-400'
-                      }`}
+                    className={`text-xl font-bold ml-4 ${
+                      filesFailed > 20
+                        ? 'text-red-600'
+                        : filesFailed > 10
+                          ? 'text-red-500'
+                          : 'text-red-400'
+                    }`}
                   >
                     {' '}
                     {filesFailed.toFixed(1)}%
