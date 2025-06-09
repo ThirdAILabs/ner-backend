@@ -70,5 +70,5 @@ def export(model: CNNNERModelSentenceTokenized, onnx_out: str, max_seq_len: int 
     )
 
     transitions = model.crf.transitions.cpu().detach().numpy().tolist()
-    with open(os.path.join(onnx_out, "crf_transitions.json", "w")) as f:
+    with open(os.path.join(onnx_out, "crf_transitions.json"), "w") as f:
         json.dump(transitions, f)
