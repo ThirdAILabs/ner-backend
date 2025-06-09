@@ -1,13 +1,16 @@
-import { Tag } from '@/components/AnalyticsDashboard';
+interface Tag {
+  type: string;
+  count: number;
+}
 
-export interface ObjectDatabaseRecord {
+interface ObjectDatabaseRecord {
   taggedTokens: [string, string][];
   tokenContexts?: { left: string; right: string }[];
   sourceObject: string;
   groups: string[];
 }
 
-export interface ClassifiedTokenDatabaseRecord {
+interface ClassifiedTokenDatabaseRecord {
   token: string;
   tag: string;
   sourceObject: string;
@@ -20,13 +23,13 @@ export interface ClassifiedTokenDatabaseRecord {
   end?: number;
 }
 
-export interface DatabaseTableProps {
+interface DatabaseTableProps {
   groups: string[];
   tags: Tag[];
   uploadId?: string;
 }
 
-export interface TableContentProps {
+interface TableContentProps {
   viewMode: ViewMode;
   objectRecords: ObjectDatabaseRecord[];
   tokenRecords: ClassifiedTokenDatabaseRecord[];
@@ -42,4 +45,4 @@ export interface TableContentProps {
   pathMap?: Record<string, string>;
 }
 
-export type ViewMode = 'object' | 'classified-token';
+type ViewMode = 'object' | 'classified-token';
