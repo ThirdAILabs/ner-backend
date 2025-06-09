@@ -7,8 +7,8 @@ import type { InferenceMetrics, ThroughputMetrics } from './inferenceTypes';
 import { formatFileSize, formatNumber } from '@/lib/utils';
 import { useHealth } from '@/contexts/HealthProvider';
 import MetricsDataViewerCard from '@/components/ui/MetricsDataViewerCard';
-import { TokenFeedback, mockFeedbackData } from './types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import type { Feedback } from '@/lib/backend';
 
 interface MetricsDataViewerProps {
   modelId?: string;
@@ -25,7 +25,8 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
   const { healthStatus } = useHealth();
   
   // State for feedback data
-  const [feedbackData] = useState<TokenFeedback[]>(mockFeedbackData);
+  const [feedbackData, setFeedbackData] = useState<Feedback[]>([]);
+  const [loadingFeedback, setLoadingFeedback] = useState(false);
 
   function getFontSize(value: string) {
     if (!value) return '2rem';
@@ -68,19 +69,20 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
           setTpMetrics(null);
         }
 
-        // 3) build inference‐series by calling summary for each day = 1..days
-        // const infPromises = Array.from({ length: days }, (_, i) =>
-        //   nerService.getInferenceMetrics(modelId, i + 1)
-        // );
-        // const infResults = await Promise.all(infPromises);
-        // if (!mounted) return;
-        // setInfSeries(
-        //   infResults.map((res, i) => ({
-        //     day: i + 1,
-        //     dataMB: parseFloat(res.DataProcessedMB.toFixed(2)),
-        //     tokens: res.TokensProcessed
-        //   }))
-        // );
+        // 3) Fetch feedback data if modelId is provided
+        if (modelId) {
+          setLoadingFeedback(true);
+          try {
+            const feedback = await nerService.getFeedbackSamples(modelId);
+            if (!mounted) return;
+            setFeedbackData(feedback);
+          } catch (e: any) {
+            console.error('Failed to load feedback data:', e);
+            // Don't set error for feedback, just log it
+          } finally {
+            if (mounted) setLoadingFeedback(false);
+          }
+        }
       } catch (e: any) {
         if (!mounted) return;
         setError(e.message || 'Failed to load metrics');
@@ -94,8 +96,8 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
     };
   }, [modelId, days, healthStatus]);
 
-  const renderHighlightedToken = (token: string, tag: string) => {
-    if (tag === 'O') {
+  const renderHighlightedToken = (token: string, label: string) => {
+    if (label === 'O') {
       return token;
     }
     
@@ -130,7 +132,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
               padding: '1px 3px',
             }}
           >
-            {tag}
+            {label}
           </span>
         </span>
       </span>
@@ -196,54 +198,69 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
         </Box>
 
         {/* Fine-tuned Feedback Data */}
-        <Box sx={{ mt: 4 }}>
-          <Typography 
-            variant="h6"
-            sx={{
-              fontWeight: 600,
-              fontSize: '1.25rem',
-              color: '#4a5568',
-              mb: 2
-            }}
-          >
-            User Feedback
-          </Typography>
-          <div className="border rounded-md">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Feedback Text</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {feedbackData.map((feedback, index) => (
-                  <TableRow key={index}>
-                    <TableCell>
-                      {feedback.tokens.map((token, tokenIndex) => (
-                        <span key={tokenIndex}>
-                          {renderHighlightedToken(token, feedback.tags[tokenIndex])}
-                        </span>
-                      ))}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <button
-                        className="text-gray-700 hover:text-gray-700 transition-colors"
-                        onClick={() => {
-                          // TODO: Implement delete functionality when backend is ready
-                          console.log('Delete feedback:', feedback);
-                        }}
-                        title="Delete feedback"
-                      >
-                        ✕
-                      </button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </Box>
+        {modelId && (
+          <Box sx={{ mt: 4 }}>
+            <Typography 
+              variant="h6"
+              sx={{
+                fontWeight: 600,
+                fontSize: '1.25rem',
+                color: '#4a5568',
+                mb: 2
+              }}
+            >
+              User Feedback
+            </Typography>
+            <div className="border rounded-md">
+              {loadingFeedback ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                  <CircularProgress size={20} />
+                </Box>
+              ) : feedbackData.length === 0 ? (
+                <Box sx={{ p: 4, textAlign: 'center' }}>
+                  <Typography sx={{ color: 'text.secondary', fontSize: '0.875rem' }}>
+                    No feedback data available for this model
+                  </Typography>
+                </Box>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Feedback Text</TableHead>
+                      <TableHead className="w-[50px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {feedbackData.map((feedback, index) => (
+                      <TableRow key={index}>
+                        <TableCell>
+                          {feedback.tokens.map((token, tokenIndex) => (
+                            <span key={tokenIndex}>
+                              {renderHighlightedToken(token, feedback.labels[tokenIndex])}
+                              {tokenIndex < feedback.tokens.length - 1 ? ' ' : ''}
+                            </span>
+                          ))}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <button
+                            className="text-gray-700 hover:text-gray-700 transition-colors"
+                            onClick={() => {
+                              // TODO: Implement delete functionality when backend is ready
+                              console.log('Delete feedback:', feedback);
+                            }}
+                            title="Delete feedback"
+                          >
+                            ✕
+                          </button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
+          </Box>
+        )}
       </Box>
     </>
   );

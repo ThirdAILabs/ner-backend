@@ -439,4 +439,13 @@ export const nerService = {
     const { data } = await axiosInstance.post(`/models/${modelId}/feedback`, feedback);
     return data;
   },
+
+  getFeedbackSamples: async (modelId: string): Promise<Feedback[]> => {
+    try {
+      const { data } = await axiosInstance.get(`/models/${modelId}/feedback`);
+      return data;
+    } catch (error) {
+      return handleApiError(error, `Failed to load feedback samples for model ${modelId}`);
+    }
+  },
 };
