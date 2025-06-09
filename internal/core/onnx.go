@@ -272,8 +272,6 @@ func (m *OnnxModel) Predict(text string) ([]types.Entity, error) {
 		}
 	}
 
-	wordTags = FilterWordTags(cleanedText, spans, wordTags)
-
 	var ents []types.Entity
 	for wid, offs := range groups {
 		if len(offs) == 0 {
