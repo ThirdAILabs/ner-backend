@@ -6,11 +6,11 @@ import { TableContent } from './TableContent';
 import { nerService } from '@/lib/backend';
 import { useSearchParams } from 'next/navigation';
 import { NO_GROUP } from '@/lib/utils';
-import type { 
-  DatabaseTableProps, 
-  ClassifiedTokenDatabaseRecord, 
-  ObjectDatabaseRecord, 
-  ViewMode 
+import type {
+  DatabaseTableProps,
+  ClassifiedTokenDatabaseRecord,
+  ObjectDatabaseRecord,
+  ViewMode,
 } from '@/types/analyticsTypes';
 
 export function DatabaseTable({
