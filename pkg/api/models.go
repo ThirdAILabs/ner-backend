@@ -100,11 +100,10 @@ type Sample struct {
 }
 
 type FinetuneRequest struct {
-	Name string
-
-	TaskPrompt string
-	Tags       []TagInfo
-	Samples    []Sample
+	Name       string    `json:"name"`                  // still required
+	TaskPrompt *string   `json:"task_prompt,omitempty"` // optional
+	Tags       []TagInfo `json:"tags,omitempty"`        // optional
+	Samples    []Sample  `json:"samples,omitempty"`     // optional
 }
 
 type FinetuneResponse struct {

@@ -97,10 +97,12 @@ func TestFinetuning(t *testing.T) {
 	})
 	defer stop()
 
+	tp := "Finetuning test"
+
 	// No in-body samples; just do a normal finetune request
 	ftReq := api.FinetuneRequest{
 		Name:       "finetuned-model",
-		TaskPrompt: "finetuning test",
+		TaskPrompt: &tp,
 		Tags:       []api.TagInfo{{Name: "xyz"}},
 	}
 	_, model := finetune(t, router, baseID.String(), ftReq, 10, 100*time.Millisecond)
@@ -200,9 +202,11 @@ func TestFinetuningAllModels(t *testing.T) {
 		assert.Equal(t, samples[1].Tokens, saved[1].Tokens)
 		assert.Equal(t, samples[1].Labels, saved[1].Labels)
 
+		tp := fmt.Sprintf("%s finetune test", modelType)
+
 		ftReq := api.FinetuneRequest{
 			Name:       fmt.Sprintf("finetuned-%s", modelType),
-			TaskPrompt: fmt.Sprintf("%s finetune test", modelType),
+			TaskPrompt: &tp,
 			Tags:       []api.TagInfo{{Name: "xyz"}},
 		}
 
