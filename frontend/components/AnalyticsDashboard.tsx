@@ -141,13 +141,12 @@ export function AnalyticsDashboard({
                     <span className="text-xs font-medium text-gray-600">Succeeded</span>
                   </div>
                   <span
-                    className={`text-xl font-bold ml-4 ${
-                      filesSucceeded > 80
-                        ? 'text-green-600'
-                        : filesSucceeded > 50
-                          ? 'text-green-500'
-                          : 'text-green-400'
-                    }`}
+                    className={`text-xl font-bold ml-4 ${filesSucceeded > 80
+                      ? 'text-green-600'
+                      : filesSucceeded > 50
+                        ? 'text-green-500'
+                        : 'text-green-400'
+                      }`}
                   >
                     {' '}
                     {filesSucceeded.toFixed(1)}%
@@ -159,25 +158,18 @@ export function AnalyticsDashboard({
                     <span className="text-xs font-medium text-gray-600">Failed</span>
                   </div>
                   <span
-                    className={`text-xl font-bold ml-4 ${
-                      filesFailed > 20
-                        ? 'text-red-600'
-                        : filesFailed > 10
-                          ? 'text-red-500'
-                          : 'text-red-400'
-                    }`}
+                    className={`text-xl font-bold ml-4 ${filesFailed > 20
+                      ? 'text-red-600'
+                      : filesFailed > 10
+                        ? 'text-red-500'
+                        : 'text-red-400'
+                      }`}
                   >
                     {' '}
                     {filesFailed.toFixed(1)}%
                   </span>
                 </div>
               </div>
-            </div>
-            <div className="mt-3 text-center">
-              {' '}
-              <span className="text-xs font-medium text-gray-500">
-                {totalFileCount} Total Files
-              </span>
             </div>
           </CardContent>
         </Card>
