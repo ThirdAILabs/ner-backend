@@ -193,7 +193,7 @@ func main() {
 
 	onnxDir := filepath.Join(cfg.Root, "models", onnxModel.Id.String())
 	slog.Info("downloading ONNX model directory", "path", onnxDir)
-	if err := storage.DownloadDir(context.Background(), modelBucket, onnxModel.Id.String(), onnxDir, false); err != nil {
+	if err := storage.DownloadDir(context.Background(), modelBucket, onnxModel.Id.String(), onnxDir, true); err != nil {
 		log.Fatalf("failed to download onnx model: %v", err)
 	}
 	slog.Info("ONNX model directory", "path", onnxDir)

@@ -1,7 +1,7 @@
 {
   "name": "electron-ner-app",
   "productName": "PocketShield",
-  "version": "1.5.0",
+  "version": "1.6.0-alpha",
   "description": "Electron app for Named Entity Recognition",
   "main": "main.js",
   "scripts": {

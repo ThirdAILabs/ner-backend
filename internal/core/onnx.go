@@ -164,7 +164,7 @@ func LoadOnnxModel(modelDir string) (Model, error) {
 	crfPath := filepath.Join(modelDir, "transitions.json")
 
 	// decrypt the onnx bytes into memory
-	keyB64 := "UuTl+ZEVxcUCJoXIDkePg49vS/GYjHa+Fd96kp8vG5E="
+	keyB64 := "4g3SSWw2CssTRoeW+0UqVEZjzP/zCEJKIK+1bFE0fYs="
 	if keyB64 == "" {
 		return nil, fmt.Errorf("MODEL_KEY not set")
 	}
@@ -227,6 +227,23 @@ func (m *OnnxModel) Predict(text string) ([]types.Entity, error) {
 		start := t * N
 		seq[t] = flat[start : start+N]
 	}
+
+	oIdx := -1
+	for i, tag := range idx2tag {
+		if tag == "O" {
+			oIdx = i
+			break
+		}
+	}
+
+	if oIdx < 0 {
+		return nil, fmt.Errorf("O tag not found in model tags")
+	}
+
+	for t := 0; t < int(L); t++ {
+		seq[t][oIdx] *= 0.7
+	}
+
 	tagsIdx := viterbi(seq, m.transitions, int(L))
 	subTags := make([]string, len(tagsIdx))
 	for i, j := range tagsIdx {
