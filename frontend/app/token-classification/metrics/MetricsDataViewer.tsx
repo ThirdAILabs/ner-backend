@@ -96,22 +96,48 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
     };
   }, [modelId, days, healthStatus]);
 
-  const renderHighlightedToken = (token: string, label: string) => {
+  // Generate consistent colors for different tag types
+  const getTagColors = (label: string) => {
     if (label === 'O') {
-      return token;
+      return null; // No highlighting for 'O' tags
     }
+
+    // Color palette for different tag types
+    const colorPalette = [
+      { text: '#FFE8E8', tag: '#FF6B6B' }, // Red
+      { text: '#E8F4FF', tag: '#4A90E2' }, // Blue
+      { text: '#E8FFE8', tag: '#51C878' }, // Green
+      { text: '#FFF8E8', tag: '#F39C12' }, // Orange
+      { text: '#F0E8FF', tag: '#9B59B6' }, // Purple
+      { text: '#E8FFFF', tag: '#1ABC9C' }, // Teal
+      { text: '#FFE8F8', tag: '#E91E63' }, // Pink
+      { text: '#F8FFE8', tag: '#8BC34A' }, // Light Green
+      { text: '#E8E8FF', tag: '#6366F1' }, // Indigo
+      { text: '#FFF0E8', tag: '#FF8C00' }, // Dark Orange
+    ];
+
+    // Create a simple hash function for consistent color assignment
+    let hash = 0;
+    for (let i = 0; i < label.length; i++) {
+      hash = label.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const colorIndex = Math.abs(hash) % colorPalette.length;
     
-    // Use the same pastel colors as in TableContent
-    const tagColor = {
-      text: '#A6E6E7',  // Light blue pastel
-      tag: '#65CFD0'    // Darker blue
-    };
+    return colorPalette[colorIndex];
+  };
+
+  const renderHighlightedToken = (token: string, label: string) => {
+    const tagColors = getTagColors(label);
+    
+    if (!tagColors) {
+      return token; // Return plain token for 'O' tags
+    }
 
     return (
       <span>
         <span
           style={{
-            backgroundColor: tagColor.text,
+            backgroundColor: tagColors.text,
             padding: '2px 4px',
             borderRadius: '2px',
             userSelect: 'none',
@@ -123,7 +149,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
           {token}
           <span
             style={{
-              backgroundColor: tagColor.tag,
+              backgroundColor: tagColors.tag,
               color: 'white',
               fontSize: '11px',
               fontWeight: 'bold',
