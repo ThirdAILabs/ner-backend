@@ -1,11 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  DatabaseTableProps,
-  ViewMode,
-  ClassifiedTokenDatabaseRecord,
-  ObjectDatabaseRecord,
-} from './types';
 import { FilterSection } from './FilterSection';
 import { HeaderContent } from './HeaderContent';
 import { TableContent } from './TableContent';

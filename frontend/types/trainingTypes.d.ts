@@ -1,18 +1,18 @@
 // Training types
-export interface LabelMetrics {
+interface LabelMetrics {
   precision: number;
   recall: number;
   f1: number;
   support: number;
 }
 
-export interface ExampleCategories {
+interface ExampleCategories {
   true_positives: TrainingExample[];
   false_positives: TrainingExample[];
   false_negatives: TrainingExample[];
 }
 
-export interface TrainingExample {
+interface TrainingExample {
   id: string;
   text: string;
   tokens: string[];
@@ -20,7 +20,7 @@ export interface TrainingExample {
   predictions: string[];
 }
 
-export interface TrainReportData {
+interface TrainReportData {
   timestamp: string;
   duration: number;
   metrics: {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ChatResponse, nerService } from '@/lib/backend';
+import { nerService } from '@/lib/backend';
 
 export interface ChatPreview {
   id: string;
