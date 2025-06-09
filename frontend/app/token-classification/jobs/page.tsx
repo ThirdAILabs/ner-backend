@@ -312,6 +312,10 @@ function JobDetail() {
   }, [reportId, reportData?.SucceededFileCount]);
 
   useEffect(() => {
+    // There are two ways to get to the 'Review' tab:
+    // 1. By clicking on the tab, in which case we want to have all the filters selected.
+    // 2. By clicking on a bar in the graph, in which case we select that label as the selected tag.
+    // This code is needed to reset the filters selected when the user clicks on the tab directly.
     if (tabValue === 'output') {
       if (!tabChangeByGraph.current) {
         setSelectedTag(null);
