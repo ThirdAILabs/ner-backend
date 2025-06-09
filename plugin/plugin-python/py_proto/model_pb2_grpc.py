@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-from plugin.proto import model_pb2 as plugin_dot_proto_dot_model__pb2
+from . import model_pb2 as model__pb2
 
 GRPC_GENERATED_VERSION = '1.72.1'
 GRPC_VERSION = grpc.__version__
@@ -18,7 +18,7 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + f' but the generated code in plugin/proto/model_pb2_grpc.py depends on'
+        + f' but the generated code in model_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
@@ -36,23 +36,23 @@ class ModelStub(object):
         """
         self.Predict = channel.unary_unary(
                 '/proto.Model/Predict',
-                request_serializer=plugin_dot_proto_dot_model__pb2.PredictRequest.SerializeToString,
-                response_deserializer=plugin_dot_proto_dot_model__pb2.PredictResponse.FromString,
+                request_serializer=model__pb2.PredictRequest.SerializeToString,
+                response_deserializer=model__pb2.PredictResponse.FromString,
                 _registered_method=True)
         self.PredictBatch = channel.unary_unary(
                 '/proto.Model/PredictBatch',
-                request_serializer=plugin_dot_proto_dot_model__pb2.PredictBatchRequest.SerializeToString,
-                response_deserializer=plugin_dot_proto_dot_model__pb2.PredictBatchResponse.FromString,
+                request_serializer=model__pb2.PredictBatchRequest.SerializeToString,
+                response_deserializer=model__pb2.PredictBatchResponse.FromString,
                 _registered_method=True)
         self.Finetune = channel.unary_unary(
                 '/proto.Model/Finetune',
-                request_serializer=plugin_dot_proto_dot_model__pb2.FinetuneRequest.SerializeToString,
-                response_deserializer=plugin_dot_proto_dot_model__pb2.FinetuneResponse.FromString,
+                request_serializer=model__pb2.FinetuneRequest.SerializeToString,
+                response_deserializer=model__pb2.FinetuneResponse.FromString,
                 _registered_method=True)
         self.Save = channel.unary_unary(
                 '/proto.Model/Save',
-                request_serializer=plugin_dot_proto_dot_model__pb2.SaveRequest.SerializeToString,
-                response_deserializer=plugin_dot_proto_dot_model__pb2.SaveResponse.FromString,
+                request_serializer=model__pb2.SaveRequest.SerializeToString,
+                response_deserializer=model__pb2.SaveResponse.FromString,
                 _registered_method=True)
 
 
@@ -88,23 +88,23 @@ def add_ModelServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'Predict': grpc.unary_unary_rpc_method_handler(
                     servicer.Predict,
-                    request_deserializer=plugin_dot_proto_dot_model__pb2.PredictRequest.FromString,
-                    response_serializer=plugin_dot_proto_dot_model__pb2.PredictResponse.SerializeToString,
+                    request_deserializer=model__pb2.PredictRequest.FromString,
+                    response_serializer=model__pb2.PredictResponse.SerializeToString,
             ),
             'PredictBatch': grpc.unary_unary_rpc_method_handler(
                     servicer.PredictBatch,
-                    request_deserializer=plugin_dot_proto_dot_model__pb2.PredictBatchRequest.FromString,
-                    response_serializer=plugin_dot_proto_dot_model__pb2.PredictBatchResponse.SerializeToString,
+                    request_deserializer=model__pb2.PredictBatchRequest.FromString,
+                    response_serializer=model__pb2.PredictBatchResponse.SerializeToString,
             ),
             'Finetune': grpc.unary_unary_rpc_method_handler(
                     servicer.Finetune,
-                    request_deserializer=plugin_dot_proto_dot_model__pb2.FinetuneRequest.FromString,
-                    response_serializer=plugin_dot_proto_dot_model__pb2.FinetuneResponse.SerializeToString,
+                    request_deserializer=model__pb2.FinetuneRequest.FromString,
+                    response_serializer=model__pb2.FinetuneResponse.SerializeToString,
             ),
             'Save': grpc.unary_unary_rpc_method_handler(
                     servicer.Save,
-                    request_deserializer=plugin_dot_proto_dot_model__pb2.SaveRequest.FromString,
-                    response_serializer=plugin_dot_proto_dot_model__pb2.SaveResponse.SerializeToString,
+                    request_deserializer=model__pb2.SaveRequest.FromString,
+                    response_serializer=model__pb2.SaveResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -132,8 +132,8 @@ class Model(object):
             request,
             target,
             '/proto.Model/Predict',
-            plugin_dot_proto_dot_model__pb2.PredictRequest.SerializeToString,
-            plugin_dot_proto_dot_model__pb2.PredictResponse.FromString,
+            model__pb2.PredictRequest.SerializeToString,
+            model__pb2.PredictResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -159,8 +159,8 @@ class Model(object):
             request,
             target,
             '/proto.Model/PredictBatch',
-            plugin_dot_proto_dot_model__pb2.PredictBatchRequest.SerializeToString,
-            plugin_dot_proto_dot_model__pb2.PredictBatchResponse.FromString,
+            model__pb2.PredictBatchRequest.SerializeToString,
+            model__pb2.PredictBatchResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -186,8 +186,8 @@ class Model(object):
             request,
             target,
             '/proto.Model/Finetune',
-            plugin_dot_proto_dot_model__pb2.FinetuneRequest.SerializeToString,
-            plugin_dot_proto_dot_model__pb2.FinetuneResponse.FromString,
+            model__pb2.FinetuneRequest.SerializeToString,
+            model__pb2.FinetuneResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -213,8 +213,8 @@ class Model(object):
             request,
             target,
             '/proto.Model/Save',
-            plugin_dot_proto_dot_model__pb2.SaveRequest.SerializeToString,
-            plugin_dot_proto_dot_model__pb2.SaveResponse.FromString,
+            model__pb2.SaveRequest.SerializeToString,
+            model__pb2.SaveResponse.FromString,
             options,
             channel_credentials,
             insecure,
