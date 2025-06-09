@@ -228,6 +228,8 @@ function JobDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [dataProcessed, setDataProcessed] = useState<number | null>(null);
 
+  const tabChangeByGraph = React.useRef(false);
+
   function setDataProcessedFromReport(report: Report | null) {
     if (report) {
       setDataProcessed(
@@ -308,6 +310,16 @@ function JobDetail() {
       clearInterval(pollInterval);
     };
   }, [reportId, reportData?.SucceededFileCount]);
+
+  useEffect(() => {
+    if (tabValue === 'output') {
+      if (!tabChangeByGraph.current) {
+        setSelectedTag(null);
+      } else {
+        tabChangeByGraph.current = false;
+      }
+    }
+  }, [tabValue]);
 
   return (
     <div className="container px-4 py-8 mx-auto" style={{ width: '90%' }}>
@@ -469,8 +481,13 @@ function JobDetail() {
             failedFileCount={reportData?.FailedFileCount || 0}
             totalFileCount={reportData?.FileCount || 1}
             dataProcessed={dataProcessed || 0}
-            setTab={setTabValue}
-            setSelectedTag={setSelectedTag}
+            setTab={(val) => {
+              tabChangeByGraph.current = true;
+              setTabValue(val);
+            }}
+            setSelectedTag={(tag) => {
+              setSelectedTag(tag);
+            }}
           />
         </TabsContent>
 
