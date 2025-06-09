@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { Box, Card, CardContent, Typography, CircularProgress } from '@mui/material';
-import { nerService, InferenceMetrics, ThroughputMetrics } from '@/lib/backend';
+import { nerService } from '@/lib/backend';
 import { formatFileSize, formatNumber } from '@/lib/utils';
 import { useHealth } from '@/contexts/HealthProvider';
 import MetricsDataViewerCard from '@/components/ui/MetricsDataViewerCard';

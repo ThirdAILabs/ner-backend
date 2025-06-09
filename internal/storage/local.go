@@ -69,15 +69,31 @@ func (p *LocalProvider) PutObject(ctx context.Context, bucket, key string, data 
 	return nil
 }
 
-func (p *LocalProvider) DownloadDir(ctx context.Context, bucket, prefix, dest string) error {
-	if err := os.CopyFS(dest, os.DirFS(p.fullpath(bucket, prefix))); err != nil {
-		return fmt.Errorf("failed to copy directory from %s/%s to %s: %w", bucket, prefix, dest, err)
+func (p *LocalProvider) DownloadDir(ctx context.Context, bucket, prefix, dest string, overwrite bool) error {
+	sourcePath := p.fullpath(bucket, prefix)
+
+	if _, err := os.Stat(dest); err == nil {
+		if !overwrite {
+			return fmt.Errorf("destination %s already exists and overwrite is false", dest)
+		}
+		if err := os.RemoveAll(dest); err != nil {
+			return fmt.Errorf("failed to remove existing destination: %w", err)
+		}
 	}
-	return nil
+
+	return os.CopyFS(dest, os.DirFS(sourcePath))
 }
 
 func (p *LocalProvider) UploadDir(ctx context.Context, bucket, prefix, src string) error {
-	if err := os.CopyFS(p.fullpath(bucket, prefix), os.DirFS(src)); err != nil {
+	destPath := p.fullpath(bucket, prefix)
+
+	if _, err := os.Stat(destPath); err == nil {
+		if err := os.RemoveAll(destPath); err != nil {
+			return fmt.Errorf("failed to remove existing destination: %w", err)
+		}
+	}
+
+	if err := os.CopyFS(destPath, os.DirFS(src)); err != nil {
 		return fmt.Errorf("failed to copy directory from %s to %s/%s: %w", src, bucket, prefix, err)
 	}
 	return nil

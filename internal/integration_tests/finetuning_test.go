@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -145,22 +144,13 @@ func TestFinetuningAllModels(t *testing.T) {
 	for _, modelType := range modelTypes {
 		var modelName string
 		if modelType == "bolt" {
-			require.NoError(t,
-				cmd.InitializeBoltModel(db, s3, modelBucket, "basic",
-					filepath.Join(os.Getenv("HOST_MODEL_DIR"), "model.bin")),
-			)
+			require.NoError(t, cmd.InitializeBoltModel(db, s3, modelBucket, "basic", os.Getenv("HOST_MODEL_DIR")))
 			modelName = "basic"
 		} else if modelType == "cnn" {
-			require.NoError(t,
-				cmd.InitializeCnnNerExtractor(ctx, db, s3, modelBucket,
-					os.Getenv("HOST_MODEL_DIR")),
-			)
+			require.NoError(t, cmd.InitializeCnnNerExtractor(ctx, db, s3, modelBucket, "advanced", os.Getenv("HOST_MODEL_DIR")))
 			modelName = "advanced"
-		} else { // transformer
-			require.NoError(t,
-				cmd.InitializeTransformerModel(ctx, db, s3, modelBucket,
-					os.Getenv("HOST_MODEL_DIR")),
-			)
+		} else if modelType == "transformer" {
+			require.NoError(t, cmd.InitializeTransformerModel(ctx, db, s3, modelBucket, "ultra", os.Getenv("HOST_MODEL_DIR")))
 			modelName = "ultra"
 		}
 

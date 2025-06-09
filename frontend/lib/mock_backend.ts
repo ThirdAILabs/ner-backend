@@ -1,9 +1,3 @@
-import type {
-  TrainReportData,
-  LabelMetrics,
-  ExampleCategories,
-  TrainingExample,
-} from '@/lib/types';
 import { useState, useEffect } from 'react';
 
 // Mock data for training reports
