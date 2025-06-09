@@ -7,11 +7,12 @@ from ..utils import build_tag_vocab, clean_text_with_spans
 
 
 class CnnNerExtractor(Model):
-    def __init__(self, model_path: str):
+    def __init__(self, model_path: str, tokenizer_path: str = None):
         self.model = CNNModel(
             model_path=model_path,
             tokenizer_name="Qwen/Qwen2.5-0.5B",
             tag2idx=build_tag_vocab(),
+            tokenizer_path=tokenizer_path,
         )
 
         self.batch_size = 100

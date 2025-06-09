@@ -48,7 +48,7 @@ func NewModelLoaders(pythonExec, pluginScript string) map[string]ModelLoader {
 			)
 		},
 		"cnn": func(modelDir string) (Model, error) {
-			cfgJSON := fmt.Sprintf(`{"model_path":"%s/cnn_model.pth"}`, modelDir)
+			cfgJSON := fmt.Sprintf(`{"model_path":"%s/cnn_model.pth", "tokenizer_path":"%s/qwen_tokenizer"}`, modelDir, modelDir)
 			return python.LoadPythonModel(
 				pythonExec,
 				pluginScript,

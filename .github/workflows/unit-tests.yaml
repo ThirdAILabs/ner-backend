@@ -55,7 +55,7 @@ jobs:
           aws s3 cp s3://ner-models/cnn_model/         "$MODEL_DIR/cnn_model/"      --recursive
           aws s3 cp s3://ner-models/transformer_model/ "$MODEL_DIR/transformer_model/" --recursive
 
-          aws s3 cp s3://ner-models/python_ensemble_ner_model/udt_complete_with_datetime.model "$MODEL_DIR/model.bin"
+          aws s3 cp s3://ner-models/python_ensemble_ner_model/udt_complete_with_datetime.model "$MODEL_DIR/udt_model/udt_complete.model"
 
       - name: Install Python requirements
         run: |

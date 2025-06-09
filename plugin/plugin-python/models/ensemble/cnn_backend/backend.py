@@ -13,8 +13,13 @@ class CNNModel:
         model_path: str,
         tokenizer_name: str,
         tag2idx: dict,
+        tokenizer_path: str = None,
     ):
-        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
+        # Try loading from local path first if provided, otherwise use pretrained
+        if tokenizer_path and os.path.exists(tokenizer_path):
+            self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, local_files_only=True)
+        else:
+            self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
         self.tag2idx = tag2idx
 
         self.model = CNNNERModelSentenceTokenized(
