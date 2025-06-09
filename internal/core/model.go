@@ -35,10 +35,10 @@ func IsStatelessModel(modelType string) bool {
 func NewModelLoaders(pythonExec, pluginScript string) map[string]ModelLoader {
 
 	return map[string]ModelLoader{
-		"bolt": func(modelDir string) (Model, error) {
+		"bolt_udt": func(modelDir string) (Model, error) {
 			return bolt.LoadNER(filepath.Join(modelDir, "model.bin"))
 		},
-		"transformer": func(modelDir string) (Model, error) {
+		"python_transformer": func(modelDir string) (Model, error) {
 			cfgJSON := fmt.Sprintf(`{"model_path":"%s","threshold":0.5}`, modelDir)
 			return python.LoadPythonModel(
 				pythonExec,
@@ -47,7 +47,7 @@ func NewModelLoaders(pythonExec, pluginScript string) map[string]ModelLoader {
 				cfgJSON,
 			)
 		},
-		"cnn": func(modelDir string) (Model, error) {
+		"python_cnn": func(modelDir string) (Model, error) {
 			cfgJSON := fmt.Sprintf(`{"model_path":"%s/cnn_model.pth", "tokenizer_path":"%s/qwen_tokenizer"}`, modelDir, modelDir)
 			return python.LoadPythonModel(
 				pythonExec,

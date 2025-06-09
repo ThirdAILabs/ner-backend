@@ -33,7 +33,7 @@ type Config struct {
 	Port       int    `env:"PORT" envDefault:"3001"`
 	License    string `env:"LICENSE_KEY" envDefault:""`
 	ModelDir   string `env:"MODEL_DIR" envDefault:""`
-	ModelType  string `env:"MODEL_TYPE" envDefault:"cnn_model"`
+	ModelType  string `env:"MODEL_TYPE" envDefault:"bolt_udt"`
 	AppDataDir string `env:"APP_DATA_DIR" envDefault:"./pocket-shield"`
 }
 
@@ -113,17 +113,7 @@ func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publish
 
 	loaders := core.NewModelLoaders("python", "plugin/plugin-python/plugin.py")
 
-	var loaderType string
-	switch {
-	case modelType == "udt_model":
-		loaderType = "bolt"
-	case modelType == "cnn_model":
-		loaderType = "cnn"
-	default:
-		log.Fatalf("Unknown model type in directory: %s", modelDir)
-	}
-
-	nerModel, err := loaders[loaderType](modelDir)
+	nerModel, err := loaders[modelType](modelDir)
 	if err != nil {
 		log.Fatalf("could not load NER model: %v", err)
 	}
@@ -173,16 +163,16 @@ func main() {
 
 	if cfg.ModelDir != "" {
 		switch cfg.ModelType {
-		case "udt_model":
-			if err := cmd.InitializeBoltModel(db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
+		case "bolt_udt":
+			if err := cmd.InitializeBoltUdtModel(context.Background(), db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
 				log.Fatalf("Failed to init & upload bolt model: %v", err)
 			}
-		case "cnn_model":
-			if err := cmd.InitializeCnnNerExtractor(context.Background(), db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
-				log.Fatalf("Failed to init & upload CNN model: %v", err)
+		case "python_cnn":
+			if err := cmd.InitializePythonCnnModel(context.Background(), db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
+				log.Fatalf("Failed to init & upload python CNN model: %v", err)
 			}
 		default:
-			log.Fatalf("Invalid model type: %s. Must be either 'bolt' or 'cnn'", cfg.ModelType)
+			log.Fatalf("Invalid model type: %s. Must be either 'bolt_udt' or 'python_cnn'", cfg.ModelType)
 		}
 	} else {
 		cmd.InitializePresidioModel(db)

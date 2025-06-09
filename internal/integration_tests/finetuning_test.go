@@ -136,18 +136,18 @@ func TestFinetuningAllModels(t *testing.T) {
 	)
 	defer stop()
 
-	models := []string{"bolt", "cnn", "transformer"}
+	models := []string{"bolt_udt", "python_cnn", "python_transformer"}
 
 	for _, modelType := range models {
 		var modelName string
-		if modelType == "bolt" {
-			require.NoError(t, cmd.InitializeBoltModel(db, s3, modelBucket, "basic", os.Getenv("HOST_MODEL_DIR")))
+		if modelType == "bolt_udt" {
+			require.NoError(t, cmd.InitializeBoltUdtModel(ctx, db, s3, modelBucket, "basic", os.Getenv("HOST_MODEL_DIR")))
 			modelName = "basic"
-		} else if modelType == "cnn" {
-			require.NoError(t, cmd.InitializeCnnNerExtractor(ctx, db, s3, modelBucket, "advanced", os.Getenv("HOST_MODEL_DIR")))
+		} else if modelType == "python_cnn" {
+			require.NoError(t, cmd.InitializePythonCnnModel(ctx, db, s3, modelBucket, "advanced", os.Getenv("HOST_MODEL_DIR")))
 			modelName = "advanced"
-		} else if modelType == "transformer" {
-			require.NoError(t, cmd.InitializeTransformerModel(ctx, db, s3, modelBucket, "ultra", os.Getenv("HOST_MODEL_DIR")))
+		} else if modelType == "python_transformer" {
+			require.NoError(t, cmd.InitializePythonTransformerModel(ctx, db, s3, modelBucket, "ultra", os.Getenv("HOST_MODEL_DIR")))
 			modelName = "ultra"
 		} else {
 			t.Fatalf("Invalid model type: %s", modelType)

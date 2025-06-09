@@ -342,7 +342,7 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 			label: "CNN Model",
 			tag:   "cnn",
 			initFn: func(c context.Context, db *gorm.DB, s3 *storage.S3Provider, bucket string) error {
-				return cmd.InitializeCnnNerExtractor(c, db, s3, bucket, "advanced", os.Getenv("HOST_MODEL_DIR"))
+				return cmd.InitializePythonCnnModel(c, db, s3, bucket, "advanced", os.Getenv("HOST_MODEL_DIR"))
 			},
 			expectedDB: "advanced",
 		},
@@ -350,7 +350,7 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 			label: "Transformer Model",
 			tag:   "transformer",
 			initFn: func(c context.Context, db *gorm.DB, s3 *storage.S3Provider, bucket string) error {
-				return cmd.InitializeTransformerModel(c, db, s3, bucket, "ultra", os.Getenv("HOST_MODEL_DIR"))
+				return cmd.InitializePythonTransformerModel(c, db, s3, bucket, "ultra", os.Getenv("HOST_MODEL_DIR"))
 			},
 			expectedDB: "ultra",
 		},
