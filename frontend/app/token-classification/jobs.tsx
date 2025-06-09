@@ -130,7 +130,7 @@ export default function Jobs() {
             }}
           >
             <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.125rem' }}>
-              Report
+              Scan
             </Typography>
             <Link href={`/token-classification/jobs/new`} passHref>
               <Button
@@ -170,7 +170,7 @@ export default function Jobs() {
             }}
           >
             <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.125rem' }}>
-              Report
+              Scan
             </Typography>
             <Link href={`/token-classification/jobs/new`} passHref>
               <Button

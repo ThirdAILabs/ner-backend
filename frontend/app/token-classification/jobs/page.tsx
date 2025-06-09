@@ -318,7 +318,7 @@ function JobDetail() {
           </Link>
         </Button>
         <h1 className="text-2xl font-medium text-center flex-1">
-          {reportData?.ReportName || '[Report Name]'}
+          {reportData?.ReportName || '[Scan Name]'}
         </h1>
         {/* Empty div to maintain spacing */}
         <div className="w-[106px]"></div> {/* Width matches the Back button */}
