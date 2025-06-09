@@ -115,30 +115,38 @@ func initializeModel(
 	tags = filterExcludedTags(tags)
 	var model database.Model
 
+	// The following section overwrite attributes of an existing model if it exists,
+	// or creates a new one if it doesn't. This is to handle the case of model type
+	// changes when we build our desktop application.
 	// First get the existing model by name
 	result := db.Preload("Tags").Where("name = ?", name).First(&model)
 	if result.Error != nil && result.Error != gorm.ErrRecordNotFound {
 		return fmt.Errorf("error finding model %q: %w", name, result.Error)
 	}
 
-	// Update or create the model
 	if result.Error == gorm.ErrRecordNotFound {
 		model = database.Model{
-			Id:   uuid.New(),
-			Name: name,
+			Id:           uuid.New(),
+			Name:         name,
+			Type:         modelType,
+			Status:       database.ModelQueued,
+			CreationTime: time.Now(),
+		}
+		// Create the model
+		if err := db.Create(&model).Error; err != nil {
+			return fmt.Errorf("failed to create model: %w", err)
 		}
 	} else {
 		slog.Info("model already exists, will overwrite", "model_id", model.Id)
-	}
-
-	// Update all other fields
-	result = db.Model(&model).Updates(database.Model{
-		Type:         modelType,
-		Status:       database.ModelQueued,
-		CreationTime: time.Now(),
-	})
-	if result.Error != nil {
-		return fmt.Errorf("failed to update model: %w", result.Error)
+		// Update existing model
+		result = db.Model(&model).Updates(database.Model{
+			Type:         modelType,
+			Status:       database.ModelQueued,
+			CreationTime: time.Now(),
+		})
+		if result.Error != nil {
+			return fmt.Errorf("failed to update model: %w", result.Error)
+		}
 	}
 
 	// Update tags
@@ -195,17 +203,7 @@ func InitializeBoltModel(db *gorm.DB, s3 storage.Provider, modelBucket, name, ho
 	localModelPath := filepath.Join(hostModelDir, "udt_model", "udt_complete.model")
 	slog.Info("initializing bolt model", "model_name", name, "local_model_path", localModelPath)
 
-	modelId := uuid.New()
 	tags := filterExcludedTags(commonModelTags)
-
-	var modelTags []database.ModelTag
-	for _, tag := range tags {
-		modelTags = append(modelTags, database.ModelTag{
-			ModelId: modelId,
-			Tag:     tag,
-		})
-	}
-
 	var model database.Model
 
 	// The following section overwrite attributes of an existing model if it exists,
@@ -217,35 +215,47 @@ func InitializeBoltModel(db *gorm.DB, s3 storage.Provider, modelBucket, name, ho
 		return fmt.Errorf("failed to query existing model: %w", result.Error)
 	}
 
-	// Update or create the model
 	if result.Error == gorm.ErrRecordNotFound {
 		model = database.Model{
-			Id:   modelId,
-			Name: name,
+			Id:           uuid.New(),
+			Name:         name,
+			Type:         "bolt",
+			Status:       database.ModelQueued,
+			CreationTime: time.Now().UTC(),
+		}
+		// Create the model
+		if err := db.Create(&model).Error; err != nil {
+			return fmt.Errorf("failed to create model: %w", err)
 		}
 	} else {
-		modelId = model.Id // Use existing model's ID
+		slog.Info("bolt model already exists, will overwrite", "model_id", model.Id)
+		// Update existing model
+		result = db.Model(&model).Updates(database.Model{
+			Type:         "bolt",
+			Status:       database.ModelQueued,
+			CreationTime: time.Now().UTC(),
+		})
+		if result.Error != nil {
+			return fmt.Errorf("failed to update model: %w", result.Error)
+		}
 	}
 
-	// Update all other fields
-	result = db.Model(&model).Updates(database.Model{
-		Type:         "bolt",
-		Status:       database.ModelQueued,
-		CreationTime: time.Now().UTC(),
-	})
-	if result.Error != nil {
-		return fmt.Errorf("failed to update model: %w", result.Error)
+	// Update tags
+	modelTags := make([]database.ModelTag, len(tags))
+	for i, tag := range tags {
+		modelTags[i] = database.ModelTag{
+			ModelId: model.Id,
+			Tag:     tag,
+		}
 	}
-
-	// Update tags separately since they're a relation
 	if err := db.Model(&model).Association("Tags").Replace(modelTags); err != nil {
 		return fmt.Errorf("failed to update model tags: %w", err)
 	}
 
 	status := database.ModelFailed
 	defer func() {
-		if err := database.UpdateModelStatus(context.Background(), db, modelId, status); err != nil {
-			slog.Error("failed to update model status during initialization", "model_id", modelId, "status", status, "error", err)
+		if err := database.UpdateModelStatus(context.Background(), db, model.Id, status); err != nil {
+			slog.Error("failed to update model status during initialization", "model_id", model.Id, "status", status, "error", err)
 		}
 	}()
 
@@ -266,12 +276,12 @@ func InitializeBoltModel(db *gorm.DB, s3 storage.Provider, modelBucket, name, ho
 	}
 	defer file.Close()
 
-	if err := s3.PutObject(context.Background(), modelBucket, filepath.Join(modelId.String(), "model.bin"), file); err != nil {
-		slog.Error("failed to upload bolt model to S3", "model_id", modelId, "error", err)
+	if err := s3.PutObject(context.Background(), modelBucket, filepath.Join(model.Id.String(), "model.bin"), file); err != nil {
+		slog.Error("failed to upload bolt model to S3", "model_id", model.Id, "error", err)
 		return fmt.Errorf("failed to upload model to S3: %w", err)
 	}
 
-	slog.Info("successfully uploaded bolt model to S3", "model_id", modelId)
+	slog.Info("successfully uploaded bolt model to S3", "model_id", model.Id)
 	status = database.ModelTrained
 
 	return nil
