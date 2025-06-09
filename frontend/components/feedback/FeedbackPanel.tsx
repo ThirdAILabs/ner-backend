@@ -8,7 +8,12 @@ interface Token {
 }
 
 interface FeedbackPanelProps {
-  feedbacks: { id: string; tokens: Token[]; spotlightStartIndex: number; spotlightEndIndex: number }[];
+  feedbacks: {
+    id: string;
+    tokens: Token[];
+    spotlightStartIndex: number;
+    spotlightEndIndex: number;
+  }[];
   availableTags: string[];
   onDelete: (id: string) => void;
   onSubmit: () => void;
@@ -23,17 +28,21 @@ interface FeedbackRowProps {
   onDelete: (id: string) => void;
 }
 
-const FeedbackRow: React.FC<FeedbackRowProps> = ({ id, tokens, availableTags, spotlightStartIndex, spotlightEndIndex, onDelete }) => {
+const FeedbackRow: React.FC<FeedbackRowProps> = ({
+  id,
+  tokens,
+  availableTags,
+  spotlightStartIndex,
+  spotlightEndIndex,
+  onDelete,
+}) => {
   const [confirm, setConfirm] = useState(false);
   const confirmBtnRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     if (!confirm) return;
     function handleClick(e: MouseEvent) {
-      if (
-        confirmBtnRef.current &&
-        !confirmBtnRef.current.contains(e.target as Node)
-      ) {
+      if (confirmBtnRef.current && !confirmBtnRef.current.contains(e.target as Node)) {
         setConfirm(false);
       }
     }
@@ -44,14 +53,22 @@ const FeedbackRow: React.FC<FeedbackRowProps> = ({ id, tokens, availableTags, sp
   return (
     <div className="flex items-start justify-between w-full gap-2 py-2">
       <div className="flex-grow min-w-0">
-        <TokenHighlighter tokens={tokens} availableTags={availableTags} spotlightStartIndex={spotlightStartIndex} spotlightEndIndex={spotlightEndIndex} />
+        <TokenHighlighter
+          tokens={tokens}
+          availableTags={availableTags}
+          spotlightStartIndex={spotlightStartIndex}
+          spotlightEndIndex={spotlightEndIndex}
+        />
       </div>
       <div className="flex-shrink-0 ml-2 flex mt-1">
         {confirm ? (
           <button
             ref={confirmBtnRef}
             className="bg-red-500 text-white rounded-full px-3 py-1 text-xs font-semibold shadow hover:bg-red-600 transition"
-            onClick={() => { onDelete(id); setConfirm(false); }}
+            onClick={() => {
+              onDelete(id);
+              setConfirm(false);
+            }}
           >
             Confirm
           </button>
@@ -69,7 +86,12 @@ const FeedbackRow: React.FC<FeedbackRowProps> = ({ id, tokens, availableTags, sp
   );
 };
 
-export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({ feedbacks, availableTags, onDelete, onSubmit }) => {
+export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
+  feedbacks,
+  availableTags,
+  onDelete,
+  onSubmit,
+}) => {
   const [collapsed, setCollapsed] = useState(feedbacks.length === 0);
   const prevFeedbackCountRef = useRef(feedbacks.length);
 
@@ -81,22 +103,39 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({ feedbacks, availab
   }, [feedbacks]);
 
   return (
-    <div className={collapsed
-      ? 'bg-blue-600 rounded-lg shadow-lg border border-gray-200 w-full h-12 flex items-center justify-between px-4 cursor-pointer transition-all duration-200 hover:bg-blue-700 '
-      : 'flex flex-col h-full w-full bg-white rounded-lg shadow-lg border border-gray-200 transition-all duration-200'}
+    <div
+      className={
+        collapsed
+          ? 'bg-blue-600 rounded-lg shadow-lg border border-gray-200 w-full h-12 flex items-center justify-between px-4 cursor-pointer transition-all duration-200 hover:bg-blue-700 '
+          : 'flex flex-col h-full w-full bg-white rounded-lg shadow-lg border border-gray-200 transition-all duration-200'
+      }
       onClick={collapsed ? () => setCollapsed(false) : undefined}
     >
       {/* Collapsed bar */}
       {collapsed ? (
         <>
           <span className="text-base font-semibold text-white">Feedback ({feedbacks.length})</span>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="white"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
         </>
       ) : (
         <>
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 rounded-t-lg bg-white flex-shrink-0">
-            <span className="text-base font-semibold text-gray-800">Feedback ({feedbacks.length})</span>
+            <span className="text-base font-semibold text-gray-800">
+              Feedback ({feedbacks.length})
+            </span>
             <button
               className="p-1 rounded hover:bg-gray-100 transition"
               onClick={() => setCollapsed((c) => !c)}
@@ -104,7 +143,18 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({ feedbacks, availab
               type="button"
             >
               {/* Minus icon when expanded */}
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
             </button>
           </div>
 

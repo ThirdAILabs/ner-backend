@@ -1,7 +1,7 @@
-import { Feedback } from "@/lib/backend";
-import { useEffect, useState } from "react";
+import { Feedback } from '@/lib/backend';
+import { useEffect, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { nerService } from "@/lib/backend";
+import { nerService } from '@/lib/backend';
 
 export interface DisplayedToken {
   text: string;
@@ -22,9 +22,10 @@ export interface FeedbackMetadata {
 const useFeedbackState = (modelId: string, reportId: string) => {
   const FEEDBACK_STORAGE_KEY = `feedback-${reportId}`;
   const OBJECTS_STORAGE_KEY = `objects-${reportId}`;
-  
+
   const initialFeedback = JSON.parse(localStorage.getItem(FEEDBACK_STORAGE_KEY) || '[]');
-  const [feedback, setFeedback] = useState<{ id: string; body: FeedbackMetadata }[]>(initialFeedback);
+  const [feedback, setFeedback] =
+    useState<{ id: string; body: FeedbackMetadata }[]>(initialFeedback);
   const initialObjects = JSON.parse(localStorage.getItem(OBJECTS_STORAGE_KEY) || '{}');
   const [objects, setObjects] = useState<Record<string, Feedback>>(initialObjects);
 
@@ -32,18 +33,24 @@ const useFeedbackState = (modelId: string, reportId: string) => {
   useEffect(() => {
     localStorage.setItem(FEEDBACK_STORAGE_KEY, JSON.stringify(feedback));
   }, [feedback, reportId]);
-  
+
   useEffect(() => {
     localStorage.setItem(OBJECTS_STORAGE_KEY, JSON.stringify(objects));
   }, [objects, reportId]);
 
-
-  const addFeedback = (newFeedback: FeedbackMetadata, objectTokens: string[], objectTags: string[]) => {
+  const addFeedback = (
+    newFeedback: FeedbackMetadata,
+    objectTokens: string[],
+    objectTags: string[]
+  ) => {
     setFeedback([...feedback, { id: uuidv4(), body: newFeedback }]);
     if (!objects[newFeedback.objectId]) {
-      setObjects({ ...objects, [newFeedback.objectId]: { tokens: objectTokens, labels: objectTags } });
+      setObjects({
+        ...objects,
+        [newFeedback.objectId]: { tokens: objectTokens, labels: objectTags },
+      });
     }
-  }
+  };
 
   const submitFeedback = async () => {
     const finetuningSamples: Record<string, Feedback> = {};
@@ -69,16 +76,21 @@ const useFeedbackState = (modelId: string, reportId: string) => {
     setObjects({});
     localStorage.removeItem(FEEDBACK_STORAGE_KEY);
     localStorage.removeItem(OBJECTS_STORAGE_KEY);
-  }
+  };
 
   const removeFeedback = (id: string) => {
     setFeedback(feedback.filter((feedback) => feedback.id !== id));
-  }
+  };
 
-  const displayedFeedback: { id: string; tokens: DisplayedToken[]; spotlightStartIndex: number; spotlightEndIndex: number }[] = feedback.map((f) => {
+  const displayedFeedback: {
+    id: string;
+    tokens: DisplayedToken[];
+    spotlightStartIndex: number;
+    spotlightEndIndex: number;
+  }[] = feedback.map((f) => {
     const toWords = (text: string) => {
       return text.split(/\s+/).filter((word) => word.trim() !== '');
-    }
+    };
     const leftContextWords = toWords(f.body.leftContext);
     const highlightedWords = toWords(f.body.highlightedText);
     const rightContextWords = toWords(f.body.rightContext);
@@ -87,7 +99,7 @@ const useFeedbackState = (modelId: string, reportId: string) => {
     const tokens = [
       ...leftContextWords.map((word) => ({ text: word, tag: 'O' })),
       ...highlightedWords.map((word) => ({ text: word, tag: f.body.tag })),
-      ...rightContextWords.map((word) => ({ text: word, tag: 'O' }))
+      ...rightContextWords.map((word) => ({ text: word, tag: 'O' })),
     ];
     return { id: f.id, tokens, spotlightStartIndex, spotlightEndIndex };
   });
@@ -96,8 +108,8 @@ const useFeedbackState = (modelId: string, reportId: string) => {
     displayedFeedback,
     addFeedback,
     removeFeedback,
-    submitFeedback
-  }
+    submitFeedback,
+  };
 };
 
 export default useFeedbackState;

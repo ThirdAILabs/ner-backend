@@ -229,7 +229,10 @@ function JobDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [dataProcessed, setDataProcessed] = useState<number | null>(null);
 
-  const { displayedFeedback, addFeedback, removeFeedback, submitFeedback } = useFeedbackState(reportData?.Model?.Id || '', reportId);
+  const { displayedFeedback, addFeedback, removeFeedback, submitFeedback } = useFeedbackState(
+    reportData?.Model?.Id || '',
+    reportId
+  );
 
   function setDataProcessedFromReport(report: Report | null) {
     if (report) {

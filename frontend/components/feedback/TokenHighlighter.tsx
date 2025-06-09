@@ -42,7 +42,7 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [query, setQuery] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
-  
+
   const tagColors = useMemo(() => {
     const colors: Record<string, HighlightColor> = {};
     availableTags
@@ -90,7 +90,7 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
     if (isSelecting) {
       setDropdownPosition({
         x: event.clientX,
-        y: event.clientY
+        y: event.clientY,
       });
       setShowDropdown(true);
       setIsSelecting(false);
@@ -119,28 +119,30 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
     REMOVE_TAG_NAME,
     ...(query
       ? availableTags.filter((tag) => tag.toLowerCase().includes(query.toLowerCase()))
-      : availableTags
-    )
+      : availableTags),
   ];
 
-  const queryMatchesTag = query && availableTags.some(tag => tag.toLowerCase() === query.toLowerCase());
+  const queryMatchesTag =
+    query && availableTags.some((tag) => tag.toLowerCase() === query.toLowerCase());
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setQuery(e.target.value);
   };
 
   return (
-    <div
-      ref={containerRef}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseLeaveFeedbackBox}
-    >
+    <div ref={containerRef} onMouseUp={handleMouseUp} onMouseLeave={handleMouseLeaveFeedbackBox}>
       <div className="flex flex-wrap gap-0.5">
         {tokens.map((token, index) => {
-          const startIndex = selectionStart && selectionEnd ? Math.min(selectionStart, selectionEnd) : tokens.length;
-          const endIndex = selectionStart && selectionEnd ? Math.max(selectionStart, selectionEnd) : -1;
+          const startIndex =
+            selectionStart && selectionEnd ? Math.min(selectionStart, selectionEnd) : tokens.length;
+          const endIndex =
+            selectionStart && selectionEnd ? Math.max(selectionStart, selectionEnd) : -1;
           const isSelected = index >= startIndex && index <= endIndex;
-          const isSpotlighted = spotlightStartIndex && spotlightEndIndex && index >= spotlightStartIndex && index <= spotlightEndIndex;
+          const isSpotlighted =
+            spotlightStartIndex &&
+            spotlightEndIndex &&
+            index >= spotlightStartIndex &&
+            index <= spotlightEndIndex;
           return (
             <span
               key={index}
@@ -150,31 +152,29 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
                 `inline-flex items-center ${editable ? 'cursor-pointer' : 'cursor-default'} select-none rounded-sm m-0 py-0.5 ${token.tag === 'O' ? 'px-0.5' : 'px-1'}`,
               ].join(' ')}
               style={{
-                backgroundColor:
-                  isSelected
-                    ? SELECTING_COLOR
-                    : hoveredIndex === index && editable
+                backgroundColor: isSelected
+                  ? SELECTING_COLOR
+                  : hoveredIndex === index && editable
                     ? '#EFEFEF'
                     : tagColors[token.tag]?.text || DEFAULT_COLOR.text,
                 color: 'black',
-                border: isSpotlighted && token.tag === 'O' ? '1px dotted #666' : 'none'
+                border: isSpotlighted && token.tag === 'O' ? '1px dotted #666' : 'none',
               }}
               onMouseDown={() => handleMouseDown(index)}
             >
               {token.text}
-              {token.tag !== 'O' && (
-                index === tokens.length - 1 || tokens[index + 1]?.tag !== token.tag
-              ) && (
-                <span
-                  className="ml-1 rounded-sm px-1.5 py-0.5 text-xs font-bold"
-                  style={{
-                    backgroundColor: tagColors[token.tag]?.tag || DEFAULT_COLOR.tag,
-                    color: 'white',
-                  }}
-                >
-                  {token.tag}
-                </span>
-              )}
+              {token.tag !== 'O' &&
+                (index === tokens.length - 1 || tokens[index + 1]?.tag !== token.tag) && (
+                  <span
+                    className="ml-1 rounded-sm px-1.5 py-0.5 text-xs font-bold"
+                    style={{
+                      backgroundColor: tagColors[token.tag]?.tag || DEFAULT_COLOR.tag,
+                      color: 'white',
+                    }}
+                  >
+                    {token.tag}
+                  </span>
+                )}
             </span>
           );
         })}
@@ -199,7 +199,7 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
             sx: {
               borderRadius: '8px',
               overflow: 'hidden',
-            }
+            },
           }}
         >
           <div className="p-2 w-[200px]">
@@ -219,9 +219,7 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
               className="flex items-center justify-between font-bold text-black bg-white rounded-md mx-2 my-0.5 px-3 py-2 transition-colors hover:bg-gray-100"
             >
               <span>{query}</span>
-              <span
-                className="ml-3 bg-gray-200 text-gray-700 rounded-full text-xs font-medium px-3 py-0.5"
-              >
+              <span className="ml-3 bg-gray-200 text-gray-700 rounded-full text-xs font-medium px-3 py-0.5">
                 new
               </span>
             </MenuItem>
@@ -251,4 +249,3 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
     </div>
   );
 };
-

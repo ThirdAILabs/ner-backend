@@ -7,8 +7,22 @@ import type { InferenceMetrics, ThroughputMetrics } from './inferenceTypes';
 import { formatFileSize, formatNumber } from '@/lib/utils';
 import { useHealth } from '@/contexts/HealthProvider';
 import MetricsDataViewerCard from '@/components/ui/MetricsDataViewerCard';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField } from '@mui/material';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+} from '@mui/material';
 import type { Feedback, FinetuneRequest } from '@/lib/backend';
 
 interface MetricsDataViewerProps {
@@ -24,7 +38,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
   const [error, setError] = useState<string | null>(null);
   const [throughput, setThroughput] = useState<string | null>('-');
   const { healthStatus } = useHealth();
-  
+
   // State for feedback data
   const [feedbackData, setFeedbackData] = useState<Feedback[]>([]);
   const [loadingFeedback, setLoadingFeedback] = useState(false);
@@ -129,13 +143,13 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
       hash = label.charCodeAt(i) + ((hash << 5) - hash);
     }
     const colorIndex = Math.abs(hash) % colorPalette.length;
-    
+
     return colorPalette[colorIndex];
   };
 
   const renderHighlightedToken = (token: string, label: string) => {
     const tagColors = getTagColors(label);
-    
+
     if (!tagColors) {
       return token; // Return plain token for 'O' tags
     }
@@ -174,7 +188,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
 
   const handleFinetuneClick = () => {
     if (!modelId) return;
-    
+
     // Generate a default name based on the current model
     const timestamp = new Date().toISOString().slice(0, 16).replace('T', '_').replace(':', '-');
     setFinetuneModelName(`finetuned_${timestamp}`);
@@ -184,7 +198,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
 
   const handleFinetuneSubmit = async () => {
     if (!modelId || !finetuneModelName.trim()) return;
-    
+
     setFinetuning(true);
     try {
       const request: FinetuneRequest = {
@@ -195,15 +209,14 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
 
       const response = await nerService.finetuneModel(modelId, request);
       console.log('Finetuning started for new model:', response.ModelId);
-      
+
       // Close dialog and reset state
       setShowFinetuneDialog(false);
       setFinetuneModelName('');
       setFinetuneTaskPrompt('');
-      
+
       // You could show a success message or redirect to the new model
       alert(`Finetuning started successfully! New model ID: ${response.ModelId}`);
-      
     } catch (error) {
       console.error('Finetuning failed:', error);
       // Error handling is already done in the service layer
@@ -250,25 +263,25 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
         >
           {/* In-Progress Tasks */}
           <MetricsDataViewerCard value={infMetrics.InProgress} label="In-Progress Reports" />
-          
+
           {/* Completed Tasks */}
           <MetricsDataViewerCard
             value={infMetrics.Completed + infMetrics.Failed}
             label="Completed Reports"
           />
-          
+
           {/* Throughput */}
           <MetricsDataViewerCard
             value={throughput === '-' ? '-' : `${throughput}/Hour`}
             label="Throughput"
           />
-          
+
           {/* Data Processed */}
           <MetricsDataViewerCard
             value={formatFileSize(infMetrics.DataProcessedMB * 1024 * 1024)}
             label="Data Processed"
           />
-          
+
           {/* Tokens Processed */}
           <MetricsDataViewerCard
             value={formatNumber(infMetrics.TokensProcessed)}
@@ -279,8 +292,10 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
         {/* Fine-tuned Feedback Data */}
         {modelId && (
           <Box sx={{ mt: 4 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography 
+            <Box
+              sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}
+            >
+              <Typography
                 variant="h6"
                 sx={{
                   fontWeight: 600,
@@ -359,22 +374,15 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
       </Box>
 
       {/* Finetune Dialog */}
-      <Dialog
-        open={showFinetuneDialog}
-        onClose={handleFinetuneCancel}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>
-          Finetune Model
-        </DialogTitle>
+      <Dialog open={showFinetuneDialog} onClose={handleFinetuneCancel} maxWidth="sm" fullWidth>
+        <DialogTitle>Finetune Model</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 1 }}>
             <Typography variant="body2" sx={{ mb: 3, color: 'text.secondary' }}>
-              Create a new finetuned model using the feedback data you've reviewed. 
-              This will use all {feedbackData.length} feedback samples as training data.
+              Create a new finetuned model using the feedback data you've reviewed. This will use
+              all {feedbackData.length} feedback samples as training data.
             </Typography>
-            
+
             <TextField
               autoFocus
               margin="dense"
@@ -387,7 +395,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
               sx={{ mb: 2 }}
               required
             />
-            
+
             <TextField
               margin="dense"
               label="Task Prompt (Optional)"
@@ -403,7 +411,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
           </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button 
+          <Button
             onClick={handleFinetuneCancel}
             disabled={finetuning}
             sx={{ textTransform: 'none' }}

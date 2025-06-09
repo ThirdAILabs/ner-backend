@@ -235,51 +235,53 @@ export function TableContent({
                 [record.context?.left || '', 'O'],
                 [record.token, record.tag],
                 [record.context?.right || '', 'O'],
-              ].flatMap((token) => token[0].split(/\s+/).filter((word) => word.trim() !== '').map((word) => ({ text: word, tag: token[1] })));
-              return(
-              <TableRow key={index}>
-                <TableCell className="w-3/5">
-                  <TokenHighlighter
-                    tokens={tokens}
-                    availableTags={tags.map((tag) => tag.type)}
-                  />
-                </TableCell>
-                <TableCell className="w-1/5 px-4">
-                  <div className="relative group">
-                    {(() => {
-                      const fileIdentifier = record.sourceObject;
-                      const { fullPath, openFile } = handleFullPath(fileIdentifier);
-                      // @ts-ignore
-                      if (fullPath && typeof window !== 'undefined' && window.electron) {
-                        return (
-                          <span
-                            style={{
-                              textDecoration: 'underline',
-                              color: 'inherit',
-                              cursor: 'pointer',
-                            }}
-                            title={fileIdentifier.split('/').slice(-1).join('')}
-                            onClick={openFile}
-                          >
-                            {truncateFilePath(fullPath)}
-                          </span>
-                        );
-                      } else {
-                        return (
-                          <span
-                            style={{ color: 'inherit' }}
-                            title={fileIdentifier.split('/').slice(-1).join('')}
-                          >
-                            {fileIdentifier.split('/').slice(-1)}
-                          </span>
-                        );
-                      }
-                    })()}
-                  </div>
-                </TableCell>
-              </TableRow>
-            )
-          })
+              ].flatMap((token) =>
+                token[0]
+                  .split(/\s+/)
+                  .filter((word) => word.trim() !== '')
+                  .map((word) => ({ text: word, tag: token[1] }))
+              );
+              return (
+                <TableRow key={index}>
+                  <TableCell className="w-3/5">
+                    <TokenHighlighter tokens={tokens} availableTags={tags.map((tag) => tag.type)} />
+                  </TableCell>
+                  <TableCell className="w-1/5 px-4">
+                    <div className="relative group">
+                      {(() => {
+                        const fileIdentifier = record.sourceObject;
+                        const { fullPath, openFile } = handleFullPath(fileIdentifier);
+                        // @ts-ignore
+                        if (fullPath && typeof window !== 'undefined' && window.electron) {
+                          return (
+                            <span
+                              style={{
+                                textDecoration: 'underline',
+                                color: 'inherit',
+                                cursor: 'pointer',
+                              }}
+                              title={fileIdentifier.split('/').slice(-1).join('')}
+                              onClick={openFile}
+                            >
+                              {truncateFilePath(fullPath)}
+                            </span>
+                          );
+                        } else {
+                          return (
+                            <span
+                              style={{ color: 'inherit' }}
+                              title={fileIdentifier.split('/').slice(-1).join('')}
+                            >
+                              {fileIdentifier.split('/').slice(-1)}
+                            </span>
+                          );
+                        }
+                      })()}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })
           ) : (
             <TableRow>
               <TableCell colSpan={2} className="text-center py-8 text-gray-500">
@@ -317,15 +319,27 @@ export function TableContent({
         filteredRecords.map((record, index) => {
           const fileIdentifier = record.sourceObject;
           const { fullPath, openFile } = handleFullPath(fileIdentifier);
-          const tokens = record.taggedTokens.flatMap((token) => { 
+          const tokens = record.taggedTokens.flatMap((token) => {
             const [text, tag] = token;
-            return text.split(/\s+/).filter((word) => word.trim() !== '').map((word) => ({ text: word, tag }));
+            return text
+              .split(/\s+/)
+              .filter((word) => word.trim() !== '')
+              .map((word) => ({ text: word, tag }));
           });
 
           const onTagAssign = (startIndex: number, endIndex: number, newTag: string) => {
-            const leftContext = tokens.slice(Math.max(0, startIndex - 5), startIndex).map(t => t.text).join(' ');
-            const highlightedText = tokens.slice(startIndex, endIndex + 1).map(t => t.text).join(' ');
-            const rightContext = tokens.slice(endIndex + 1, Math.min(endIndex + 6, tokens.length)).map(t => t.text).join(' ');
+            const leftContext = tokens
+              .slice(Math.max(0, startIndex - 5), startIndex)
+              .map((t) => t.text)
+              .join(' ');
+            const highlightedText = tokens
+              .slice(startIndex, endIndex + 1)
+              .map((t) => t.text)
+              .join(' ');
+            const rightContext = tokens
+              .slice(endIndex + 1, Math.min(endIndex + 6, tokens.length))
+              .map((t) => t.text)
+              .join(' ');
             addFeedback(
               {
                 highlightedText,
