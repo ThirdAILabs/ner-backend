@@ -99,7 +99,6 @@
     "afterPack": "./scripts/after-pack.js",
     "asar": true,
     "mac": {
-      "identity": "ThirdAI Corp (KJ35JRW2T6)",
       "category": "public.app-category.developer-tools",
       "target": [
         "dmg",
