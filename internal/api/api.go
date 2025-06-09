@@ -54,6 +54,8 @@ func (s *BackendService) AddRoutes(r chi.Router) {
 		r.Get("/", RestHandler(s.ListModels))
 		r.Get("/{model_id}", RestHandler(s.GetModel))
 		r.Post("/{model_id}/finetune", RestHandler(s.FinetuneModel))
+		r.Post("/{model_id}/feedback", RestHandler(s.StoreModelFeedback))
+		r.Get("/{model_id}/feedback", RestHandler(s.ListModelFeedback))
 	})
 	r.Route("/reports", func(r chi.Router) {
 		r.Get("/", RestHandler(s.ListReports))
@@ -169,22 +171,41 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 		return nil, err
 	}
 
-	var tags []string
-	for _, ti := range req.Tags {
-		tags = append(tags, ti.Name)
-	}
-	if err := database.SetModelTags(ctx, s.db, model.Id, tags); err != nil {
-		slog.Error("failed to set tags on finetuned model", "model_id", model.Id, "error", err)
-		return nil, err
+	if len(req.Tags) > 0 {
+		tagNames := make([]string, len(req.Tags))
+		for i, t := range req.Tags {
+			tagNames[i] = t.Name
+		}
+		if err := database.SetModelTags(ctx, s.db, model.Id, tagNames); err != nil {
+			slog.Error("failed to set tags", "model", model.Id, "err", err)
+			return nil, err
+		}
 	}
 
-	if err := s.publisher.PublishFinetuneTask(ctx, messaging.FinetuneTaskPayload{
+	tokensList, labelsList, err := database.GetFeedbackSamples(ctx, s.db, modelId)
+	if err != nil {
+		slog.Error("failed to load feedback samples", "model_id", modelId, "error", err)
+		return nil, CodedErrorf(http.StatusInternalServerError, "could not load feedback samples: %v", err)
+	}
+
+	for i := range tokensList {
+		req.Samples = append(req.Samples, api.Sample{
+			Tokens: tokensList[i],
+			Labels: labelsList[i],
+		})
+	}
+
+	payload := messaging.FinetuneTaskPayload{
 		ModelId:     model.Id,
 		BaseModelId: model.BaseModelId.UUID,
-		TaskPrompt:  req.TaskPrompt,
 		Tags:        req.Tags,
 		Samples:     req.Samples,
-	}); err != nil {
+	}
+	if req.TaskPrompt != nil {
+		payload.TaskPrompt = *req.TaskPrompt
+	}
+
+	if err := s.publisher.PublishFinetuneTask(ctx, payload); err != nil {
 		slog.Error("error queueing finetune task", "error", err)
 		_ = database.UpdateModelStatus(ctx, s.db, model.Id, database.ModelFailed)
 		return nil, CodedErrorf(http.StatusInternalServerError, "failed to queue finetune task")
@@ -1026,8 +1047,8 @@ func (s *BackendService) StoreFileNameToPath(r *http.Request) (any, error) {
 		return nil, CodedErrorf(http.StatusBadRequest, "invalid mapping")
 	}
 	entry := database.FileNameToPath{
-		ID: uploadId,
-		Mapping:  mappingJson,
+		ID:      uploadId,
+		Mapping: mappingJson,
 	}
 	if err := s.db.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "id"}},
@@ -1052,6 +1073,66 @@ func (s *BackendService) GetFileNameToPath(r *http.Request) (any, error) {
 		return nil, CodedErrorf(http.StatusInternalServerError, "invalid mapping data")
 	}
 	return api.FileNameToPath{
-		Mapping:  mapping,
+		Mapping: mapping,
 	}, nil
+}
+
+func (s *BackendService) StoreModelFeedback(r *http.Request) (any, error) {
+	modelId, err := URLParamUUID(r, "model_id")
+	if err != nil {
+		return nil, err
+	}
+
+	ctx := r.Context()
+	var m database.Model
+	if err := s.db.WithContext(ctx).First(&m, "id = ?", modelId).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, CodedErrorf(http.StatusNotFound, "model not found")
+		}
+		return nil, CodedErrorf(http.StatusInternalServerError, "error %d: could not retrieve model", ErrCodeDB)
+	}
+
+	var req api.FeedbackRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, CodedErrorf(http.StatusBadRequest, "invalid request payload: %v", err)
+	}
+	if len(req.Tokens) == 0 || len(req.Labels) == 0 || len(req.Tokens) != len(req.Labels) {
+		return nil, CodedErrorf(http.StatusUnprocessableEntity, "tokens and labels must both be non‐empty and of equal length")
+	}
+
+	if err := database.SaveFeedbackSample(ctx, s.db, modelId, req.Tokens, req.Labels); err != nil {
+		return nil, CodedErrorf(http.StatusInternalServerError, "failed to save feedback: %v", err)
+	}
+
+	return nil, nil
+}
+
+func (s *BackendService) ListModelFeedback(r *http.Request) (any, error) {
+	modelId, err := URLParamUUID(r, "model_id")
+	if err != nil {
+		return nil, err
+	}
+
+	ctx := r.Context()
+	var m database.Model
+	if err := s.db.WithContext(ctx).First(&m, "id = ?", modelId).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, CodedErrorf(http.StatusNotFound, "model not found")
+		}
+		return nil, CodedErrorf(http.StatusInternalServerError, "error %d: could not retrieve model", ErrCodeDB)
+	}
+
+	tokensList, labelsList, err := database.GetFeedbackSamples(ctx, s.db, modelId)
+	if err != nil {
+		return nil, CodedErrorf(http.StatusInternalServerError, "could not fetch feedback: %v", err)
+	}
+
+	out := make([]api.FeedbackRequest, len(tokensList))
+	for i := range tokensList {
+		out[i] = api.FeedbackRequest{
+			Tokens: tokensList[i],
+			Labels: labelsList[i],
+		}
+	}
+	return out, nil
 }

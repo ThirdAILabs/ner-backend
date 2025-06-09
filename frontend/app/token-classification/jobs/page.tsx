@@ -23,6 +23,8 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Suspense } from 'react';
 import { floor } from 'lodash';
+import { FeedbackPanel } from '@/components/feedback/FeedbackPanel';
+import useFeedbackState from '@/components/feedback/useFeedbackState';
 
 // Calculate progress based on InferenceTaskStatuses
 const calculateProgress = (report: Report | null): number => {
@@ -226,6 +228,8 @@ function JobDetail() {
   const [customTags, setCustomTags] = useState<CustomTag[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dataProcessed, setDataProcessed] = useState<number | null>(null);
+
+  const { displayedFeedback, addFeedback, removeFeedback, submitFeedback } = useFeedbackState(reportData?.Model?.Id || '', reportId);
 
   function setDataProcessedFromReport(report: Report | null) {
     if (report) {
@@ -476,7 +480,16 @@ function JobDetail() {
             groups={reportData?.Groups?.map((g) => g.Name) || []}
             tags={availableTagsCount}
             uploadId={reportData?.IsUpload ? reportData?.SourceS3Prefix : ''}
+            addFeedback={addFeedback}
           />
+          <div className="fixed bottom-[30px] right-[30px] z-50 w-[300px] h-[500px] flex items-end">
+            <FeedbackPanel
+              feedbacks={displayedFeedback}
+              availableTags={availableTags}
+              onDelete={removeFeedback}
+              onSubmit={submitFeedback}
+            />
+          </div>
         </TabsContent>
       </Tabs>
     </div>

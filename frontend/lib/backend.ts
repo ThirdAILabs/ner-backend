@@ -2,6 +2,104 @@ import axiosInstance, { showApiErrorEvent } from './axios.config';
 import axios from 'axios';
 import qs from 'qs';
 
+// Type definitions for API responses
+interface Model {
+  Id: string;
+  Name: string;
+  Status: string;
+  BaseModelId?: string;
+  Tags?: string[];
+}
+
+interface Group {
+  Id: string;
+  Name: string;
+  Query: string;
+  Objects?: string[];
+}
+
+interface TaskStatusCategory {
+  TotalTasks: number;
+  TotalSize: number;
+}
+
+interface Report {
+  Id: string;
+  Model: Model;
+  SourceS3Bucket: string;
+  SourceS3Prefix: string;
+  IsUpload?: boolean;
+  CreationTime: string;
+  Tags?: string[];
+  CustomTags?: {
+    [key: string]: string;
+  };
+  FileCount: number;
+  SucceededFileCount: number;
+  FailedFileCount: number;
+  Groups?: Group[];
+  ShardDataTaskStatus?: string;
+  InferenceTaskStatuses?: { [key: string]: TaskStatusCategory };
+  Errors?: string[];
+  ReportName: string;
+  TagCounts: { [key: string]: number };
+  TotalInferenceTimeSeconds: number;
+  ShardDataTimeSeconds: number;
+}
+
+interface Entity {
+  Object: string;
+  Start: number;
+  End: number;
+  Label: string;
+  Text: string;
+  LContext?: string;
+  RContext?: string;
+}
+
+interface ObjectPreview {
+  object: string;
+  tokens: string[];
+  tags: string[];
+}
+
+interface CreateReportRequest {
+  ModelId: string;
+  UploadId?: string;
+  S3Endpoint?: string;
+  S3Region?: string;
+  SourceS3Bucket?: string;
+  SourceS3Prefix?: string;
+  Tags: string[];
+  CustomTags?: { [key: string]: string };
+  Groups?: { [key: string]: string };
+  report_name: string;
+}
+
+export interface InferenceMetrics {
+  Completed: number;
+  Failed: number;
+  InProgress: number;
+  DataProcessedMB: number;
+  TokensProcessed: number;
+}
+
+export interface ThroughputMetrics {
+  ModelID: string;
+  ReportID?: string;
+  ThroughputMBPerHour: number;
+}
+
+export interface ChatResponse {
+  InputText: string;
+  Reply: string;
+  TagMap: Record<string, string>;
+}
+
+export interface Feedback {
+  tokens: string[];
+  labels: string[];
+}
 // Add a utility function to handle API errors with custom messages
 const handleApiError = (error: unknown, customMessage?: string): never => {
   console.error('API Error:', error);
@@ -335,5 +433,10 @@ export const nerService = {
     const { data } = await axiosInstance.get(`/file-name-to-path/${uploadId}`);
     console.log('getFileNameToPath', data);
     return data.Mapping as { [filename: string]: string };
+  },
+
+  submitFeedback: async (modelId: string, feedback: Feedback) => {
+    const { data } = await axiosInstance.post(`/models/${modelId}/feedback`, feedback);
+    return data;
   },
 };

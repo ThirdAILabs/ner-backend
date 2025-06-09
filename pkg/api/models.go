@@ -100,11 +100,10 @@ type Sample struct {
 }
 
 type FinetuneRequest struct {
-	Name string
-
-	TaskPrompt string
-	Tags       []TagInfo
-	Samples    []Sample
+	Name       string    `json:"name"`                  // still required
+	TaskPrompt *string   `json:"task_prompt,omitempty"` // optional
+	Tags       []TagInfo `json:"tags,omitempty"`        // optional
+	Samples    []Sample  `json:"samples,omitempty"`     // optional
 }
 
 type FinetuneResponse struct {
@@ -151,5 +150,10 @@ type ValidateS3BucketRequest struct {
 }
 
 type FileNameToPath struct {
-	Mapping  map[string]string
+	Mapping map[string]string
+}
+
+type FeedbackRequest struct {
+	Tokens []string `json:"tokens"`
+	Labels []string `json:"labels"`
 }
