@@ -24,6 +24,7 @@ interface AnalyticsDashboardProps {
   failedFileCount: number;
   totalFileCount: number;
   dataProcessed: number;
+  // isJobComplete: boolean;
 }
 
 const formatTime = (time: number): string => {
@@ -58,6 +59,7 @@ export function AnalyticsDashboard({
   failedFileCount,
   totalFileCount,
   dataProcessed,
+  // isJobComplete,
 }: AnalyticsDashboardProps) {
   const tokenChartData = tags;
   const progress = ((succeededFileCount + failedFileCount) * 100) / totalFileCount || 0;
@@ -128,14 +130,17 @@ export function AnalyticsDashboard({
                 </div>
               </div>
 
-              <div className="flex flex-col space-y-3 pl-4">
+              <div className="flex flex-col space-y-3 pl-2"> {/* Reduced padding */}
                 {' '}
                 <div className="flex flex-col">
                   <div className="flex items-center space-x-2">
                     <div className="h-2.5 w-2.5 rounded-full bg-gradient-to-r from-green-500 to-green-600"></div>
-                    <span className="text-xs font-medium text-gray-600">Success</span>
+                    <span className="text-xs font-medium text-gray-600">Succeeded</span>
                   </div>
-                  <span className="text-xl font-bold text-gray-800 ml-4">
+                  <span className={`text-xl font-bold ml-4 ${filesSucceeded > 80 ? 'text-green-600' :
+                      filesSucceeded > 50 ? 'text-green-500' :
+                        'text-green-400'
+                    }`}>
                     {' '}
                     {filesSucceeded.toFixed(1)}%
                   </span>
@@ -145,7 +150,10 @@ export function AnalyticsDashboard({
                     <div className="h-2.5 w-2.5 rounded-full bg-gradient-to-r from-red-500 to-red-600"></div>
                     <span className="text-xs font-medium text-gray-600">Failed</span>
                   </div>
-                  <span className="text-xl font-bold text-gray-800 ml-4">
+                  <span className={`text-xl font-bold ml-4 ${filesFailed > 20 ? 'text-red-600' :
+                      filesFailed > 10 ? 'text-red-500' :
+                        'text-red-400'
+                    }`}>
                     {' '}
                     {filesFailed.toFixed(1)}%
                   </span>
@@ -209,7 +217,9 @@ export function AnalyticsDashboard({
               <div className="p-2 bg-purple-100 rounded-lg">
                 <Clock className="h-5 w-5 text-purple-600" />
               </div>
-              <h3 className="text-sm font-semibold text-gray-700">Processing Duration</h3>
+              <h3 className="text-sm font-semibold text-gray-700">
+                {progress === 100 ? "Time Taken" : "Time Elapsed"}
+              </h3>
             </div>
             <div className="flex-1 flex flex-col items-center justify-center pb-4">
               <span
@@ -217,12 +227,6 @@ export function AnalyticsDashboard({
               >
                 {formattedTime}
               </span>
-              <div className="flex items-center space-x-2 mt-2">
-                <span className="px-2 py-1 bg-purple-100 rounded-full text-sm font-medium text-purple-800">
-                  {timeTaken < 60 ? 'Seconds' : timeTaken < 3600 ? 'Minutes' : 'Hours'}
-                </span>
-                <span className="text-sm text-gray-500">Elapsed</span>
-              </div>
             </div>
           </CardContent>
         </Card>
