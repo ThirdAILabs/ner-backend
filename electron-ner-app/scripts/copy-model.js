@@ -11,7 +11,7 @@ const projectRoot = path.join(__dirname, '..');
 const binDir = path.join(projectRoot, 'bin');
 
 // Get model path from environment variable
-const modelPath = "/Users/anandkumar/Downloads/udt_complete.model";
+const modelPath = process.env.MODEL_DIR;
 if (!modelPath) {
   console.error('MODEL_DIR environment variable is not set');
   process.exit(1);
