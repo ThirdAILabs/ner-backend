@@ -113,8 +113,8 @@ const SourceOption: React.FC<SourceOptionProps> = ({
 }) => (
   <div
     className={`relative p-6 border-2 border-dashed rounded-lg transition-colors ${
-      disabled 
-        ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60' 
+      disabled
+        ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
         : 'border-gray-300 hover:border-blue-400 cursor-pointer'
     }`}
     onClick={disabled ? undefined : onClick}
@@ -147,7 +147,12 @@ interface FileSourcesProps {
   setIsLoadingFiles: (loading: boolean) => void;
 }
 
-const FileSources: React.FC<FileSourcesProps> = ({ selectSource, handleLocalFiles, isLoadingFiles, setIsLoadingFiles }) => {
+const FileSources: React.FC<FileSourcesProps> = ({
+  selectSource,
+  handleLocalFiles,
+  isLoadingFiles,
+  setIsLoadingFiles,
+}) => {
   const s3 = (
     <SourceOption
       onClick={() => selectSource('s3')}
@@ -192,7 +197,7 @@ const FileSources: React.FC<FileSourcesProps> = ({ selectSource, handleLocalFile
           }}
           icon={isLoadingFiles ? <RefreshCw className="w-8 h-8 animate-spin" /> : folderIcon}
           title="Local Files"
-          description={isLoadingFiles ? "Loading files..." : "Scan files from your computer"}
+          description={isLoadingFiles ? 'Loading files...' : 'Scan files from your computer'}
           disclaimer={`Supported: ${SUPPORTED_TYPES.join(', ')}`}
           disabled={isLoadingFiles}
         />
@@ -207,7 +212,7 @@ const FileSources: React.FC<FileSourcesProps> = ({ selectSource, handleLocalFile
       setIsLoadingFiles(true);
       try {
         // Add a small delay to show loading state for quick file selections
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
         handleLocalFiles(
           Array.from(files).map((file) => [file, '']),
           true
@@ -262,7 +267,7 @@ const FileSources: React.FC<FileSourcesProps> = ({ selectSource, handleLocalFile
           )
         }
         title="Local Files"
-        description={isLoadingFiles ? "Loading files..." : "Scan files from your computer"}
+        description={isLoadingFiles ? 'Loading files...' : 'Scan files from your computer'}
         disclaimer={`Supported: ${SUPPORTED_TYPES.join(', ')}`}
         disabled={isLoadingFiles}
       />
@@ -274,7 +279,7 @@ const FileSources: React.FC<FileSourcesProps> = ({ selectSource, handleLocalFile
         input={directoryInput}
         icon={isLoadingFiles ? <RefreshCw className="w-8 h-8 animate-spin" /> : folderIcon}
         title="Local Directory"
-        description={isLoadingFiles ? "Loading files..." : "Scan an entire directory"}
+        description={isLoadingFiles ? 'Loading files...' : 'Scan an entire directory'}
         disclaimer={`Supported: ${SUPPORTED_TYPES.join(', ')}`}
         disabled={isLoadingFiles}
       />
@@ -872,9 +877,14 @@ export default function NewJobPage() {
             <h2 className="text-2xl font-medium mb-4">Source</h2>
             <div className="relative">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <FileSources selectSource={setSelectedSource} handleLocalFiles={handleLocalFiles} isLoadingFiles={isLoadingFiles} setIsLoadingFiles={setIsLoadingFiles} />
+                <FileSources
+                  selectSource={setSelectedSource}
+                  handleLocalFiles={handleLocalFiles}
+                  isLoadingFiles={isLoadingFiles}
+                  setIsLoadingFiles={setIsLoadingFiles}
+                />
               </div>
-              
+
               {/* Loading Overlay */}
               {isLoadingFiles && (
                 <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center rounded-lg z-10">
