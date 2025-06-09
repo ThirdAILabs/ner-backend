@@ -8,7 +8,8 @@ import { formatFileSize, formatNumber } from '@/lib/utils';
 import { useHealth } from '@/contexts/HealthProvider';
 import MetricsDataViewerCard from '@/components/ui/MetricsDataViewerCard';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import type { Feedback } from '@/lib/backend';
+import { Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField } from '@mui/material';
+import type { Feedback, FinetuneRequest } from '@/lib/backend';
 
 interface MetricsDataViewerProps {
   modelId?: string;
@@ -27,6 +28,12 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
   // State for feedback data
   const [feedbackData, setFeedbackData] = useState<Feedback[]>([]);
   const [loadingFeedback, setLoadingFeedback] = useState(false);
+
+  // State for finetuning
+  const [showFinetuneDialog, setShowFinetuneDialog] = useState(false);
+  const [finetuneModelName, setFinetuneModelName] = useState('');
+  const [finetuneTaskPrompt, setFinetuneTaskPrompt] = useState('');
+  const [finetuning, setFinetuning] = useState(false);
 
   function getFontSize(value: string) {
     if (!value) return '2rem';
@@ -165,6 +172,52 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
     );
   };
 
+  const handleFinetuneClick = () => {
+    if (!modelId) return;
+    
+    // Generate a default name based on the current model
+    const timestamp = new Date().toISOString().slice(0, 16).replace('T', '_').replace(':', '-');
+    setFinetuneModelName(`finetuned_${timestamp}`);
+    setFinetuneTaskPrompt('');
+    setShowFinetuneDialog(true);
+  };
+
+  const handleFinetuneSubmit = async () => {
+    if (!modelId || !finetuneModelName.trim()) return;
+    
+    setFinetuning(true);
+    try {
+      const request: FinetuneRequest = {
+        name: finetuneModelName.trim(),
+        task_prompt: finetuneTaskPrompt.trim() || undefined,
+        samples: feedbackData.length > 0 ? feedbackData : undefined,
+      };
+
+      const response = await nerService.finetuneModel(modelId, request);
+      console.log('Finetuning started for new model:', response.ModelId);
+      
+      // Close dialog and reset state
+      setShowFinetuneDialog(false);
+      setFinetuneModelName('');
+      setFinetuneTaskPrompt('');
+      
+      // You could show a success message or redirect to the new model
+      alert(`Finetuning started successfully! New model ID: ${response.ModelId}`);
+      
+    } catch (error) {
+      console.error('Finetuning failed:', error);
+      // Error handling is already done in the service layer
+    } finally {
+      setFinetuning(false);
+    }
+  };
+
+  const handleFinetuneCancel = () => {
+    setShowFinetuneDialog(false);
+    setFinetuneModelName('');
+    setFinetuneTaskPrompt('');
+  };
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
@@ -226,17 +279,33 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
         {/* Fine-tuned Feedback Data */}
         {modelId && (
           <Box sx={{ mt: 4 }}>
-            <Typography 
-              variant="h6"
-              sx={{
-                fontWeight: 600,
-                fontSize: '1.25rem',
-                color: '#4a5568',
-                mb: 2
-              }}
-            >
-              User Feedback
-            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography 
+                variant="h6"
+                sx={{
+                  fontWeight: 600,
+                  fontSize: '1.25rem',
+                  color: '#4a5568',
+                }}
+              >
+                User Feedback
+              </Typography>
+              {feedbackData.length > 0 && (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={handleFinetuneClick}
+                  disabled={loadingFeedback}
+                  sx={{
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    px: 3,
+                  }}
+                >
+                  Finetune Model
+                </Button>
+              )}
+            </Box>
             <div className="border rounded-md">
               {loadingFeedback ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
@@ -288,6 +357,76 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
           </Box>
         )}
       </Box>
+
+      {/* Finetune Dialog */}
+      <Dialog
+        open={showFinetuneDialog}
+        onClose={handleFinetuneCancel}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          Finetune Model
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1 }}>
+            <Typography variant="body2" sx={{ mb: 3, color: 'text.secondary' }}>
+              Create a new finetuned model using the feedback data you've reviewed. 
+              This will use all {feedbackData.length} feedback samples as training data.
+            </Typography>
+            
+            <TextField
+              autoFocus
+              margin="dense"
+              label="Model Name"
+              fullWidth
+              variant="outlined"
+              value={finetuneModelName}
+              onChange={(e) => setFinetuneModelName(e.target.value)}
+              helperText="Enter a name for the new finetuned model"
+              sx={{ mb: 2 }}
+              required
+            />
+            
+            <TextField
+              margin="dense"
+              label="Task Prompt (Optional)"
+              fullWidth
+              multiline
+              rows={3}
+              variant="outlined"
+              value={finetuneTaskPrompt}
+              onChange={(e) => setFinetuneTaskPrompt(e.target.value)}
+              helperText="Optional custom prompt to guide the finetuning process"
+              placeholder="e.g., Focus on improving accuracy for person names and locations..."
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button 
+            onClick={handleFinetuneCancel}
+            disabled={finetuning}
+            sx={{ textTransform: 'none' }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleFinetuneSubmit}
+            variant="contained"
+            disabled={finetuning || !finetuneModelName.trim()}
+            sx={{ textTransform: 'none', ml: 1 }}
+          >
+            {finetuning ? (
+              <>
+                <CircularProgress size={16} sx={{ mr: 1 }} />
+                Starting Finetuning...
+              </>
+            ) : (
+              'Start Finetuning'
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 };

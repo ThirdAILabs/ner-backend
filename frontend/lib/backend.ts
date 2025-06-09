@@ -100,6 +100,23 @@ export interface Feedback {
   tokens: string[];
   labels: string[];
 }
+
+export interface TagInfo {
+  name: string;
+  description: string;
+  examples: string[];
+}
+
+export interface FinetuneRequest {
+  name: string;
+  task_prompt?: string;
+  tags?: TagInfo[];
+  samples?: Feedback[];
+}
+
+export interface FinetuneResponse {
+  ModelId: string;
+}
 // Add a utility function to handle API errors with custom messages
 const handleApiError = (error: unknown, customMessage?: string): never => {
   console.error('API Error:', error);
@@ -446,6 +463,15 @@ export const nerService = {
       return data;
     } catch (error) {
       return handleApiError(error, `Failed to load feedback samples for model ${modelId}`);
+    }
+  },
+
+  finetuneModel: async (modelId: string, request: FinetuneRequest): Promise<FinetuneResponse> => {
+    try {
+      const { data } = await axiosInstance.post(`/models/${modelId}/finetune`, request);
+      return data;
+    } catch (error) {
+      return handleApiError(error, `Failed to start finetuning for model ${modelId}`);
     }
   },
 };
