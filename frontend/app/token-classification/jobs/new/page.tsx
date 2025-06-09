@@ -136,7 +136,7 @@ const SourceOption: React.FC<SourceOptionProps> = ({
 
 interface FileSourcesProps {
   selectSource: (source: 's3' | 'files' | 'directory') => void;
-  handleLocalFiles: (files: [File, string][]) => void;
+  handleLocalFiles: (files: [File, string][], isUploaded: boolean) => void;
 }
 
 const FileSources: React.FC<FileSourcesProps> = ({ selectSource, handleLocalFiles }) => {
@@ -172,7 +172,9 @@ const FileSources: React.FC<FileSourcesProps> = ({ selectSource, handleLocalFile
       <>
         <SourceOption
           onClick={() => {
-            getFilesFromElectron(SUPPORTED_TYPES).then(handleLocalFiles);
+            getFilesFromElectron(SUPPORTED_TYPES).then(({ files, isUploaded }) => {
+              handleLocalFiles(files, isUploaded);
+            });
             selectSource('files');
           }}
           icon={folderIcon}
@@ -188,7 +190,10 @@ const FileSources: React.FC<FileSourcesProps> = ({ selectSource, handleLocalFile
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      handleLocalFiles(Array.from(files).map((file) => [file, '']));
+      handleLocalFiles(
+        Array.from(files).map((file) => [file, '']),
+        true
+      );
       e.target.value = '';
     }
   };
@@ -541,13 +546,13 @@ export default function NewJobPage() {
   };
 
   // Update file handling to use file/directory input
-  const handleLocalFiles = (files: [File, string][]) => {
+  const handleLocalFiles = (files: [File, string][], isUploaded: boolean) => {
     const supportedFiles = files.filter((file) => isFileSupported(file[0].name));
 
     if (supportedFiles.length > 0) {
       addFiles(supportedFiles);
     } else {
-      setIsConfirmDialogOpen(true);
+      if (isUploaded) setIsConfirmDialogOpen(true);
     }
   };
 
