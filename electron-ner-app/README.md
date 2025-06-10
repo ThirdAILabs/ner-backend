@@ -40,7 +40,7 @@ MODEL_DIR=/path/to/models MODEL_TYPE=python_cnn npm run build
 
 Ensure that you have a clean python 3.11 environment activated when running the build command. 
 
-/path/to/models should have a directory called python_cnn with cnn_model.pth and qwen_tokenizer inside, or it should have a directory called bolt_udt with udt_complete.model inside.
+/path/to/models should have a directory called python_cnn with cnn_model.pth and qwen_tokenizer inside, or it should have a directory called bolt_udt with model.bin inside.
 
 To download the qwen_tokenizer folder, run the following:
 ```bash
