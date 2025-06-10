@@ -266,6 +266,21 @@ const Dashboard = () => {
           </Box>
         </Box>
 
+        {/* Model Details */}
+        {selectedModel && (
+          <Box sx={{ mb: 4, ml: 4 }}>
+            <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>
+              Started Training: {new Date('2025-06-10T12:00:00').toLocaleString()}
+            </Typography>
+            {models.find(m => m.Id === selectedModel)?.BaseModelId && (
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                Base Model:{' '}
+                {models.find(m => m.Id === models.find(m => m.Id === selectedModel)?.BaseModelId)?.Name || 'Unknown'}
+              </Typography>
+            )}
+          </Box>
+        )}
+
         {/* Metrics Viewer */}
         <Box
           sx={{
