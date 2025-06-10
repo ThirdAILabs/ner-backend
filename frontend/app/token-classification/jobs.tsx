@@ -314,7 +314,7 @@ export default function Jobs() {
               }}
             />
             {/* Loading animation */}
-            {(succeededFileCount + failedFileCount < fileCount) && (
+            {succeededFileCount + failedFileCount < fileCount && (
               <Box
                 className="shimmer-effect"
                 sx={{
