@@ -1011,138 +1011,137 @@ export default function NewJobPage() {
           </Box>
 
           {/* Model Selection */}
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Built-in Models</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {builtInModels.map((model) => (
-                  <ModelOption
-                    key={model.Id}
-                    title={model.Name}
-                    description={model.Description}
-                    isSelected={selectedModelId === model.Id}
-                    onClick={() => {
-                      setSelectedModelId(model.Id);
-                      setSelectedModel(model);
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Custom Models</h3>
-                <div className="relative w-64">
-                  <input
-                    type="text"
-                    placeholder="Search custom models..."
-                    value={modelSearchQuery}
-                    onChange={(e) => setModelSearchQuery(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                  <SearchIcon className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {filteredCustomModels.map((model) => (
-                  <ModelOption
-                    key={model.Id}
-                    title={model.Name}
-                    description={
-                      <div className="space-y-2">
-                        {model.Status === 'TRAINING' && (
-                          <div className="flex items-center space-x-2 text-blue-600">
-                            <CircularProgress size={16} />
-                            <span className="text-sm">Training in progress...</span>
-                          </div>
-                        )}
-                        {model.Status === 'QUEUED' && (
-                          <p className="text-sm text-orange-600">Queued for training</p>
-                        )}
-                        {model.BaseModelId && (
-                          <p className="text-sm text-gray-600">
-                            Base Model: {models.find(m => m.Id === model.BaseModelId)?.Name || 'Unknown'}
-                          </p>
-                        )}
-                      </div>
-                    }
-                    isSelected={selectedModelId === model.Id}
-                    onClick={() => {
-                      setSelectedModelId(model.Id);
-                      setSelectedModel(model);
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Tags Section - Only show if a model is selected */}
-          {selectedModelId && (
-            <div>
-              <div className="flex justify-between items-center my-2">
-                <h2 className="text-lg font-medium">Tags</h2>
-                <div className="flex space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={selectAllTags}
-                    className="text-sm flex items-center"
-                    disabled={isTagsLoading || selectedTags.length === availableTags.length}
-                  >
-                    <span className="mr-1">Select All</span>
-                    <input
-                      type="checkbox"
-                      checked={selectedTags.length === availableTags.length}
-                      onChange={selectAllTags}
-                      className="rounded border-gray-300"
-                    />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSelectedTags([])}
-                    className="text-sm flex items-center"
-                    disabled={isTagsLoading || selectedTags.length === 0}
-                  >
-                    <span className="mr-1">Clear Selection</span>
-                    <input
-                      type="checkbox"
-                      checked={selectedTags.length === 0}
-                      onChange={() => setSelectedTags([])}
-                      className="rounded border-gray-300"
-                    />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Added descriptive note */}
-              <p className="text-sm text-gray-500 mb-4">
-                Click on any tag to select/unselect it. By default, all tags are selected.
-              </p>
-
-              {isTagsLoading ? (
-                <div className="flex justify-center py-4">
-                  <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
-                </div>
-              ) : availableTags.length === 0 ? (
-                <div className="text-gray-500 py-2">No tags available for this model</div>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {availableTags.map((tag) => (
-                    <Tag
-                      key={tag}
-                      tag={tag}
-                      selected={selectedTags.includes(tag)}
-                      onClick={() => toggleTag(tag)}
+          <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3 }}>
+            <h2 className="text-2xl font-medium mb-4">Model</h2>
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Built-in Models</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {builtInModels.map((model) => (
+                    <ModelOption
+                      key={model.Id}
+                      title={model.Name}
+                      description={model.Description}
+                      isSelected={selectedModelId === model.Id}
+                      onClick={() => {
+                        setSelectedModelId(model.Id);
+                        setSelectedModel(model);
+                      }}
                     />
                   ))}
                 </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold">Custom Models</h3>
+                  <div className="relative w-64">
+                    <input
+                      type="text"
+                      placeholder="Search custom models..."
+                      value={modelSearchQuery}
+                      onChange={(e) => setModelSearchQuery(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    <SearchIcon className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {filteredCustomModels
+                    .filter(model => model.Status !== 'TRAINING' && model.Status !== 'QUEUED')
+                    .map((model) => (
+                      <ModelOption
+                        key={model.Id}
+                        title={model.Name}
+                        description={
+                          <div className="space-y-2">
+                            {model.BaseModelId && (
+                              <p className="text-sm text-gray-600">
+                                Base Model: {models.find(m => m.Id === model.BaseModelId)?.Name || 'Unknown'}
+                              </p>
+                            )}
+                          </div>
+                        }
+                        isSelected={selectedModelId === model.Id}
+                        onClick={() => {
+                          setSelectedModelId(model.Id);
+                          setSelectedModel(model);
+                        }}
+                      />
+                  ))}
+                </div>
+              </div>
+
+              {/* Tags Section - Only show if a model is selected */}
+              {selectedModelId && (
+                <div className="mt-8">
+                  <div className="border-t pt-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-semibold">Model Tags</h3>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={selectAllTags}
+                          className="text-sm flex items-center"
+                          disabled={isTagsLoading || selectedTags.length === availableTags.length}
+                        >
+                          <span className="mr-1">Select All</span>
+                          <input
+                            type="checkbox"
+                            checked={selectedTags.length === availableTags.length}
+                            onChange={selectAllTags}
+                            className="rounded border-gray-300"
+                          />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedTags([])}
+                          className="text-sm flex items-center"
+                          disabled={isTagsLoading || selectedTags.length === 0}
+                        >
+                          <span className="mr-1">Clear Selection</span>
+                          <input
+                            type="checkbox"
+                            checked={selectedTags.length === 0}
+                            onChange={() => setSelectedTags([])}
+                            className="rounded border-gray-300"
+                          />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Added descriptive note */}
+                    <p className="text-sm text-gray-500 mb-4">
+                      Click on any tag to select/unselect it. By default, all tags are selected.
+                    </p>
+
+                    {isTagsLoading ? (
+                      <div className="flex justify-center py-4">
+                        <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
+                      </div>
+                    ) : availableTags.length === 0 ? (
+                      <div className="text-gray-500 py-2">No tags available for this model</div>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {availableTags.map((tag) => (
+                          <Tag
+                            key={tag}
+                            tag={tag}
+                            selected={selectedTags.includes(tag)}
+                            onClick={() => toggleTag(tag)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
-          )}
+          </Box>
+
           {/* Custom Tags Section */}
           <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3 }}>
             <h2 className="text-2xl font-medium mb-4">
