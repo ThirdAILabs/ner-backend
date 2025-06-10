@@ -44,7 +44,7 @@ func setupCommon(t *testing.T) (
 	db = createDB(t)
 	pub, sub = setupRabbitMQContainer(t, ctx)
 
-	backendSvc := backendpkg.NewBackendService(db, s3Prov, pub, 120)
+	backendSvc := backendpkg.NewBackendService(db, s3Prov, pub, 120, &DummyLicenseVerifier{})
 	r := chi.NewRouter()
 	backendSvc.AddRoutes(r)
 

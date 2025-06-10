@@ -27,7 +27,11 @@ func TestFreeLicensing(t *testing.T) {
 		return mockNow
 	})
 
-	assert.NoError(t, verifier.VerifyLicense(context.Background()))
+	licenseInfo, err := verifier.VerifyLicense(context.Background())
+	assert.NoError(t, err)
+	assert.Equal(t, licensing.FreeLicense, licenseInfo.LicenseType)
+	assert.Equal(t, int64(300), licenseInfo.Usage.MaxBytes)
+	assert.Equal(t, int64(0), licenseInfo.Usage.UsedBytes)
 
 	// Create tasks in May 2025
 	require.NoError(t, db.Create(&database.InferenceTask{
@@ -41,7 +45,8 @@ func TestFreeLicensing(t *testing.T) {
 		CreationTime: mayTime,
 	}).Error)
 
-	assert.NoError(t, verifier.VerifyLicense(context.Background()))
+	_, err = verifier.VerifyLicense(context.Background())
+	assert.NoError(t, err)
 
 	require.NoError(t, db.Create(&database.InferenceTask{
 		ReportId:     uuid.New(),
@@ -50,7 +55,8 @@ func TestFreeLicensing(t *testing.T) {
 	}).Error)
 
 	// Should exceed quota in May
-	assert.ErrorIs(t, verifier.VerifyLicense(context.Background()), licensing.ErrQuotaExceeded)
+	_, err = verifier.VerifyLicense(context.Background())
+	assert.ErrorIs(t, err, licensing.ErrQuotaExceeded)
 
 	// Move clock to June 2025
 	juneTime := time.Date(2025, 6, 1, 10, 0, 0, 0, time.UTC)
@@ -64,7 +70,8 @@ func TestFreeLicensing(t *testing.T) {
 	}).Error)
 
 	// Should not exceed quota since we're only counting June's tasks
-	assert.NoError(t, verifier.VerifyLicense(context.Background()))
+	_, err = verifier.VerifyLicense(context.Background())
+	assert.NoError(t, err)
 
 	// Create a task in june that exceeds the quota
 	require.NoError(t, db.Create(&database.InferenceTask{
@@ -74,5 +81,9 @@ func TestFreeLicensing(t *testing.T) {
 	}).Error)
 
 	// License check should fail because quota is exceeded in June
-	assert.ErrorIs(t, verifier.VerifyLicense(context.Background()), licensing.ErrQuotaExceeded)
+	licenseInfo, err = verifier.VerifyLicense(context.Background())
+	assert.ErrorIs(t, err, licensing.ErrQuotaExceeded)
+	assert.Equal(t, licensing.FreeLicense, licenseInfo.LicenseType)
+	assert.Equal(t, int64(300), licenseInfo.Usage.MaxBytes)
+	assert.Equal(t, int64(301), licenseInfo.Usage.UsedBytes)
 }

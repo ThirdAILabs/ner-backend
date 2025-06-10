@@ -289,18 +289,9 @@ func InitializeBoltModel(db *gorm.DB, s3 storage.Provider, modelBucket, name, ho
 
 func CreateLicenseVerifier(db *gorm.DB, license string) licensing.LicenseVerifier {
 	if strings.HasPrefix(license, "local:") {
-		var err error
-		licenseVerifier, err := licensing.NewFileLicenseVerifier([]byte(licensing.FileLicensePublicKey), strings.TrimSpace(strings.TrimPrefix(license, "local:")))
-		if err != nil {
-			log.Fatalf("Failed to create file license verifier: %v", err)
-		}
-		return licenseVerifier
+		return licensing.NewFileLicenseVerifier([]byte(licensing.FileLicensePublicKey), strings.TrimSpace(strings.TrimPrefix(license, "local:")))
 	} else if license != "" {
-		licenseVerifier, err := licensing.NewKeygenLicenseVerifier(license)
-		if err != nil {
-			log.Fatalf("Failed to create license verifier: %v", err)
-		}
-		return licenseVerifier
+		return licensing.NewKeygenLicenseVerifier(license)
 	} else {
 		slog.Warn(fmt.Sprintf("License key not provided. Using free license verifier with %.2fGB total file size limit", float64(licensing.DefaultFreeLicenseMaxBytes)/(1024*1024*1024)))
 		return licensing.NewFreeLicenseVerifier(db, licensing.DefaultFreeLicenseMaxBytes)
