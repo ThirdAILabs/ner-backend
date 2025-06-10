@@ -149,6 +149,11 @@ export async function startBackend() {
   // Get the plugin executable path
   const pluginPath = path.join(backendDir, 'plugin', 'plugin');
 
+  const frameworksDir = path.join(
+    process.resourcesPath || __dirname,
+    '..', // up to Resources
+    'Frameworks');
+    
   const proc = spawn(
     backendPath,
     [],
@@ -161,6 +166,9 @@ export async function startBackend() {
         MODEL_TYPE: modelType,
         PLUGIN_SERVER: pluginPath,
         APP_DATA_DIR: appDataDir,
+        ONNX_RUNTIME_DYLIB: frameworksDir
+        ? path.join(frameworksDir, 'libonnxruntime.dylib')
+        : '',
       },
       stdio: ['pipe', 'pipe', 'pipe']
     }

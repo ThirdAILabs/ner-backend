@@ -165,9 +165,6 @@ func LoadOnnxModel(modelDir string) (Model, error) {
 
 	// decrypt the onnx bytes into memory
 	keyB64 := "UuTl+ZEVxcUCJoXIDkePg49vS/GYjHa+Fd96kp8vG5E="
-	if keyB64 == "" {
-		return nil, fmt.Errorf("MODEL_KEY not set")
-	}
 	onnxBytes, err := decryptModel(encPath, keyB64)
 	if err != nil {
 		return nil, fmt.Errorf("decrypt model: %w", err)

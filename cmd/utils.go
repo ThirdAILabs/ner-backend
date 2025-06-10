@@ -292,68 +292,10 @@ func InitializeOnnxModel(
 	s3 storage.Provider,
 	bucket, name, modelDir string,
 ) error {
-	slog.Info("initializing ONNX model", "model_name", name, "model_dir", modelDir)
-	ctx := context.Background()
-	modelId := uuid.New()
-
-	// attach common tags
-	tags := filterExcludedTags(commonModelTags)
-	var mts []database.ModelTag
-	for _, t := range tags {
-		mts = append(mts, database.ModelTag{
-			ModelId: modelId,
-			Tag:     t,
-		})
-	}
-
-	// create or find existing record
-	var model database.Model
-	res := db.
-		Where(database.Model{Name: name}).
-		Attrs(database.Model{
-			Id:           modelId,
-			Type:         "onnx",
-			Status:       database.ModelQueued,
-			CreationTime: time.Now().UTC(),
-			Tags:         mts,
-		}).
-		FirstOrCreate(&model)
-	if err := res.Error; err != nil {
-		return fmt.Errorf("db create/find onnx model: %w", err)
-	}
-	if res.RowsAffected == 0 && model.Status == database.ModelTrained {
-		slog.Info("onnx model already exists, skipping upload", "model_id", model.Id)
-		return nil
-	}
-
-	// upload the .onnx file
-	onnxPath := filepath.Join(modelDir, "model.onnx.enc")
-	f, err := os.Open(onnxPath)
-	if err != nil {
-		return fmt.Errorf("open onnx file %q: %w", onnxPath, err)
-	}
-	defer f.Close()
-	if err := s3.PutObject(ctx, bucket, filepath.Join(modelId.String(), "model.onnx.enc"), f); err != nil {
-		return fmt.Errorf("upload onnx to s3: %w", err)
-	}
-
-	// upload transitions.json if present
-	transPath := filepath.Join(modelDir, "transitions.json")
-	if tf, err := os.Open(transPath); err == nil {
-		defer tf.Close()
-		if err := s3.PutObject(ctx, bucket, filepath.Join(modelId.String(), "transitions.json"), tf); err != nil {
-			slog.Warn("failed to upload transitions.json", "error", err)
-		}
-	} else {
-		slog.Warn("transitions.json not found; skipping", "path", transPath)
-	}
-
-	// mark as trained
-	if err := database.UpdateModelStatus(ctx, db, modelId, database.ModelTrained); err != nil {
-		return fmt.Errorf("update onnx model status: %w", err)
-	}
-	slog.Info("uploaded ONNX model to S3", "model_id", modelId)
-	return nil
+	return initializeModel(
+		context.Background(), db, s3, bucket,
+		name, "onnx", modelDir, commonModelTags,
+	)
 }
 
 func CreateLicenseVerifier(db *gorm.DB, license string) licensing.LicenseVerifier {

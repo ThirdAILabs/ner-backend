@@ -195,7 +195,7 @@ func main() {
 				log.Fatalf("Failed to init & upload CNN model: %v", err)
 			}
 		case "onnx_model":
-			if err := cmd.InitializeOnnxModel(db, storage, modelBucket, "basic", cfg.OnnxModelPath); err != nil {
+			if err := cmd.InitializeOnnxModel(db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
 				log.Fatalf("failed to init ONNX model: %v", err)
 			}
 		default:
