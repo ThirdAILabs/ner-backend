@@ -289,7 +289,7 @@ export default function Jobs() {
             sx={{
               flex: 1,
               height: '8px',
-              bgcolor: '#f1f5f9',
+              bgcolor: '#cbd5e1',
               borderRadius: '9999px',
               overflow: 'hidden',
               display: 'flex',
@@ -313,8 +313,7 @@ export default function Jobs() {
               }}
             />
             {/* Loading animation */}
-            {(succeededFileCount + failedFileCount < fileCount ||
-              (succeededFileCount + failedFileCount === 0 && fileCount > 0)) && (
+            {(succeededFileCount + failedFileCount < fileCount) && (
               <Box
                 className="shimmer-effect"
                 sx={{
@@ -323,14 +322,6 @@ export default function Jobs() {
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  '--shimmer-width':
-                    succeededFileCount + failedFileCount === 0
-                      ? '400px'
-                      : `${((succeededFileCount + failedFileCount) / fileCount) * 400}px`,
-                  width:
-                    succeededFileCount + failedFileCount === 0
-                      ? '100%'
-                      : `${((succeededFileCount + failedFileCount) / fileCount) * 100}%`,
                 }}
               />
             )}
