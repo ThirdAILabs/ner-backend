@@ -4,6 +4,7 @@ import (
 	"context"
 	"ner-backend/internal/licensing"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -22,6 +23,8 @@ func TestKeygenLicensing(t *testing.T) {
 		licenseInfo, err := verifier.VerifyLicense(context.Background())
 		assert.NoError(t, err)
 		assert.Equal(t, licensing.KeygenLicense, licenseInfo.LicenseType)
+		assert.NotNil(t, licenseInfo.Expiry)
+		assert.True(t, licenseInfo.Expiry.After(time.Now()))
 	})
 
 	t.Run("ExpiredLicense", func(t *testing.T) {
@@ -29,6 +32,8 @@ func TestKeygenLicensing(t *testing.T) {
 		licenseInfo, err := verifier.VerifyLicense(context.Background())
 		assert.ErrorIs(t, err, licensing.ErrExpiredLicense)
 		assert.Equal(t, licensing.KeygenLicense, licenseInfo.LicenseType)
+		assert.NotNil(t, licenseInfo.Expiry)
+		assert.True(t, licenseInfo.Expiry.Before(time.Now()))
 	})
 
 	t.Run("NonexistentLicense", func(t *testing.T) {
@@ -43,6 +48,7 @@ func TestKeygenLicensing(t *testing.T) {
 		licenseInfo, err := verifier.VerifyLicense(context.Background())
 		assert.ErrorIs(t, err, licensing.ErrExpiredLicense)
 		assert.Equal(t, licensing.KeygenLicense, licenseInfo.LicenseType)
+		assert.NotNil(t, licenseInfo.Expiry)
 	})
 
 	t.Run("MissingEntitlements", func(t *testing.T) {

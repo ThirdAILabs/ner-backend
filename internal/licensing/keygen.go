@@ -92,6 +92,7 @@ func (verifier *KeygenVerifier) VerifyLicense(ctx context.Context) (LicenseInfo,
 		case "NOT_FOUND":
 			return licenseInfo, ErrLicenseNotFound
 		case "EXPIRED", "SUSPENDED":
+			licenseInfo.Expiry = &verified.Data.Attributes.Expiry
 			return licenseInfo, ErrExpiredLicense
 		default:
 			slog.Error("keygen verification error", "code", verified.Meta.Constant, "error", verified.Meta.Detail)
@@ -104,6 +105,7 @@ func (verifier *KeygenVerifier) VerifyLicense(ctx context.Context) (LicenseInfo,
 		return licenseInfo, ErrInvalidLicense
 	}
 
+	licenseInfo.Expiry = &verified.Data.Attributes.Expiry
 	return licenseInfo, nil
 }
 
