@@ -24,6 +24,8 @@ interface AnalyticsDashboardProps {
   failedFileCount: number;
   totalFileCount: number;
   dataProcessed: number;
+  setTab?: (tab: string) => void;
+  setSelectedTag?: (tag: string) => void;
 }
 
 const formatTime = (time: number): string => {
@@ -58,6 +60,8 @@ export function AnalyticsDashboard({
   failedFileCount,
   totalFileCount,
   dataProcessed,
+  setTab,
+  setSelectedTag,
 }: AnalyticsDashboardProps) {
   const tokenChartData = tags;
   const progress = ((succeededFileCount + failedFileCount) * 100) / totalFileCount || 0;
@@ -266,7 +270,36 @@ export function AnalyticsDashboard({
                   formatter={(value: number) => formatNumber(value)}
                   labelFormatter={(label) => `Type: ${label}`}
                 />
-                <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+                <Bar
+                  dataKey="count"
+                  fill="#3b82f6"
+                  radius={[0, 4, 4, 0]}
+                  shape={(props: any) => {
+                    const { x, y, width, height, index } = props;
+                    return (
+                      <g
+                        onClick={() => {
+                          if (tokenChartData[index].count > 0) {
+                            setTab?.('output');
+                            setSelectedTag?.(tokenChartData[index].type);
+                          }
+                        }}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <rect
+                          x={x}
+                          y={y}
+                          width={width}
+                          height={height}
+                          fill="#3b82f6"
+                          rx="4"
+                          ry="4"
+                        />
+                        <rect x={0} y={y} width="100%" height={height} fill="transparent" />
+                      </g>
+                    );
+                  }}
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
