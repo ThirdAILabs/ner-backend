@@ -222,7 +222,7 @@ func TestCreateReport_InvalidS3(t *testing.T) {
 		&database.ModelTag{ModelId: modelId, Tag: "phone"},
 	)
 
-	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024, nil)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -735,7 +735,7 @@ func TestGetInferenceMetrics_WithTasks(t *testing.T) {
 }
 
 func TestValidateGroupDefinition_ValidDefinition(t *testing.T) {
-	service := backend.NewBackendService(nil, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(nil, &mockStorage{}, messaging.NewInMemoryQueue(), 1024, nil)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -749,7 +749,7 @@ func TestValidateGroupDefinition_ValidDefinition(t *testing.T) {
 }
 
 func TestValidateGroupDefinition_InvalidDefinition(t *testing.T) {
-	service := backend.NewBackendService(nil, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(nil, &mockStorage{}, messaging.NewInMemoryQueue(), 1024, nil)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -764,7 +764,7 @@ func TestValidateGroupDefinition_InvalidDefinition(t *testing.T) {
 }
 
 func TestValidateS3Bucket_PublicBucket(t *testing.T) {
-	service := backend.NewBackendService(nil, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(nil, &mockStorage{}, messaging.NewInMemoryQueue(), 1024, nil)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -778,7 +778,7 @@ func TestValidateS3Bucket_PublicBucket(t *testing.T) {
 }
 
 func TestValidateS3Bucket_InvalidBucket(t *testing.T) {
-	service := backend.NewBackendService(nil, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(nil, &mockStorage{}, messaging.NewInMemoryQueue(), 1024, nil)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -794,10 +794,10 @@ func TestValidateS3Bucket_InvalidBucket(t *testing.T) {
 
 func TestStoreAndGetFileNameToPath(t *testing.T) {
 	db := createDB(t)
-	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024, nil)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
-	
+
 	// First test storing
 	uploadId := uuid.New()
 	testMap := map[string]string{
