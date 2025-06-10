@@ -10,6 +10,7 @@ import (
 	"mime"
 	"mime/multipart"
 	"ner-backend/internal/core"
+	"ner-backend/internal/core/datagen"
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/storage"
@@ -182,6 +183,9 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 		}
 	}
 
+	samples := make([]api.Sample, 0, len(req.Samples))
+	samples = append(samples, req.Samples...)
+
 	tokensList, labelsList, err := database.GetFeedbackSamples(ctx, s.db, modelId)
 	if err != nil {
 		slog.Error("failed to load feedback samples", "model_id", modelId, "error", err)
@@ -189,17 +193,45 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 	}
 
 	for i := range tokensList {
-		req.Samples = append(req.Samples, api.Sample{
+		samples = append(samples, api.Sample{
 			Tokens: tokensList[i],
 			Labels: labelsList[i],
 		})
+	}
+
+	if req.GenerateData {
+		taskPrompt := ""
+		if req.TaskPrompt != nil {
+			taskPrompt = *req.TaskPrompt
+		}
+
+		opts := datagen.DatagenOpts{
+			TaskPrompt: taskPrompt,
+			Tags:       req.Tags,
+			Samples:    samples,
+			// have to adjust these values
+			NumValuesPerTag:    10,
+			SamplesToGenerate:  100,
+			SamplesPerTemplate: 5,
+			GenerateAtOnce:     10,
+			TemplatesPerSample: 2,
+			TestSplit:          0.2,
+		}
+
+		trainSamples, testSamples, err := datagen.GenerateData(opts)
+		if err != nil {
+			slog.Error("error generating synthetic data", "error", err)
+			return nil, CodedErrorf(http.StatusInternalServerError, "error generating samples: %v", err)
+		}
+		samples = append(samples, trainSamples...)
+		samples = append(samples, testSamples...)
 	}
 
 	payload := messaging.FinetuneTaskPayload{
 		ModelId:     model.Id,
 		BaseModelId: model.BaseModelId.UUID,
 		Tags:        req.Tags,
-		Samples:     req.Samples,
+		Samples:     samples,
 	}
 	if req.TaskPrompt != nil {
 		payload.TaskPrompt = *req.TaskPrompt
