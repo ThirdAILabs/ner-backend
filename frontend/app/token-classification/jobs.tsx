@@ -26,6 +26,21 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { useHealth } from '@/contexts/HealthProvider';
 import { alpha } from '@mui/material/styles';
 
+const shimmerKeyframes = `
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400px);
+  }
+}
+`;
+
+const styleElement = document.createElement('style');
+styleElement.innerHTML = shimmerKeyframes;
+document.head.appendChild(styleElement);
+
 export default function Jobs() {
   const searchParams = useSearchParams();
   const deploymentId = searchParams.get('deploymentId');
@@ -47,14 +62,14 @@ export default function Jobs() {
           prev.map((r) =>
             r.Id === report.Id
               ? {
-                  ...r,
-                  SucceededFileCount: detailedReport.SucceededFileCount,
-                  detailedStatus: {
-                    ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
-                    InferenceTaskStatuses: detailedReport.InferenceTaskStatuses,
-                  },
-                  isLoadingStatus: false,
-                }
+                ...r,
+                SucceededFileCount: detailedReport.SucceededFileCount,
+                detailedStatus: {
+                  ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
+                  InferenceTaskStatuses: detailedReport.InferenceTaskStatuses,
+                },
+                isLoadingStatus: false,
+              }
               : r
           )
         );
@@ -114,7 +129,7 @@ export default function Jobs() {
       }
     };
     if (healthStatus) fetchReports();
-    return () => {};
+    return () => { };
   }, [healthStatus]);
 
   if (loading) {
@@ -293,6 +308,7 @@ export default function Jobs() {
               borderRadius: '9999px',
               overflow: 'hidden',
               display: 'flex',
+              position: 'relative',
             }}
           >
             {/* Green (successful files) */}
@@ -311,6 +327,31 @@ export default function Jobs() {
                 bgcolor: '#ef4444',
               }}
             />
+            {/* Loading animation */}
+            {(succeededFileCount + failedFileCount < fileCount ||
+              (succeededFileCount + failedFileCount === 0 && fileCount > 0)) && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    '&::after': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      height: '100%',
+                      width: '40px',
+                      background: (succeededFileCount + failedFileCount === 0) ? 'linear-gradient(90deg, transparent, #4caf50, transparent)' : 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
+                      animation: 'shimmer 2.5s infinite',
+                    },
+                    width: succeededFileCount + failedFileCount === 0 ? '100%' :
+                      `${((succeededFileCount + failedFileCount) / fileCount) * 100}%`,
+                  }}
+                />
+              )}
           </Box>
           <Typography
             variant="body2"
