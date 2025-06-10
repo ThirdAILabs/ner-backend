@@ -167,9 +167,11 @@ function SafeGPTContent() {
         }`}
         style={{ paddingTop: '70px' }}
       >
-        <div className={`bg-white rounded-lg shadow-lg p-6 border border-gray-200 transition-all duration-300 ease-in-out transform ${
-          showNewChatDialog ? 'scale-100 translate-y-0' : 'scale-95 translate-y-2'
-        }`}>
+        <div
+          className={`bg-white rounded-lg shadow-lg p-6 border border-gray-200 transition-all duration-300 ease-in-out transform ${
+            showNewChatDialog ? 'scale-100 translate-y-0' : 'scale-95 translate-y-2'
+          }`}
+        >
           <p className="text-gray-700 font-medium">This is a new chat. Start chatting!</p>
         </div>
       </div>
