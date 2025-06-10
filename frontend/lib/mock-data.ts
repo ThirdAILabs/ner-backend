@@ -1,6 +1,3 @@
-import type { TrainReportData, LabelMetrics, ExampleCategories, TrainingExample } from '@/lib/types';
-import { ObjectDatabaseRecord, ClassifiedTokenDatabaseRecord } from '@/app/token-classification/jobs/(database-table)/types';
-
 // ===== WORKFLOWS =====
 export const mockWorkflows = [
   {
@@ -16,7 +13,7 @@ export const mockWorkflows = [
     team_id: null,
     attributes: {
       llm_provider: 'openai',
-      default_mode: 'standard'
+      default_mode: 'standard',
     },
     dependencies: [
       {
@@ -24,11 +21,11 @@ export const mockWorkflows = [
         model_name: 'Base Token Classification Model',
         type: 'nlp-token',
         sub_type: 'base',
-        username: 'demo_user'
-      }
+        username: 'demo_user',
+      },
     ],
     size: '1.2GB',
-    size_in_memory: '500MB'
+    size_in_memory: '500MB',
   },
   {
     model_id: '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
@@ -43,7 +40,7 @@ export const mockWorkflows = [
     team_id: '550e8400-e29b-41d4-a716-446655440001',
     attributes: {
       llm_provider: 'openai',
-      default_mode: 'medical'
+      default_mode: 'medical',
     },
     dependencies: [
       {
@@ -51,11 +48,11 @@ export const mockWorkflows = [
         model_name: 'Medical Base Model',
         type: 'nlp-token',
         sub_type: 'medical',
-        username: 'demo_user'
-      }
+        username: 'demo_user',
+      },
     ],
     size: '1.5GB',
-    size_in_memory: '600MB'
+    size_in_memory: '600MB',
   },
   {
     model_id: '6ba7b811-9dad-11d1-80b4-00c04fd430c8',
@@ -70,7 +67,7 @@ export const mockWorkflows = [
     team_id: '550e8400-e29b-41d4-a716-446655440002',
     attributes: {
       llm_provider: 'openai',
-      default_mode: 'finance'
+      default_mode: 'finance',
     },
     dependencies: [
       {
@@ -78,11 +75,11 @@ export const mockWorkflows = [
         model_name: 'Finance Base Model',
         type: 'nlp-token',
         sub_type: 'finance',
-        username: 'demo_user'
-      }
+        username: 'demo_user',
+      },
     ],
     size: '1.8GB',
-    size_in_memory: '700MB'
+    size_in_memory: '700MB',
   },
   {
     model_id: '6ba7b812-9dad-11d1-80b4-00c04fd430c8',
@@ -97,7 +94,7 @@ export const mockWorkflows = [
     team_id: null,
     attributes: {
       llm_provider: 'openai',
-      default_mode: 'standard'
+      default_mode: 'standard',
     },
     dependencies: [
       {
@@ -105,11 +102,11 @@ export const mockWorkflows = [
         model_name: 'Base Token Classification Model',
         type: 'nlp-token',
         sub_type: 'base',
-        username: 'demo_user'
-      }
+        username: 'demo_user',
+      },
     ],
     size: '2.0GB',
-    size_in_memory: '800MB'
+    size_in_memory: '800MB',
   },
   {
     model_id: '6ba7b813-9dad-11d1-80b4-00c04fd430c8',
@@ -124,7 +121,7 @@ export const mockWorkflows = [
     team_id: null,
     attributes: {
       llm_provider: 'openai',
-      default_mode: 'medical'
+      default_mode: 'medical',
     },
     dependencies: [
       {
@@ -132,58 +129,253 @@ export const mockWorkflows = [
         model_name: 'Medical Base Model',
         type: 'nlp-token',
         sub_type: 'medical',
-        username: 'demo_user'
-      }
+        username: 'demo_user',
+      },
     ],
     size: '1.6GB',
-    size_in_memory: '650MB'
-  }
+    size_in_memory: '650MB',
+  },
 ];
 
 // ===== PREDICTIONS =====
 export const mockPredictionResponses: Record<string, any> = {
-  'default': {
+  default: {
     prediction_results: {
-      tokens: ['The', 'patient', 'John', 'Smith', 'called', 'to', 'schedule', 'an', 'appointment', 'for', 'next', 'Monday', '.'],
-      predicted_tags: [['O'], ['O'], ['NAME'], ['NAME'], ['O'], ['O'], ['O'], ['O'], ['O'], ['O'], ['O'], ['DATE'], ['O']],
-      source_object: 'Sample text 1'
+      tokens: [
+        'The',
+        'patient',
+        'John',
+        'Smith',
+        'called',
+        'to',
+        'schedule',
+        'an',
+        'appointment',
+        'for',
+        'next',
+        'Monday',
+        '.',
+      ],
+      predicted_tags: [
+        ['O'],
+        ['O'],
+        ['NAME'],
+        ['NAME'],
+        ['O'],
+        ['O'],
+        ['O'],
+        ['O'],
+        ['O'],
+        ['O'],
+        ['O'],
+        ['DATE'],
+        ['O'],
+      ],
+      source_object: 'Sample text 1',
     },
-    time_taken: 0.0032
+    time_taken: 0.0032,
   },
   'The patient John Smith called to schedule an appointment for next Monday.': {
     prediction_results: {
-      tokens: ['The', 'patient', 'John', 'Smith', 'called', 'to', 'schedule', 'an', 'appointment', 'for', 'next', 'Monday', '.'],
-      predicted_tags: [['O'], ['O'], ['NAME'], ['NAME'], ['O'], ['O'], ['O'], ['O'], ['O'], ['O'], ['O'], ['DATE'], ['O']],
-      source_object: 'Sample text 1'
+      tokens: [
+        'The',
+        'patient',
+        'John',
+        'Smith',
+        'called',
+        'to',
+        'schedule',
+        'an',
+        'appointment',
+        'for',
+        'next',
+        'Monday',
+        '.',
+      ],
+      predicted_tags: [
+        ['O'],
+        ['O'],
+        ['NAME'],
+        ['NAME'],
+        ['O'],
+        ['O'],
+        ['O'],
+        ['O'],
+        ['O'],
+        ['O'],
+        ['O'],
+        ['DATE'],
+        ['O'],
+      ],
+      source_object: 'Sample text 1',
     },
-    time_taken: 0.0032
+    time_taken: 0.0032,
   },
   'Patient ID: 123-45-6789, DOB: 01/15/1980, Phone: (555) 123-4567': {
     prediction_results: {
-      tokens: ['Patient', 'ID', ':', '123-45-6789', ',', 'DOB', ':', '01/15/1980', ',', 'Phone', ':', '(', '555', ')', '123-4567'],
-      predicted_tags: [['O'], ['O'], ['O'], ['SSN'], ['O'], ['O'], ['O'], ['DOB'], ['O'], ['O'], ['O'], ['O'], ['PHONE'], ['O'], ['PHONE']],
-      source_object: 'Medical record'
+      tokens: [
+        'Patient',
+        'ID',
+        ':',
+        '123-45-6789',
+        ',',
+        'DOB',
+        ':',
+        '01/15/1980',
+        ',',
+        'Phone',
+        ':',
+        '(',
+        '555',
+        ')',
+        '123-4567',
+      ],
+      predicted_tags: [
+        ['O'],
+        ['O'],
+        ['O'],
+        ['SSN'],
+        ['O'],
+        ['O'],
+        ['O'],
+        ['DOB'],
+        ['O'],
+        ['O'],
+        ['O'],
+        ['O'],
+        ['PHONE'],
+        ['O'],
+        ['PHONE'],
+      ],
+      source_object: 'Medical record',
     },
-    time_taken: 0.0032
+    time_taken: 0.0032,
   },
   'Insurance claim #98765 for patient Jane Doe, policy number 987654321': {
     prediction_results: {
-      tokens: ['Insurance', 'claim', '#', '98765', 'for', 'patient', 'Jane', 'Doe', ',', 'policy', 'number', '987654321'],
-      predicted_tags: [['O'], ['O'], ['O'], ['CLAIM_ID'], ['O'], ['O'], ['NAME'], ['NAME'], ['O'], ['O'], ['O'], ['POLICY_NUMBER']],
-      source_object: 'Insurance claim'
+      tokens: [
+        'Insurance',
+        'claim',
+        '#',
+        '98765',
+        'for',
+        'patient',
+        'Jane',
+        'Doe',
+        ',',
+        'policy',
+        'number',
+        '987654321',
+      ],
+      predicted_tags: [
+        ['O'],
+        ['O'],
+        ['O'],
+        ['CLAIM_ID'],
+        ['O'],
+        ['O'],
+        ['NAME'],
+        ['NAME'],
+        ['O'],
+        ['O'],
+        ['O'],
+        ['POLICY_NUMBER'],
+      ],
+      source_object: 'Insurance claim',
     },
-    time_taken: 0.0032
+    time_taken: 0.0032,
   },
   // ALONE: CONTEXT_SENSITIVE_DATA
   // VACANT: CONTEXT_SENSITIVE_DATA
-  'Customer : Also , I will be staying alone and my primary residence at 1742 Oakdale Avenue in Pasadena will be vacant for those three months . Is there anything else I need to do regarding my prescription ?': {
-    prediction_results: {
-      tokens: ['Customer', ':', 'Also', ',', 'I', 'will', 'be', 'staying', 'alone', 'and', 'my', 'primary', 'residence', 'at', '1742', 'Oakdale', 'Avenue', 'in', 'Pasadena', 'will', 'be', 'vacant', 'for', 'those', 'three', 'months', '.', 'Is', 'there', 'anything', 'else', 'I', 'need', 'to', 'do', 'regarding', 'my', 'prescription', '?'],
-      predicted_tags: [['O'], ['O'], ['O'], ['O'], ['O'], ['O'], ['O'], ['O'], ['O'], ['O'], ['O'], ['O'], ['O'], ['O'], ['ADDRESS'], ['ADDRESS'], ['ADDRESS'], ['O'], ['LOCATION'], ['O'], ['O'], ['O'], ['O'], ['O'], ['O'], ['O'], ['O'], ['O'], ['O'], ['O'], ['O'], ['O'], ['O'], ['O'], ['O'], ['O'], ['O'], ['O'], ['O']],
-      source_object: 'customer_chat_20231110.txt'
+  'Customer : Also , I will be staying alone and my primary residence at 1742 Oakdale Avenue in Pasadena will be vacant for those three months . Is there anything else I need to do regarding my prescription ?':
+    {
+      prediction_results: {
+        tokens: [
+          'Customer',
+          ':',
+          'Also',
+          ',',
+          'I',
+          'will',
+          'be',
+          'staying',
+          'alone',
+          'and',
+          'my',
+          'primary',
+          'residence',
+          'at',
+          '1742',
+          'Oakdale',
+          'Avenue',
+          'in',
+          'Pasadena',
+          'will',
+          'be',
+          'vacant',
+          'for',
+          'those',
+          'three',
+          'months',
+          '.',
+          'Is',
+          'there',
+          'anything',
+          'else',
+          'I',
+          'need',
+          'to',
+          'do',
+          'regarding',
+          'my',
+          'prescription',
+          '?',
+        ],
+        predicted_tags: [
+          ['O'],
+          ['O'],
+          ['O'],
+          ['O'],
+          ['O'],
+          ['O'],
+          ['O'],
+          ['O'],
+          ['O'],
+          ['O'],
+          ['O'],
+          ['O'],
+          ['O'],
+          ['O'],
+          ['ADDRESS'],
+          ['ADDRESS'],
+          ['ADDRESS'],
+          ['O'],
+          ['LOCATION'],
+          ['O'],
+          ['O'],
+          ['O'],
+          ['O'],
+          ['O'],
+          ['O'],
+          ['O'],
+          ['O'],
+          ['O'],
+          ['O'],
+          ['O'],
+          ['O'],
+          ['O'],
+          ['O'],
+          ['O'],
+          ['O'],
+          ['O'],
+          ['O'],
+          ['O'],
+          ['O'],
+        ],
+        source_object: 'customer_chat_20231110.txt',
+      },
+      time_taken: 0.0032,
     },
-    time_taken: 0.0032
-  }
 };
 
 // ===== DEPLOYMENT STATS =====
@@ -198,25 +390,10 @@ export const mockDeploymentStats = {
     ],
   },
   throughput: {
-    header: [
-      'Time Period',
-      'Tokens Identified',
-      'Queries Ingested',
-      'Queries Ingested Size',
-    ],
+    header: ['Time Period', 'Tokens Identified', 'Queries Ingested', 'Queries Ingested Size'],
     rows: [
-      [
-        'Past hour',
-        '1.2M',
-        '50K',
-        '2.5MB',
-      ],
-      [
-        'Total',
-        '15.7B',
-        '1.2M',
-        '45.3MB',
-      ],
+      ['Past hour', '1.2M', '50K', '2.5MB'],
+      ['Total', '15.7B', '1.2M', '45.3MB'],
     ],
   },
 };
@@ -238,191 +415,811 @@ export const mockLabels = [
   'MEDICATION',
   'PROVIDER_NAME',
   'FACILITY_NAME',
-  'INSURANCE_ID'
+  'INSURANCE_ID',
 ];
 
 // ===== TRAINING REPORTS =====
 export const mockMetrics: Record<string, LabelMetrics> = {
-  'O': {
+  O: {
     precision: 0.95,
     recall: 0.92,
     f1: 0.93,
-    support: 100
+    support: 100,
   },
-  'NAME': {
+  NAME: {
     precision: 0.88,
     recall: 0.85,
     f1: 0.86,
-    support: 50
+    support: 50,
   },
-  'SSN': {
+  SSN: {
     precision: 0.91,
     recall: 0.89,
-    f1: 0.90,
-    support: 30
+    f1: 0.9,
+    support: 30,
   },
-  'DOB': {
+  DOB: {
     precision: 0.94,
     recall: 0.93,
     f1: 0.94,
-    support: 25
+    support: 25,
   },
-  'PHONE': {
+  PHONE: {
     precision: 0.87,
     recall: 0.86,
     f1: 0.87,
-    support: 40
+    support: 40,
   },
-  'EMAIL': {
+  EMAIL: {
     precision: 0.92,
     recall: 0.91,
     f1: 0.92,
-    support: 35
+    support: 35,
   },
-  'ADDRESS': {
+  ADDRESS: {
     precision: 0.89,
     recall: 0.88,
     f1: 0.89,
-    support: 45
+    support: 45,
   },
-  'POLICY_NUMBER': {
+  POLICY_NUMBER: {
     precision: 0.93,
     recall: 0.92,
     f1: 0.93,
-    support: 20
+    support: 20,
   },
-  'CLAIM_ID': {
-    precision: 0.90,
+  CLAIM_ID: {
+    precision: 0.9,
     recall: 0.89,
-    f1: 0.90,
-    support: 15
-  }
+    f1: 0.9,
+    support: 15,
+  },
 };
 
 export const mockExamples: ExampleCategories = {
   true_positives: [
-    { id: "1", text: "John Smith", tokens: ["John", "Smith"], labels: ["NAME", "NAME"], predictions: ["NAME", "NAME"] },
-    { id: "2", text: "Jane Doe", tokens: ["Jane", "Doe"], labels: ["NAME", "NAME"], predictions: ["NAME", "NAME"] },
-    { id: "3", text: "123-45-6789", tokens: ["123-45-6789"], labels: ["SSN"], predictions: ["SSN"] }
+    {
+      id: '1',
+      text: 'John Smith',
+      tokens: ['John', 'Smith'],
+      labels: ['NAME', 'NAME'],
+      predictions: ['NAME', 'NAME'],
+    },
+    {
+      id: '2',
+      text: 'Jane Doe',
+      tokens: ['Jane', 'Doe'],
+      labels: ['NAME', 'NAME'],
+      predictions: ['NAME', 'NAME'],
+    },
+    {
+      id: '3',
+      text: '123-45-6789',
+      tokens: ['123-45-6789'],
+      labels: ['SSN'],
+      predictions: ['SSN'],
+    },
   ],
   false_positives: [
-    { id: "4", text: "John", tokens: ["John"], labels: ["O"], predictions: ["NAME"] },
-    { id: "5", text: "Smith", tokens: ["Smith"], labels: ["O"], predictions: ["NAME"] }
+    { id: '4', text: 'John', tokens: ['John'], labels: ['O'], predictions: ['NAME'] },
+    { id: '5', text: 'Smith', tokens: ['Smith'], labels: ['O'], predictions: ['NAME'] },
   ],
   false_negatives: [
-    { id: "6", text: "Michael Brown", tokens: ["Michael", "Brown"], labels: ["NAME", "NAME"], predictions: ["O", "O"] },
-    { id: "7", text: "987-65-4321", tokens: ["987-65-4321"], labels: ["SSN"], predictions: ["O"] }
-  ]
+    {
+      id: '6',
+      text: 'Michael Brown',
+      tokens: ['Michael', 'Brown'],
+      labels: ['NAME', 'NAME'],
+      predictions: ['O', 'O'],
+    },
+    { id: '7', text: '987-65-4321', tokens: ['987-65-4321'], labels: ['SSN'], predictions: ['O'] },
+  ],
 };
 
 export const mockTrainReport: TrainReportData = {
-  timestamp: "2023-11-05T12:00:00Z",
+  timestamp: '2023-11-05T12:00:00Z',
   duration: 3600,
   metrics: {
     accuracy: 0.92,
-    precision: 0.90,
+    precision: 0.9,
     recall: 0.88,
     f1: 0.89,
-    label_metrics: mockMetrics
+    label_metrics: mockMetrics,
   },
-  examples: mockExamples
+  examples: mockExamples,
 };
 
 // ===== TOKEN CLASSIFICATION DATA =====
-export const mockGroups = ["Sensitive", "Review", "Safe"];
+export const mockGroups = ['Sensitive', 'Review', 'Safe'];
 
-export const mockTags = ["NAME", "SSN", "DOB", "EMAIL", "PHONE", "ADDRESS", "POLICY_NUMBER", "CLAIM_ID", "DATE", "TIME", "MEDICAL_CONDITION", "MEDICATION", "PROVIDER_NAME", "FACILITY_NAME", "INSURANCE_ID"];
+export const mockTags = [
+  'NAME',
+  'SSN',
+  'DOB',
+  'EMAIL',
+  'PHONE',
+  'ADDRESS',
+  'POLICY_NUMBER',
+  'CLAIM_ID',
+  'DATE',
+  'TIME',
+  'MEDICAL_CONDITION',
+  'MEDICATION',
+  'PROVIDER_NAME',
+  'FACILITY_NAME',
+  'INSURANCE_ID',
+];
 
 export const mockObjectRecords: ObjectDatabaseRecord[] = [
   {
     taggedTokens: [
-      ['Agent', 'O'], [':', 'O'], ['Thank', 'O'], ['you', 'O'], ['for', 'O'], ['calling', 'O'], ['TechGuard', 'O'],
-      ['Support', 'O'], ['.', 'O'], ['My', 'O'], ['name', 'O'], ['is', 'O'], ['Alex', 'O'], [',', 'O'], ['how', 'O'],
-      ['can', 'O'], ['I', 'O'], ['help', 'O'], ['you', 'O'], ['today', 'O'], ['?', 'O']
+      ['Agent', 'O'],
+      [':', 'O'],
+      ['Thank', 'O'],
+      ['you', 'O'],
+      ['for', 'O'],
+      ['calling', 'O'],
+      ['TechGuard', 'O'],
+      ['Support', 'O'],
+      ['.', 'O'],
+      ['My', 'O'],
+      ['name', 'O'],
+      ['is', 'O'],
+      ['Alex', 'O'],
+      [',', 'O'],
+      ['how', 'O'],
+      ['can', 'O'],
+      ['I', 'O'],
+      ['help', 'O'],
+      ['you', 'O'],
+      ['today', 'O'],
+      ['?', 'O'],
     ],
     sourceObject: 'customer_chat_20231105_0.txt',
-    groups: ['Safe']
+    groups: ['Safe'],
   },
   {
     taggedTokens: [
-      ['Customer', 'O'], [':', 'O'], ['Hi', 'O'], ['there', 'O'], ['.', 'O'], ['My', 'O'], ['name', 'O'], ['is', 'O'],
-      ['Robert', 'NAME'], ['Chen', 'NAME'], ['and', 'O'], ["I'm", 'O'], ['having', 'O'], ['trouble', 'O'],
-      ['accessing', 'O'], ['my', 'O'], ['account', 'O'], ['.', 'O'], ["I've", 'O'], ['been', 'O'], ['trying', 'O'],
-      ['since', 'O'], ['yesterday', 'O'], ['.', 'O']
+      ['Customer', 'O'],
+      [':', 'O'],
+      ['Hi', 'O'],
+      ['there', 'O'],
+      ['.', 'O'],
+      ['My', 'O'],
+      ['name', 'O'],
+      ['is', 'O'],
+      ['Robert', 'NAME'],
+      ['Chen', 'NAME'],
+      ['and', 'O'],
+      ["I'm", 'O'],
+      ['having', 'O'],
+      ['trouble', 'O'],
+      ['accessing', 'O'],
+      ['my', 'O'],
+      ['account', 'O'],
+      ['.', 'O'],
+      ["I've", 'O'],
+      ['been', 'O'],
+      ['trying', 'O'],
+      ['since', 'O'],
+      ['yesterday', 'O'],
+      ['.', 'O'],
     ],
     sourceObject: 'customer_chat_20231105_1.txt',
-    groups: ['Review']
+    groups: ['Review'],
   },
   {
     taggedTokens: [
-      ['Agent', 'O'], [':', 'O'], ["I'm", 'O'], ['sorry', 'O'], ['to', 'O'], ['hear', 'O'], ['that', 'O'], [',', 'O'],
-      ['Mr.', 'O'], ['Chen', 'NAME'], ['.', 'O'], ["I'd", 'O'], ['be', 'O'], ['happy', 'O'], ['to', 'O'], ['help', 'O'],
-      ['you', 'O'], ['regain', 'O'], ['access', 'O'], ['.', 'O'], ['Could', 'O'], ['you', 'O'], ['please', 'O'],
-      ['verify', 'O'], ['your', 'O'], ['account', 'O'], ['with', 'O'], ['your', 'O'], ['email', 'O'], ['address', 'O'],
-      ['?', 'O']
+      ['Agent', 'O'],
+      [':', 'O'],
+      ["I'm", 'O'],
+      ['sorry', 'O'],
+      ['to', 'O'],
+      ['hear', 'O'],
+      ['that', 'O'],
+      [',', 'O'],
+      ['Mr.', 'O'],
+      ['Chen', 'NAME'],
+      ['.', 'O'],
+      ["I'd", 'O'],
+      ['be', 'O'],
+      ['happy', 'O'],
+      ['to', 'O'],
+      ['help', 'O'],
+      ['you', 'O'],
+      ['regain', 'O'],
+      ['access', 'O'],
+      ['.', 'O'],
+      ['Could', 'O'],
+      ['you', 'O'],
+      ['please', 'O'],
+      ['verify', 'O'],
+      ['your', 'O'],
+      ['account', 'O'],
+      ['with', 'O'],
+      ['your', 'O'],
+      ['email', 'O'],
+      ['address', 'O'],
+      ['?', 'O'],
     ],
     sourceObject: 'customer_chat_20231105_2.txt',
-    groups: ['Review']
-  }, 
+    groups: ['Review'],
+  },
   {
     taggedTokens: [
-      ['Customer', 'O'], [':', 'O'], ['Sure', 'O'], [',', 'O'], ["it's", 'O'], ['robert.chen1982', 'EMAIL'], ['@', 'EMAIL'], ['gmail.com', 'EMAIL'], ['.', 'O']
-    ], sourceObject: 'customer_chat_20231105_3.txt', groups: ['Review']
-  }, { taggedTokens: [['Agent', 'O'], [':', 'O'], ['Thank', 'O'], ['you', 'O'], ['.', 'O'], ['And', 'O'], ['for', 'O'], ['additional', 'O'], ['verification', 'O'], [',', 'O'], ['could', 'O'], ['I', 'O'], ['have', 'O'], ['the', 'O'], ['last', 'O'], ['four', 'O'], ['digits', 'O'], ['of', 'O'], ['the', 'O'], ['phone', 'O'], ['number', 'O'], ['associated', 'O'], ['with', 'O'], ['the', 'O'], ['account', 'O'], ['?', 'O']], sourceObject: 'customer_chat_20231105_4.txt', groups: ['Safe'] }, { taggedTokens: [['Customer', 'O'], [':', 'O'], ['Yes', 'O'], [',', 'O'], ["it's", 'O'], ['5784', 'PHONE'], ['.', 'O']], sourceObject: 'customer_chat_20231105_5.txt', groups: ['Review'] }, { taggedTokens: [['Agent', 'O'], [':', 'O'], ['Perfect', 'O'], ['.', 'O'], ['I', 'O'], ['can', 'O'], ['see', 'O'], ['your', 'O'], ['account', 'O'], ['here', 'O'], ['.', 'O'], ['It', 'O'], ['looks', 'O'], ['like', 'O'], ['there', 'O'], ['were', 'O'], ['multiple', 'O'], ['failed', 'O'], ['login', 'O'], ['attempts', 'O'], ['from', 'O'], ['an', 'O'], ['unfamiliar', 'O'], ['IP', 'O'], ['address', 'O'], [',', 'O'], ['so', 'O'], ['our', 'O'], ['security', 'O'], ['system', 'O'], ['temporarily', 'O'], ['locked', 'O'], ['your', 'O'], ['account', 'O'], ['.', 'O'], ['Can', 'O'], ['you', 'O'], ['confirm', 'O'], ['your', 'O'], ['current', 'O'], ['address', 'O'], ['is', 'O'], ['still', 'O'], ['728', 'ADDRESS'], ['Maple', 'ADDRESS'], ['Street', 'ADDRESS'], [',', 'ADDRESS'], ['Apartment', 'ADDRESS'], ['4B', 'ADDRESS'], [',', 'ADDRESS'], ['San', 'ADDRESS'], ['Francisco', 'ADDRESS'], [',', 'ADDRESS'], ['CA', 'ADDRESS'], ['94107', 'ADDRESS'], ['?', 'O']], sourceObject: 'customer_chat_20231105_6.txt', groups: ['Sensitive'] }, { taggedTokens: [['Customer', 'O'], [':', 'O'], ['Yes', 'O'], [',', 'O'], ["that's", 'O'], ['correct', 'O'], ['.', 'O']], sourceObject: 'customer_chat_20231105_7.txt', groups: ['Safe'] }, { taggedTokens: [['Agent', 'O'], [':', 'O'], ['Great', 'O'], ['.', 'O'], ["I've", 'O'], ['reset', 'O'], ['your', 'O'], ['account', 'O'], ['access', 'O'], ['.', 'O'], ['You', 'O'], ['should', 'O'], ['receive', 'O'], ['a', 'O'], ['verification', 'O'], ['code', 'O'], ['at', 'O'], ['your', 'O'], ['email', 'O'], ['address', 'O'], ['shortly', 'O'], ['.', 'O'], ['Once', 'O'], ['you', 'O'], ['enter', 'O'], ['that', 'O'], ['code', 'O'], [',', 'O'], ["you'll", 'O'], ['be', 'O'], ['prompted', 'O'], ['to', 'O'], ['create', 'O'], ['a', 'O'], ['new', 'O'], ['password', 'O'], ['.', 'O'], ['Is', 'O'], ['there', 'O'], ['anything', 'O'], ['else', 'O'], ['I', 'O'], ['can', 'O'], ['help', 'O'], ['with', 'O'], ['today', 'O'], ['?', 'O']], sourceObject: 'customer_chat_20231105_8.txt', groups: ['Safe'] }, { taggedTokens: [['Customer', 'O'], [':', 'O'], ['Actually', 'O'], [',', 'O'], ['yes', 'O'], ['.', 'O'], ['I', 'O'], ['recently', 'O'], ['got', 'O'], ['a', 'O'], ['new', 'O'], ['credit', 'O'], ['card', 'O'], ['and', 'O'], ['need', 'O'], ['to', 'O'], ['update', 'O'], ['my', 'O'], ['billing', 'O'], ['information', 'O'], ['.', 'O'], ['The', 'O'], ['new', 'O'], ['card', 'O'], ['number', 'O'], ['is', 'O'], ['4832', 'CREDIT_CARD'], ['5691', 'CREDIT_CARD'], ['2748', 'CREDIT_CARD'], ['1035', 'CREDIT_CARD'], ['with', 'O'], ['expiration', 'O'], ['date', 'O'], ['09', 'EXPIRATION_DATE'], ['/', 'EXPIRATION_DATE'], ['27', 'EXPIRATION_DATE'], ['and', 'O'], ['security', 'O'], ['code', 'O'], ['382', 'CVV'], ['.', 'O']], sourceObject: 'customer_chat_20231105_9.txt', groups: ['Sensitive'] }, { taggedTokens: [['Customer', 'O'], [':', 'O'], ['That', 'O'], ['makes', 'O'], ['sense', 'O'], ['.', 'O'], ["I'll", 'O'], ['do', 'O'], ['that', 'O'], ['instead', 'O'], ['.', 'O'], ['My', 'O'], ['social', 'O'], ['security', 'O'], ['number', 'O'], ['is', 'O'], ['532', 'SSN'], ['-', 'SSN'], ['48', 'SSN'], ['-', 'SSN'], ['1095', 'SSN'], ['if', 'O'], ['you', 'O'], ['need', 'O'], ['that', 'O'], ['for', 'O'], ['verification', 'O'], ['.', 'O']], sourceObject: 'customer_chat_20231105_10.txt', groups: ['Sensitive'] },
+      ['Customer', 'O'],
+      [':', 'O'],
+      ['Sure', 'O'],
+      [',', 'O'],
+      ["it's", 'O'],
+      ['robert.chen1982', 'EMAIL'],
+      ['@', 'EMAIL'],
+      ['gmail.com', 'EMAIL'],
+      ['.', 'O'],
+    ],
+    sourceObject: 'customer_chat_20231105_3.txt',
+    groups: ['Review'],
+  },
   {
     taggedTokens: [
-      ['Hi', 'O'], ['my', 'O'], ['name', 'O'], ['is', 'O'], ['John', 'NAME'], ['Smith', 'NAME'], ['and', 'O'],
-      ['my', 'O'], ['phone', 'O'], ['number', 'O'], ['is', 'O'], ['555-123-4567', 'PHONE']
+      ['Agent', 'O'],
+      [':', 'O'],
+      ['Thank', 'O'],
+      ['you', 'O'],
+      ['.', 'O'],
+      ['And', 'O'],
+      ['for', 'O'],
+      ['additional', 'O'],
+      ['verification', 'O'],
+      [',', 'O'],
+      ['could', 'O'],
+      ['I', 'O'],
+      ['have', 'O'],
+      ['the', 'O'],
+      ['last', 'O'],
+      ['four', 'O'],
+      ['digits', 'O'],
+      ['of', 'O'],
+      ['the', 'O'],
+      ['phone', 'O'],
+      ['number', 'O'],
+      ['associated', 'O'],
+      ['with', 'O'],
+      ['the', 'O'],
+      ['account', 'O'],
+      ['?', 'O'],
+    ],
+    sourceObject: 'customer_chat_20231105_4.txt',
+    groups: ['Safe'],
+  },
+  {
+    taggedTokens: [
+      ['Customer', 'O'],
+      [':', 'O'],
+      ['Yes', 'O'],
+      [',', 'O'],
+      ["it's", 'O'],
+      ['5784', 'PHONE'],
+      ['.', 'O'],
+    ],
+    sourceObject: 'customer_chat_20231105_5.txt',
+    groups: ['Review'],
+  },
+  {
+    taggedTokens: [
+      ['Agent', 'O'],
+      [':', 'O'],
+      ['Perfect', 'O'],
+      ['.', 'O'],
+      ['I', 'O'],
+      ['can', 'O'],
+      ['see', 'O'],
+      ['your', 'O'],
+      ['account', 'O'],
+      ['here', 'O'],
+      ['.', 'O'],
+      ['It', 'O'],
+      ['looks', 'O'],
+      ['like', 'O'],
+      ['there', 'O'],
+      ['were', 'O'],
+      ['multiple', 'O'],
+      ['failed', 'O'],
+      ['login', 'O'],
+      ['attempts', 'O'],
+      ['from', 'O'],
+      ['an', 'O'],
+      ['unfamiliar', 'O'],
+      ['IP', 'O'],
+      ['address', 'O'],
+      [',', 'O'],
+      ['so', 'O'],
+      ['our', 'O'],
+      ['security', 'O'],
+      ['system', 'O'],
+      ['temporarily', 'O'],
+      ['locked', 'O'],
+      ['your', 'O'],
+      ['account', 'O'],
+      ['.', 'O'],
+      ['Can', 'O'],
+      ['you', 'O'],
+      ['confirm', 'O'],
+      ['your', 'O'],
+      ['current', 'O'],
+      ['address', 'O'],
+      ['is', 'O'],
+      ['still', 'O'],
+      ['728', 'ADDRESS'],
+      ['Maple', 'ADDRESS'],
+      ['Street', 'ADDRESS'],
+      [',', 'ADDRESS'],
+      ['Apartment', 'ADDRESS'],
+      ['4B', 'ADDRESS'],
+      [',', 'ADDRESS'],
+      ['San', 'ADDRESS'],
+      ['Francisco', 'ADDRESS'],
+      [',', 'ADDRESS'],
+      ['CA', 'ADDRESS'],
+      ['94107', 'ADDRESS'],
+      ['?', 'O'],
+    ],
+    sourceObject: 'customer_chat_20231105_6.txt',
+    groups: ['Sensitive'],
+  },
+  {
+    taggedTokens: [
+      ['Customer', 'O'],
+      [':', 'O'],
+      ['Yes', 'O'],
+      [',', 'O'],
+      ["that's", 'O'],
+      ['correct', 'O'],
+      ['.', 'O'],
+    ],
+    sourceObject: 'customer_chat_20231105_7.txt',
+    groups: ['Safe'],
+  },
+  {
+    taggedTokens: [
+      ['Agent', 'O'],
+      [':', 'O'],
+      ['Great', 'O'],
+      ['.', 'O'],
+      ["I've", 'O'],
+      ['reset', 'O'],
+      ['your', 'O'],
+      ['account', 'O'],
+      ['access', 'O'],
+      ['.', 'O'],
+      ['You', 'O'],
+      ['should', 'O'],
+      ['receive', 'O'],
+      ['a', 'O'],
+      ['verification', 'O'],
+      ['code', 'O'],
+      ['at', 'O'],
+      ['your', 'O'],
+      ['email', 'O'],
+      ['address', 'O'],
+      ['shortly', 'O'],
+      ['.', 'O'],
+      ['Once', 'O'],
+      ['you', 'O'],
+      ['enter', 'O'],
+      ['that', 'O'],
+      ['code', 'O'],
+      [',', 'O'],
+      ["you'll", 'O'],
+      ['be', 'O'],
+      ['prompted', 'O'],
+      ['to', 'O'],
+      ['create', 'O'],
+      ['a', 'O'],
+      ['new', 'O'],
+      ['password', 'O'],
+      ['.', 'O'],
+      ['Is', 'O'],
+      ['there', 'O'],
+      ['anything', 'O'],
+      ['else', 'O'],
+      ['I', 'O'],
+      ['can', 'O'],
+      ['help', 'O'],
+      ['with', 'O'],
+      ['today', 'O'],
+      ['?', 'O'],
+    ],
+    sourceObject: 'customer_chat_20231105_8.txt',
+    groups: ['Safe'],
+  },
+  {
+    taggedTokens: [
+      ['Customer', 'O'],
+      [':', 'O'],
+      ['Actually', 'O'],
+      [',', 'O'],
+      ['yes', 'O'],
+      ['.', 'O'],
+      ['I', 'O'],
+      ['recently', 'O'],
+      ['got', 'O'],
+      ['a', 'O'],
+      ['new', 'O'],
+      ['credit', 'O'],
+      ['card', 'O'],
+      ['and', 'O'],
+      ['need', 'O'],
+      ['to', 'O'],
+      ['update', 'O'],
+      ['my', 'O'],
+      ['billing', 'O'],
+      ['information', 'O'],
+      ['.', 'O'],
+      ['The', 'O'],
+      ['new', 'O'],
+      ['card', 'O'],
+      ['number', 'O'],
+      ['is', 'O'],
+      ['4832', 'CREDIT_CARD'],
+      ['5691', 'CREDIT_CARD'],
+      ['2748', 'CREDIT_CARD'],
+      ['1035', 'CREDIT_CARD'],
+      ['with', 'O'],
+      ['expiration', 'O'],
+      ['date', 'O'],
+      ['09', 'EXPIRATION_DATE'],
+      ['/', 'EXPIRATION_DATE'],
+      ['27', 'EXPIRATION_DATE'],
+      ['and', 'O'],
+      ['security', 'O'],
+      ['code', 'O'],
+      ['382', 'CVV'],
+      ['.', 'O'],
+    ],
+    sourceObject: 'customer_chat_20231105_9.txt',
+    groups: ['Sensitive'],
+  },
+  {
+    taggedTokens: [
+      ['Customer', 'O'],
+      [':', 'O'],
+      ['That', 'O'],
+      ['makes', 'O'],
+      ['sense', 'O'],
+      ['.', 'O'],
+      ["I'll", 'O'],
+      ['do', 'O'],
+      ['that', 'O'],
+      ['instead', 'O'],
+      ['.', 'O'],
+      ['My', 'O'],
+      ['social', 'O'],
+      ['security', 'O'],
+      ['number', 'O'],
+      ['is', 'O'],
+      ['532', 'SSN'],
+      ['-', 'SSN'],
+      ['48', 'SSN'],
+      ['-', 'SSN'],
+      ['1095', 'SSN'],
+      ['if', 'O'],
+      ['you', 'O'],
+      ['need', 'O'],
+      ['that', 'O'],
+      ['for', 'O'],
+      ['verification', 'O'],
+      ['.', 'O'],
+    ],
+    sourceObject: 'customer_chat_20231105_10.txt',
+    groups: ['Sensitive'],
+  },
+  {
+    taggedTokens: [
+      ['Hi', 'O'],
+      ['my', 'O'],
+      ['name', 'O'],
+      ['is', 'O'],
+      ['John', 'NAME'],
+      ['Smith', 'NAME'],
+      ['and', 'O'],
+      ['my', 'O'],
+      ['phone', 'O'],
+      ['number', 'O'],
+      ['is', 'O'],
+      ['555-123-4567', 'PHONE'],
     ],
     sourceObject: 'customer_chat_20231105.txt',
     groups: ['Sensitive'],
   },
   {
     taggedTokens: [
-      ['Please', 'O'], ['update', 'O'], ['my', 'O'], ['address', 'O'], ['to', 'O'],
-      ['123', 'ADDRESS'], ['Main', 'ADDRESS'], ['Street', 'ADDRESS'], ['Apt', 'ADDRESS'], ['4B', 'ADDRESS']
+      ['Please', 'O'],
+      ['update', 'O'],
+      ['my', 'O'],
+      ['address', 'O'],
+      ['to', 'O'],
+      ['123', 'ADDRESS'],
+      ['Main', 'ADDRESS'],
+      ['Street', 'ADDRESS'],
+      ['Apt', 'ADDRESS'],
+      ['4B', 'ADDRESS'],
     ],
     sourceObject: 'customer_chat_20231106.txt',
     groups: ['Safe'],
   },
   {
     taggedTokens: [
-      ['My', 'O'], ['SSN', 'O'], ['is', 'O'], ['123-45-6789', 'SSN'], ['.', 'O'],
-      ['Date', 'O'], ['of', 'O'], ['birth', 'O'], ['is', 'O'], ['01/15/1980', 'DOB']
+      ['My', 'O'],
+      ['SSN', 'O'],
+      ['is', 'O'],
+      ['123-45-6789', 'SSN'],
+      ['.', 'O'],
+      ['Date', 'O'],
+      ['of', 'O'],
+      ['birth', 'O'],
+      ['is', 'O'],
+      ['01/15/1980', 'DOB'],
     ],
     sourceObject: 'customer_chat_20231107.txt',
     groups: ['Sensitive', 'Sensitive'],
   },
   {
     taggedTokens: [
-      ['I', 'O'], ['need', 'O'], ['help', 'O'], ['with', 'O'], ['my', 'O'], ['insurance', 'O'], ['claim', 'O'],
-      ['987654321', 'CLAIM_ID']
+      ['I', 'O'],
+      ['need', 'O'],
+      ['help', 'O'],
+      ['with', 'O'],
+      ['my', 'O'],
+      ['insurance', 'O'],
+      ['claim', 'O'],
+      ['987654321', 'CLAIM_ID'],
     ],
     sourceObject: 'customer_chat_20231108.txt',
     groups: ['Sensitive'],
   },
   {
     taggedTokens: [
-      ['You', 'O'], ['can', 'O'], ['email', 'O'], ['me', 'O'], ['at', 'O'],
-      ['john.smith', 'EMAIL'], ['@', 'EMAIL'], ['healthcare.com', 'EMAIL']
+      ['You', 'O'],
+      ['can', 'O'],
+      ['email', 'O'],
+      ['me', 'O'],
+      ['at', 'O'],
+      ['john.smith', 'EMAIL'],
+      ['@', 'EMAIL'],
+      ['healthcare.com', 'EMAIL'],
     ],
     sourceObject: 'customer_chat_20231109.txt',
     groups: ['Safe'],
   },
   {
     taggedTokens: [
-      ['My', 'O'], ['policy', 'O'], ['number', 'O'], ['is', 'O'],
-      ['POL987654321', 'POLICY_NUMBER'], ['issued', 'O'], ['by', 'O'], ['BlueCross', 'O']
+      ['My', 'O'],
+      ['policy', 'O'],
+      ['number', 'O'],
+      ['is', 'O'],
+      ['POL987654321', 'POLICY_NUMBER'],
+      ['issued', 'O'],
+      ['by', 'O'],
+      ['BlueCross', 'O'],
     ],
     sourceObject: 'customer_chat_20231110.txt',
     groups: ['Sensitive'],
   },
 ];
 
-export const mockClassifiedTokenRecords: ClassifiedTokenDatabaseRecord[] = [{'token': 'Robert', 'tag': 'NAME', 'sourceObject': 'customer_chat_20231105_1.txt', 'groups': ['Review']}, {'token': 'Chen', 'tag': 'NAME', 'sourceObject': 'customer_chat_20231105_1.txt', 'groups': ['Review']}, {'token': 'Chen', 'tag': 'NAME', 'sourceObject': 'customer_chat_20231105_2.txt', 'groups': ['Review']}, {'token': 'robert.chen1982', 'tag': 'EMAIL', 'sourceObject': 'customer_chat_20231105_3.txt', 'groups': ['Review']}, {'token': '@', 'tag': 'EMAIL', 'sourceObject': 'customer_chat_20231105_3.txt', 'groups': ['Review']}, {'token': 'gmail.com', 'tag': 'EMAIL', 'sourceObject': 'customer_chat_20231105_3.txt', 'groups': ['Review']}, {'token': '5784', 'tag': 'PHONE', 'sourceObject': 'customer_chat_20231105_5.txt', 'groups': ['Review']}, {'token': '728', 'tag': 'ADDRESS', 'sourceObject': 'customer_chat_20231105_6.txt', 'groups': ['Sensitive']}, {'token': 'Maple', 'tag': 'ADDRESS', 'sourceObject': 'customer_chat_20231105_6.txt', 'groups': ['Sensitive']}, {'token': 'Street', 'tag': 'ADDRESS', 'sourceObject': 'customer_chat_20231105_6.txt', 'groups': ['Sensitive']}, {'token': ',', 'tag': 'ADDRESS', 'sourceObject': 'customer_chat_20231105_6.txt', 'groups': ['Sensitive']}, {'token': 'Apartment', 'tag': 'ADDRESS', 'sourceObject': 'customer_chat_20231105_6.txt', 'groups': ['Sensitive']}, {'token': '4B', 'tag': 'ADDRESS', 'sourceObject': 'customer_chat_20231105_6.txt', 'groups': ['Sensitive']}, {'token': ',', 'tag': 'ADDRESS', 'sourceObject': 'customer_chat_20231105_6.txt', 'groups': ['Sensitive']}, {'token': 'San', 'tag': 'ADDRESS', 'sourceObject': 'customer_chat_20231105_6.txt', 'groups': ['Sensitive']}, {'token': 'Francisco', 'tag': 'ADDRESS', 'sourceObject': 'customer_chat_20231105_6.txt', 'groups': ['Sensitive']}, {'token': ',', 'tag': 'ADDRESS', 'sourceObject': 'customer_chat_20231105_6.txt', 'groups': ['Sensitive']}, {'token': 'CA', 'tag': 'ADDRESS', 'sourceObject': 'customer_chat_20231105_6.txt', 'groups': ['Sensitive']}, {'token': '94107', 'tag': 'ADDRESS', 'sourceObject': 'customer_chat_20231105_6.txt', 'groups': ['Sensitive']}, {'token': '4832', 'tag': 'CREDIT_CARD', 'sourceObject': 'customer_chat_20231105_9.txt', 'groups': ['Sensitive']}, {'token': '5691', 'tag': 'CREDIT_CARD', 'sourceObject': 'customer_chat_20231105_9.txt', 'groups': ['Sensitive']}, {'token': '2748', 'tag': 'CREDIT_CARD', 'sourceObject': 'customer_chat_20231105_9.txt', 'groups': ['Sensitive']}, {'token': '1035', 'tag': 'CREDIT_CARD', 'sourceObject': 'customer_chat_20231105_9.txt', 'groups': ['Sensitive']}, {'token': '09', 'tag': 'EXPIRATION_DATE', 'sourceObject': 'customer_chat_20231105_9.txt', 'groups': ['Sensitive']}, {'token': '/', 'tag': 'EXPIRATION_DATE', 'sourceObject': 'customer_chat_20231105_9.txt', 'groups': ['Sensitive']}, {'token': '27', 'tag': 'EXPIRATION_DATE', 'sourceObject': 'customer_chat_20231105_9.txt', 'groups': ['Sensitive']}, {'token': '382', 'tag': 'CVV', 'sourceObject': 'customer_chat_20231105_9.txt', 'groups': ['Sensitive']}, {'token': '532', 'tag': 'SSN', 'sourceObject': 'customer_chat_20231105_10.txt', 'groups': ['Sensitive']}, {'token': '-', 'tag': 'SSN', 'sourceObject': 'customer_chat_20231105_10.txt', 'groups': ['Sensitive']}, {'token': '48', 'tag': 'SSN', 'sourceObject': 'customer_chat_20231105_10.txt', 'groups': ['Sensitive']}, {'token': '-', 'tag': 'SSN', 'sourceObject': 'customer_chat_20231105_10.txt', 'groups': ['Sensitive']}, {'token': '1095', 'tag': 'SSN', 'sourceObject': 'customer_chat_20231105_10.txt', 'groups': ['Sensitive']}, {'token': 'John', 'tag': 'NAME', 'sourceObject': 'customer_chat_20231105.txt', 'groups': ['Sensitive']}, {'token': 'Smith', 'tag': 'NAME', 'sourceObject': 'customer_chat_20231105.txt', 'groups': ['Sensitive']}, {'token': '555-123-4567', 'tag': 'PHONE', 'sourceObject': 'customer_chat_20231105.txt', 'groups': ['Sensitive']}, {'token': '123', 'tag': 'ADDRESS', 'sourceObject': 'customer_chat_20231106.txt', 'groups': ['Safe']}, {'token': 'Main', 'tag': 'ADDRESS', 'sourceObject': 'customer_chat_20231106.txt', 'groups': ['Safe']}, {'token': 'Street', 'tag': 'ADDRESS', 'sourceObject': 'customer_chat_20231106.txt', 'groups': ['Safe']}, {'token': 'Apt', 'tag': 'ADDRESS', 'sourceObject': 'customer_chat_20231106.txt', 'groups': ['Safe']}, {'token': '4B', 'tag': 'ADDRESS', 'sourceObject': 'customer_chat_20231106.txt', 'groups': ['Safe']}, {'token': '123-45-6789', 'tag': 'SSN', 'sourceObject': 'customer_chat_20231107.txt', 'groups': ['Sensitive', 'Sensitive']}, {'token': '01/15/1980', 'tag': 'DOB', 'sourceObject': 'customer_chat_20231107.txt', 'groups': ['Sensitive', 'Sensitive']}, {'token': '987654321', 'tag': 'CLAIM_ID', 'sourceObject': 'customer_chat_20231108.txt', 'groups': ['Sensitive']}, {'token': 'john.smith', 'tag': 'EMAIL', 'sourceObject': 'customer_chat_20231109.txt', 'groups': ['Safe']}, {'token': '@', 'tag': 'EMAIL', 'sourceObject': 'customer_chat_20231109.txt', 'groups': ['Safe']}, {'token': 'healthcare.com', 'tag': 'EMAIL', 'sourceObject': 'customer_chat_20231109.txt', 'groups': ['Safe']}, {'token': 'POL987654321', 'tag': 'POLICY_NUMBER', 'sourceObject': 'customer_chat_20231110.txt', 'groups': ['Sensitive']}];
+export const mockClassifiedTokenRecords: ClassifiedTokenDatabaseRecord[] = [
+  {
+    token: 'Robert',
+    tag: 'NAME',
+    sourceObject: 'customer_chat_20231105_1.txt',
+    groups: ['Review'],
+  },
+  { token: 'Chen', tag: 'NAME', sourceObject: 'customer_chat_20231105_1.txt', groups: ['Review'] },
+  { token: 'Chen', tag: 'NAME', sourceObject: 'customer_chat_20231105_2.txt', groups: ['Review'] },
+  {
+    token: 'robert.chen1982',
+    tag: 'EMAIL',
+    sourceObject: 'customer_chat_20231105_3.txt',
+    groups: ['Review'],
+  },
+  { token: '@', tag: 'EMAIL', sourceObject: 'customer_chat_20231105_3.txt', groups: ['Review'] },
+  {
+    token: 'gmail.com',
+    tag: 'EMAIL',
+    sourceObject: 'customer_chat_20231105_3.txt',
+    groups: ['Review'],
+  },
+  { token: '5784', tag: 'PHONE', sourceObject: 'customer_chat_20231105_5.txt', groups: ['Review'] },
+  {
+    token: '728',
+    tag: 'ADDRESS',
+    sourceObject: 'customer_chat_20231105_6.txt',
+    groups: ['Sensitive'],
+  },
+  {
+    token: 'Maple',
+    tag: 'ADDRESS',
+    sourceObject: 'customer_chat_20231105_6.txt',
+    groups: ['Sensitive'],
+  },
+  {
+    token: 'Street',
+    tag: 'ADDRESS',
+    sourceObject: 'customer_chat_20231105_6.txt',
+    groups: ['Sensitive'],
+  },
+  {
+    token: ',',
+    tag: 'ADDRESS',
+    sourceObject: 'customer_chat_20231105_6.txt',
+    groups: ['Sensitive'],
+  },
+  {
+    token: 'Apartment',
+    tag: 'ADDRESS',
+    sourceObject: 'customer_chat_20231105_6.txt',
+    groups: ['Sensitive'],
+  },
+  {
+    token: '4B',
+    tag: 'ADDRESS',
+    sourceObject: 'customer_chat_20231105_6.txt',
+    groups: ['Sensitive'],
+  },
+  {
+    token: ',',
+    tag: 'ADDRESS',
+    sourceObject: 'customer_chat_20231105_6.txt',
+    groups: ['Sensitive'],
+  },
+  {
+    token: 'San',
+    tag: 'ADDRESS',
+    sourceObject: 'customer_chat_20231105_6.txt',
+    groups: ['Sensitive'],
+  },
+  {
+    token: 'Francisco',
+    tag: 'ADDRESS',
+    sourceObject: 'customer_chat_20231105_6.txt',
+    groups: ['Sensitive'],
+  },
+  {
+    token: ',',
+    tag: 'ADDRESS',
+    sourceObject: 'customer_chat_20231105_6.txt',
+    groups: ['Sensitive'],
+  },
+  {
+    token: 'CA',
+    tag: 'ADDRESS',
+    sourceObject: 'customer_chat_20231105_6.txt',
+    groups: ['Sensitive'],
+  },
+  {
+    token: '94107',
+    tag: 'ADDRESS',
+    sourceObject: 'customer_chat_20231105_6.txt',
+    groups: ['Sensitive'],
+  },
+  {
+    token: '4832',
+    tag: 'CREDIT_CARD',
+    sourceObject: 'customer_chat_20231105_9.txt',
+    groups: ['Sensitive'],
+  },
+  {
+    token: '5691',
+    tag: 'CREDIT_CARD',
+    sourceObject: 'customer_chat_20231105_9.txt',
+    groups: ['Sensitive'],
+  },
+  {
+    token: '2748',
+    tag: 'CREDIT_CARD',
+    sourceObject: 'customer_chat_20231105_9.txt',
+    groups: ['Sensitive'],
+  },
+  {
+    token: '1035',
+    tag: 'CREDIT_CARD',
+    sourceObject: 'customer_chat_20231105_9.txt',
+    groups: ['Sensitive'],
+  },
+  {
+    token: '09',
+    tag: 'EXPIRATION_DATE',
+    sourceObject: 'customer_chat_20231105_9.txt',
+    groups: ['Sensitive'],
+  },
+  {
+    token: '/',
+    tag: 'EXPIRATION_DATE',
+    sourceObject: 'customer_chat_20231105_9.txt',
+    groups: ['Sensitive'],
+  },
+  {
+    token: '27',
+    tag: 'EXPIRATION_DATE',
+    sourceObject: 'customer_chat_20231105_9.txt',
+    groups: ['Sensitive'],
+  },
+  { token: '382', tag: 'CVV', sourceObject: 'customer_chat_20231105_9.txt', groups: ['Sensitive'] },
+  {
+    token: '532',
+    tag: 'SSN',
+    sourceObject: 'customer_chat_20231105_10.txt',
+    groups: ['Sensitive'],
+  },
+  { token: '-', tag: 'SSN', sourceObject: 'customer_chat_20231105_10.txt', groups: ['Sensitive'] },
+  { token: '48', tag: 'SSN', sourceObject: 'customer_chat_20231105_10.txt', groups: ['Sensitive'] },
+  { token: '-', tag: 'SSN', sourceObject: 'customer_chat_20231105_10.txt', groups: ['Sensitive'] },
+  {
+    token: '1095',
+    tag: 'SSN',
+    sourceObject: 'customer_chat_20231105_10.txt',
+    groups: ['Sensitive'],
+  },
+  { token: 'John', tag: 'NAME', sourceObject: 'customer_chat_20231105.txt', groups: ['Sensitive'] },
+  {
+    token: 'Smith',
+    tag: 'NAME',
+    sourceObject: 'customer_chat_20231105.txt',
+    groups: ['Sensitive'],
+  },
+  {
+    token: '555-123-4567',
+    tag: 'PHONE',
+    sourceObject: 'customer_chat_20231105.txt',
+    groups: ['Sensitive'],
+  },
+  { token: '123', tag: 'ADDRESS', sourceObject: 'customer_chat_20231106.txt', groups: ['Safe'] },
+  { token: 'Main', tag: 'ADDRESS', sourceObject: 'customer_chat_20231106.txt', groups: ['Safe'] },
+  { token: 'Street', tag: 'ADDRESS', sourceObject: 'customer_chat_20231106.txt', groups: ['Safe'] },
+  { token: 'Apt', tag: 'ADDRESS', sourceObject: 'customer_chat_20231106.txt', groups: ['Safe'] },
+  { token: '4B', tag: 'ADDRESS', sourceObject: 'customer_chat_20231106.txt', groups: ['Safe'] },
+  {
+    token: '123-45-6789',
+    tag: 'SSN',
+    sourceObject: 'customer_chat_20231107.txt',
+    groups: ['Sensitive', 'Sensitive'],
+  },
+  {
+    token: '01/15/1980',
+    tag: 'DOB',
+    sourceObject: 'customer_chat_20231107.txt',
+    groups: ['Sensitive', 'Sensitive'],
+  },
+  {
+    token: '987654321',
+    tag: 'CLAIM_ID',
+    sourceObject: 'customer_chat_20231108.txt',
+    groups: ['Sensitive'],
+  },
+  {
+    token: 'john.smith',
+    tag: 'EMAIL',
+    sourceObject: 'customer_chat_20231109.txt',
+    groups: ['Safe'],
+  },
+  { token: '@', tag: 'EMAIL', sourceObject: 'customer_chat_20231109.txt', groups: ['Safe'] },
+  {
+    token: 'healthcare.com',
+    tag: 'EMAIL',
+    sourceObject: 'customer_chat_20231109.txt',
+    groups: ['Safe'],
+  },
+  {
+    token: 'POL987654321',
+    tag: 'POLICY_NUMBER',
+    sourceObject: 'customer_chat_20231110.txt',
+    groups: ['Sensitive'],
+  },
+];
 
 // Helper function for loading more mock data
-export const makeLoadMoreMockData = <T>(records: T[]): () => Promise<T[]> => {
+export const makeLoadMoreMockData = <T>(records: T[]): (() => Promise<T[]>) => {
   return () => {
     return new Promise((resolve) => {
       setTimeout(() => {

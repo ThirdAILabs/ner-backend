@@ -7,7 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Box } from '@mui/material';
 import { ArrowLeft, Plus, RefreshCw, Edit } from 'lucide-react';
 import { nerService } from '@/lib/backend';
-import { Suspense } from 'react';
+import { NO_GROUP, uniqueFileNames, getFilesFromElectron } from '@/lib/utils';
+import { Input } from '@/components/ui/input';
+
+const SUPPORTED_TYPES = ['.pdf', '.txt', '.csv', '.html', '.json', '.xml'];
 
 // Tag chip component - reused from the detail page but with interactive mode
 interface TagProps {
@@ -23,11 +26,11 @@ const Tag: React.FC<TagProps> = ({
   selected = false,
   onClick,
   custom = false,
-  addNew = false
+  addNew = false,
 }) => {
   return (
     <div
-      className={`px-3 py-1 text-sm font-medium rounded-sm ${!custom && 'cursor-pointer'} ${selected ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+      className={`px-3 py-1 text-sm font-medium overflow-x-scroll max-w-[16vw] rounded-sm ${!custom && 'cursor-pointer'} ${selected ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
       style={{ userSelect: 'none' }}
       onClick={onClick}
     >
@@ -37,7 +40,7 @@ const Tag: React.FC<TagProps> = ({
 };
 
 // Source option card component - reused from the detail page
-interface SourceOptionProps {
+interface ModelOptionProps {
   title: string;
   description: React.ReactNode;
   isSelected?: boolean;
@@ -45,19 +48,20 @@ interface SourceOptionProps {
   onClick: () => void;
 }
 
-const SourceOption: React.FC<SourceOptionProps> = ({
+const ModelOption: React.FC<ModelOptionProps> = ({
   title,
   description,
   isSelected = false,
   disabled = false,
-  onClick
+  onClick,
 }) => (
   <div
     className={`relative p-6 border rounded-md transition-all
       ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200 border-2'}
-      ${disabled
-        ? 'opacity-85 cursor-not-allowed bg-gray-50'
-        : 'cursor-pointer hover:border-blue-300'
+      ${
+        disabled
+          ? 'opacity-85 cursor-not-allowed bg-gray-50'
+          : 'cursor-pointer hover:border-blue-300'
       }
     `}
     onClick={() => !disabled && onClick()}
@@ -78,12 +82,7 @@ const GroupCard: React.FC<GroupProps> = ({ name, definition, onRemove }) => (
   <div className="border border-gray-200 rounded-md overflow-hidden">
     <div className="p-4 border-b border-gray-200 flex justify-between items-center">
       <h3 className="text-base font-medium">{name}</h3>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={onRemove}
-        className="text-red-500"
-      >
+      <Button variant="ghost" size="sm" onClick={onRemove} className="text-red-500">
         Remove
       </Button>
     </div>
@@ -92,6 +91,170 @@ const GroupCard: React.FC<GroupProps> = ({ name, definition, onRemove }) => (
     </div>
   </div>
 );
+
+interface SourceOptionProps {
+  onClick: () => void;
+  input?: React.ReactNode;
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  disclaimer: string;
+}
+
+const SourceOption: React.FC<SourceOptionProps> = ({
+  onClick,
+  input,
+  icon,
+  title,
+  description,
+  disclaimer,
+}) => (
+  <div
+    className="relative p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 transition-colors cursor-pointer"
+    onClick={onClick}
+  >
+    {input && input}
+    <div className="flex flex-col items-center justify-center space-y-4">
+      <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-50">
+        <svg
+          className="w-8 h-8 text-blue-500"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          {icon}
+        </svg>
+      </div>
+      <div className="text-center">
+        <h3 className="text-base font-medium mb-1">{title}</h3>
+        <p className="text-sm text-gray-500">{description}</p>
+        <p className="text-xs text-gray-400 mt-2">{disclaimer}</p>
+      </div>
+    </div>
+  </div>
+);
+
+interface FileSourcesProps {
+  selectSource: (source: 's3' | 'files' | 'directory') => void;
+  handleLocalFiles: (files: [File, string][], isUploaded: boolean) => void;
+}
+
+const FileSources: React.FC<FileSourcesProps> = ({ selectSource, handleLocalFiles }) => {
+  const s3 = (
+    <SourceOption
+      onClick={() => selectSource('s3')}
+      icon={
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
+        />
+      }
+      title="S3 Bucket"
+      description="Scan files from an S3 bucket"
+      disclaimer="Public buckets only without enterprise subscription."
+    />
+  );
+
+  const folderIcon = (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+    />
+  );
+
+  // @ts-ignore
+  if (window && window.electron) {
+    return (
+      <>
+        <SourceOption
+          onClick={() => {
+            getFilesFromElectron(SUPPORTED_TYPES).then(({ files, isUploaded }) => {
+              handleLocalFiles(files, isUploaded);
+            });
+            selectSource('files');
+          }}
+          icon={folderIcon}
+          title="Local Files"
+          description="Scan files from your computer"
+          disclaimer={`Supported: ${SUPPORTED_TYPES.join(', ')}`}
+        />
+        {s3}
+      </>
+    );
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      handleLocalFiles(
+        Array.from(files).map((file) => [file, '']),
+        true
+      );
+      e.target.value = '';
+    }
+  };
+
+  const fileInput = (
+    <input
+      type="file"
+      id="file-upload"
+      multiple
+      onChange={handleFileChange}
+      className="hidden"
+      accept={SUPPORTED_TYPES.join(',')}
+    />
+  );
+
+  const directoryInput = (
+    <input
+      type="file"
+      id="directory-upload"
+      {...({ webkitdirectory: '', directory: '' } as any)}
+      onChange={handleFileChange}
+      className="hidden"
+      accept={SUPPORTED_TYPES.join(',')}
+    />
+  );
+
+  return (
+    <>
+      <SourceOption
+        onClick={() => {
+          document.getElementById('file-upload')?.click();
+          selectSource('files');
+        }}
+        input={fileInput}
+        icon={
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+          />
+        }
+        title="Local Files"
+        description="Scan files from your computer"
+        disclaimer={`Supported: ${SUPPORTED_TYPES.join(', ')}`}
+      />
+      <SourceOption
+        onClick={() => {
+          document.getElementById('directory-upload')?.click();
+          selectSource('directory');
+        }}
+        input={directoryInput}
+        icon={folderIcon}
+        title="Local Directory"
+        description="Scan an entire directory"
+        disclaimer={`Supported: ${SUPPORTED_TYPES.join(', ')}`}
+      />
+      {s3}
+    </>
+  );
+};
 
 // Custom Tag interface
 interface CustomTag {
@@ -103,12 +266,15 @@ export default function NewJobPage() {
   const router = useRouter();
 
   // Essential state
-  const [selectedSource, setSelectedSource] = useState<'s3' | 'files'>('files');
+  const [selectedSource, setSelectedSource] = useState<'s3' | 'files' | 'directory' | ''>('files');
+  const [sourceS3Endpoint, setSourceS3Endpoint] = useState('');
+  const [sourceS3Region, setSourceS3Region] = useState('');
   const [sourceS3Bucket, setSourceS3Bucket] = useState('');
   const [sourceS3Prefix, setSourceS3Prefix] = useState('');
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  // [File object, full path] pairs. Full path may be empty if electron is not available.
+  const [selectedFiles, setSelectedFiles] = useState<[File, string][]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
+  const [existingReportName, setExistingReportName] = useState<string[]>([]);
   //Job Name
   const [jobName, setJobName] = useState('');
 
@@ -144,9 +310,16 @@ export default function NewJobPage() {
 
   // Error/Success messages
   const [error, setError] = useState<string | null>(null);
+  const [s3Error, setS3Error] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   const [patternType, setPatternType] = useState('string');
+
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+
+  const isFileSupported = (filename: string) => {
+    return SUPPORTED_TYPES.some((ext) => filename.toLowerCase().endsWith(ext));
+  };
 
   // Fetch models on page load
   useEffect(() => {
@@ -154,9 +327,7 @@ export default function NewJobPage() {
       try {
         const modelData = await nerService.listModels();
         // Only show trained models that can be used for inference
-        const trainedModels = modelData.filter(
-          (model) => model.Status === 'TRAINED'
-        );
+        const trainedModels = modelData.filter((model) => model.Status === 'TRAINED');
         setModels(trainedModels.reverse());
         setSelectedModelId(trainedModels[0].Id);
       } catch (err) {
@@ -166,6 +337,12 @@ export default function NewJobPage() {
     };
 
     fetchModels();
+
+    const fetchReportNames = async () => {
+      const response = await nerService.listReports();
+      setExistingReportName(response.map((report) => report.ReportName));
+    };
+    fetchReportNames();
   }, []);
 
   // Load tags when a model is selected
@@ -181,9 +358,9 @@ export default function NewJobPage() {
         // Get tags from the model
         const modelTags = model.Tags || [];
         console.log('Tags from model:', modelTags);
-
-        setAvailableTags(modelTags);
-        setSelectedTags(modelTags); // By default, select all tags
+        const filteredModelTags = modelTags.filter((tag) => tag !== 'O');
+        setAvailableTags(filteredModelTags);
+        setSelectedTags(filteredModelTags); // By default, select all tags
       } catch (error) {
         console.error('Error fetching tags:', error);
         setError('Failed to load tags from the selected model');
@@ -209,22 +386,6 @@ export default function NewJobPage() {
     setSelectedTags([...availableTags]);
   };
 
-  const handleAddGroup = () => {
-    if (!groupName.trim() || !groupQuery.trim()) {
-      setError('Group name and query are required');
-      return;
-    }
-
-    setGroups({
-      ...groups,
-      [groupName]: groupQuery
-    });
-
-    setGroupName('');
-    setGroupQuery('');
-    setError(null);
-  };
-
   const handleGroupCancel = () => {
     setGroupName('');
     setGroupQuery('');
@@ -233,29 +394,47 @@ export default function NewJobPage() {
     setIsGroupDialogOpen(false);
   };
 
-  const handleAddGroupFromDialog = async () => {
+  const handleAddGroup = async () => {
     setGroupDialogError(null);
 
     if (!groupName.trim() || !groupQuery.trim()) {
-      setGroupDialogError('Group name and query are required');
+      setGroupDialogError('Group name and query are required.');
       return;
     }
 
     if (!editingGroup && groups[groupName]) {
-      setGroupDialogError('Group name must be unique');
+      setGroupDialogError('Group name must be unique.');
       return;
     }
 
-    const errorMessage = await nerService.validateGroupDefinition(groupQuery);
+    const formattedGroupName = groupName.trim().toUpperCase();
+    const formattedGroupQuery = groupQuery.trim().toUpperCase();
+
+    if (formattedGroupName === NO_GROUP.trim().toUpperCase()) {
+      setGroupDialogError(`Group name cannot be "${NO_GROUP}"`);
+      return;
+    }
+
+    const errorMessage = await nerService.validateGroupDefinition(formattedGroupQuery);
+    console.log('Error message:', errorMessage);
 
     if (errorMessage) {
       setGroupDialogError(errorMessage);
       return;
     }
 
+    setGroups((prev) => {
+      const updatedGroups = { ...prev };
+      if (editingGroup && editingGroup.name !== formattedGroupName) {
+        delete updatedGroups[editingGroup.name];
+      }
+      updatedGroups[formattedGroupName] = formattedGroupQuery;
+      return updatedGroups;
+    });
+
     setGroups((prev) => ({
       ...prev,
-      [groupName]: groupQuery
+      [groupName.trim().toUpperCase()]: groupQuery.trim().toUpperCase(),
     }));
 
     handleGroupCancel();
@@ -285,13 +464,13 @@ export default function NewJobPage() {
 
     const newCustomTag = {
       name: customTagName.trim().toUpperCase(),
-      pattern: customTagPattern
-    }
+      pattern: customTagPattern,
+    };
 
     if (editingTag) {
-      setCustomTags(prev => prev.map(tag =>
-        tag.name === editingTag.name ? newCustomTag : tag
-      ));
+      setCustomTags((prev) =>
+        prev.map((tag) => (tag.name === editingTag.name ? newCustomTag : tag))
+      );
     } else {
       for (let index = 0; index < customTags.length; index++) {
         const thisTag = customTags[index];
@@ -300,7 +479,7 @@ export default function NewJobPage() {
           return;
         }
       }
-      setCustomTags(prev => [...prev, newCustomTag]);
+      setCustomTags((prev) => [...prev, newCustomTag]);
     }
 
     setCustomTagName('');
@@ -327,33 +506,110 @@ export default function NewJobPage() {
     setDialogError(null);
     setIsCustomTagDialogOpen(false);
   };
-  const areFilesIdentical = (file1: File, file2: File): boolean => {
-    return file1.name === file2.name && file1.size === file2.size;
-  };
 
-  // Handle file selection
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files) {
-      const fileArray = Array.from(files);
+  const addFiles = (files: [File, string][]) => {
+    const newSelectedFiles = [...selectedFiles];
 
-      // Filter out duplicates
-      const newFiles = fileArray.filter((newFile) => {
-        // Check if this file already exists in selectedFiles
-        const isDuplicate = selectedFiles.some((existingFile) =>
-          areFilesIdentical(existingFile, newFile)
-        );
-        return !isDuplicate;
+    files.forEach(([newFile, newFullPath]) => {
+      const existingIndex = newSelectedFiles.findIndex((existingFile) => {
+        // In practice, either both are empty or both are not empty
+        // If both are not empty, it means we are using electron to choose files
+        // Otherwise, we are using the file input to choose files
+        if (existingFile[1] !== '' && newFullPath !== '') {
+          return existingFile[1] === newFullPath;
+        }
+        return existingFile[0].name === newFile.name;
       });
 
-      setSelectedFiles((prev) => [...prev, ...newFiles]);
-      e.target.value = '';
+      if (existingIndex !== -1) {
+        // Duplicate file so, replace the existing file with the new one
+        newSelectedFiles[existingIndex] = [newFile, newFullPath];
+      } else {
+        // Add the new file
+        newSelectedFiles.push([newFile, newFullPath]);
+      }
+    });
+
+    // This is to handle the case where there are multiple files with the same name
+    // but different full paths.
+    const newFileNames = uniqueFileNames(newSelectedFiles.map((file) => file[0].name));
+
+    setSelectedFiles(
+      newSelectedFiles.map(([file, fullPath], index) => {
+        const newFile = new File([file], newFileNames[index], {
+          type: file.type,
+          lastModified: file.lastModified,
+        });
+        return [newFile, fullPath];
+      })
+    );
+  };
+
+  // Update file handling to use file/directory input
+  const handleLocalFiles = (files: [File, string][], isUploaded: boolean) => {
+    const supportedFiles = files.filter((file) => isFileSupported(file[0].name));
+
+    if (supportedFiles.length > 0) {
+      addFiles(supportedFiles);
+    } else {
+      if (isUploaded) setIsConfirmDialogOpen(true);
+    }
+  };
+
+  const validateS3Bucket = async () => {
+    if (!sourceS3Bucket || !sourceS3Region) {
+      return;
+    }
+    setS3Error('');
+    const s3Error = await nerService.attemptS3Connection(
+      sourceS3Endpoint,
+      sourceS3Region,
+      sourceS3Bucket,
+      sourceS3Prefix
+    );
+    if (s3Error) {
+      setS3Error(s3Error);
+    } else {
+      setS3Error('');
     }
   };
 
   const removeFile = (index: number) => {
     setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
   };
+
+  const handleCloseDialog = () => {
+    setIsConfirmDialogOpen(false);
+    // Reset the input value
+    const input = document.getElementById(
+      selectedSource === 'directory' ? 'directory-upload' : 'file-upload'
+    ) as HTMLInputElement;
+    if (input) {
+      input.value = '';
+    }
+  };
+
+  const validateCustomTagName = (name: string): boolean => {
+    if (!name) {
+      setDialogError('Tag name is required');
+      return false;
+    }
+
+    if (!/^[A-Za-z0-9_]+$/.test(name)) {
+      setDialogError('Tag name can only contain letters, numbers, and underscores');
+      return false;
+    }
+
+    setDialogError(null);
+    return true;
+  };
+
+  const handleTagNameChange = (name: string) => {
+    const value = name.replace(/\s/g, '_');
+    setCustomTagName(value);
+    validateCustomTagName(value);
+  };
+
   // Submit the new job
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -363,12 +619,20 @@ export default function NewJobPage() {
       return;
     }
 
-    if (selectedSource === 's3' && !sourceS3Bucket) {
-      setError('S3 bucket is required');
+    if (selectedSource === 's3' && !(sourceS3Region && sourceS3Bucket)) {
+      setError('S3 region and bucket are required');
       return;
     }
 
-    if (selectedSource === 'files' && selectedFiles.length === 0) {
+    if (selectedSource === 's3' && s3Error) {
+      setError(s3Error);
+      return;
+    }
+
+    if (
+      (selectedSource === 'files' || selectedSource === 'directory') &&
+      selectedFiles.length === 0
+    ) {
       setError('Please select at least one file');
       return;
     }
@@ -382,12 +646,24 @@ export default function NewJobPage() {
     setIsSubmitting(true);
 
     try {
-      let uploadId;
+      let uploadId: string | undefined;
 
-      // Handle file uploads if needed
-      if (selectedSource === 'files') {
-        const uploadResponse = await nerService.uploadFiles(selectedFiles);
+      // Handle file/directory uploads if needed
+      if (selectedSource === 'files' || selectedSource === 'directory') {
+        const uploadResponse = await nerService.uploadFiles(selectedFiles.map(([file, _]) => file));
         uploadId = uploadResponse.Id;
+
+        // Store file path mappings for local uploads if full path is available
+        const mapping: { [filename: string]: string } = {};
+        selectedFiles.forEach(([file, fullPath]) => {
+          if (fullPath) {
+            mapping[file.name] = fullPath;
+          }
+        });
+        if (Object.keys(mapping).length > 0) {
+          await nerService.storeFileNameToPath(uploadId, mapping);
+          console.log('stored upload paths', mapping);
+        }
       }
 
       // Create custom tags object for API
@@ -404,24 +680,38 @@ export default function NewJobPage() {
         CustomTags: customTagsObj,
         ...(selectedSource === 's3'
           ? {
-            SourceS3Bucket: sourceS3Bucket,
-            SourceS3Prefix: sourceS3Prefix || undefined
-          }
+              S3Endpoint: sourceS3Endpoint,
+              S3Region: sourceS3Region,
+              SourceS3Bucket: sourceS3Bucket,
+              SourceS3Prefix: sourceS3Prefix || undefined,
+            }
           : {
-            UploadId: uploadId
-          }),
+              UploadId: uploadId,
+            }),
         Groups: groups,
-        report_name: jobName
+        report_name: jobName,
       });
 
       setSuccess(true);
 
       // Redirect after success
       setTimeout(() => {
-        router.push(`/token-classification/jobs?jobId=${response.ReportId}`);
+        router.push(`/token-classification/landing?tab=jobs`);
       }, 2000);
-    } catch (err) {
-      setError('Failed to create report. Please try again.');
+    } catch (err: unknown) {
+      let errorMessage = 'An unexpected error occurred';
+
+      if (
+        typeof err === 'object' &&
+        err !== null &&
+        'response' in err &&
+        typeof (err as any).response?.data === 'string'
+      ) {
+        const data = (err as any).response.data;
+        errorMessage = (data.charAt(0).toUpperCase() + data.slice(1)).trim();
+      }
+
+      setError(`Failed to create report. ${errorMessage}. Please try again.`);
       console.error(err);
     } finally {
       setIsSubmitting(false);
@@ -436,8 +726,13 @@ export default function NewJobPage() {
       return false;
     }
 
-    if (!/^[A-Za-z0-9_]+$/.test(name)) {
-      setNameError('Report name can only contain letters, numbers, and underscores');
+    if (existingReportName.includes(name)) {
+      setNameError('Report with this name already exists.');
+      return false;
+    }
+
+    if (!/^[A-Za-z0-9_-]+$/.test(name)) {
+      setNameError('Report name can only contain letters, numbers, underscores, and hyphens');
       return false;
     }
 
@@ -450,27 +745,58 @@ export default function NewJobPage() {
     return true;
   };
 
-  const [showTooltip, setShowTooltip] = useState(false);
-  const copyToClipboard = (text: string) => {
+  const [showTooltip, setShowTooltip] = useState<Record<string, boolean>>({});
+  const copyToClipboard = (text: string, tooltipId: string) => {
     navigator.clipboard.writeText(text);
-    setShowTooltip(true);
+    setShowTooltip((prev) => ({ ...prev, [tooltipId]: true }));
     setTimeout(() => {
-      setShowTooltip(false);
+      setShowTooltip((prev) => ({ ...prev, [tooltipId]: false }));
     }, 1000);
   };
 
+  const renderFileName = (file: File) => (
+    <span className="text-sm text-gray-600">
+      {file.name} ({(file.size / 1024).toFixed(1)} KB)
+    </span>
+  );
+
+  const renderFileList = (files: File[]) => (
+    <ul className="space-y-1">
+      {files.map((file, i) => (
+        <li key={i} className="flex items-center justify-between py-1">
+          {renderFileName(file)}
+          <button
+            type="button"
+            onClick={() => removeFile(i)}
+            className="text-red-500 hover:text-red-700 p-1"
+            aria-label="Remove file"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+
   return (
-    <div className="container px-4 py-8 w-3/4">
+    <div className="container px-4 py-8" style={{ width: '90%' }}>
       {/* Title and Back Button */}
       <div className="flex items-center justify-between mb-6">
         <Button variant="outline" size="sm" asChild>
-          <Link href={`/?tab=jobs`} className="flex items-center">
+          <Link href={`/token-classification/landing?tab=jobs`} className="flex items-center">
             <ArrowLeft className="mr-1 h-4 w-4" /> Back to Reports
           </Link>
         </Button>
       </div>
 
-      {(error && !isPressedSubmit) && (
+      {error && !isPressedSubmit && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
           {error}
         </div>
@@ -478,12 +804,12 @@ export default function NewJobPage() {
 
       {success ? (
         <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-6">
-          Job created successfully! Redirecting...
+          Scanning in progress! Redirecting to Reports Dashboard...
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Job Name Field */}
-          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
+          <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3 }}>
             <h2 className="text-2xl font-medium mb-4">Report Name</h2>
             <div className="w-full">
               <input
@@ -495,41 +821,139 @@ export default function NewJobPage() {
                   validateJobName(value);
                 }}
                 onBlur={() => validateJobName(jobName)}
-                className={`w-full p-2 border ${nameError ? 'border-red-500' : 'border-gray-300'
-                  } rounded`}
+                className={`w-full p-2 border ${
+                  nameError ? 'border-red-500' : 'border-gray-300'
+                } rounded`}
                 placeholder="Enter_Report_Name"
                 required
               />
               {nameError ? (
-                <p className="text-red-700 text-sm mt-1"><sup className='text-red-700'>*</sup>{nameError}</p>
+                <p className="text-red-700 text-sm mt-1">
+                  <sup className="text-red-700">*</sup>
+                  {nameError}
+                </p>
               ) : (
                 <p className="text-sm text-gray-500 mt-1">
-                  Use only letters, numbers, and underscores. No spaces allowed.
+                  Use only letters, numbers, underscores, and hyphens. No spaces allowed.
                 </p>
               )}
             </div>
           </Box>
 
-          {/* Source Section */}
           <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
             <h2 className="text-2xl font-medium mb-4">Source</h2>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-              <SourceOption
-                title="File Upload"
-                description="Upload files from your computer"
-                isSelected={selectedSource === 'files'}
-                onClick={() => setSelectedSource('files')}
-              />
-              <SourceOption
-                title="S3 Bucket"
-                description="Use files from an S3 bucket"
-                isSelected={selectedSource === 's3'}
-                onClick={() => setSelectedSource('s3')}
-              />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <FileSources selectSource={setSelectedSource} handleLocalFiles={handleLocalFiles} />
             </div>
 
-            {selectedSource === 's3' ? (
+            {selectedFiles.length > 0 && (
+              <div className="mt-6">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-sm font-medium text-gray-700">
+                    Selected Files ({selectedFiles.length})
+                  </h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedFiles([])}
+                    className="text-red-500"
+                  >
+                    Clear all
+                  </Button>
+                </div>
+                <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-md">
+                  {selectedFiles.map(([file, fullPath], index) => (
+                    <div
+                      key={`${file.name}-${fullPath}-${index}`}
+                      className="flex items-center justify-between px-4 py-2 border-b last:border-b-0 hover:bg-gray-50"
+                    >
+                      <div className="flex items-center">
+                        <div className="text-sm text-gray-600">
+                          {fullPath || file.name}
+                          <span className="text-xs text-gray-400 ml-2">
+                            ({(file.size / 1024).toFixed(1)} KB)
+                          </span>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeFile(index)}
+                        className="text-red-500"
+                      >
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {selectedSource === 's3' && (
               <div className="space-y-4">
+                <div>
+                  <div className="text-sm text-gray-500 mt-1 mb-3">
+                    Your S3 bucket must be public. Private bucket support is available on the
+                    enterprise platform. Reach out to{' '}
+                    <div className="relative inline-block">
+                      <span
+                        className="text-blue-500 underline cursor-pointer hover:text-blue-700"
+                        onClick={() => copyToClipboard('contact@thirdai.com', 's3')}
+                        title="Click to copy email"
+                      >
+                        contact@thirdai.com
+                      </span>
+                      {showTooltip['s3'] && (
+                        <div className="absolute left-1/2 -translate-x-1/2 mt-1 w-max px-2 py-1 text-xs bg-gray-800 text-white rounded shadow-md z-10">
+                          Email Copied
+                        </div>
+                      )}
+                    </div>{' '}
+                    for an enterprise subscription.
+                  </div>
+                  {s3Error && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded">
+                      {s3Error}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    S3 Endpoint (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={sourceS3Endpoint}
+                    onChange={(e) => setSourceS3Endpoint(e.target.value)}
+                    onBlur={validateS3Bucket}
+                    className="w-full p-2 border border-gray-300 rounded"
+                    placeholder="s3.amazonaws.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">S3 Region</label>
+                  <input
+                    type="text"
+                    value={sourceS3Region}
+                    onChange={(e) => setSourceS3Region(e.target.value)}
+                    onBlur={validateS3Bucket}
+                    className="w-full p-2 border border-gray-300 rounded"
+                    placeholder="us-east-1"
+                    required
+                  />
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     S3 Bucket Name
@@ -538,6 +962,7 @@ export default function NewJobPage() {
                     type="text"
                     value={sourceS3Bucket}
                     onChange={(e) => setSourceS3Bucket(e.target.value)}
+                    onBlur={validateS3Bucket}
                     className="w-full p-2 border border-gray-300 rounded"
                     placeholder="my-bucket"
                     required
@@ -556,131 +981,53 @@ export default function NewJobPage() {
                   />
                 </div>
               </div>
-            ) : (
-              <div className="w-full">
-                <input
-                  type="file"
-                  multiple
-                  onChange={handleFileChange}
-                  className="hidden"
-                  id="file-upload"
-                  accept=".pdf, .txt, .csv, .html, .json, .xml"
-                />
-                <label
-                  htmlFor="file-upload"
-                  className="flex items-center justify-center w-full p-4 border-2 border-dashed border-gray-300 rounded-md cursor-pointer hover:border-gray-400"
-                >
-                  <div className="space-y-1 text-center">
-                    <svg
-                      className="mx-auto h-12 w-12 text-gray-400"
-                      stroke="currentColor"
-                      fill="none"
-                      viewBox="0 0 48 48"
-                    >
-                      <path
-                        d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4h-12m-4-12v8m0 0v8a4 4 0 01-4 4h-8m-4-12h8m-8 0v-8m32 0v-8"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    <div className="flex text-sm text-gray-600">
-                      <span className="relative rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
-                        Select files
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      Drag and drop files or click to browse
-                    </p>
-                  </div>
-                </label>
-
-                {selectedFiles.length > 0 && (
-                  <div className="mt-4">
-                    <h3 className="text-sm font-medium text-gray-700">
-                      Selected Files ({selectedFiles.length})
-                    </h3>
-                    <div className="mt-2 max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2">
-                      <ul className="space-y-1">
-                        {selectedFiles.map((file, i) => (
-                          <li
-                            key={i}
-                            className="flex items-center justify-between py-1"
-                          >
-                            <span className="text-sm text-gray-500">
-                              {file.name} ({(file.size / 1024).toFixed(1)} KB)
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => removeFile(i)}
-                              className="text-red-500 hover:text-red-700 p-1"
-                              aria-label="Remove file"
-                            >
-                              <svg
-                                className="h-4 w-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M6 18L18 6M6 6l12 12"
-                                />
-                              </svg>
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                )}
-              </div>
             )}
           </Box>
 
           {/* Model Selection */}
-          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
+          <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3 }}>
             <div>
               <h2 className="text-2xl font-medium mb-4">Model</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {models.map((model) => (
-                  <SourceOption
+                  <ModelOption
                     key={model.Id}
                     title={model.Name[0].toUpperCase() + model.Name.slice(1)}
                     description={
-                      'Description: Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.'
+                      'Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.'
                     }
                     isSelected={selectedModelId === model.Id}
                     onClick={() => setSelectedModelId(model.Id)}
-                    disabled={model.Name === "presidio"}
+                    disabled={model.Name === 'presidio'}
                   />
                 ))}
-                <SourceOption
-                  key={"Advanced-Model"}
-                  title={"Advanced"}
+                <ModelOption
+                  key={'Advanced-Model'}
+                  title={'Advanced'}
                   description={
                     <>
-                      Description: Our most advanced AI model, available on enterprise platform. Allows users to perpetually customize fields with user feedback, includes advanced monitoring features. Reach out to{' '}
+                      Our most advanced AI model, available on enterprise platform. Allows users to
+                      perpetually customize fields with user feedback, includes advanced monitoring
+                      features. Reach out to{' '}
                       <div className="relative inline-block">
                         <span
                           className="text-blue-500 underline cursor-pointer hover:text-blue-700"
-                          onClick={() => copyToClipboard('contact@thirdai.com')}
+                          onClick={() => copyToClipboard('contact@thirdai.com', 'advanced-model')}
                           title="Click to copy email"
                         >
                           contact@thirdai.com
                         </span>
-                        {showTooltip && (
+                        {showTooltip['advanced-model'] && (
                           <div className="absolute left-1/2 -translate-x-1/2 mt-1 w-max px-2 py-1 text-xs bg-gray-800 text-white rounded shadow-md z-10">
                             Email Copied
                           </div>
                         )}
-                      </div>
-                      {' '}for an enterprise subscription.
+                      </div>{' '}
+                      for an enterprise subscription.
                     </>
                   }
                   isSelected={false}
-                  onClick={() => { }}
+                  onClick={() => {}}
                   disabled={true}
                 />
               </div>
@@ -697,10 +1044,7 @@ export default function NewJobPage() {
                       size="sm"
                       onClick={selectAllTags}
                       className="text-sm flex items-center"
-                      disabled={
-                        isTagsLoading ||
-                        selectedTags.length === availableTags.length
-                      }
+                      disabled={isTagsLoading || selectedTags.length === availableTags.length}
                     >
                       <span className="mr-1">Select All</span>
                       <input
@@ -730,8 +1074,7 @@ export default function NewJobPage() {
 
                 {/* Added descriptive note */}
                 <p className="text-sm text-gray-500 mb-4">
-                  Click on any tag to select/unselect it. By default, all tags
-                  are selected.
+                  Click on any tag to select/unselect it. By default, all tags are selected.
                 </p>
 
                 {isTagsLoading ? (
@@ -739,9 +1082,7 @@ export default function NewJobPage() {
                     <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
                   </div>
                 ) : availableTags.length === 0 ? (
-                  <div className="text-gray-500 py-2">
-                    No tags available for this model
-                  </div>
+                  <div className="text-gray-500 py-2">No tags available for this model</div>
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {availableTags.map((tag) => (
@@ -759,12 +1100,10 @@ export default function NewJobPage() {
           </Box>
 
           {/* Custom Tags Section */}
-          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
+          <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3 }}>
             <h2 className="text-2xl font-medium mb-4">
               Custom Tags
-              <span className="text-sm font-normal text-gray-500 ml-2">
-                (Optional)
-              </span>
+              <span className="text-sm font-normal text-gray-500 ml-2">(Optional)</span>
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {customTags.map((customTag) => (
@@ -772,24 +1111,24 @@ export default function NewJobPage() {
                   key={customTag.name}
                   className="border border-gray-200 rounded-md overflow-hidden"
                 >
-                  <div className="py-1 px-4 border-b border-gray-200 flex justify-between items-center">
+                  <div className="py-1 px-2 border-b border-gray-200 flex justify-between items-center">
                     <Tag tag={customTag.name} custom={true} selected />
-                    <div className="flex items-center space-x-1">
+                    <div className="flex items-center space-x-3 px-1">
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => handleEditCustomTag(customTag)}
-                        className="text-blue-500"
+                        className="text-blue-500 px-0"
                       >
-                        <Edit className="h-4 w-4 mr-1" />
+                        <Edit className="h-4 w-4" />
                       </Button>
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => handleRemoveCustomTag(customTag.name)}
-                        className="text-red-500"
+                        className="text-red-500 px-0"
                       >
                         <svg
                           className="h-4 w-4"
@@ -829,7 +1168,7 @@ export default function NewJobPage() {
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-lg p-6 w-full max-w-md">
                   <h3 className="text-lg font-medium mb-4">
-                    {`${editingTag ? "Edit" : "Create"} Custom Tag`}
+                    {`${editingTag ? 'Edit' : 'Create'} Custom Tag`}
                   </h3>
                   {dialogError && (
                     <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded">
@@ -841,14 +1180,17 @@ export default function NewJobPage() {
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Tag Name
                       </label>
-                      <input
-                        type="text"
+
+                      <Input
+                        id="tagName"
                         value={customTagName}
-                        onChange={(e) =>
-                          setCustomTagName(e.target.value.toUpperCase())
-                        }
-                        className="w-full p-2 border border-gray-300 rounded"
+                        onChange={(e) => handleTagNameChange(e.target.value)}
+                        onBlur={(e) => handleTagNameChange(e.target.value)}
+                        className={`w-full p-2 border ${
+                          nameError ? 'border-red-500' : 'border-gray-300'
+                        } rounded`}
                         placeholder="CUSTOM_TAG_NAME"
+                        required
                       />
                     </div>
 
@@ -862,9 +1204,7 @@ export default function NewJobPage() {
                             onChange={() => setPatternType('string')}
                             className="mr-1"
                           />
-                          <span className="block text-sm font-medium text-gray-700">
-                            String
-                          </span>
+                          <span className="block text-sm font-medium text-gray-700">String</span>
                         </label>
                         <label className="flex items-center text-sm text-gray-700">
                           <input
@@ -874,9 +1214,7 @@ export default function NewJobPage() {
                             onChange={() => setPatternType('regex')}
                             className="mr-1"
                           />
-                          <span className="block text-sm font-medium text-gray-700">
-                            Regex
-                          </span>
+                          <span className="block text-sm font-medium text-gray-700">Regex</span>
                         </label>
                       </div>
 
@@ -885,11 +1223,7 @@ export default function NewJobPage() {
                         value={customTagPattern}
                         onChange={(e) => setCustomTagPattern(e.target.value)}
                         className="w-full p-2 border border-gray-300 rounded"
-                        placeholder={
-                          patternType === 'regex'
-                            ? '\\b[A-Z]{2}\\d{6}\\b'
-                            : 'John Doe'
-                        }
+                        placeholder={patternType === 'regex' ? '\\b[A-Z]{2}\\d{6}\\b' : 'John Doe'}
                       />
 
                       {patternType === 'string' && (
@@ -939,10 +1273,9 @@ export default function NewJobPage() {
                         onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#1565c0')}
                         onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#1976d2')}
                         onClick={handleAddCustomTag}
-                      >Add Tag</Button>
-                      {/* <Button onClick={handleAddCustomTag} type="button">
+                      >
                         Add Tag
-                      </Button> */}
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -951,21 +1284,16 @@ export default function NewJobPage() {
           </Box>
 
           {/* Groups Section */}
-          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
+          <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3 }}>
             <h2 className="text-2xl font-medium mb-4">
               Groups
-              <span className="text-sm font-normal text-gray-500 ml-2">
-                (Optional)
-              </span>
+              <span className="text-sm font-normal text-gray-500 ml-2">(Optional)</span>
             </h2>
 
             {/* Display defined groups */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {Object.entries(groups).map(([name, query]) => (
-                <div
-                  key={name}
-                  className="border border-gray-200 rounded-md overflow-hidden"
-                >
+                <div key={name} className="border border-gray-200 rounded-md overflow-hidden">
                   <div className="py-1 px-4 border-b border-gray-200 flex justify-between items-center">
                     <span className="font-medium">{name}</span>
                     <div className="flex items-center space-x-1">
@@ -1038,12 +1366,16 @@ export default function NewJobPage() {
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Group Name
                       </label>
-                      <input
+                      <Input
                         type="text"
                         value={groupName}
-                        onChange={(e) => setGroupName(e.target.value)}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\s/g, '_');
+                          setGroupName(value);
+                        }}
                         className="w-full p-2 border border-gray-300 rounded"
                         placeholder="sensitive_docs"
+                        required
                       />
                     </div>
 
@@ -1051,7 +1383,7 @@ export default function NewJobPage() {
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Group Query
                       </label>
-                      <input
+                      <Input
                         type="text"
                         value={groupQuery}
                         onChange={(e) => setGroupQuery(e.target.value)}
@@ -1064,14 +1396,11 @@ export default function NewJobPage() {
                       <p>Example queries:</p>
                       <ul className="list-disc pl-5 mt-1 space-y-1">
                         <li>
-                          <code>COUNT(SSN) &gt; 0</code> - Documents containing
-                          SSNs
+                          <code>COUNT(SSN) &gt; 0</code> - Documents containing SSNs
                         </li>
                         <li>
-                          <code>
-                            COUNT(NAME) &gt; 2 AND COUNT(PHONE) &gt; 0
-                          </code>{' '}
-                          - Documents with multiple names and a phone number
+                          <code>COUNT(NAME) &gt; 2 AND COUNT(PHONE) &gt; 0</code> - Documents with
+                          multiple names and a phone number
                         </li>
                       </ul>
                     </div>
@@ -1081,10 +1410,25 @@ export default function NewJobPage() {
                         type="button"
                         variant="outline"
                         onClick={handleGroupCancel}
+                        style={{
+                          color: '#1976d2',
+                        }}
                       >
                         Cancel
                       </Button>
-                      <Button onClick={handleAddGroupFromDialog} type="button">
+                      <Button
+                        type="button"
+                        variant="default"
+                        color="primary"
+                        style={{
+                          backgroundColor: '#1976d2',
+                          textTransform: 'none',
+                          fontWeight: 500,
+                        }}
+                        onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#1565c0')}
+                        onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#1976d2')}
+                        onClick={handleAddGroup}
+                      >
                         {editingGroup ? 'Save Changes' : 'Add Group'}
                       </Button>
                     </div>
@@ -1096,7 +1440,7 @@ export default function NewJobPage() {
 
           {/* Submit Button */}
           <div className="flex flex-col items-center space-y-4 pt-4">
-            {(error && isPressedSubmit) && (
+            {error && isPressedSubmit && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded w-full max-w-md text-center">
                 {error}
               </div>
@@ -1126,6 +1470,32 @@ export default function NewJobPage() {
             </Button>
           </div>
         </form>
+      )}
+
+      {isConfirmDialogOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-medium mb-4">No Supported Files</h3>
+            <p className="text-sm text-amber-600 mb-4">
+              No supported files found in the selected directory.
+              <br />
+              Only {SUPPORTED_TYPES.join(', ')} files are supported.
+            </p>
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="default"
+                onClick={handleCloseDialog}
+                style={{
+                  backgroundColor: '#1976d2',
+                  color: 'white',
+                }}
+              >
+                OK
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

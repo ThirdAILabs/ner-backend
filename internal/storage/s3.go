@@ -186,7 +186,16 @@ func (s *S3Provider) PutObject(ctx context.Context, bucket, key string, data io.
 	return nil
 }
 
-func (s *S3Provider) DownloadDir(ctx context.Context, bucket, prefix, dest string) error {
+func (s *S3Provider) DownloadDir(ctx context.Context, bucket, prefix, dest string, overwrite bool) error {
+	if _, err := os.Stat(dest); err == nil {
+		if !overwrite {
+			return fmt.Errorf("destination %s already exists and overwrite is false", dest)
+		}
+		if err := os.RemoveAll(dest); err != nil {
+			return fmt.Errorf("failed to remove existing destination: %w", err)
+		}
+	}
+
 	if err := os.MkdirAll(dest, os.ModePerm); err != nil {
 		return fmt.Errorf("failed to create directory %s: %w", dest, err)
 	}
@@ -315,4 +324,21 @@ func (s *S3Provider) IterObjects(ctx context.Context, bucket, prefix string) Obj
 			}
 		}
 	}
+}
+
+func (s *S3Provider) ValidateAccess(ctx context.Context, bucket, prefix string) error {
+	if _, err := s.client.HeadBucket(ctx, &s3.HeadBucketInput{
+		Bucket: aws.String(bucket),
+	}); err != nil {
+		return fmt.Errorf("failed to verify access to s3://%s: %w", bucket, err)
+	}
+
+	if _, err := s.client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
+		Bucket: aws.String(bucket),
+		Prefix: aws.String(prefix),
+	}); err != nil {
+		return fmt.Errorf("failed to verify objects in s3://%s/%s: %w", bucket, prefix, err)
+	}
+
+	return nil
 }

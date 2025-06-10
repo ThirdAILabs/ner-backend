@@ -25,8 +25,9 @@ type Group struct {
 }
 
 type TaskStatusCategory struct {
-	TotalTasks int
-	TotalSize  int
+	TotalTasks    int
+	TotalSize     int
+	CompletedSize int
 }
 
 type Report struct {
@@ -40,8 +41,9 @@ type Report struct {
 
 	Stopped            bool
 	CreationTime       time.Time
-	TotalFileCount     int `json:"FileCount,omitempty"`
-	CompletedFileCount int `json:"CompletedFileCount,omitempty"`
+	TotalFileCount     int `json:"FileCount"`
+	SucceededFileCount int `json:"SucceededFileCount"`
+	FailedFileCount    int `json:"FailedFileCount"`
 
 	Tags       []string          `json:"Tags,omitempty"`
 	CustomTags map[string]string `json:"CustomTags,omitempty"`
@@ -126,6 +128,7 @@ type ObjectPreviewResponse struct {
 
 type InferenceMetricsResponse struct {
 	Completed       int64   `json:"Completed"`
+	Failed          int64   `json:"Failed"`
 	InProgress      int64   `json:"InProgress"`
 	DataProcessedMB float64 `json:"DataProcessedMB"`
 	TokensProcessed int64   `json:"TokensProcessed"`
@@ -141,4 +144,19 @@ type GetLicenseResponse struct {
 	LicenseType  licensing.LicenseType
 	LicenseInfo  licensing.LicenseInfo
 	LicenseError string
+}
+
+type ValidateGroupDefinitionRequest struct {
+	GroupQuery string
+}
+
+type ValidateS3BucketRequest struct {
+	S3Endpoint     string
+	S3Region       string
+	SourceS3Bucket string
+	SourceS3Prefix string
+}
+
+type FileNameToPath struct {
+	Mapping map[string]string
 }

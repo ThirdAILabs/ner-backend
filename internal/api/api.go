@@ -79,8 +79,14 @@ func (s *BackendService) AddRoutes(r chi.Router) {
 		r.Get("/throughput", RestHandler(s.GetThroughputMetrics))
 	})
 
-	r.Route("/validate-group-definition", func(r chi.Router) {
-		r.Get("/", RestHandler(s.ValidateGroupDefinition))
+	r.Route("/validate", func(r chi.Router) {
+		r.Get("/group", RestHandler(s.ValidateGroupDefinition))
+		r.Get("/s3", RestHandler(s.ValidateS3Access))
+	})
+
+	r.Route("/file-name-to-path", func(r chi.Router) {
+		r.Post("/{upload_id}", RestHandler(s.StoreFileNameToPath))
+		r.Get("/{upload_id}", RestHandler(s.GetFileNameToPath))
 	})
 
 	r.Get("/license", RestHandler(s.GetLicense))
@@ -168,6 +174,15 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 		return nil, err
 	}
 
+	var tags []string
+	for _, ti := range req.Tags {
+		tags = append(tags, ti.Name)
+	}
+	if err := database.SetModelTags(ctx, s.db, model.Id, tags); err != nil {
+		slog.Error("failed to set tags on finetuned model", "model_id", model.Id, "error", err)
+		return nil, err
+	}
+
 	if err := s.publisher.PublishFinetuneTask(ctx, messaging.FinetuneTaskPayload{
 		ModelId:     model.Id,
 		BaseModelId: model.BaseModelId.UUID,
@@ -235,6 +250,12 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 
 	if sourceS3Bucket == "" {
 		return nil, CodedErrorf(http.StatusUnprocessableEntity, "the following fields are required: SourceS3Bucket or UploadId")
+	}
+
+	if req.UploadId == uuid.Nil {
+		if err := validateS3Access(s3Endpoint, s3Region, sourceS3Bucket, s3Prefix); err != nil {
+			return nil, err
+		}
 	}
 
 	if err := validateReportName(req.ReportName); err != nil {
@@ -368,6 +389,73 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 	return api.CreateReportResponse{ReportId: report.Id}, nil
 }
 
+func (s *BackendService) GetInferenceTime(ctx context.Context, reportId uuid.UUID) float64 {
+	dbType := s.db.Dialector.Name()
+
+	query := s.db.WithContext(ctx).
+		Model(&database.InferenceTask{}).
+		Select("MIN(start_time) AS min_start, MAX(completion_time) AS max_end").
+		Where("report_id = ? AND start_time IS NOT NULL", reportId)
+
+	var startingTime time.Time
+
+	switch dbType {
+	case "sqlite", "sqlite3":
+		var infBounds struct {
+			MinStart string `gorm:"column:min_start"`
+			MaxEnd   string `gorm:"column:max_end"`
+		}
+
+		if err := query.Scan(&infBounds).Error; err != nil {
+			slog.Error("error fetching time bounds", "err", err)
+		}
+
+		const sqliteTimeLayout = "2006-01-02 15:04:05.999999999Z07:00"
+
+		startTime, err := time.Parse(sqliteTimeLayout, infBounds.MinStart)
+		if err != nil {
+			slog.Error("error parsing min_start", "raw", infBounds.MinStart, "err", err)
+		}
+
+		endTime, err := time.Parse(sqliteTimeLayout, infBounds.MaxEnd)
+		if err != nil {
+			slog.Error("error parsing max_end", "raw", infBounds.MaxEnd, "err", err)
+		}
+
+		if !startTime.IsZero() {
+			startingTime = startTime
+		}
+
+		if !startTime.IsZero() && !endTime.IsZero() {
+			return endTime.Sub(startTime).Seconds()
+		}
+
+	case "postgres":
+		var infBounds struct {
+			MinStart sql.NullTime `gorm:"column:min_start"`
+			MaxEnd   sql.NullTime `gorm:"column:max_end"`
+		}
+
+		if err := query.Scan(&infBounds).Error; err != nil {
+			slog.Error("error fetching time bounds", "err", err)
+		}
+
+		if infBounds.MinStart.Valid {
+			startingTime = infBounds.MinStart.Time
+		}
+
+		if infBounds.MinStart.Valid && infBounds.MaxEnd.Valid {
+			return infBounds.MaxEnd.Time.Sub(infBounds.MinStart.Time).Seconds()
+		}
+	}
+
+	if !startingTime.IsZero() {
+		return time.Now().UTC().Sub(startingTime).Seconds()
+	}
+
+	return 0
+}
+
 func (s *BackendService) GetReport(r *http.Request) (any, error) {
 	reportId, err := URLParamUUID(r, "report_id")
 	if err != nil {
@@ -390,16 +478,17 @@ func (s *BackendService) GetReport(r *http.Request) (any, error) {
 	}
 
 	type taskStatusCategory struct {
-		Status string
-		Count  int
-		Total  int
+		Status    string
+		Count     int
+		Total     int
+		Completed int
 	}
 
 	var statusCategories []taskStatusCategory
 
 	if err := s.db.WithContext(ctx).Model(&database.InferenceTask{}).
 		Where("report_id = ?", reportId).
-		Select("status, COUNT(*) as count, sum(total_size) as total").
+		Select("status, COUNT(*) as count, sum(total_size) as total, SUM(completed_size) as completed").
 		Group("status").
 		Find(&statusCategories).Error; err != nil {
 		slog.Error("error getting inference task statuses", "report_id", reportId, "error", err)
@@ -410,29 +499,15 @@ func (s *BackendService) GetReport(r *http.Request) (any, error) {
 	apiReport.InferenceTaskStatuses = make(map[string]api.TaskStatusCategory)
 	for _, category := range statusCategories {
 		apiReport.InferenceTaskStatuses[category.Status] = api.TaskStatusCategory{
-			TotalTasks: category.Count,
-			TotalSize:  category.Total,
+			TotalTasks:    category.Count,
+			TotalSize:     category.Total,
+			CompletedSize: category.Completed,
 		}
 	}
 
 	now := time.Now().UTC()
 
-	var infBounds struct {
-		MinStart sql.NullTime `gorm:"column:min_start"`
-		MaxEnd   sql.NullTime `gorm:"column:max_end"`
-	}
-	_ = s.db.WithContext(ctx).
-		Model(&database.InferenceTask{}).
-		Select("MIN(start_time) AS min_start, MAX(completion_time) AS max_end").
-		Where("report_id = ? AND status = ?", reportId, database.JobCompleted).
-		Scan(&infBounds).Error
-
-	var totalInfSecs float64
-	if infBounds.MinStart.Valid && infBounds.MaxEnd.Valid {
-		totalInfSecs = infBounds.MaxEnd.Time.Sub(infBounds.MinStart.Time).Seconds()
-	}
-
-	apiReport.TotalInferenceTimeSeconds = totalInfSecs
+	apiReport.TotalInferenceTimeSeconds = s.GetInferenceTime(ctx, reportId)
 
 	var shardSecs float64
 	if t := report.ShardDataTask; t != nil {
@@ -612,14 +687,40 @@ func (s *BackendService) GetReportPreviews(r *http.Request) (any, error) {
 		}
 	}
 
+	tags := params["tags"]
+	objectFilter := params.Get("object")
+
 	ctx := r.Context()
+
+	query := s.db.WithContext(ctx).
+		Where("report_id = ?", reportId)
+
+	if len(tags) > 0 {
+		var matchingObjects []string
+		if err := s.db.WithContext(ctx).
+			Model(&database.ObjectEntity{}).
+			Distinct("object").
+			Where("report_id = ? AND label IN ?", reportId, tags).
+			Pluck("object", &matchingObjects).Error; err != nil {
+			slog.Error("error fetching entities for tag filter", "report_id", reportId, "tags", tags, "error", err)
+			return nil, CodedErrorf(http.StatusInternalServerError, "error %d: error applying tag filter", ErrCodeDB)
+		}
+
+		if len(matchingObjects) == 0 {
+			return []api.ObjectPreviewResponse{}, nil
+		}
+
+		query = query.Where("object IN ?", matchingObjects)
+	}
+
+	if objectFilter != "" {
+		query = query.Where("object = ?", objectFilter)
+	}
+
+	query = query.Offset(offset).Limit(limit).Order("object")
+
 	var previews []database.ObjectPreview
-	if err := s.db.WithContext(ctx).
-		Where("report_id = ?", reportId).
-		Offset(offset).
-		Limit(limit).
-		Order("object").
-		Find(&previews).Error; err != nil {
+	if err := query.Find(&previews).Error; err != nil {
 		slog.Error("error fetching previews", "report_id", reportId, "err", err)
 		return nil, CodedErrorf(http.StatusInternalServerError, "error %d: error retrieving previews", ErrCodeDB)
 	}
@@ -763,10 +864,13 @@ func (s *BackendService) GetInferenceMetrics(r *http.Request) (any, error) {
 		Tokens sql.NullInt64 `gorm:"column:tokens"`
 	}
 
-	var completed, running statusMetrics
+	var completed, running, failed statusMetrics
+
+	// We count distinct report IDs because we are querying the InferenceTask table,
+	// where the same report ID can appear multiple times.
 
 	q1 := s.db.Model(&database.InferenceTask{}).
-		Select("COUNT(*) AS count, COALESCE(SUM(total_size),0) AS size, COALESCE(SUM(token_count),0) AS tokens").
+		Select("COUNT(DISTINCT report_id) AS count, COALESCE(SUM(total_size),0) AS size, COALESCE(SUM(token_count),0) AS tokens").
 		Where("inference_tasks.status = ? AND inference_tasks.completion_time >= ?", database.JobCompleted, since)
 	if modelID != uuid.Nil {
 		q1 = q1.
@@ -779,7 +883,7 @@ func (s *BackendService) GetInferenceMetrics(r *http.Request) (any, error) {
 	}
 
 	q2 := s.db.Model(&database.InferenceTask{}).
-		Select("COUNT(*) AS count, COALESCE(SUM(total_size),0) AS size, COALESCE(SUM(token_count),0) AS tokens").
+		Select("COUNT(DISTINCT report_id) AS count, COALESCE(SUM(total_size),0) AS size, COALESCE(SUM(token_count),0) AS tokens").
 		Where("inference_tasks.status = ? AND inference_tasks.creation_time >= ?", database.JobRunning, since)
 	if modelID != uuid.Nil {
 		q2 = q2.
@@ -791,12 +895,26 @@ func (s *BackendService) GetInferenceMetrics(r *http.Request) (any, error) {
 		return nil, CodedErrorf(http.StatusInternalServerError, "error %d: error retrieving metrics", ErrCodeDB)
 	}
 
-	totalBytes := completed.Size.Int64 + running.Size.Int64
-	totalTokens := completed.Tokens.Int64 + running.Tokens.Int64
+	q3 := s.db.Model(&database.InferenceTask{}).
+		Select("COUNT(DISTINCT report_id) AS count, COALESCE(SUM(total_size),0) AS size, COALESCE(SUM(token_count),0) AS tokens").
+		Where("inference_tasks.status = ? AND inference_tasks.creation_time >= ?", database.JobFailed, since)
+	if modelID != uuid.Nil {
+		q3 = q3.
+			Joins("JOIN reports ON reports.id = inference_tasks.report_id").
+			Where("reports.model_id = ?", modelID)
+	}
+	if err := q3.Scan(&failed).Error; err != nil {
+		slog.Error("error fetching in-progress metrics", "error", err)
+		return nil, CodedErrorf(http.StatusInternalServerError, "error %d: error retrieving metrics", ErrCodeDB)
+	}
+
+	totalBytes := completed.Size.Int64 + running.Size.Int64 + failed.Size.Int64
+	totalTokens := completed.Tokens.Int64 + running.Tokens.Int64 + failed.Tokens.Int64
 	dataProcessedMB := float64(totalBytes) / (1024 * 1024)
 
 	return api.InferenceMetricsResponse{
 		Completed:       completed.Count,
+		Failed:          failed.Count,
 		InProgress:      running.Count,
 		DataProcessedMB: dataProcessedMB,
 		TokensProcessed: totalTokens,
@@ -831,7 +949,7 @@ func (s *BackendService) GetThroughputMetrics(r *http.Request) (any, error) {
 	}
 	q := s.db.Model(&database.InferenceTask{}).
 		Joins("JOIN reports ON reports.id = inference_tasks.report_id").
-		Where("inference_tasks.status = ?", database.JobCompleted).
+		Where("inference_tasks.status = ? OR inference_tasks.status = ?", database.JobCompleted, database.JobFailed).
 		Where("reports.model_id = ?", modelID)
 	if reportID != uuid.Nil {
 		q = q.Where("inference_tasks.report_id = ?", reportID)
@@ -866,12 +984,12 @@ func (s *BackendService) GetThroughputMetrics(r *http.Request) (any, error) {
 }
 
 func (s *BackendService) ValidateGroupDefinition(r *http.Request) (any, error) {
-	groupQuery := r.URL.Query().Get("group_query")
-	if groupQuery == "" {
-		return nil, CodedErrorf(http.StatusBadRequest, "group query is required")
+	req, err := ParseRequestQueryParams[api.ValidateGroupDefinitionRequest](r)
+	if err != nil {
+		return nil, err
 	}
-	if _, err := core.ParseQuery(groupQuery); err != nil {
-		return nil, CodedErrorf(http.StatusUnprocessableEntity, "invalid query '%s': %v", groupQuery, err)
+	if _, err := core.ParseQuery(req.GroupQuery); err != nil {
+		return nil, CodedErrorf(http.StatusUnprocessableEntity, "invalid query '%s': %v", req.GroupQuery, err)
 	}
 	return nil, nil
 }
@@ -881,5 +999,72 @@ func (s *BackendService) GetLicense(r *http.Request) (any, error) {
 	return api.GetLicenseResponse{
 		LicenseInfo:  licenseInfo,
 		LicenseError: fmt.Sprintf("%v", err),
+	}, nil
+}
+
+func validateS3Access(endpoint string, region string, bucket string, prefix string) error {
+	s3Client, err := storage.NewS3Provider(storage.S3ProviderConfig{
+		S3EndpointURL: endpoint,
+		S3Region:      region,
+	})
+
+	if err != nil {
+		slog.Error("error connecting to S3", "s3_endpoint", endpoint, "region", region, "error", err)
+		return CodedErrorf(http.StatusInternalServerError, "Failed to connect to S3 endpoint. %v", err)
+	}
+
+	ctx := context.Background()
+	return s3Client.ValidateAccess(ctx, bucket, prefix)
+}
+
+func (s *BackendService) ValidateS3Access(r *http.Request) (any, error) {
+	req, err := ParseRequestQueryParams[api.ValidateS3BucketRequest](r)
+	if err != nil {
+		return nil, err
+	}
+	return nil, validateS3Access(req.S3Endpoint, req.S3Region, req.SourceS3Bucket, req.SourceS3Prefix)
+}
+
+func (s *BackendService) StoreFileNameToPath(r *http.Request) (any, error) {
+	uploadId, err := URLParamUUID(r, "upload_id")
+	if err != nil {
+		return nil, err
+	}
+	req, err := ParseRequest[api.FileNameToPath](r)
+	if err != nil {
+		return nil, CodedErrorf(http.StatusBadRequest, "invalid request body")
+	}
+	mappingJson, err := json.Marshal(req.Mapping)
+	if err != nil {
+		return nil, CodedErrorf(http.StatusBadRequest, "invalid mapping")
+	}
+	entry := database.FileNameToPath{
+		ID:      uploadId,
+		Mapping: mappingJson,
+	}
+	if err := s.db.Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"mapping"}),
+	}).Create(&entry).Error; err != nil {
+		return nil, CodedErrorf(http.StatusInternalServerError, "failed to store path map")
+	}
+	return nil, nil
+}
+
+func (s *BackendService) GetFileNameToPath(r *http.Request) (any, error) {
+	uploadId, err := URLParamUUID(r, "upload_id")
+	if err != nil {
+		return nil, err
+	}
+	var entry database.FileNameToPath
+	if err := s.db.First(&entry, "id = ?", uploadId).Error; err != nil {
+		return nil, CodedErrorf(http.StatusNotFound, "not found")
+	}
+	var mapping map[string]string
+	if err := json.Unmarshal(entry.Mapping, &mapping); err != nil {
+		return nil, CodedErrorf(http.StatusInternalServerError, "invalid mapping data")
+	}
+	return api.FileNameToPath{
+		Mapping: mapping,
 	}, nil
 }

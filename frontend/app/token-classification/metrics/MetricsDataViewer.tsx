@@ -1,44 +1,43 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import {
-  Box,
-  Grid,
-  Card,
-  CardContent,
-  Typography,
-  CircularProgress
-} from '@mui/material';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  LabelList
-} from 'recharts';
-import { nerService, InferenceMetrics, ThroughputMetrics } from '@/lib/backend';
+import { Box, Card, CardContent, Typography, CircularProgress } from '@mui/material';
+import { nerService } from '@/lib/backend';
+import { formatFileSize, formatNumber } from '@/lib/utils';
+import { useHealth } from '@/contexts/HealthProvider';
+import MetricsDataViewerCard from '@/components/ui/MetricsDataViewerCard';
 
 interface MetricsDataViewerProps {
   modelId?: string;
   days: number;
 }
 
-const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
-  modelId,
-  days
-}) => {
+const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) => {
   const [infMetrics, setInfMetrics] = useState<InferenceMetrics | null>(null);
   const [tpMetrics, setTpMetrics] = useState<ThroughputMetrics | null>(null);
-  const [infSeries, setInfSeries] = useState<
-    { day: number; dataMB: number; tokens: number }[]
-  >([]);
+  const [infSeries, setInfSeries] = useState<{ day: number; dataMB: number; tokens: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [throughput, setThroughput] = useState<string | null>('-');
+  const { healthStatus } = useHealth();
+
+  function getFontSize(value: string) {
+    if (!value) return '2rem';
+    if (value.length > 7) return '1.25rem';
+    if (value.length > 5) return '1.5rem';
+    if (value.length > 3) return '1.75rem';
+
+    return '2rem';
+  }
 
   useEffect(() => {
     let mounted = true;
+
+    // Don't make API calls if health check hasn't passed
+    if (!healthStatus) {
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -54,6 +53,11 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
           const tp = await nerService.getThroughputMetrics(modelId);
           if (!mounted) return;
           setTpMetrics(tp);
+          setThroughput(
+            tp.ThroughputMBPerHour !== undefined
+              ? formatFileSize(tp.ThroughputMBPerHour, true)
+              : '-'
+          );
         } else {
           setTpMetrics(null);
         }
@@ -82,20 +86,20 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
     return () => {
       mounted = false;
     };
-  }, [modelId, days]);
+  }, [modelId, days, healthStatus]);
 
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-        <CircularProgress />
+        <CircularProgress size={24} />
       </Box>
     );
   }
 
   if (error) {
     return (
-      <Box sx={{ p: 2 }}>
-        <Typography color="error">{error}</Typography>
+      <Box sx={{ p: 3 }}>
+        <Typography sx={{ color: 'error.main', fontSize: '0.875rem' }}>{error}</Typography>
       </Box>
     );
   }
@@ -105,102 +109,42 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
   }
 
   return (
-    <>
-      <div className="space-y-6 w-full">
-        <div className="grid grid-cols-5 gap-4">
-          {/* In-Progress Tasks */}
-          <Card className="flex flex-col justify-between">
-            <CardContent className="flex flex-col items-center justify-center flex-1 pt-6">
-              <div className="relative h-32 w-32">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-2xl font-bold text-gray-700">
-                    {infMetrics.InProgress}
-                  </span>
-                </div>
-              </div>
-              <h3 className="mt-auto text-sm text-muted-foreground">
-                In-Progress Files
-              </h3>
-            </CardContent>
-          </Card>
+    <Box sx={{ p: 3 }}>
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(5, 1fr)',
+          gap: 3,
+        }}
+      >
+        {/* In-Progress Tasks */}
+        <MetricsDataViewerCard value={infMetrics.InProgress} label="In-Progress Reports" />
 
-          {/* Completed Tasks */}
-          <Card className="flex flex-col justify-between">
-            <CardContent className="flex flex-col items-center justify-center flex-1 pt-6">
-              <div className="relative h-32 w-32">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-2xl font-bold text-gray-700">
-                    {infMetrics.Completed}
-                  </span>
-                </div>
-              </div>
-              <h3 className="mt-auto text-sm text-muted-foreground">
-                Completed Files
-              </h3>
-            </CardContent>
-          </Card>
+        {/* Completed Tasks */}
+        <MetricsDataViewerCard
+          value={infMetrics.Completed + infMetrics.Failed}
+          label="Completed Reports"
+        />
 
-          {/* Throughput */}
-          <Card className="flex flex-col justify-between">
-            <CardContent className="flex flex-col items-center justify-center flex-1 pt-6">
-              <div className="relative h-32 w-32">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span
-                    className={`font-bold text-gray-700 text-center ${
-                      tpMetrics?.ThroughputMBPerHour &&
-                      (tpMetrics?.ThroughputMBPerHour > 1000
-                        ? 'text-xl'
-                        : tpMetrics?.ThroughputMBPerHour > 100
-                          ? 'text-2xl'
-                          : 'text-3xl')
-                    }`}
-                  >
-                    {tpMetrics?.ThroughputMBPerHour == null
-                      ? '-'
-                      : `${tpMetrics?.ThroughputMBPerHour.toFixed(2).toLocaleString()} MB/Hour`}
-                  </span>
-                </div>
-              </div>
-              <h3 className="mt-auto text-sm text-muted-foreground">
-                Throughput
-              </h3>
-            </CardContent>
-          </Card>
+        {/* Throughput */}
+        <MetricsDataViewerCard
+          value={throughput === '-' ? '-' : `${throughput}/Hour`}
+          label="Throughput"
+        />
 
-          {/* Data Processed */}
-          <Card className="flex flex-col justify-between">
-            <CardContent className="flex flex-col items-center justify-center flex-1 pt-6">
-              <div className="relative h-32 w-32">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-2xl font-bold text-gray-700">
-                    {infMetrics.DataProcessedMB.toFixed(2).toLocaleString()} MB
-                  </span>
-                </div>
-              </div>
-              <h3 className="mt-auto text-sm text-muted-foreground">
-                Data Processed
-              </h3>
-            </CardContent>
-          </Card>
+        {/* Data Processed */}
+        <MetricsDataViewerCard
+          value={formatFileSize(infMetrics.DataProcessedMB * 1024 * 1024)}
+          label="Data Processed"
+        />
 
-          {/* Tokens Processed */}
-          <Card className="flex flex-col justify-between">
-            <CardContent className="flex flex-col items-center justify-center flex-1 pt-6">
-              <div className="relative h-32 w-32">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-2xl font-bold text-gray-700">
-                    {infMetrics.TokensProcessed.toLocaleString()}
-                  </span>
-                </div>
-              </div>
-              <h3 className="mt-auto text-sm text-muted-foreground">
-                Tokens Processed
-              </h3>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </>
+        {/* Tokens Processed */}
+        <MetricsDataViewerCard
+          value={formatNumber(infMetrics.TokensProcessed)}
+          label="Tokens Processed"
+        />
+      </Box>
+    </Box>
   );
 };
 

@@ -12,7 +12,7 @@ import {
   TableHead,
   TableRow,
   Paper,
-  CircularProgress
+  CircularProgress,
 } from '@mui/material';
 import { Plus } from 'lucide-react';
 
@@ -24,47 +24,7 @@ import { nerService } from '@/lib/backend';
 import { IconButton, Tooltip } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useHealth } from '@/contexts/HealthProvider';
-// Import the TaskStatusCategory from backend.ts
-interface TaskStatusCategory {
-  TotalTasks: number;
-  TotalSize: number;
-}
-
-// Using the Report interface from backend.ts
-interface ReportWithStatus {
-  Id: string;
-  Model: {
-    Id: string;
-    Name: string;
-    Status: string;
-    BaseModelId?: string;
-    Tags?: string[];
-  };
-  SourceS3Bucket: string;
-  SourceS3Prefix?: string;
-  CreationTime: string;
-  FileCount: number;
-  CompletedFileCount: number;
-  Tags?: string[];
-  CustomTags?: { [key: string]: string };
-  Groups?: {
-    Id: string;
-    Name: string;
-    Query: string;
-    Objects?: string[];
-  }[];
-  ShardDataTaskStatus?: string;
-  InferenceTaskStatuses?: { [key: string]: TaskStatusCategory };
-  Errors?: string[];
-
-  // Additional fields for UI
-  detailedStatus?: {
-    ShardDataTaskStatus?: string;
-    InferenceTaskStatuses?: { [key: string]: TaskStatusCategory };
-  };
-  isLoadingStatus?: boolean;
-  ReportName: string;
-}
+import { alpha } from '@mui/material/styles';
 
 export default function Jobs() {
   const searchParams = useSearchParams();
@@ -75,39 +35,61 @@ export default function Jobs() {
   const { healthStatus } = useHealth();
 
   const fetchReportStatus = async (report: ReportWithStatus) => {
-    try {
-      setReports((prev) =>
-        prev.map((r) =>
-          r.Id === report.Id ? { ...r, isLoadingStatus: true } : r
-        )
-      );
+    const pollStatus = async () => {
+      try {
+        setReports((prev) =>
+          prev.map((r) => (r.Id === report.Id ? { ...r, isLoadingStatus: true } : r))
+        );
 
-      const detailedReport = await nerService.getReport(report.Id);
+        const detailedReport = await nerService.getReport(report.Id);
 
-      setReports((prev) =>
-        prev.map((r) =>
-          r.Id === report.Id
-            ? {
-              ...r,
-              detailedStatus: {
-                ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
-                InferenceTaskStatuses: detailedReport.InferenceTaskStatuses
-              },
-              isLoadingStatus: false
-            }
-            : r
-        )
-      );
-    } catch (err) {
-      console.error(`Error fetching status for report ${report.Id}:`, err);
-      setReports((prev) =>
-        prev.map((r) =>
-          r.Id === report.Id ? { ...r, isLoadingStatus: false } : r
-        )
-      );
-    }
+        setReports((prev) =>
+          prev.map((r) =>
+            r.Id === report.Id
+              ? {
+                  ...r,
+                  SucceededFileCount: detailedReport.SucceededFileCount,
+                  detailedStatus: {
+                    ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
+                    InferenceTaskStatuses: detailedReport.InferenceTaskStatuses,
+                  },
+                  isLoadingStatus: false,
+                }
+              : r
+          )
+        );
+
+        // If files are complete, return true to stop polling
+        return (
+          detailedReport.SucceededFileCount + detailedReport.FailedFileCount ===
+          detailedReport.FileCount
+        );
+      } catch (err) {
+        console.error(`Error fetching status for report ${report.Id}:`, err);
+        setReports((prev) =>
+          prev.map((r) => (r.Id === report.Id ? { ...r, isLoadingStatus: false } : r))
+        );
+        return false;
+      }
+    };
+
+    let pollInterval: NodeJS.Timeout;
+
+    const poll = async () => {
+      const isComplete = await pollStatus();
+
+      if (isComplete) {
+        clearInterval(pollInterval);
+      }
+    };
+
+    poll();
+    pollInterval = setInterval(poll, 5000);
+
+    return () => {
+      clearInterval(pollInterval);
+    };
   };
-
 
   useEffect(() => {
     const fetchReports = async () => {
@@ -116,8 +98,7 @@ export default function Jobs() {
         const reportsData = await nerService.listReports();
         reportsData.sort(
           (a: ReportWithStatus, b: ReportWithStatus) =>
-            new Date(b.CreationTime).getTime() -
-            new Date(a.CreationTime).getTime()
+            new Date(b.CreationTime).getTime() - new Date(a.CreationTime).getTime()
         );
         setReports(reportsData as ReportWithStatus[]);
 
@@ -132,8 +113,8 @@ export default function Jobs() {
         setLoading(false);
       }
     };
-    if (healthStatus)
-      fetchReports();
+    if (healthStatus) fetchReports();
+    return () => {};
   }, [healthStatus]);
 
   if (loading) {
@@ -145,13 +126,10 @@ export default function Jobs() {
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              mb: 3
+              mb: 3,
             }}
           >
-            <Typography
-              variant="h6"
-              sx={{ fontWeight: 600, fontSize: '1.125rem' }}
-            >
+            <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.125rem' }}>
               Report
             </Typography>
             <Link href={`/token-classification/jobs/new`} passHref>
@@ -161,10 +139,10 @@ export default function Jobs() {
                 sx={{
                   bgcolor: '#1976d2',
                   '&:hover': {
-                    bgcolor: '#1565c0'
+                    bgcolor: '#1565c0',
                   },
                   textTransform: 'none',
-                  fontWeight: 500
+                  fontWeight: 500,
                 }}
               >
                 <Plus size={16} />
@@ -188,13 +166,10 @@ export default function Jobs() {
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              mb: 3
+              mb: 3,
             }}
           >
-            <Typography
-              variant="h6"
-              sx={{ fontWeight: 600, fontSize: '1.125rem' }}
-            >
+            <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.125rem' }}>
               Report
             </Typography>
             <Link href={`/token-classification/jobs/new`} passHref>
@@ -204,19 +179,17 @@ export default function Jobs() {
                 sx={{
                   bgcolor: '#1976d2',
                   '&:hover': {
-                    bgcolor: '#1565c0'
+                    bgcolor: '#1565c0',
                   },
                   textTransform: 'none',
-                  fontWeight: 500
+                  fontWeight: 500,
                 }}
               >
                 <Plus size={16} />
               </Button>
             </Link>
           </Box>
-          <Typography sx={{ textAlign: 'center', py: 2, color: 'error.main' }}>
-            {error}
-          </Typography>
+          <Typography sx={{ textAlign: 'center', py: 2, color: 'error.main' }}>{error}</Typography>
         </CardContent>
       </Card>
     );
@@ -227,9 +200,11 @@ export default function Jobs() {
       return (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
           <CircularProgress size={16} />
-          {/* <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            Loading status...
-          </Typography> */}
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              Loading status...
+            </Typography>
+          </Typography>
         </Box>
       );
     }
@@ -237,15 +212,15 @@ export default function Jobs() {
     if (!report.detailedStatus) {
       return (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <CircularProgress size={16} />
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            Status unavailable
+            Loading status...
           </Typography>
         </Box>
       );
     }
 
-    const { ShardDataTaskStatus, InferenceTaskStatuses } =
-      report.detailedStatus;
+    const { ShardDataTaskStatus, InferenceTaskStatuses } = report.detailedStatus;
 
     // Check for ShardDataTask failure first
     if (ShardDataTaskStatus === 'FAILED') {
@@ -257,7 +232,7 @@ export default function Jobs() {
               height: '8px',
               bgcolor: '#f1f5f9',
               borderRadius: '9999px',
-              overflow: 'hidden'
+              overflow: 'hidden',
             }}
           >
             <Box
@@ -265,7 +240,7 @@ export default function Jobs() {
                 height: '100%',
                 width: '100%',
                 bgcolor: '#ef4444', // red color for failure
-                borderRadius: '9999px'
+                borderRadius: '9999px',
               }}
             />
           </Box>
@@ -274,7 +249,7 @@ export default function Jobs() {
             sx={{
               color: '#ef4444',
               whiteSpace: 'nowrap',
-              fontWeight: 'medium'
+              fontWeight: 'medium',
             }}
           >
             Failed (Data Sharding Error)
@@ -290,51 +265,11 @@ export default function Jobs() {
     const failed = InferenceTaskStatuses?.FAILED?.TotalTasks || 0;
 
     const fileCount = report.FileCount || 0;
-    const completedFileCount = report.CompletedFileCount || 0;
+    const succeededFileCount = report.SucceededFileCount || 0;
+    const failedFileCount = report.FailedFileCount || 0;
     const totalTasks = completed + running + queued + failed;
 
-    const progress = completedFileCount > 0 ? (completedFileCount / fileCount) * 100 : 0;
-
-    // If there are failed tasks, show failure status
-    if (failed > 0) {
-      return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Box
-              sx={{
-                flex: 1,
-                height: '8px',
-                bgcolor: '#f1f5f9',
-                borderRadius: '9999px',
-                overflow: 'hidden'
-              }}
-            >
-              <Box
-                sx={{
-                  height: '100%',
-                  width: '100%',
-                  bgcolor: '#ef4444',
-                  borderRadius: '9999px'
-                }}
-              />
-            </Box>
-            <Typography
-              variant="body2"
-              sx={{
-                color: '#ef4444',
-                whiteSpace: 'nowrap',
-                fontWeight: 'medium'
-              }}
-            >
-              Failed
-            </Typography>
-          </Box>
-          <Typography variant="caption" sx={{ color: '#ef4444' }}>
-            {`${failed} task${failed > 1 ? 's' : ''} failed out of ${totalTasks} total`}
-          </Typography>
-        </Box>
-      );
-    }
+    const progress = succeededFileCount > 0 ? (succeededFileCount / fileCount) * 100 : 0;
 
     // If no tasks yet, show just the ShardDataTaskStatus
     if (totalTasks === 0) {
@@ -347,7 +282,6 @@ export default function Jobs() {
       );
     }
 
-    // Show progress for running tasks
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -357,31 +291,44 @@ export default function Jobs() {
               height: '8px',
               bgcolor: '#f1f5f9',
               borderRadius: '9999px',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              display: 'flex',
             }}
           >
+            {/* Green (successful files) */}
             <Box
               sx={{
                 height: '100%',
-                width: `${progress}%`,
-                bgcolor:
-                  ShardDataTaskStatus === 'COMPLETED' && progress === 100
-                    ? '#4caf50'
-                    : '#1976d2',
-                borderRadius: '9999px',
-                transition: 'all 0.2s'
+                width: `${(succeededFileCount / fileCount) * 100}%`,
+                bgcolor: '#4caf50',
+              }}
+            />
+            {/* Red (failed files) */}
+            <Box
+              sx={{
+                height: '100%',
+                width: `${(failedFileCount / fileCount) * 100}%`,
+                bgcolor: '#ef4444',
               }}
             />
           </Box>
           <Typography
             variant="body2"
-            sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}
+            sx={{
+              color: 'text.secondary',
+              whiteSpace: 'nowrap',
+              fontWeight: 'medium',
+            }}
           >
-            {`${Math.round(progress)}%`}
+            {`${(((succeededFileCount + failedFileCount) / fileCount) * 100).toFixed(0)} %`}
           </Typography>
         </Box>
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-          {`Files: ${completedFileCount}/${fileCount}`}
+          {succeededFileCount === fileCount
+            ? `Files: ${fileCount}/${fileCount} Processed`
+            : failedFileCount === fileCount
+              ? `Files: ${failedFileCount}/${fileCount} Failed`
+              : `Files: ${succeededFileCount}/${fileCount} Processed${failedFileCount > 0 ? `, ${failedFileCount}/${fileCount} Failed` : ''}`}
         </Typography>
       </Box>
     );
@@ -401,42 +348,56 @@ export default function Jobs() {
   };
 
   return (
-    <Card sx={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)', bgcolor: 'grey.100' }}>
-      <CardContent sx={{ p: 3 }}>
+    <Card
+      sx={{
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        bgcolor: 'white',
+        borderRadius: '12px',
+        mx: 'auto',
+        maxWidth: '1400px',
+      }}
+    >
+      <CardContent sx={{ p: 4 }}>
         <Box
           sx={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            mb: 3,
+            mb: 4,
           }}
         >
-          <Typography
-            variant="h6"
-            sx={{ fontWeight: 500, fontSize: '1.25rem' }}
-          >
-            Reports
-          </Typography>
+          <Box>
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 600,
+                fontSize: '1.5rem',
+                color: '#4a5568',
+              }}
+            >
+              Reports
+            </Typography>
+          </Box>
           <Link href={`/token-classification/jobs/new`} passHref>
             <Button
               variant="contained"
               color="primary"
+              startIcon={<Plus size={20} />}
               sx={{
-                bgcolor: '#1976d2',
+                bgcolor: '#2563eb',
                 '&:hover': {
-                  bgcolor: '#1565c0'
+                  bgcolor: '#1d4ed8',
                 },
                 textTransform: 'none',
                 fontWeight: 500,
-                width: 48,
-                height: 48,
-                minWidth: 0,
-                padding: 0,
-                borderRadius: '50%'
+                px: 3,
+                py: 1.5,
+                borderRadius: '8px',
+                boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
               }}
               disabled={!healthStatus}
             >
-              <Plus size={24} />
+              New Report
             </Button>
           </Link>
         </Box>
@@ -445,29 +406,64 @@ export default function Jobs() {
           component={Paper}
           sx={{
             boxShadow: 'none',
-            border: '1px solid rgba(0, 0, 0, 0.12)',
-            borderRadius: '0.375rem',
-            overflow: 'hidden',
-            // width: '80%',
-            // margin: '0 auto',
+            border: '1px solid',
+            borderColor: 'grey.200',
+            borderRadius: '12px',
+            bgcolor: 'white',
+            '& .MuiTableCell-root': {
+              borderBottom: '1px solid',
+              borderColor: 'grey.200',
+              py: 2.5,
+            },
           }}
         >
           <Table>
             <TableHead>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 600, width: '20%' }}>
+              <TableRow sx={{ bgcolor: '#f8fafc' }}>
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    color: '#475569',
+                    fontSize: '0.875rem',
+                  }}
+                >
                   Name
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, width: '15%' }}>
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    color: '#475569',
+                    fontSize: '0.875rem',
+                  }}
+                >
                   Model
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, width: '35%' }}>
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    color: '#475569',
+                    fontSize: '0.875rem',
+                  }}
+                >
                   Progress
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, width: '20%' }}>
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    color: '#475569',
+                    fontSize: '0.875rem',
+                  }}
+                >
                   Created At
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, width: '10%' }}>
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    color: '#475569',
+                    fontSize: '0.875rem',
+                    width: '120px',
+                  }}
+                >
                   Actions
                 </TableCell>
               </TableRow>
@@ -478,45 +474,86 @@ export default function Jobs() {
                   <TableRow
                     key={report.Id}
                     sx={{
-                      bgcolor: index % 2 === 0 ? 'white' : '#f9fafb'
+                      bgcolor: 'white',
+                      '&:hover': {
+                        bgcolor: alpha('#60a5fa', 0.04),
+                      },
+                      transition: 'background-color 0.2s',
                     }}
                   >
-                    <TableCell>{report.ReportName}</TableCell>
-                    <TableCell>{report.Model.Name}</TableCell>
+                    <TableCell>
+                      <Typography
+                        sx={{
+                          fontWeight: 500,
+                          color: '#1e293b',
+                        }}
+                      >
+                        {report.ReportName}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Box
+                        sx={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          px: 2,
+                          py: 0.5,
+                          bgcolor: '#f1f5f9',
+                          borderRadius: '16px',
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            fontSize: '0.875rem',
+                            color: '#475569',
+                          }}
+                        >
+                          {report.Model.Name.charAt(0).toUpperCase() + report.Model.Name.slice(1)}
+                        </Typography>
+                      </Box>
+                    </TableCell>
                     <TableCell>{getStatusDisplay(report)}</TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                        <Typography variant="body2">
-                          {format(
-                            new Date(report.CreationTime),
-                            'MMMM d, yyyy'
-                          )}
+                        <Typography variant="body2" sx={{ color: '#1e293b' }}>
+                          {format(new Date(report.CreationTime), 'MMMM d, yyyy')}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography variant="caption" sx={{ color: '#64748b' }}>
                           {format(new Date(report.CreationTime), 'h:mm a')}
                         </Typography>
                       </Box>
                     </TableCell>
                     <TableCell>
                       <Box
-                        sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                        }}
                       >
                         <Link
                           href={`/token-classification/jobs?jobId=${report.Id}`}
                           style={{
-                            color: '#1976d2',
-                            textDecoration: 'none'
+                            textDecoration: 'none',
                           }}
                         >
-                          <Typography
+                          <Button
+                            variant="outlined"
+                            size="small"
                             sx={{
+                              borderColor: '#e2e8f0',
+                              color: '#475569',
                               '&:hover': {
-                                textDecoration: 'underline'
-                              }
+                                borderColor: '#cbd5e1',
+                                bgcolor: '#f8fafc',
+                              },
+                              textTransform: 'none',
+                              minWidth: 0,
+                              px: 2,
                             }}
                           >
                             View
-                          </Typography>
+                          </Button>
                         </Link>
                         <Tooltip title="Delete report">
                           <IconButton
@@ -525,8 +562,8 @@ export default function Jobs() {
                             sx={{
                               color: '#dc2626',
                               '&:hover': {
-                                bgcolor: 'rgba(220, 38, 38, 0.04)'
-                              }
+                                bgcolor: alpha('#dc2626', 0.04),
+                              },
                             }}
                           >
                             <DeleteIcon fontSize="small" />
@@ -541,12 +578,27 @@ export default function Jobs() {
                   <TableCell
                     colSpan={5}
                     sx={{
+                      py: 8,
                       textAlign: 'center',
-                      py: 2,
-                      color: 'text.secondary'
                     }}
                   >
-                    No reports found. Create a new report to get started.
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 2,
+                      }}
+                    >
+                      <Typography
+                        sx={{
+                          color: '#475569',
+                          fontSize: '0.875rem',
+                        }}
+                      >
+                        -
+                      </Typography>
+                    </Box>
                   </TableCell>
                 </TableRow>
               )}

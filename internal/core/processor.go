@@ -38,6 +38,13 @@ type TaskProcessor struct {
 
 const bytesPerMB = 1024 * 1024
 
+var ExcludedTags = map[string]struct{}{
+	"GENDER":             {},
+	"SEXUAL_ORIENTATION": {},
+	"ETHNICITY":          {},
+	"SERVICE_CODE":       {},
+}
+
 func NewTaskProcessor(db *gorm.DB, storage storage.Provider, publisher messaging.Publisher, reciever messaging.Reciever, licenseVerifier licensing.LicenseVerifier, localModelDir string, modelBucket string, modelLoaders map[string]ModelLoader) *TaskProcessor {
 	return &TaskProcessor{
 		db:            db,
@@ -127,6 +134,26 @@ func (proc *TaskProcessor) ProcessTask(task messaging.Task) {
 	}
 }
 
+func (proc *TaskProcessor) updateFileCount(reportId uuid.UUID, success bool) error {
+	var column string
+	if success {
+		column = "succeeded_file_count"
+	} else {
+		column = "failed_file_count"
+	}
+
+	if err := proc.db.
+		Model(&database.Report{}).
+		Where("id = ?", reportId).
+		UpdateColumn(column, gorm.Expr(column+" + ?", 1)).
+		Error; err != nil {
+		slog.Error("could not increment file count", "report_id", reportId, "column", column, "error", err)
+		return fmt.Errorf("could not increment file count: %w", err)
+	}
+
+	return nil
+}
+
 func (proc *TaskProcessor) getStorageClient(report *database.Report) (storage.Provider, error) {
 	if report.IsUpload {
 		return proc.storage, nil
@@ -158,7 +185,7 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 		return fmt.Errorf("error getting inference task: %w", err)
 	}
 
-	if task.Report.Stopped {
+	if task.Report.Stopped || task.Report.Deleted {
 		slog.Info("report stopped, skipping inference task", "report_id", reportId, "task_id", payload.TaskId)
 		return nil
 	}
@@ -203,13 +230,7 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 		return err
 	}
 
-	totalTokens, workerErr := proc.runInferenceOnBucket(ctx, task.ReportId, storage, task.Report.Model.Id, task.Report.Model.Type, tags, customTags, groupToQuery, task.Report.SourceS3Bucket, s3Objects)
-	if workerErr != nil {
-		slog.Error("error running inference task", "report_id", reportId, "task_id", payload.TaskId, "error", workerErr)
-		database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobFailed) // nolint:errcheck
-		database.SaveReportError(ctx, proc.db, reportId, workerErr.Error())
-		return fmt.Errorf("error running inference task: %w", workerErr)
-	}
+	totalTokens, workerErr := proc.runInferenceOnBucket(ctx, taskId, task.ReportId, storage, task.Report.Model.Id, task.Report.Model.Type, tags, customTags, groupToQuery, task.Report.SourceS3Bucket, s3Objects)
 
 	if err := proc.db.
 		Model(&database.InferenceTask{}).
@@ -219,17 +240,15 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 		slog.Error("unable to update token_count", "report_id", reportId, "task_id", taskId, "error", err)
 	}
 
-	if err := database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobCompleted); err != nil {
-		return fmt.Errorf("error updating inference task status to complete: %w", err)
+	if workerErr != nil {
+		slog.Error("error running inference task", "report_id", reportId, "task_id", payload.TaskId, "error", workerErr)
+		database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobFailed) // nolint:errcheck
+		database.SaveReportError(ctx, proc.db, reportId, workerErr.Error())
+		return fmt.Errorf("error running inference task: %w", workerErr)
 	}
 
-	delta := len(s3Objects)
-	if err := proc.db.
-		Model(&database.Report{}).
-		Where("id = ?", reportId).
-		UpdateColumn("completed_file_count", gorm.Expr("completed_file_count + ?", delta)).
-		Error; err != nil {
-		slog.Error("could not increment completed_file_count", "report_id", reportId, "delta", delta, "err", err)
+	if err := database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobCompleted); err != nil {
+		return fmt.Errorf("error updating inference task status to complete: %w", err)
 	}
 
 	slog.Info("inference task completed successfully", "report_id", reportId, "task_id", payload.TaskId)
@@ -263,6 +282,7 @@ type objectChunkStream struct {
 
 func (proc *TaskProcessor) runInferenceOnBucket(
 	ctx context.Context,
+	taskId int,
 	reportId uuid.UUID,
 	storage storage.Provider,
 	modelId uuid.UUID,
@@ -320,47 +340,77 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 
 	for object := range queue {
 		if object.err != nil {
-			slog.Error("error getting object stream", "bucket", bucket, "object", object, "error", err)
+			slog.Error("error getting object stream", "bucket", bucket, "object", object.object, "error", err)
 			objectErrorCnt++
+			if err := proc.updateFileCount(reportId, false); err != nil {
+				return totalTokens, err
+			}
 			continue
 		}
 
-		tokens, entities, groups, objTagCount, objCustomTagCount, err := proc.runInferenceOnObject(reportId, object.chunks, model, tags, customTagsRe, groupToFilter, object.object)
+		result, err := proc.runInferenceOnObject(reportId, object.chunks, model, tags, customTagsRe, groupToFilter, object.object)
+
 		if err != nil {
-			slog.Error("error processing object", "object", object, "error", err)
+			slog.Error("error processing object", "object", object.object, "error", err)
 			objectErrorCnt++
+			if err := proc.updateFileCount(reportId, false); err != nil {
+				return totalTokens, err
+			}
 			continue
 		}
 
-		if err := proc.db.CreateInBatches(&entities, 100).Error; err != nil {
-			slog.Error("error saving entities to database", "object", object, "error", err)
+		if err := proc.db.CreateInBatches(&result.Entities, 100).Error; err != nil {
+			slog.Error("error saving entities to database", "object", object.object, "error", err)
 			objectErrorCnt++
+			if err := proc.updateFileCount(reportId, false); err != nil {
+				return totalTokens, err
+			}
 			continue
 		}
 
-		if err := proc.db.CreateInBatches(groups, 100).Error; err != nil {
-			slog.Error("error saving groups to database", "object", object, "error", err)
+		if err := proc.db.CreateInBatches(result.Groups, 100).Error; err != nil {
+			slog.Error("error saving groups to database", "object", object.object, "error", err)
 			objectErrorCnt++
+			if err := proc.updateFileCount(reportId, false); err != nil {
+				return totalTokens, err
+			}
 			continue
 		}
 
-		if err := proc.updateInferenceTagCount(reportId, objTagCount, false); err != nil {
-			slog.Error("error updating tag count", "object", object, "error", err)
+		if err := proc.updateInferenceTagCount(reportId, result.TagCount, false); err != nil {
+			slog.Error("error updating tag count", "object", object.object, "error", err)
 			objectErrorCnt++
+			if err := proc.updateFileCount(reportId, false); err != nil {
+				return totalTokens, err
+			}
 			continue
 		}
 
-		if err := proc.updateInferenceTagCount(reportId, objCustomTagCount, true); err != nil {
-			slog.Error("error updating custom tag count", "object", object, "error", err)
+		if err := proc.updateInferenceTagCount(reportId, result.CustomTagCount, true); err != nil {
+			slog.Error("error updating custom tag count", "object", object.object, "error", err)
 			objectErrorCnt++
+			if err := proc.updateFileCount(reportId, false); err != nil {
+				return totalTokens, err
+			}
 			continue
 		}
 
-		totalTokens += tokens
+		if err := proc.updateFileCount(reportId, true); err != nil {
+			return totalTokens, err
+		}
+
+		totalTokens += result.TotalTokens
+
+		if err := proc.db.Model(&database.InferenceTask{}).
+			Where("report_id = ? AND task_id = ?", reportId, taskId).
+			Update("completed_size", gorm.Expr("completed_size + ?", result.TotalSize)).Error; err != nil {
+			slog.Error("could not update completed size in InferenceTask", "error", err)
+			return totalTokens, err
+		}
 	}
 
 	if objectErrorCnt > 0 {
-		return 0, fmt.Errorf("errors while processing %d/%d objects", objectErrorCnt, len(objects))
+		return totalTokens, fmt.Errorf("errors while processing %d/%d objects", objectErrorCnt, len(objects))
 	}
 
 	return totalTokens, nil
@@ -382,7 +432,7 @@ func (proc *TaskProcessor) loadModel(ctx context.Context, modelId uuid.UUID, mod
 		if _, err := os.Stat(localDir); os.IsNotExist(err) {
 			slog.Info("model not found locally, downloading from S3", "modelId", modelId)
 
-			if err := proc.storage.DownloadDir(ctx, proc.modelBucket, modelId.String(), localDir); err != nil {
+			if err := proc.storage.DownloadDir(ctx, proc.modelBucket, modelId.String(), localDir, false); err != nil {
 				return nil, fmt.Errorf("failed to download model from S3: %w", err)
 			}
 		}
@@ -410,10 +460,16 @@ func (proc *TaskProcessor) createObjectPreview(
 	if err != nil {
 		return fmt.Errorf("preview inference error: %w", err)
 	}
+	spans = FilterEntities(previewText, spans)
 
-	sort.Slice(spans, func(i, j int) bool {
-		return spans[i].Start < spans[j].Start
-	})
+	// converting spans to a map for coalescing
+	spanEntityMap := make(map[string][]types.Entity)
+	for _, span := range spans {
+		spanEntityMap[span.Label] = append(spanEntityMap[span.Label], span)
+	}
+
+	coalescedSpans := coalesceEntities(spanEntityMap)
+	// coalescedSpans will be already sorted by start position
 
 	var (
 		tokens []string
@@ -421,7 +477,11 @@ func (proc *TaskProcessor) createObjectPreview(
 		cursor = 0
 		length = len(previewText)
 	)
-	for _, e := range spans {
+	for _, e := range coalescedSpans {
+		if _, exists := ExcludedTags[e.Label]; exists {
+			continue
+		}
+
 		if e.Start > cursor {
 			tokens = append(tokens, previewText[cursor:e.Start])
 			tags = append(tags, "O")
@@ -452,6 +512,52 @@ func (proc *TaskProcessor) createObjectPreview(
 	}).Error
 }
 
+func coalesceEntities(labelToEntities map[string][]types.Entity) []types.Entity {
+	maxEntityGap := 1 // Assuming this gap is less that any entity.Rcontext length
+	flattenedEntities := make([]types.Entity, 0, len(labelToEntities))
+	for _, ents := range labelToEntities {
+		flattenedEntities = append(flattenedEntities, ents...)
+	}
+	if len(flattenedEntities) == 0 {
+		return nil
+	}
+
+	sort.Slice(flattenedEntities, func(i, j int) bool {
+		return flattenedEntities[i].Start < flattenedEntities[j].Start
+	})
+
+	coalescedEntities := make([]types.Entity, 0, len(flattenedEntities))
+	currentEnt := flattenedEntities[0]
+
+	for i := 1; i < len(flattenedEntities); i++ {
+		nextEnt := flattenedEntities[i]
+
+		// Merge only if they are adjacent (at most maxEntityGap) and share the same label.
+		if currentEnt.Label == nextEnt.Label && nextEnt.Start >= currentEnt.End && nextEnt.Start-currentEnt.End <= maxEntityGap {
+			// Extend currentEnt to include nextEnt
+			currentEnt.Text += currentEnt.RContext[:nextEnt.Start-currentEnt.End] + nextEnt.Text
+			currentEnt.End = nextEnt.End
+			currentEnt.RContext = nextEnt.RContext
+		} else {
+			// Different label or non-adjacent: flush currentEnt and start a new one
+			coalescedEntities = append(coalescedEntities, currentEnt)
+			currentEnt = nextEnt
+		}
+	}
+
+	coalescedEntities = append(coalescedEntities, currentEnt)
+	return coalescedEntities
+}
+
+type InferenceResult struct {
+	TotalTokens    int64
+	TotalSize      int64
+	Entities       []database.ObjectEntity
+	Groups         []database.ObjectGroup
+	TagCount       map[string]uint64
+	CustomTagCount map[string]uint64
+}
+
 func (proc *TaskProcessor) runInferenceOnObject(
 	reportId uuid.UUID,
 	chunks <-chan ParsedChunk,
@@ -459,41 +565,46 @@ func (proc *TaskProcessor) runInferenceOnObject(
 	tags map[string]struct{},
 	customTags map[string]*regexp.Regexp,
 	groupFilter map[uuid.UUID]Filter,
-	object string) (
-	int64, []database.ObjectEntity, []database.ObjectGroup, map[string]uint64, map[string]uint64, error) {
-	var tokens int64
+	object string,
+) (InferenceResult, error) {
+	result := InferenceResult{
+		TagCount:       make(map[string]uint64),
+		CustomTagCount: make(map[string]uint64),
+	}
 
 	labelToEntities := make(map[string][]types.Entity)
 
 	const previewLimit = 1000
-
 	previewTokens := make([]string, 0, previewLimit)
-
-	tagCount, customTagCount := make(map[string]uint64), make(map[string]uint64)
 
 	for chunk := range chunks {
 		if chunk.Error != nil {
-			return 0, nil, nil, nil, nil, fmt.Errorf("error parsing document: %w", chunk.Error)
+			return result, fmt.Errorf("error parsing document: %w", chunk.Error)
 		}
+
+		result.TotalSize += chunk.RawSize
 
 		start := time.Now()
 		chunkEntities, err := model.Predict(chunk.Text)
+		chunkEntities = FilterEntities(chunk.Text, chunkEntities)
 		duration := time.Since(start)
-		sizeMB := float64(len(chunk.Text)) / float64(bytesPerMB)
+		sizeMB := float64(chunk.RawSize) / float64(bytesPerMB)
 		slog.Info("processed chunk",
 			"chunk_size_mb", fmt.Sprintf("%.2f", sizeMB),
 			"duration", duration,
 		)
 		if err != nil {
-			return 0, nil, nil, nil, nil, fmt.Errorf("error running model inference: %w", err)
+			return result, fmt.Errorf("error running model inference: %w", err)
 		}
 
 		for _, entity := range chunkEntities {
+			if _, exists := ExcludedTags[entity.Label]; exists {
+				continue
+			}
 			if _, ok := tags[entity.Label]; ok {
 				entity.Start += chunk.Offset
 				entity.End += chunk.Offset
 				labelToEntities[entity.Label] = append(labelToEntities[entity.Label], entity)
-				tagCount[entity.Label]++
 			}
 		}
 
@@ -509,7 +620,6 @@ func (proc *TaskProcessor) runInferenceOnObject(
 					LContext: strings.ToValidUTF8(chunk.Text[max(0, start-20):start], ""),
 					RContext: strings.ToValidUTF8(chunk.Text[end:min(len(chunk.Text), end+20)], ""),
 				})
-				customTagCount[tag]++
 			}
 		}
 
@@ -524,7 +634,7 @@ func (proc *TaskProcessor) runInferenceOnObject(
 		}
 
 		toks := strings.Fields(chunk.Text)
-		tokens += int64(len(toks))
+		result.TotalTokens += int64(len(toks))
 	}
 
 	previewText := strings.Join(previewTokens, " ")
@@ -543,23 +653,32 @@ func (proc *TaskProcessor) runInferenceOnObject(
 		}
 	}
 
-	allEntities := make([]database.ObjectEntity, 0)
-	for _, entities := range labelToEntities {
-		for _, entity := range entities {
-			allEntities = append(allEntities, database.ObjectEntity{
-				ReportId: reportId,
-				Label:    entity.Label,
-				Text:     entity.Text,
-				Start:    entity.Start,
-				End:      entity.End,
-				Object:   object,
-				LContext: entity.LContext,
-				RContext: entity.RContext,
-			})
+	coalescedEntities := coalesceEntities(labelToEntities)
+
+	allEntities := make([]database.ObjectEntity, len(coalescedEntities))
+	for i, entity := range coalescedEntities {
+		allEntities[i] = database.ObjectEntity{
+			ReportId: reportId,
+			Label:    entity.Label,
+			Text:     entity.Text,
+			Start:    entity.Start,
+			End:      entity.End,
+			Object:   object,
+			LContext: entity.LContext,
+			RContext: entity.RContext,
+		}
+
+		if _, exists := customTags[entity.Label]; exists {
+			result.CustomTagCount[entity.Label]++
+		} else {
+			result.TagCount[entity.Label]++
 		}
 	}
 
-	return tokens, allEntities, groups, tagCount, customTagCount, nil
+	result.Entities = allEntities
+	result.Groups = groups
+
+	return result, nil
 }
 
 func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload messaging.ShardDataPayload) error {
@@ -573,7 +692,7 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 		return fmt.Errorf("error getting shard data task: %w", err)
 	}
 
-	if task.Report.Stopped {
+	if task.Report.Stopped || task.Report.Deleted {
 		slog.Info("report stopped, skipping shard data task", "report_id", reportId)
 		return nil
 	}

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import type { TrainReportData, LabelMetrics, ExampleCategories, TrainingExample } from '@/lib/types';
-import { ObjectDatabaseRecord, ClassifiedTokenDatabaseRecord } from '@/app/token-classification/jobs/(database-table)/types';
+
 import {
   mockWorkflows,
   mockPredictionResponses,
@@ -18,11 +17,11 @@ import {
   loadMoreMockClassifiedTokenRecords,
   upvotes,
   associations,
-  reformulations
+  reformulations,
 } from './mock-data';
 
 // Helper function to simulate API delay
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Helper function to format time
 export const formatTime = (seconds: number): string => {
@@ -48,7 +47,7 @@ export const formatAmount = (amount: number): string => {
 
 // Mock API functions
 export const predict = async (text: string, mode: string = 'default') => {
-  console.log("HERE")
+  console.log('HERE');
   console.log('text', text);
   await delay(500);
   console.log('mockPredictionResponses', mockPredictionResponses[text]);
@@ -95,7 +94,7 @@ export const useLabels = () => {
   return {
     labels: mockLabels,
     isLoading: false,
-    error: null
+    error: null,
   };
 };
 
@@ -103,7 +102,7 @@ export const useRecentSamples = () => {
   return {
     samples: mockExamples.true_positives,
     isLoading: false,
-    error: null
+    error: null,
   };
 };
 
@@ -145,7 +144,7 @@ export function useTokenClassificationEndpoints() {
 
   const predict = async (text: string) => {
     setIsLoading(true);
-    console.log("HERE")
+    console.log('HERE');
     try {
       await delay(500);
       return mockPredictionResponses[text] || mockPredictionResponses['default'];
@@ -217,11 +216,11 @@ export function useTokenClassificationEndpoints() {
     insertSample,
     addLabel,
     getLabels,
-    getTextFromFile
+    getTextFromFile,
   };
 }
 
 export async function fetchWorkflows(): Promise<any[]> {
   await delay(800);
   return mockWorkflows;
-} 
+}

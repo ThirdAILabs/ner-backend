@@ -21,11 +21,13 @@ type Provider interface {
 
 	PutObject(ctx context.Context, bucket, key string, data io.Reader) error
 
-	DownloadDir(ctx context.Context, bucket, prefix, dest string) error
+	DownloadDir(ctx context.Context, bucket, prefix, dest string, overwrite bool) error
 
 	UploadDir(ctx context.Context, bucket, prefix, src string) error
 
 	ListObjects(ctx context.Context, bucket, prefix string) ([]Object, error)
 
 	IterObjects(ctx context.Context, bucket, prefix string) ObjectIterator
+
+	ValidateAccess(ctx context.Context, bucket, prefix string) error
 }

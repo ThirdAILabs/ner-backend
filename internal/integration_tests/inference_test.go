@@ -28,8 +28,54 @@ import (
 )
 
 const (
-	dataBucket = "test-data"
+	dataBucket  = "test-data"
+	unicodeText = `Name: Zoë Faulkner 🌟 | Address: 742 Evergreen Terrace, Springfield 🏡 | SSN: 123-45-6789 🆔
+Name: Jürgen Müller 🧑‍🔬 | Email: jurgen.müller@example.de 📧 | City: München, Germany 🇩🇪
+Name: Aiko Tanaka 🎎 | Phone: +81-90-1234-5678 📱 | Prefecture: 東京 (Tokyo) 🗼
+Name: Carlos Andrés Pérez 🎭 | Passport: X12345678 🇨🇴 | Address: Calle 123, Bogotá 🏙️
+Name: Fatima Al-Fulan 🧕 | National ID: 789654321 🪪 | City: دبي (Dubai) 🇦🇪
+Name: Olamide Okoro 🧑‍💻 | Email: olamide.okoro@nigeria.ng 📧 | Address: 12 Unity Rd, Lagos 🇳🇬
+Name: Chloé Dubois 🎨 | SSN: 987-65-4321 🔐 | City: Marseille 🇫🇷
+Name: Иван Иванов 📚 | Phone: +7 495 123-45-67 ☎️ | City: Москва (Moscow) 🇷🇺
+Name: 李小龍 (Bruce Lee) 🐉 | Email: brucelee@kungfu.cn 📩 | Province: 廣東 (Guangdong) 🏯
+Name: Amelia O’Connell 🍀 | Address: 1 Abbey Rd, Dublin 🇮🇪 | PPSN: 1234567TA 🗃️`
+	phoneText = "this is a test file with a phone number 123-456-7890"
+	emailText = "this is a test file with an email address abc@email.com"
 )
+
+var expected = []string{
+	"abc@email.com",
+	"+81-90-1234-5678",
+	"789654321",
+	"Zoë Faulkner", "Jürgen Müller",
+	"Aiko Tanaka",
+	"Carlos Andrés Pérez",
+	"Fatima Al-Fulan",
+	"Olamide Okoro",
+	"Chloé Dubois",
+	"Иван Иванов",
+	"Bruce Lee",
+	"Amelia O’Connell",
+
+	"742 Evergreen Terrace", "Springfield",
+	"City", "München", "Germany", "Tokyo",
+	"دبي", "Dubai",
+	"12 Unity Rd", "Lagos",
+	"Marseille",
+	"Москва", "Moscow",
+	"1 Abbey Rd", "Dublin",
+
+	"123-45-6789", "987-65-4321",
+	"jurgen.müller@example.de",
+	"olamide.okoro@nigeria.ng",
+	"brucelee@kungfu.cn",
+
+	"123-456-7890",
+	"email",
+	"+7 495 123-45-67",
+	"廣東", "Guangdong",
+	"123",
+}
 
 func createData(t *testing.T, storage storage.Provider) {
 	require.NoError(t, storage.CreateBucket(context.Background(), dataBucket))
@@ -148,7 +194,10 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 	assert.Equal(t, modelId, report.Model.Id)
 	assert.Equal(t, dataBucket, report.SourceS3Bucket)
 	assert.Equal(t, 11, report.InferenceTaskStatuses[database.JobCompleted].TotalTasks)
+	assert.Equal(t, report.InferenceTaskStatuses[database.JobCompleted].TotalSize, report.InferenceTaskStatuses[database.JobCompleted].CompletedSize)
 	assert.Equal(t, 2, len(report.Groups))
+	assert.Greater(t, report.TotalInferenceTimeSeconds, 0.0)
+	assert.Greater(t, report.ShardDataTimeSeconds, 0.0)
 
 	entities := getReportEntities(t, router, reportId)
 	assert.Equal(t, 21, len(entities))
@@ -169,12 +218,17 @@ func createUpload(t *testing.T, router http.Handler) uuid.UUID {
 
 	f1, err := writer.CreateFormFile("files", "file1.txt")
 	require.NoError(t, err)
-	_, err = f1.Write([]byte("this is a test file with a phone number 123-456-7890"))
+	_, err = f1.Write([]byte(phoneText))
 	require.NoError(t, err)
 
 	f2, err := writer.CreateFormFile("files", "file2.txt")
 	require.NoError(t, err)
-	_, err = f2.Write([]byte("this is a test file with an email address abc@email.com"))
+	_, err = f2.Write([]byte(emailText))
+	require.NoError(t, err)
+
+	f3, err := writer.CreateFormFile("files", "unicode.txt")
+	require.NoError(t, err)
+	_, err = f3.Write([]byte(unicodeText))
 	require.NoError(t, err)
 
 	require.NoError(t, writer.Close())
@@ -273,6 +327,11 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 	go worker.Start()
 	t.Cleanup(worker.Stop)
 
+	expectedSet := make(map[string]struct{}, len(expected))
+	for _, tok := range expected {
+		expectedSet[tok] = struct{}{}
+	}
+
 	models := []struct {
 		label      string
 		tag        string
@@ -283,7 +342,7 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 			label: "CNN Model",
 			tag:   "cnn",
 			initFn: func(c context.Context, db *gorm.DB, s3 *storage.S3Provider, bucket string) error {
-				return cmd.InitializeCnnNerExtractor(c, db, s3, bucket, os.Getenv("HOST_MODEL_DIR"))
+				return cmd.InitializeCnnNerExtractor(c, db, s3, bucket, "advanced", os.Getenv("HOST_MODEL_DIR"))
 			},
 			expectedDB: "advanced",
 		},
@@ -291,7 +350,7 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 			label: "Transformer Model",
 			tag:   "transformer",
 			initFn: func(c context.Context, db *gorm.DB, s3 *storage.S3Provider, bucket string) error {
-				return cmd.InitializeTransformerModel(c, db, s3, bucket, os.Getenv("HOST_MODEL_DIR"))
+				return cmd.InitializeTransformerModel(c, db, s3, bucket, "ultra", os.Getenv("HOST_MODEL_DIR"))
 			},
 			expectedDB: "ultra",
 		},
@@ -311,8 +370,8 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 				ModelId:    model.Id,
 				UploadId:   uploadID,
 				Tags: []string{"ADDRESS", "CARD_NUMBER", "COMPANY", "CREDIT_SCORE", "DATE",
-					"EMAIL", "ETHNICITY", "GENDER", "ID_NUMBER", "LICENSE_PLATE",
-					"LOCATION", "NAME", "PHONENUMBER", "SERVICE_CODE", "SEXUAL_ORIENTATION",
+					"EMAIL", "ID_NUMBER", "LICENSE_PLATE",
+					"LOCATION", "NAME", "PHONENUMBER",
 					"SSN", "URL", "VIN", "O"},
 			})
 
@@ -323,7 +382,21 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 			assert.Equal(t, uploadID.String(), report.SourceS3Prefix)
 
 			entities := getReportEntities(t, router, reportID)
-			assert.Greater(t, len(entities), 0)
+
+			var matched int
+			for _, e := range entities {
+				if _, ok := expectedSet[e.Text]; ok {
+					matched++
+				}
+			}
+
+			pct := float64(matched) / float64(len(expected)) * 100
+			assert.GreaterOrEqualf(
+				t,
+				pct, 85.0,
+				"only %.1f%% of expected texts were found (need ≥85%%)", pct,
+			)
+			assert.GreaterOrEqual(t, len(entities), 35)
 		})
 	}
 }

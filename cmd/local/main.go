@@ -30,10 +30,12 @@ import (
 )
 
 type Config struct {
-	Root          string `env:"ROOT" envDefault:"./pocket-shield"`
-	Port          int    `env:"PORT" envDefault:"3001"`
-	License       string `env:"LICENSE_KEY" envDefault:""`
-	BoltModelPath string `env:"MODEL_PATH" envDefault:""`
+	Root       string `env:"ROOT" envDefault:"./pocket-shield"`
+	Port       int    `env:"PORT" envDefault:"3001"`
+	License    string `env:"LICENSE_KEY" envDefault:""`
+	ModelDir   string `env:"MODEL_DIR" envDefault:""`
+	ModelType  string `env:"MODEL_TYPE" envDefault:"cnn_model"`
+	AppDataDir string `env:"APP_DATA_DIR" envDefault:"./pocket-shield"`
 }
 
 const (
@@ -91,7 +93,7 @@ func createQueue(db *gorm.DB) *messaging.InMemoryQueue {
 	return queue
 }
 
-func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publisher, port int, licensing licensing.LicenseVerifier) *http.Server {
+func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publisher, port int, modelDir, modelType string, licensing licensing.LicenseVerifier) *http.Server {
 	r := chi.NewRouter()
 
 	// Middleware
@@ -110,8 +112,28 @@ func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publish
 
 	apiHandler := api.NewBackendService(db, storage, queue, chunkTargetBytes, licensing)
 
+	loaders := core.NewModelLoaders("python", "plugin/plugin-python/plugin.py")
+
+	var loaderType string
+	switch {
+	case modelType == "udt_model":
+		loaderType = "bolt"
+	case modelType == "cnn_model":
+		loaderType = "cnn"
+	default:
+		log.Fatalf("Unknown model type in directory: %s", modelDir)
+	}
+
+	nerModel, err := loaders[loaderType](modelDir)
+	if err != nil {
+		log.Fatalf("could not load NER model: %v", err)
+	}
+
+	chatHandler := api.NewChatService(db, nerModel)
+
 	r.Route("/api/v1", func(r chi.Router) {
 		apiHandler.AddRoutes(r)
+		chatHandler.AddRoutes(r)
 	})
 
 	return &http.Server{
@@ -141,21 +163,34 @@ func main() {
 
 	log.SetOutput(io.MultiWriter(f, os.Stderr))
 
-	slog.Info("starting backend", "root", cfg.Root, "port", cfg.Port)
+	slog.Info("starting backend", "root", cfg.Root, "port", cfg.Port, "app_data_dir", cfg.AppDataDir)
 
-	db := createDatabase(cfg.Root)
+	db := createDatabase(cfg.AppDataDir)
 
 	storage, err := storage.NewLocalProvider(filepath.Join(cfg.Root, "storage"))
 	if err != nil {
 		log.Fatalf("Worker: Failed to create storage client: %v", err)
 	}
 
-	if cfg.BoltModelPath != "" {
-		if err := cmd.InitializeBoltModel(db, storage, modelBucket, "basic", cfg.BoltModelPath); err != nil {
-			log.Fatalf("Failed to initialize basic model: %v", err)
+	if cfg.ModelDir != "" {
+		switch cfg.ModelType {
+		case "udt_model":
+			if err := cmd.InitializeBoltModel(db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
+				log.Fatalf("Failed to init & upload bolt model: %v", err)
+			}
+		case "cnn_model":
+			if err := cmd.InitializeCnnNerExtractor(context.Background(), db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
+				log.Fatalf("Failed to init & upload CNN model: %v", err)
+			}
+		default:
+			log.Fatalf("Invalid model type: %s. Must be either 'bolt' or 'cnn'", cfg.ModelType)
 		}
 	} else {
 		cmd.InitializePresidioModel(db)
+	}
+
+	if err := cmd.RemoveExcludedTagsFromAllModels(db); err != nil {
+		log.Fatalf("Failed to remove excluded tags from all models: %v", err)
 	}
 
 	queue := createQueue(db)
@@ -164,7 +199,16 @@ func main() {
 
 	worker := core.NewTaskProcessor(db, storage, queue, queue, licensing, filepath.Join(cfg.Root, "models"), modelBucket, core.NewModelLoaders("python", "plugin/plugin-python/plugin.py"))
 
-	server := createServer(db, storage, queue, cfg.Port, licensing)
+	var basicModel database.Model
+	if err := db.Where("name = ?", "basic").First(&basicModel).Error; err != nil {
+		log.Fatalf("could not lookup basic model: %v", err)
+	}
+
+	basicModelDir := filepath.Join(cfg.Root, "models", basicModel.Id.String())
+	if err := storage.DownloadDir(context.Background(), modelBucket, basicModel.Id.String(), basicModelDir, true); err != nil {
+		log.Fatalf("failed to download model: %v", err)
+	}
+	server := createServer(db, storage, queue, cfg.Port, basicModelDir, cfg.ModelType, licensing)
 
 	slog.Info("starting worker")
 	go worker.Start()

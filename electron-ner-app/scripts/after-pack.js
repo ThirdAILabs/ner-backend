@@ -1,11 +1,20 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { exec } from 'node:child_process';
+import { promisify } from 'node:util';
+
+const execAsync = promisify(exec);
+
+// Get __dirname equivalent in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * This hook runs after Electron Builder packs the app but before it creates the installer
  * This ensures the backend binary is properly copied to the final location in the app bundle
  */
-module.exports = async function(context) {
+export async function afterPack(context) {
   const { appOutDir, packager, electronPlatformName } = context;
   const appDir = packager.info._appDir;
   const sourceBackend = path.join(appDir, '..', 'main');
@@ -63,6 +72,39 @@ module.exports = async function(context) {
     // List the files in the bin directory to confirm
     console.log('Contents of bin directory:');
     console.log(fs.readdirSync(targetBinDir));
+
+    // For macOS, fix the libomp.dylib path using install_name_tool
+    if (electronPlatformName === 'darwin') {
+      const appPath = path.join(appOutDir, `${packager.appInfo.productName}.app`);
+      const frameworksPath = path.join(appPath, 'Contents', 'Frameworks');
+      const libompPath = path.join(frameworksPath, 'libomp.dylib');
+      
+      if (fs.existsSync(libompPath)) {
+        console.log('Fixing libomp.dylib path in backend executable...');
+        try {
+          // Get the current install name
+          const { stdout: currentName } = await execAsync(`otool -L "${targetBackendPath}" | grep libomp`);
+          console.log('Current libomp path:', currentName.trim());
+          
+          // Extract the current path from otool output
+          const currentPath = currentName.trim().split(' ')[0];
+          console.log('Extracted current path:', currentPath);
+          
+          // Use install_name_tool to change the path
+          await execAsync(`install_name_tool -change "${currentPath}" "@executable_path/../../Frameworks/libomp.dylib" "${targetBackendPath}"`);
+          console.log('✅ Successfully updated libomp.dylib path in backend executable');
+          
+          // Verify the change
+          const { stdout: newName } = await execAsync(`otool -L "${targetBackendPath}" | grep libomp`);
+          console.log('New libomp path:', newName.trim());
+        } catch (error) {
+          console.error('Error fixing libomp.dylib path:', error);
+          throw error;
+        }
+      } else {
+        console.warn('⚠️ libomp.dylib not found at:', libompPath);
+      }
+    }
   } catch (error) {
     console.error('Error copying backend binary:', error);
     throw error;
@@ -90,9 +132,22 @@ module.exports = async function(context) {
     console.error('Error copying electron-is-dev module:', error);
     // Continue even if this fails, since we have a fallback in the code
   }
-  
+
+  // Ensure libomp.dylib is executable for ShipIt quarantine stripping
+  if (electronPlatformName === 'darwin') {
+    const appName = packager.appInfo.productFilename;
+    const frameworksDir = path.join(appOutDir, `${appName}.app`, 'Contents', 'Frameworks');
+    const libPath = path.join(frameworksDir, 'libomp.dylib');
+    console.log('🔧 Setting permissions on libomp.dylib to 755:', libPath);
+    try {
+      fs.chmodSync(libPath, 0o755);
+    } catch (err) {
+      console.warn('⚠️ Could not chmod libomp.dylib:', err);
+    }
+  }
+
   console.log('After-pack hook completed successfully!');
-};
+}
 
 /**
  * Helper function to recursively copy a directory
@@ -114,4 +169,4 @@ function copyRecursive(src, dest) {
       fs.copyFileSync(srcPath, destPath);
     }
   }
-} 
+}

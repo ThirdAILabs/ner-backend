@@ -18,6 +18,7 @@ class EnsembleModel(Model):
                         model_path=arguments["model_path"],
                         tokenizer_name="Qwen/Qwen2.5-0.5B",
                         tag2idx=build_tag_vocab(),
+                        tokenizer_path=arguments.get("tokenizer_path"),
                     )
                 )
             elif model_name == "embedding_bag":

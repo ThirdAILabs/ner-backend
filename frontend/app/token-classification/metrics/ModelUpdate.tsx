@@ -1,14 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Typography,
-  TextField,
-  Button,
-  Alert,
-  Tooltip
-} from '@mui/material';
+import { Box, Typography, TextField, Button, Alert, Tooltip } from '@mui/material';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Upload, HelpCircle } from 'lucide-react';
 import RecentSamples from './RecentSamples';
@@ -20,44 +13,59 @@ import RecentSamples from './RecentSamples';
 // These would be replaced with actual API calls in a real implementation
 const getTrainReport = async (modelId: string) => {
   // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 800));
-  
+  await new Promise((resolve) => setTimeout(resolve, 800));
+
   return {
     data: {
       metrics: {
         before: { precision: 0.85, recall: 0.82, f1: 0.83 },
-        after: { precision: 0.91, recall: 0.89, f1: 0.90 }
-      }
-    }
+        after: { precision: 0.91, recall: 0.89, f1: 0.9 },
+      },
+    },
   };
 };
 
 const getLabels = async () => {
   // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 600));
-  
-  return ['PERSON', 'ORGANIZATION', 'LOCATION', 'DATE', 'O', 'PHONE', 'EMAIL', 'ADDRESS', 'PRODUCT', 'EVENT', 'TIME', 'MONEY', 'PERCENT', 'QUANTITY'];
+  await new Promise((resolve) => setTimeout(resolve, 600));
+
+  return [
+    'PERSON',
+    'ORGANIZATION',
+    'LOCATION',
+    'DATE',
+    'O',
+    'PHONE',
+    'EMAIL',
+    'ADDRESS',
+    'PRODUCT',
+    'EVENT',
+    'TIME',
+    'MONEY',
+    'PERCENT',
+    'QUANTITY',
+  ];
 };
 
 const trainUDTWithCSV = async ({ model_name, file, base_model_identifier, test_split }: any) => {
   // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1500));
-  
+  await new Promise((resolve) => setTimeout(resolve, 1500));
+
   return {
     status: 'success',
     message: 'Training initiated successfully',
-    model_id: 'model_123456'
+    model_id: 'model_123456',
   };
 };
 
 const retrainTokenClassifier = async ({ model_name, base_model_id }: any) => {
   // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1500));
-  
+  await new Promise((resolve) => setTimeout(resolve, 1500));
+
   return {
     status: 'success',
     message: 'Retraining initiated successfully',
-    model_id: 'model_789012'
+    model_id: 'model_789012',
   };
 };
 
@@ -76,7 +84,7 @@ const ModelUpdate: React.FC<ModelUpdateProps> = ({
   deploymentUrl = 'https://api.example.com/token-classification',
   workflowNames = [],
   deployStatus = 'complete',
-  modelId = 'model_123'
+  modelId = 'model_123',
 }) => {
   // States for CSV upload
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -173,7 +181,7 @@ const ModelUpdate: React.FC<ModelUpdateProps> = ({
         console.error('Error fetching labels:', error);
       }
     };
-    
+
     fetchTags();
   }, []);
 
@@ -319,13 +327,13 @@ const ModelUpdate: React.FC<ModelUpdateProps> = ({
     setPollingError('');
     setPollingSuccess(false);
     setPollingButtonDisabled(true);
-    
+
     try {
       const response = await retrainTokenClassifier({
         model_name: pollingModelName,
         base_model_id: modelId,
       });
-      
+
       if (response.status === 'success') {
         setPollingSuccess(true);
       } else {
@@ -571,4 +579,4 @@ const ModelUpdate: React.FC<ModelUpdateProps> = ({
   );
 };
 
-export default ModelUpdate; 
+export default ModelUpdate;

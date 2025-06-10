@@ -1,16 +1,20 @@
 {
   "name": "electron-ner-app",
-  "version": "1.1.0",
+  "productName": "PocketShield",
+  "version": "1.5.0",
   "description": "Electron app for Named Entity Recognition",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "copy-model": "node scripts/copy-model.js",
     "copy-backend": "node scripts/copy-backend.js",
-    "prepare-files": "rm -rf bin && npm run copy-backend && npm run copy-model",
+    "copy-libomp": "otool -L bin/main | grep libomp | awk '{print $1}' | xargs -I {} cp {} resources/",
+    "prepare-files": "rm -rf bin && ([ \"$MODEL_TYPE\" = \"cnn_model\" ] && npm run build-plugin || true) && npm run copy-backend && npm run copy-model && rm -rf resources && mkdir resources && npm run copy-libomp && npm run sign-libomp",
     "dev": "npm run prepare-files && concurrently --kill-others \"cd ../frontend && npm run dev && cd ../electron-ner-app\" \"wait-on http://localhost:3007 && electron .\"",
     "start-backend": "node scripts/start-backend.js",
-    "build": "cd ../frontend && npm run build && rm -rf ../electron-ner-app/frontend-dist && mv out ../electron-ner-app/frontend-dist && cd ../electron-ner-app && npm run prepare-files && electron-builder",
+    "build-plugin": "cd ../plugin/plugin-python && pip install -r requirements.txt && rm -rf bin dist && python -m PyInstaller plugin.spec --noconfirm && cd ../../electron-ner-app",
+    "build": "cd ../frontend && BUILD_STATIC=true npm run build && rm -rf ../electron-ner-app/frontend-dist && mv out ../electron-ner-app/frontend-dist && cd ../electron-ner-app && npm run prepare-files && electron-builder",
+    "sign-libomp": "codesign --force --sign \"ThirdAI Corp (KJ35JRW2T6)\"  --options runtime --entitlements build/entitlements.mac.plist resources/libomp.dylib",
     "vite-build": "cd src && vite build",
     "electron-build": "npm run copy-backend && electron-builder",
     "build-dmg": "node scripts/build-dmg.js",
@@ -34,7 +38,7 @@
     "@types/node": "^20.14.10",
     "@vitejs/plugin-react": "^4.2.1",
     "concurrently": "^8.2.2",
-    "electron": "^28.0.0",
+    "electron": "^35.4.0",
     "electron-builder": "^24.6.4",
     "typescript": "^5.5.3",
     "vite": "^5.1.4"
@@ -45,10 +49,11 @@
     "commander": "^12.0.0",
     "electron-is-dev": "^2.0.0",
     "electron-log": "^5.4.0",
-    "electron-serve": "^1.3.0",
+    "electron-serve": "^2.1.1",
     "electron-updater": "^6.6.2",
     "get-port": "^7.1.0",
     "http-proxy": "^1.18.1",
+    "pg": "^8.16.0",
     "portfinder": "^1.0.37",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -65,6 +70,8 @@
       "build/**/*",
       "main.js",
       "preload.js",
+      "telemetry.js",
+      "userIdManager.js",
       "frontend-dist/**/*",
       "scripts/**/*",
       "!**/node_modules/**/{CHANGELOG.md,README.md,README,readme.md,readme}",
@@ -80,6 +87,10 @@
       {
         "from": "node_modules/electron-is-dev",
         "to": "node_modules/electron-is-dev"
+      },
+      {
+        "from": "resources/libomp.dylib",
+        "to": "../Frameworks/libomp.dylib"
       }
     ],
     "asarUnpack": [
@@ -94,7 +105,13 @@
         "zip"
       ],
       "hardenedRuntime": true,
-      "gatekeeperAssess": false
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "gatekeeperAssess": false,
+      "extendInfo": {
+        "NSLocalNetworkUsageDescription": "This app needs to communicate with a local backend server for NLP processing."
+      },
+      "notarize": false
     },
     "win": {
       "target": "nsis"
@@ -109,5 +126,6 @@
         "repo": "pocket-shield-release"
       }
     ]
-  }
+  },
+  "type": "module"
 }

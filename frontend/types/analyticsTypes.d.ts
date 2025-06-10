@@ -1,13 +1,16 @@
-import { Tag } from "@/components/AnalyticsDashboard"
+interface Tag {
+  type: string;
+  count: number;
+}
 
-export interface ObjectDatabaseRecord {
+interface ObjectDatabaseRecord {
   taggedTokens: [string, string][];
   tokenContexts?: { left: string; right: string }[];
   sourceObject: string;
   groups: string[];
 }
 
-export interface ClassifiedTokenDatabaseRecord {
+interface ClassifiedTokenDatabaseRecord {
   token: string;
   tag: string;
   sourceObject: string;
@@ -20,14 +23,13 @@ export interface ClassifiedTokenDatabaseRecord {
   end?: number;
 }
 
-export interface DatabaseTableProps {
-  loadMoreObjectRecords: () => Promise<ObjectDatabaseRecord[]>;
-  loadMoreClassifiedTokenRecords: () => Promise<ClassifiedTokenDatabaseRecord[]>;
+interface DatabaseTableProps {
   groups: string[];
   tags: Tag[];
+  uploadId?: string;
 }
 
-export interface TableContentProps {
+interface TableContentProps {
   viewMode: ViewMode;
   objectRecords: ObjectDatabaseRecord[];
   tokenRecords: ClassifiedTokenDatabaseRecord[];
@@ -35,10 +37,12 @@ export interface TableContentProps {
   tagFilters: Record<string, boolean>;
   isLoadingObjectRecords: boolean;
   isLoadingTokenRecords: boolean;
-  tags: Tag[]; 
+  tags: Tag[];
   hasMoreTokens?: boolean;
   hasMoreObjects?: boolean;
   onLoadMore?: () => void;
+  showFilterContent: boolean;
+  pathMap?: Record<string, string>;
 }
 
-export type ViewMode = 'object' | 'classified-token'; 
+type ViewMode = 'object' | 'classified-token';

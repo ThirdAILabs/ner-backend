@@ -164,8 +164,9 @@ func TestCreateReport(t *testing.T) {
 	payload := api.CreateReportRequest{
 		ReportName:     "test-report",
 		ModelId:        modelId,
-		SourceS3Bucket: "test-bucket",
-		SourceS3Prefix: "test-prefix",
+		S3Region:       "us-east-2",
+		SourceS3Bucket: "thirdai-corp-public",
+		SourceS3Prefix: "sample-pdfs/MACH.pdf",
 		Tags:           []string{"name", "phone"},
 		CustomTags:     map[string]string{"tag1": "pattern1", "tag2": "pattern2"},
 		Groups: map[string]string{
@@ -204,12 +205,51 @@ func TestCreateReport(t *testing.T) {
 		Name:   "Model1",
 		Status: database.ModelTrained,
 	}, report.Model)
-	assert.Equal(t, "test-bucket", report.SourceS3Bucket)
-	assert.Equal(t, "test-prefix", report.SourceS3Prefix)
+	assert.Equal(t, "thirdai-corp-public", report.SourceS3Bucket)
+	assert.Equal(t, "sample-pdfs/MACH.pdf", report.SourceS3Prefix)
 	assert.ElementsMatch(t, []string{"name", "phone"}, report.Tags)
 	assert.Equal(t, map[string]string{"tag1": "pattern1", "tag2": "pattern2"}, report.CustomTags)
 	assert.Equal(t, 2, len(report.Groups))
 	assert.Equal(t, database.JobQueued, report.ShardDataTaskStatus)
+}
+
+func TestCreateReport_InvalidS3(t *testing.T) {
+	modelId := uuid.New()
+	db := createDB(t,
+		&database.Model{Id: modelId, Name: "Model1", Type: "regex", Status: database.ModelTrained},
+		&database.ModelTag{ModelId: modelId, Tag: "name"},
+		&database.ModelTag{ModelId: modelId, Tag: "email"},
+		&database.ModelTag{ModelId: modelId, Tag: "phone"},
+	)
+
+	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	router := chi.NewRouter()
+	service.AddRoutes(router)
+
+	payload := api.CreateReportRequest{
+		ReportName:     "test-report",
+		ModelId:        modelId,
+		SourceS3Bucket: "test-bucket",
+		SourceS3Prefix: "test-prefix",
+		Tags:           []string{"name", "phone"},
+		CustomTags:     map[string]string{"tag1": "pattern1", "tag2": "pattern2"},
+		Groups: map[string]string{
+			"group1": `label1 CONTAINS "xyz"`,
+			"group2": `COUNT(label2) > 8`,
+		},
+	}
+
+	body, err := json.Marshal(payload)
+	assert.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodPost, "/reports", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	assert.Contains(t, rec.Body.String(), "failed to verify access to s3")
 }
 
 func TestGetReport(t *testing.T) {
@@ -272,6 +312,8 @@ func TestGetReport(t *testing.T) {
 		assert.Equal(t, map[string]string{"tag1": "pattern1"}, report.CustomTags)
 		assert.Equal(t, 2, len(report.Groups))
 		assert.Equal(t, database.JobCompleted, report.ShardDataTaskStatus)
+		assert.GreaterOrEqual(t, report.TotalInferenceTimeSeconds, 0.0)
+		assert.GreaterOrEqual(t, report.ShardDataTimeSeconds, 0.0)
 	})
 
 	t.Run("GetReportGroups", func(t *testing.T) {
@@ -480,36 +522,104 @@ func TestGetReportPreviews(t *testing.T) {
 		Object:    "doc2.txt",
 		TokenTags: datatypes.JSON(b),
 	}
-	db := createDB(t, p1, p2)
+	p3 := &database.ObjectPreview{
+		ReportId:  reportId,
+		Object:    "doc3.txt",
+		TokenTags: datatypes.JSON([]byte(`{"tokens":["foo"],"tags":["TAG2"]}`)),
+	}
+
+	e1 := &database.ObjectEntity{
+		ReportId: reportId,
+		Object:   "doc1.txt",
+		Start:    0, End: 1,
+		Label: "TAG1",
+		Text:  "",
+	}
+	e2 := &database.ObjectEntity{
+		ReportId: reportId,
+		Object:   "doc2.txt",
+		Start:    0, End: 1,
+		Label: "TAG1",
+		Text:  "",
+	}
+	e3 := &database.ObjectEntity{
+		ReportId: reportId,
+		Object:   "doc3.txt",
+		Start:    0, End: 1,
+		Label: "TAG2",
+		Text:  "",
+	}
+
+	db := createDB(t, p1, p2, p3, e1, e2, e3)
 
 	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024, nil)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
-	url := fmt.Sprintf("/reports/%s/objects?limit=10&offset=0", reportId.String())
-	req := httptest.NewRequest(http.MethodGet, url, nil)
-	rec := httptest.NewRecorder()
-	router.ServeHTTP(rec, req)
+	// Test: Get previews with tag filter "TAG1"
+	t.Run("GetPreviewsWithTagFilter", func(t *testing.T) {
+		url := fmt.Sprintf("/reports/%s/objects?limit=10&offset=0&tags=TAG1", reportId.String())
+		req := httptest.NewRequest(http.MethodGet, url, nil)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
 
-	assert.Equal(t, http.StatusOK, rec.Code)
-	var resp []api.ObjectPreviewResponse
-	err = json.Unmarshal(rec.Body.Bytes(), &resp)
-	require.NoError(t, err)
-	assert.Len(t, resp, 2)
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var resp []api.ObjectPreviewResponse
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
 
-	want := []api.ObjectPreviewResponse{
-		{
-			Object: "doc1.txt",
-			Tokens: []string{"foo", "bar", "baz"},
-			Tags:   []string{"O", "TAG1", "O"},
-		},
-		{
-			Object: "doc2.txt",
-			Tokens: []string{"foo", "bar", "baz"},
-			Tags:   []string{"O", "TAG1", "O"},
-		},
-	}
-	assert.ElementsMatch(t, want, resp)
+		want := []api.ObjectPreviewResponse{
+			{Object: "doc1.txt", Tokens: []string{"foo", "bar", "baz"}, Tags: []string{"O", "TAG1", "O"}},
+			{Object: "doc2.txt", Tokens: []string{"foo", "bar", "baz"}, Tags: []string{"O", "TAG1", "O"}},
+		}
+		assert.ElementsMatch(t, want, resp)
+	})
+
+	// Test: Get previews with tag filter "TAG2"
+	t.Run("GetPreviewsWithTag2Filter", func(t *testing.T) {
+		url := fmt.Sprintf("/reports/%s/objects?limit=10&offset=0&tags=TAG2", reportId.String())
+		req := httptest.NewRequest(http.MethodGet, url, nil)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var resp []api.ObjectPreviewResponse
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+
+		want := []api.ObjectPreviewResponse{
+			{Object: "doc3.txt", Tokens: []string{"foo"}, Tags: []string{"TAG2"}},
+		}
+		assert.ElementsMatch(t, want, resp)
+	})
+
+	// Test: Get previews with no matching tags
+	t.Run("GetPreviewsWithNoMatchingTags", func(t *testing.T) {
+		url := fmt.Sprintf("/reports/%s/objects?limit=10&offset=0&tags=TAG3", reportId.String())
+		req := httptest.NewRequest(http.MethodGet, url, nil)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var resp []api.ObjectPreviewResponse
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+		assert.Len(t, resp, 0)
+	})
+
+	// Test: Get previews with object filtering
+	t.Run("GetPreviewsWithObjectFilter", func(t *testing.T) {
+		url := fmt.Sprintf("/reports/%s/objects?limit=10&offset=0&object=doc1.txt", reportId.String())
+		req := httptest.NewRequest(http.MethodGet, url, nil)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var resp []api.ObjectPreviewResponse
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+
+		want := []api.ObjectPreviewResponse{
+			{Object: "doc1.txt", Tokens: []string{"foo", "bar", "baz"}, Tags: []string{"O", "TAG1", "O"}},
+		}
+		assert.ElementsMatch(t, want, resp)
+	})
 }
 
 func TestGetInferenceMetrics_NoTasks(t *testing.T) {
@@ -622,4 +732,98 @@ func TestGetInferenceMetrics_WithTasks(t *testing.T) {
 		assert.Equal(t, reportID, resp.ReportID)
 		assert.InEpsilon(t, 1.0, resp.ThroughputMBPerHour, 1e-6)
 	})
+}
+
+func TestValidateGroupDefinition_ValidDefinition(t *testing.T) {
+	service := backend.NewBackendService(nil, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	router := chi.NewRouter()
+	service.AddRoutes(router)
+
+	url := "/validate/group?GroupQuery=" + url.QueryEscape("COUNT(label1) > 0")
+	req := httptest.NewRequest(http.MethodGet, url, nil)
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+}
+
+func TestValidateGroupDefinition_InvalidDefinition(t *testing.T) {
+	service := backend.NewBackendService(nil, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	router := chi.NewRouter()
+	service.AddRoutes(router)
+
+	url := "/validate/group?GroupQuery=FAKEQUERY"
+	req := httptest.NewRequest(http.MethodGet, url, nil)
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusUnprocessableEntity, rec.Code)
+	assert.Contains(t, rec.Body.String(), "invalid query")
+}
+
+func TestValidateS3Bucket_PublicBucket(t *testing.T) {
+	service := backend.NewBackendService(nil, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	router := chi.NewRouter()
+	service.AddRoutes(router)
+
+	url := "/validate/s3?S3Endpoint=&S3Region=us-east-2&SourceS3Bucket=thirdai-corp-public&SourceS3Prefix="
+	req := httptest.NewRequest(http.MethodGet, url, nil)
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+}
+
+func TestValidateS3Bucket_InvalidBucket(t *testing.T) {
+	service := backend.NewBackendService(nil, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	router := chi.NewRouter()
+	service.AddRoutes(router)
+
+	url := "/validate/s3?S3Endpoint=&S3Region=us-east-1&SourceS3Bucket=test-bucket&SourceS3Prefix="
+	req := httptest.NewRequest(http.MethodGet, url, nil)
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+	assert.Contains(t, rec.Body.String(), "failed to verify access to s3")
+}
+
+func TestStoreAndGetFileNameToPath(t *testing.T) {
+	db := createDB(t)
+	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	router := chi.NewRouter()
+	service.AddRoutes(router)
+	
+	// First test storing
+	uploadId := uuid.New()
+	testMap := map[string]string{
+		"file1.txt": "path/to/file1.txt",
+		"file2.txt": "path/to/file2.txt",
+	}
+
+	url := fmt.Sprintf("/file-name-to-path/%s", uploadId.String())
+	body, err := json.Marshal(api.FileNameToPath{Mapping: testMap})
+	assert.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodPost, url, bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	// Then test getting
+	req = httptest.NewRequest(http.MethodGet, url, nil)
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var resp api.FileNameToPath
+	err = json.Unmarshal(rec.Body.Bytes(), &resp)
+	assert.NoError(t, err)
+	assert.Equal(t, testMap, resp.Mapping)
 }

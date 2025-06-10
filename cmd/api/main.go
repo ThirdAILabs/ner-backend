@@ -68,12 +68,16 @@ func main() {
 
 	cmd.InitializePresidioModel(db)
 
-	if err := cmd.InitializeCnnNerExtractor(context.Background(), db, s3Client, cfg.ModelBucketName, cfg.HostModelDir); err != nil {
+	if err := cmd.InitializeCnnNerExtractor(context.Background(), db, s3Client, cfg.ModelBucketName, "advanced", cfg.HostModelDir); err != nil {
 		log.Fatalf("Failed to init & upload CNN NER model: %v", err)
 	}
 
-	if err := cmd.InitializeTransformerModel(context.Background(), db, s3Client, cfg.ModelBucketName, cfg.HostModelDir); err != nil {
+	if err := cmd.InitializeTransformerModel(context.Background(), db, s3Client, cfg.ModelBucketName, "ultra", cfg.HostModelDir); err != nil {
 		log.Fatalf("Failed to init & upload Transformer model: %v", err)
+	}
+
+	if err := cmd.RemoveExcludedTagsFromAllModels(db); err != nil {
+		log.Fatalf("Failed to remove excluded tags from all models: %v", err)
 	}
 
 	// Initialize RabbitMQ Publisher

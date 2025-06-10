@@ -59,7 +59,8 @@ type Report struct {
 	IsUpload       bool
 
 	CreationTime       time.Time
-	CompletedFileCount int `gorm:"default:0"`
+	SucceededFileCount int `gorm:"default:0"`
+	FailedFileCount    int `gorm:"default:0"`
 	TotalFileCount     int `gorm:"default:0"`
 
 	Tags       []ReportTag `gorm:"foreignKey:ReportId;constraint:OnDelete:CASCADE"`
@@ -107,9 +108,10 @@ type InferenceTask struct {
 	StartTime      sql.NullTime
 	CompletionTime sql.NullTime
 
-	SourceS3Keys string
-	TotalSize    int64
-	TokenCount   int64 `gorm:"not null;default:0"`
+	SourceS3Keys  string
+	TotalSize     int64
+	CompletedSize int64 `gorm:"default:0"`
+	TokenCount    int64 `gorm:"not null;default:0"`
 }
 
 type Group struct {
@@ -149,4 +151,24 @@ type ReportError struct {
 	ErrorId   uuid.UUID `gorm:"type:uuid;primaryKey"`
 	Error     string
 	Timestamp time.Time
+}
+
+type ChatSession struct {
+	ID          uuid.UUID         `gorm:"type:uuid;primaryKey"`
+	Title       string            `gorm:"not null"`
+	TagMetadata datatypes.JSON    `gorm:"type:jsonb"`
+}
+
+type ChatHistory struct {
+	ID          uint            `gorm:"primary_key"`
+	SessionID   uuid.UUID       `gorm:"index"`
+	MessageType string          // 'user' or 'ai'
+	Content     string
+	Timestamp   time.Time       `gorm:"autoCreateTime"`
+	Metadata    datatypes.JSON  `gorm:"type:jsonb"` // {"key": "value"}
+}
+
+type FileNameToPath struct {
+	ID       uuid.UUID         `gorm:"type:uuid;primaryKey"`
+	Mapping  datatypes.JSON `gorm:"type:jsonb"`
 }
