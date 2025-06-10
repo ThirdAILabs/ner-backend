@@ -35,30 +35,33 @@ if (!fs.existsSync(modelPath)) {
   process.exit(1);
 }
 
-// Copy all files from the model folder to the bin directory
-const modelFolderName = path.basename(modelPath);
-const targetModelFolderPath = path.join(binDir, modelFolderName);
-
+// Copy only the specific model type directory
 try {
-  console.log(`Copying model folder from ${modelPath} to ${targetModelFolderPath}`);
-  
-  // Ensure target folder exists
-  if (!fs.existsSync(targetModelFolderPath)) {
-    fs.mkdirSync(targetModelFolderPath, { recursive: true });
+  const modelTypeDir = path.join(modelPath, modelType);
+  const targetModelDir = path.join(binDir, modelType);
+
+  if (!fs.existsSync(modelTypeDir)) {
+    console.error(`Model type directory not found at: ${modelTypeDir}`);
+    process.exit(1);
   }
 
-  // Read all files in the model folder
-  const files = fs.readdirSync(modelPath);
-  files.forEach(file => {
-    const sourceFilePath = path.join(modelPath, file);
-    const targetFilePath = path.join(targetModelFolderPath, file);
-
-    // Copy each file
-    fs.copyFileSync(sourceFilePath, targetFilePath);
-    console.log(`Copied ${file} to ${targetFilePath}`);
+  console.log(`Copying ${modelType} model from ${modelTypeDir} to ${targetModelDir}`);
+  fs.cpSync(modelTypeDir, targetModelDir, { 
+    recursive: true, 
+    force: true,
+    dereference: false,
+    preserveTimestamps: true
   });
+  console.log(`${modelType} model directory copied successfully!`);
 
-  console.log('Model folder copied successfully!');
+  // Create model_config.json
+  const configPath = path.join(binDir, 'model_config.json');
+  const config = {
+    model_type: modelType
+  };
+  
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+  console.log(`Created model configuration at ${configPath}`);
 } catch (error) {
   console.error('Failed to copy model files:', error.message);
   process.exit(1);
