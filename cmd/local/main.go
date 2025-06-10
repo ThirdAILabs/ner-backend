@@ -30,11 +30,12 @@ import (
 )
 
 type Config struct {
-	Root          string `env:"ROOT" envDefault:"./pocket-shield"`
-	Port          int    `env:"PORT" envDefault:"3001"`
-	License       string `env:"LICENSE_KEY" envDefault:""`
-	OnnxModelPath string `env:"MODEL_PATH" envDefault:""`
-	AppDataDir    string `env:"APP_DATA_DIR" envDefault:"./pocket-shield"`
+	Root       string `env:"ROOT" envDefault:"./pocket-shield"`
+	Port       int    `env:"PORT" envDefault:"3001"`
+	License    string `env:"LICENSE_KEY" envDefault:""`
+	ModelDir   string `env:"MODEL_DIR" envDefault:""`
+	ModelType  string `env:"MODEL_TYPE" envDefault:"cnn_model"`
+	AppDataDir string `env:"APP_DATA_DIR" envDefault:"./pocket-shield"`
 }
 
 const (
@@ -92,7 +93,7 @@ func createQueue(db *gorm.DB) *messaging.InMemoryQueue {
 	return queue
 }
 
-func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publisher, port int, modelDir string) *http.Server {
+func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publisher, port int, modelDir, modelType string) *http.Server {
 	r := chi.NewRouter()
 
 	// Middleware
@@ -111,10 +112,25 @@ func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publish
 
 	apiHandler := api.NewBackendService(db, storage, queue, chunkTargetBytes)
 
-	nerModel, err := core.LoadOnnxModel(modelDir)
+	loaders := core.NewModelLoaders("python", "plugin/plugin-python/plugin.py")
+
+	var loaderType string
+	switch {
+	case modelType == "udt_model":
+		loaderType = "bolt"
+	case modelType == "cnn_model":
+		loaderType = "cnn"
+	case modelType == "onnx_model":
+		loaderType = "onnx"
+	default:
+		log.Fatalf("Unknown model type in directory: %s", modelDir)
+	}
+
+	nerModel, err := loaders[loaderType](modelDir)
 	if err != nil {
 		log.Fatalf("could not load NER model: %v", err)
 	}
+
 	chatHandler := api.NewChatService(db, nerModel)
 
 	r.Route("/api/v1", func(r chi.Router) {
@@ -168,9 +184,22 @@ func main() {
 		log.Fatalf("Worker: Failed to create storage client: %v", err)
 	}
 
-	if cfg.OnnxModelPath != "" {
-		if err := cmd.InitializeOnnxModel(db, storage, modelBucket, "basic", cfg.OnnxModelPath); err != nil {
-			log.Fatalf("failed to init ONNX model: %v", err)
+	if cfg.ModelDir != "" {
+		switch cfg.ModelType {
+		case "udt_model":
+			if err := cmd.InitializeBoltModel(db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
+				log.Fatalf("Failed to init & upload bolt model: %v", err)
+			}
+		case "cnn_model":
+			if err := cmd.InitializeCnnNerExtractor(context.Background(), db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
+				log.Fatalf("Failed to init & upload CNN model: %v", err)
+			}
+		case "onnx_model":
+			if err := cmd.InitializeOnnxModel(db, storage, modelBucket, "basic", cfg.OnnxModelPath); err != nil {
+				log.Fatalf("failed to init ONNX model: %v", err)
+			}
+		default:
+			log.Fatalf("Invalid model type: %s. Must be either 'bolt' or 'cnn'", cfg.ModelType)
 		}
 	} else {
 		cmd.InitializePresidioModel(db)
@@ -186,19 +215,16 @@ func main() {
 
 	worker := core.NewTaskProcessor(db, storage, queue, queue, licensing, filepath.Join(cfg.Root, "models"), modelBucket, core.NewModelLoaders("python", "plugin/plugin-python/plugin.py"))
 
-	var onnxModel database.Model
-	if err := db.Where("name = ?", "basic").First(&onnxModel).Error; err != nil {
-		log.Fatalf("could not lookup onnx model: %v", err)
+	var basicModel database.Model
+	if err := db.Where("name = ?", "basic").First(&basicModel).Error; err != nil {
+		log.Fatalf("could not lookup basic model: %v", err)
 	}
 
-	onnxDir := filepath.Join(cfg.Root, "models", onnxModel.Id.String())
-	slog.Info("downloading ONNX model directory", "path", onnxDir)
-	if err := storage.DownloadDir(context.Background(), modelBucket, onnxModel.Id.String(), onnxDir, false); err != nil {
-		log.Fatalf("failed to download onnx model: %v", err)
+	basicModelDir := filepath.Join(cfg.Root, "models", basicModel.Id.String())
+	if err := storage.DownloadDir(context.Background(), modelBucket, basicModel.Id.String(), basicModelDir, true); err != nil {
+		log.Fatalf("failed to download model: %v", err)
 	}
-	slog.Info("ONNX model directory", "path", onnxDir)
-
-	server := createServer(db, storage, queue, cfg.Port, onnxDir)
+	server := createServer(db, storage, queue, cfg.Port, basicModelDir, cfg.ModelType)
 
 	slog.Info("starting worker")
 	go worker.Start()

@@ -11,9 +11,15 @@ const projectRoot = path.join(__dirname, '..');
 const binDir = path.join(projectRoot, 'bin');
 
 // Get model path from environment variable
-const modelPath = process.env.MODEL_PATH;
+const modelPath = process.env.MODEL_DIR;
 if (!modelPath) {
-  console.error('MODEL_PATH environment variable is not set');
+  console.error('MODEL_DIR environment variable is not set');
+  process.exit(1);
+}
+
+const modelType = process.env.MODEL_TYPE;
+if (!modelType) {
+  console.error('MODEL_TYPE environment variable is not set');
   process.exit(1);
 }
 
@@ -54,6 +60,6 @@ try {
 
   console.log('Model folder copied successfully!');
 } catch (error) {
-  console.error('Failed to copy model folder:', error.message);
+  console.error('Failed to copy model files:', error.message);
   process.exit(1);
 }

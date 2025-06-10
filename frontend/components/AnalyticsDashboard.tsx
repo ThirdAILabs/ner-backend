@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import _ from 'lodash';
+import { Clock, HardDrive, CheckCircle2 } from 'lucide-react';
 
 import { formatFileSize, formatNumber } from '@/lib/utils';
 
@@ -64,96 +65,173 @@ export function AnalyticsDashboard({
   const filesFailed = (failedFileCount * 100) / totalFileCount || 0;
 
   const formattedTime = formatTime(timeTaken);
-
+  console.log('Ha ha ha...', failedFileCount / totalFileCount);
   return (
     <div className="space-y-6 w-full">
       {/* Top Widgets */}
       <div className="grid grid-cols-3 gap-4">
         {/* Progress Widget */}
-        <Card className="col-start-1 flex flex-col justify-between">
-          <CardContent className="flex flex-col items-center justify-center flex-1 pt-6">
-            <div className="relative h-36 w-36">
-              <svg className="h-full w-full" viewBox="0 0 120 120">
-                {/* Background circle */}
-                <circle cx="60" cy="60" r="52" fill="none" stroke="#dddddd" strokeWidth="10" />
+        <Card className="flex flex-col justify-between transition-all duration-300 bg-gradient-to-br from-white to-gray-50/50">
+          <CardContent className="flex flex-col pt-4 pb-3 h-full">
+            {' '}
+            <div className="flex items-center space-x-2 mb-4">
+              {' '}
+              <div className="p-1.5 bg-indigo-100 rounded-lg">
+                {' '}
+                <CheckCircle2 className="h-4 w-4 text-indigo-600" />
+              </div>
+              <h3 className="text-sm font-semibold text-gray-700">File Progress</h3>
+            </div>
+            <div className="flex-1 flex items-center justify-between">
+              <div className="relative h-28 w-28">
+                {' '}
+                <svg className="h-full w-full -rotate-90 transform" viewBox="0 0 120 120">
+                  <defs>
+                    <linearGradient id="successGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#22c55e" />
+                      <stop offset="100%" stopColor="#16a34a" />
+                    </linearGradient>
+                    <linearGradient id="failureGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#ef4444" />
+                      <stop offset="100%" stopColor="#dc2626" />
+                    </linearGradient>
+                  </defs>
 
-                {/* Success arc (green) */}
-                <circle
-                  cx="60"
-                  cy="60"
-                  r="52"
-                  fill="none"
-                  stroke="#4caf50"
-                  strokeWidth="10"
-                  strokeDasharray={`${(succeededFileCount / totalFileCount) * 326.725} 326.725`}
-                  transform="rotate(-90 60 60)"
-                />
+                  <circle cx="60" cy="60" r="52" fill="none" stroke="#f3f4f6" strokeWidth="6" />
+                  <circle
+                    cx="60"
+                    cy="60"
+                    r="52"
+                    fill="none"
+                    stroke="url(#successGradient)"
+                    strokeWidth="6"
+                    strokeLinecap="round"
+                    strokeDasharray={`${(succeededFileCount / totalFileCount) * 326.725} 326.725`}
+                    className="transition-all duration-500 ease-in-out"
+                  />
+                  {failedFileCount > 0 && (
+                    <circle
+                      cx="60"
+                      cy="60"
+                      r="52"
+                      fill="none"
+                      stroke="url(#failureGradient)"
+                      strokeWidth="6"
+                      strokeLinecap="round"
+                      strokeDasharray={`${(failedFileCount / totalFileCount) * 326.725} 326.725`}
+                      strokeDashoffset={-((succeededFileCount / totalFileCount) * 326.725)}
+                      className="transition-all duration-500 ease-in-out"
+                    />
+                  )}
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-xl font-bold text-gray-800">{progress.toFixed(0)}%</span>
+                  <span className="text-[10px] font-medium text-gray-500">Complete</span>
+                </div>
+              </div>
 
-                {/* Failure arc (red), offset by the success arc */}
-                <circle
-                  cx="60"
-                  cy="60"
-                  r="52"
-                  fill="none"
-                  stroke="#ef4444"
-                  strokeWidth="10"
-                  strokeDasharray={`${(failedFileCount / totalFileCount) * 326.725} 326.725`}
-                  strokeDashoffset={-((succeededFileCount / totalFileCount) * 326.725)}
-                  transform="rotate(-90 60 60)"
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center space-y-0">
-                <span className="text-xl font-bold text-gray-700">{progress.toFixed(1)}%</span>
-                <span className="text-xs  text-gray-400">
-                  {filesSucceeded.toFixed(1)}% processed
-                </span>
-                <span className="text-xs  text-gray-400">{filesFailed.toFixed(1)}% failed</span>
+              <div className="flex flex-col space-y-3 pl-2">
+                {' '}
+                <div className="flex flex-col">
+                  <div className="flex items-center space-x-2">
+                    <div className="h-2.5 w-2.5 rounded-full bg-gradient-to-r from-green-500 to-green-600"></div>
+                    <span className="text-xs font-medium text-gray-600">Succeeded</span>
+                  </div>
+                  <span
+                    className={`text-xl font-bold ml-4 ${
+                      filesSucceeded > 80
+                        ? 'text-green-600'
+                        : filesSucceeded > 50
+                          ? 'text-green-500'
+                          : 'text-green-400'
+                    }`}
+                  >
+                    {' '}
+                    {filesSucceeded.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="flex flex-col">
+                  <div className="flex items-center space-x-2">
+                    <div className="h-2.5 w-2.5 rounded-full bg-gradient-to-r from-red-500 to-red-600"></div>
+                    <span className="text-xs font-medium text-gray-600">Failed</span>
+                  </div>
+                  <span
+                    className={`text-xl font-bold ml-4 ${
+                      filesFailed > 20
+                        ? 'text-red-600'
+                        : filesFailed > 10
+                          ? 'text-red-500'
+                          : 'text-red-400'
+                    }`}
+                  >
+                    {' '}
+                    {filesFailed.toFixed(1)}%
+                  </span>
+                </div>
               </div>
             </div>
-            <h3 className="mt-auto text-sm text-muted-foreground">File Progress</h3>
           </CardContent>
         </Card>
 
-        {/* Data Processed Widget (formerly Tokens Processed) */}
-        <Card className="flex flex-col justify-between">
-          <CardContent className="flex flex-col items-center pt-6 h-full">
-            <div className="flex-1 flex items-center">
-              <div className="flex flex-col items-center text-gray-700">
+        {/* Data Processed Widget */}
+        <Card className="flex flex-col justify-between transition-all duration-300 bg-gradient-to-br from-white to-gray-50/50">
+          <CardContent className="flex flex-col pt-6 h-full">
+            <div className="flex items-center space-x-2 mb-6">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <HardDrive className="h-5 w-5 text-blue-600" />
+              </div>
+              <h3 className="text-sm font-semibold text-gray-700">Data Successfully Processed</h3>
+            </div>
+            <div className="flex-1 flex items-center justify-center pb-4">
+              <div className="flex flex-col items-center">
                 {dataProcessed !== null && dataProcessed > 0 ? (
                   <>
-                    <span className="text-4xl font-semibold whitespace-nowrap">
-                      {formatFileSize(dataProcessed)}
-                    </span>
-                    <span className="text-xl font-medium text-gray-500 whitespace-nowrap">
-                      / {formatFileSize(tokensProcessed)}
-                    </span>
+                    <div className="flex flex-col items-center">
+                      <span className="text-4xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+                        {formatFileSize(dataProcessed)}
+                      </span>
+                      <div className="flex items-center space-x-2 mt-2">
+                        <div className="flex items-center space-x-1 px-2 py-1 bg-green-100 rounded-full">
+                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          <span className="text-sm font-medium text-green-800">Processed</span>
+                        </div>
+                        <span className="text-base font-medium text-gray-500">
+                          of {formatFileSize(tokensProcessed)}
+                        </span>
+                      </div>
+                    </div>
                   </>
                 ) : (
-                  <span className="text-4xl font-semibold whitespace-nowrap">
-                    {formatFileSize(tokensProcessed)}
-                  </span>
+                  <div className="flex flex-col items-center">
+                    <span className="text-4xl font-bold tracking-tight bg-gradient-to-r from-gray-600 to-gray-800 bg-clip-text text-transparent">
+                      {formatFileSize(tokensProcessed)}
+                    </span>
+                    <span className="text-sm text-gray-500 mt-2">Total Size</span>
+                  </div>
                 )}
               </div>
             </div>
-            <h3 className="text-sm text-muted-foreground text-center">
-              Data Successfully Processed
-            </h3>
           </CardContent>
         </Card>
 
-        {/* Time Taken */}
-        <Card className="flex flex-col justify-between">
-          <CardContent className="flex flex-col items-center pt-6 h-full">
-            <div className="flex-1 flex items-center">
+        {/* Time Taken Widget */}
+        <Card className="flex flex-col justify-between transition-all duration-300 bg-gradient-to-br from-white to-gray-50/50">
+          <CardContent className="flex flex-col pt-6 h-full">
+            <div className="flex items-center space-x-2 mb-6">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Clock className="h-5 w-5 text-purple-600" />
+              </div>
+              <h3 className="text-sm font-semibold text-gray-700">
+                {progress === 100 ? 'Time Taken' : 'Time Elapsed'}
+              </h3>
+            </div>
+            <div className="flex-1 flex flex-col items-center justify-center pb-4">
               <span
-                className={`font-semibold text-gray-700 text-center ${timeTakenToTextSize(
-                  formattedTime
-                )}`}
+                className={`font-bold tracking-tight bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent ${timeTakenToTextSize(formattedTime)}`}
               >
                 {formattedTime}
               </span>
             </div>
-            <h3 className="text-sm text-muted-foreground">Time Taken</h3>
           </CardContent>
         </Card>
       </div>

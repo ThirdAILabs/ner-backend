@@ -84,10 +84,10 @@ function getBackendPath() {
   return binPath ? path.join(binPath, 'main') : null;
 }
 
-function getDefaultModelPath() {
+function getModelConfigPath() {
   const binPath = getBinPath();
   if (!binPath) return null;
-  return path.join(binPath, 'onnx_model');
+  return path.join(binPath, 'model_config.json');
 }
 
 export async function startBackend() {
@@ -104,6 +104,7 @@ export async function startBackend() {
 
   await app.whenReady();
   const appDataDir = app.getPath('userData');
+  const modelConfigPath = getModelConfigPath();
 
   if (!fs.existsSync(backendPath)) {
     log.error(`Backend executable not found at: ${backendPath}`);
@@ -123,7 +124,16 @@ export async function startBackend() {
 
   log.debug('Spawning backend with cwd:', backendDir);
 
-  const backendLogPath = path.join(
+  let modelType = 'cnn_model';  // Default model type
+  try {
+    const modelConfig = JSON.parse(fs.readFileSync(modelConfigPath, 'utf8'));
+    modelType = modelConfig.model_type || modelType;
+    log.debug('Loaded model type from config:', modelType);
+  } catch (error) {
+    log.warn('Failed to load model config, using default:', error.message);
+  }
+
+  let backendLogPath = path.join(
     process.resourcesPath || __dirname,
     '..',
     'logs',
@@ -136,10 +146,8 @@ export async function startBackend() {
 
   log.debug(`All backend output → ${backendLogPath}`);
 
-  const frameworksDir = path.join(
-    process.resourcesPath || __dirname,
-    '..', // up to Resources
-    'Frameworks');
+  // Get the plugin executable path
+  const pluginPath = path.join(backendDir, 'plugin', 'plugin');
 
   const proc = spawn(
     backendPath,
@@ -148,11 +156,10 @@ export async function startBackend() {
       cwd: backendDir,
       env: {
         ...process.env,
-        PORT: FIXED_PORT.toString(),
-        MODEL_PATH: getDefaultModelPath(),
-        ONNX_RUNTIME_DYLIB: frameworksDir
-        ? path.join(frameworksDir, 'libonnxruntime.dylib')
-        : '',
+        PORT:       FIXED_PORT.toString(),
+        MODEL_DIR: getBinPath(),
+        MODEL_TYPE: modelType,
+        PLUGIN_SERVER: pluginPath,
         APP_DATA_DIR: appDataDir,
       },
       stdio: ['pipe', 'pipe', 'pipe']
