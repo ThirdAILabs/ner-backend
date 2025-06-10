@@ -7,129 +7,54 @@ import (
 )
 
 var (
-	punctChars = []string{
-		",", ".", "!", "?", ";", ":", "-", "_", "\"", "'", "`",
-		")", "]", "}", "(", "[", "{",
-	}
+	punctChars = ",.!?;:-_\"'`)]}([{"
 
-	tokenRE = regexp.MustCompile(`\S+(?:\s+|$)`)
+	replacePunctFollowedBySpaceRE = regexp.MustCompile(fmt.Sprintf(`(\S)[%s](\s)`, regexp.QuoteMeta(punctChars)))
+	replaceSpaceFollowedByPunctRE = regexp.MustCompile(fmt.Sprintf(`(\s)[%s](\S)`, regexp.QuoteMeta(punctChars)))
+
+	tokenRE = regexp.MustCompile(`\S+`)
 )
 
 func replacePunctFollowedBySpace(text string) string {
-	originalLen := len(text)
-
-	// Simulate (?<=\S)[punct](?=\s+) - replace punct with space when:
-	runes := []rune(text)
-	for i := 0; i < len(runes); i++ {
-		char := string(runes[i])
-
-		// Check if current char is punctuation
-		if isPunctChar(char) {
-			// Check if preceded by non-whitespace (lookbehind simulation)
-			hasPrecedingNonSpace := i > 0 && !isSpace(runes[i-1])
-
-			// Check if followed by one or more spaces (lookahead simulation)
-			hasFollowingSpaces := false
-			if i < len(runes)-1 {
-				j := i + 1
-				for j < len(runes) && isSpace(runes[j]) {
-					j++
-				}
-				hasFollowingSpaces = j > i+1 // at least one space found
-			}
-
-			if hasPrecedingNonSpace && hasFollowingSpaces {
-				runes[i] = ' '
-			}
-		}
+	newText := replacePunctFollowedBySpaceRE.ReplaceAllString(text, "$1 $2")
+	if len(text) != len(newText) {
+		panic(fmt.Sprintf("Text: '%s' Original length: %d, New length: %d", text, len(text), len(newText)))
 	}
 
-	result := string(runes)
-	newLen := len(result)
-	if originalLen != newLen {
-		panic(fmt.Sprintf("Original length: %d, New length: %d", originalLen, newLen))
-	}
-
-	return result
+	return newText
 }
 
-func replacePunctAfterSpace(text string) string {
-	originalLen := len(text)
-
-	// Simulate (\s+)[punct](?=\S) - replace punct with space when:
-	runes := []rune(text)
-	for i := 0; i < len(runes); i++ {
-		char := string(runes[i])
-
-		// Check if current char is punctuation
-		if isPunctChar(char) {
-			// Check if preceded by one or more spaces
-			hasPrecedingSpaces := false
-			if i > 0 {
-				j := i - 1
-				for j >= 0 && isSpace(runes[j]) {
-					j--
-				}
-				hasPrecedingSpaces = j < i-1 // at least one space found
-			}
-
-			// Check if followed by non-whitespace (lookahead simulation)
-			hasFollowingNonSpace := i < len(runes)-1 && !isSpace(runes[i+1])
-
-			if hasPrecedingSpaces && hasFollowingNonSpace {
-				runes[i] = ' '
-			}
-		}
+func replaceSpaceFollowedByPunct(text string) string {
+	newText := replaceSpaceFollowedByPunctRE.ReplaceAllString(text, "$1 $2")
+	if len(text) != len(newText) {
+		panic(fmt.Sprintf("Text: '%s' Original length: %d, New length: %d", text, len(text), len(newText)))
 	}
 
-	result := string(runes)
-	newLen := len(result)
-	if originalLen != newLen {
-		panic(fmt.Sprintf("Original length: %d, New length: %d", originalLen, newLen))
-	}
-
-	return result
+	return newText
 }
 
-func isPunctChar(char string) bool {
-	for _, p := range punctChars {
-		if char == p {
-			return true
-		}
-	}
-	return false
-}
-
-func isSpace(r rune) bool {
-	return r == ' ' || r == '\t' || r == '\n' || r == '\r' || r == '\f' || r == '\v'
-}
-
-func CleanTextWithSpans(text string) (string, [][2]int) {
-	t := replacePunctFollowedBySpace(text)
-	t = replacePunctAfterSpace(t)
+func CleanTextWithSpans(text string) (string, [][2]int, [][2]int) {
+	text = replacePunctFollowedBySpace(text)
+	text = replaceSpaceFollowedByPunct(text)
 
 	// Token+whitespace matches so we capture every run of spaces
-	spans := make([][2]int, 0)
-	var tokens []string
+	originalSpans := make([][2]int, 0)
+	cleanedSpans := make([][2]int, 0)
+	cleanedText := strings.Builder{}
 
-	matches := tokenRE.FindAllStringIndex(t, -1)
+	matches := tokenRE.FindAllStringIndex(text, -1)
 	for _, match := range matches {
-		start, end := match[0], match[1]
-		chunk := t[start:end]
-		tok := strings.TrimSpace(chunk)
+		originalStart, originalEnd := match[0], match[1]
+		token := text[originalStart:originalEnd]
 
-		if tok == "" {
-			continue
-		}
+		cleanedText.WriteByte(' ')
+		cleanedStart := cleanedText.Len()
+		cleanedText.WriteString(token)
+		cleanedEnd := cleanedText.Len()
 
-		// Calculate exact token boundaries
-		tokStart := start
-		tokEnd := start + len(tok)
-
-		spans = append(spans, [2]int{tokStart, tokEnd})
-		tokens = append(tokens, tok)
+		originalSpans = append(originalSpans, [2]int{originalStart, originalEnd})
+		cleanedSpans = append(cleanedSpans, [2]int{cleanedStart, cleanedEnd})
 	}
 
-	cleaned := strings.Join(tokens, " ")
-	return cleaned, spans
+	return cleanedText.String(), originalSpans, cleanedSpans
 }

@@ -6,22 +6,15 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"log/slog"
 	"os"
 	"path/filepath"
-	"sync"
-	"unicode"
 
 	"ner-backend/internal/core/types"
 	"ner-backend/pkg/api"
 
 	"github.com/daulet/tokenizers"
 	ort "github.com/yalue/onnxruntime_go"
-)
-
-var (
-	initOnce sync.Once
-	initErr  error
 )
 
 var idx2tag = []string{
@@ -31,48 +24,64 @@ var idx2tag = []string{
 	"SEXUAL_ORIENTATION", "SSN", "URL", "VIN",
 }
 
-func loadCRF(path string) ([][]float32, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	var mat [][]float32
-	if err := json.Unmarshal(data, &mat); err != nil {
-		return nil, err
-	}
-	return mat, nil
+type CRF struct {
+	Transitions [][]float32
+	StartProbs  []float32
+	EndProbs    []float32
 }
 
-func viterbi(emissions [][]float32, transitions [][]float32, seqLen int) []int {
-	N := len(transitions)
+func loadCRF(path string) (CRF, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return CRF{}, err
+	}
+	var data CRF
+	if err := json.NewDecoder(file).Decode(&data); err != nil {
+		return CRF{}, err
+	}
+	return data, nil
+}
+
+func (crf *CRF) NumTags() int {
+	return len(crf.Transitions)
+}
+
+func (crf *CRF) ViterbiDecode(emissions [][]float32) []int {
+	nTags := crf.NumTags()
+	seqLen := len(emissions)
 	dp := make([][]float32, seqLen)
 	bp := make([][]int, seqLen)
 	for t := 0; t < seqLen; t++ {
-		dp[t] = make([]float32, N)
-		bp[t] = make([]int, N)
+		dp[t] = make([]float32, nTags)
+		bp[t] = make([]int, nTags)
 	}
-	for j := 0; j < N; j++ {
-		dp[0][j] = emissions[0][j]
+	for j := 0; j < nTags; j++ {
+		dp[0][j] = emissions[0][j] + crf.StartProbs[j]
 	}
 	for t := 1; t < seqLen; t++ {
-		for j := 0; j < N; j++ {
-			maxScore := float32(-1e9)
-			var maxPrev int
-			for k := 0; k < N; k++ {
-				s := dp[t-1][k] + transitions[k][j] + emissions[t][j]
-				if s > maxScore {
-					maxScore = s
-					maxPrev = k
+		for currTag := 0; currTag < nTags; currTag++ {
+			bestScore := float32(-1e9)
+			var bestPrevTag int
+			for prevTag := 0; prevTag < nTags; prevTag++ {
+				s := dp[t-1][prevTag] + crf.Transitions[prevTag][currTag] + emissions[t][currTag]
+				if s > bestScore {
+					bestScore = s
+					bestPrevTag = prevTag
 				}
 			}
-			dp[t][j] = maxScore
-			bp[t][j] = maxPrev
+			dp[t][currTag] = bestScore
+			bp[t][currTag] = bestPrevTag
 		}
 	}
+
+	for j := 0; j < nTags; j++ {
+		dp[seqLen-1][j] += crf.EndProbs[j]
+	}
+
 	seq := make([]int, seqLen)
 	bestTag := 0
 	bestScore := float32(-1e9)
-	for j := 0; j < N; j++ {
+	for j := 0; j < nTags; j++ {
 		if dp[seqLen-1][j] > bestScore {
 			bestScore = dp[seqLen-1][j]
 			bestTag = j
@@ -85,45 +94,47 @@ func viterbi(emissions [][]float32, transitions [][]float32, seqLen int) []int {
 	return seq
 }
 
-func manualWordIDs(text string, offsets []tokenizers.Offset) []int {
-	wordIDs := make([]int, len(offsets))
-	cur, lastEnd := -1, -1
-	for i, off := range offsets {
-		start, end := int(off[0]), int(off[1])
-		if start == 0 && end == 0 {
-			wordIDs[i] = -1
-		} else {
-			if (start == 0 || unicode.IsSpace(rune(text[start]))) && start >= lastEnd {
-				cur++
-			}
-			wordIDs[i] = cur
+func getWordIds(wordOffsets [][2]int, tokenOffsets []tokenizers.Offset) []int {
+	// This function assumes that the word/token offets are non-overlapping and sorted.
+	wordIDs := make([]int, len(tokenOffsets))
+	wordID := 0
+
+	for i, off := range tokenOffsets {
+		tokenStart, tokenEnd := int(off[0]), int(off[1])
+
+		for wordID < len(wordOffsets) && wordOffsets[wordID][1] <= tokenStart {
+			wordID++ // skip words that end before the token starts
 		}
-		lastEnd = end
+
+		if wordID < len(wordOffsets) && wordOffsets[wordID][0] < tokenEnd {
+			wordIDs[i] = wordID // token overlaps with this word
+		} else {
+			wordIDs[i] = -1 // token does not overlap with any word
+		}
 	}
+
 	return wordIDs
 }
 
-func aggregatePredictions(tags []string, lens []int) []string {
-	a := make([]string, len(lens))
-	ptr := 0
-	for wi, l := range lens {
-		best := "O"
-		for j := 0; j < l; j++ {
-			if tags[ptr+j] != "O" {
-				best = tags[ptr+j]
-				break
-			}
-		}
-		a[wi] = best
-		ptr += l
+func aggregatePredictions(tags []string, wordIds []int, numWords int) []string {
+	preds := make([]string, numWords)
+	for i := range preds {
+		preds[i] = "O"
 	}
-	return a
+
+	for i, tag := range tags {
+		if wordID := wordIds[i]; wordID >= 0 && preds[wordID] == "O" {
+			preds[wordID] = tag
+		}
+	}
+
+	return preds
 }
 
 type OnnxModel struct {
-	session     *ort.DynamicAdvancedSession
-	tokenizer   *tokenizers.Tokenizer
-	transitions [][]float32
+	session   *ort.DynamicAdvancedSession
+	tokenizer *tokenizers.Tokenizer
+	crf       CRF
 }
 
 func decryptModel(encPath, keyB64 string) ([]byte, error) {
@@ -135,7 +146,7 @@ func decryptModel(encPath, keyB64 string) ([]byte, error) {
 		return nil, fmt.Errorf("MODEL_KEY must be 32 bytes")
 	}
 
-	ct, err := ioutil.ReadFile(encPath)
+	ct, err := os.ReadFile(encPath)
 	if err != nil {
 		return nil, fmt.Errorf("read encrypted model: %w", err)
 	}
@@ -170,7 +181,7 @@ func LoadOnnxModel(modelDir string) (Model, error) {
 		return nil, fmt.Errorf("decrypt model: %w", err)
 	}
 
-	trans, err := loadCRF(crfPath)
+	crf, err := loadCRF(crfPath)
 	if err != nil {
 		return nil, fmt.Errorf("CRF load error: %w", err)
 	}
@@ -191,90 +202,66 @@ func LoadOnnxModel(modelDir string) (Model, error) {
 	}
 
 	return &OnnxModel{
-		session:     session,
-		tokenizer:   tk,
-		transitions: trans,
+		session:   session,
+		tokenizer: tk,
+		crf:       crf,
 	}, nil
 }
 
 func (m *OnnxModel) Predict(text string) ([]types.Entity, error) {
-	cleanedText, originalSpans := CleanTextWithSpans(text)
+	cleanedText, originalWordOffsets, cleanedWordOffsets := CleanTextWithSpans(text)
+
 	enc := m.tokenizer.EncodeWithOptions(cleanedText, false, tokenizers.WithReturnAllAttributes())
 	ids := make([]int64, len(enc.IDs))
 	for i, v := range enc.IDs {
 		ids[i] = int64(v)
 	}
-	B, L, N := int64(1), int64(len(ids)), int64(len(m.transitions))
+
+	B, L, N := int64(1), int64(len(ids)), int64(m.crf.NumTags())
+
 	inT, err := ort.NewTensor(ort.NewShape(B, L), ids)
 	if err != nil {
 		return nil, err
 	}
-	defer inT.Destroy()
+	defer func() {
+		if err := inT.Destroy(); err != nil {
+			slog.Error("failed to destroy input tensor", "error", err)
+		}
+	}()
+
 	outT, err := ort.NewEmptyTensor[float32](ort.NewShape(B, L, N))
 	if err != nil {
 		return nil, err
 	}
-	defer outT.Destroy()
+	defer func() {
+		if err := outT.Destroy(); err != nil {
+			slog.Error("failed to destroy output tensor", "error", err)
+		}
+	}()
+
 	if err := m.session.Run([]ort.Value{inT}, []ort.Value{outT}); err != nil {
 		return nil, fmt.Errorf("session run error: %w", err)
 	}
+
 	flat := outT.GetData()
 	seq := make([][]float32, L)
 	for t := int64(0); t < L; t++ {
 		start := t * N
 		seq[t] = flat[start : start+N]
 	}
-	tagsIdx := viterbi(seq, m.transitions, int(L))
+
+	tagsIdx := m.crf.ViterbiDecode(seq)
 	subTags := make([]string, len(tagsIdx))
-	for i, j := range tagsIdx {
-		if j >= 0 && j < len(idx2tag) {
-			subTags[i] = idx2tag[j]
-		} else {
-			subTags[i] = "O"
-		}
-	}
-	offsets := enc.Offsets
-	wordIDs := manualWordIDs(cleanedText, offsets)
-	maxW := 0
-	for _, w := range wordIDs {
-		if w > maxW {
-			maxW = w
-		}
-	}
-	sublens := make([]int, maxW+1)
-	for _, w := range wordIDs {
-		if w >= 0 {
-			sublens[w]++
-		}
-	}
-	wordTags := aggregatePredictions(subTags, sublens)
-
-	maxW = len(sublens)
-	groups := make([][]tokenizers.Offset, maxW)
-	for subIdx, wid := range wordIDs {
-		if wid >= 0 {
-			groups[wid] = append(groups[wid], enc.Offsets[subIdx])
-		}
+	for i, tagID := range tagsIdx {
+		subTags[i] = idx2tag[tagID]
 	}
 
-	spans := make([][2]int, len(groups))
-	for wid, offs := range groups {
-		if len(offs) == 0 {
-			spans[wid] = [2]int{0, 0}
-		} else {
-			spans[wid] = [2]int{
-				int(offs[0][0]),
-				int(offs[len(offs)-1][1]),
-			}
-		}
-	}
+	wordIDs := getWordIds(cleanedWordOffsets, enc.Offsets)
+
+	wordTags := aggregatePredictions(subTags, wordIDs, len(cleanedWordOffsets))
 
 	var ents []types.Entity
-	for wid, offs := range groups {
-		if len(offs) == 0 {
-			continue
-		}
-		tag := wordTags[wid]
+	for wid, tag := range wordTags {
 		if tag == "O" {
 			continue
 		}
@@ -282,8 +269,8 @@ func (m *OnnxModel) Predict(text string) ([]types.Entity, error) {
 		ents = append(ents, types.CreateEntity(
 			tag,
 			text,
-			originalSpans[wid][0],
-			originalSpans[wid][1],
+			originalWordOffsets[wid][0],
+			originalWordOffsets[wid][1],
 		))
 	}
 	return ents, nil
@@ -298,6 +285,10 @@ func (m *OnnxModel) Save(path string) error {
 }
 
 func (m *OnnxModel) Release() {
-	m.session.Destroy()
-	m.tokenizer.Close()
+	if err := m.session.Destroy(); err != nil {
+		slog.Error("failed to destroy ONNX session", "error", err)
+	}
+	if err := m.tokenizer.Close(); err != nil {
+		slog.Error("failed to close tokenizer", "error", err)
+	}
 }

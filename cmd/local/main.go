@@ -30,12 +30,13 @@ import (
 )
 
 type Config struct {
-	Root       string `env:"ROOT" envDefault:"./pocket-shield"`
-	Port       int    `env:"PORT" envDefault:"3001"`
-	License    string `env:"LICENSE_KEY" envDefault:""`
-	ModelDir   string `env:"MODEL_DIR" envDefault:""`
-	ModelType  string `env:"MODEL_TYPE" envDefault:"cnn_model"`
-	AppDataDir string `env:"APP_DATA_DIR" envDefault:"./pocket-shield"`
+	Root             string `env:"ROOT" envDefault:"./pocket-shield"`
+	Port             int    `env:"PORT" envDefault:"3001"`
+	License          string `env:"LICENSE_KEY" envDefault:""`
+	ModelDir         string `env:"MODEL_DIR" envDefault:""`
+	ModelType        string `env:"MODEL_TYPE" envDefault:"cnn_model"`
+	AppDataDir       string `env:"APP_DATA_DIR" envDefault:"./pocket-shield"`
+	OnnxRuntimeDylib string `env:"ONNX_RUNTIME_DYLIB"`
 }
 
 const (
@@ -145,22 +146,25 @@ func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publish
 }
 
 func main() {
-	dylib := os.Getenv("ONNX_RUNTIME_DYLIB")
-	if dylib == "" {
-		log.Fatalf("ONNX_RUNTIME_DYLIB must be set")
-	}
-	ort.SetSharedLibraryPath(dylib)
-	if err := ort.InitializeEnvironment(); err != nil {
-		log.Fatalf("could not init ONNX Runtime: %v", err)
-	}
-	defer ort.DestroyEnvironment()
-
 	const modelBucket = "models"
 
 	var cfg Config
 	if err := env.Parse(&cfg); err != nil {
 		log.Fatalf("error parsing config: %v", err)
 	}
+
+	if cfg.OnnxRuntimeDylib == "" {
+		log.Fatalf("ONNX_RUNTIME_DYLIB must be set")
+	}
+	ort.SetSharedLibraryPath(cfg.OnnxRuntimeDylib)
+	if err := ort.InitializeEnvironment(); err != nil {
+		log.Fatalf("could not init ONNX Runtime: %v", err)
+	}
+	defer func() {
+		if err := ort.DestroyEnvironment(); err != nil {
+			log.Fatalf("error destroying onnx env: %v", err)
+		}
+	}()
 
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	if err := os.MkdirAll(cfg.Root, os.ModePerm); err != nil {
