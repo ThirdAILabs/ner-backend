@@ -26,13 +26,14 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { useHealth } from '@/contexts/HealthProvider';
 import { alpha } from '@mui/material/styles';
 
+// First, modify the shimmer keyframes to be dynamic using CSS custom properties
 const shimmerKeyframes = `
 @keyframes shimmer {
   0% {
     transform: translateX(-100%);
   }
   100% {
-    transform: translateX(400px);
+    transform: translateX(var(--shimmer-width, 400px));
   }
 }
 `;
@@ -337,6 +338,10 @@ export default function Jobs() {
                   left: 0,
                   right: 0,
                   bottom: 0,
+                  '--shimmer-width':
+                    succeededFileCount + failedFileCount === 0
+                      ? '400px'
+                      : `${((succeededFileCount + failedFileCount) / fileCount) * 400}px`,
                   '&::after': {
                     content: '""',
                     position: 'absolute',
