@@ -314,11 +314,11 @@ function JobDetail() {
       <div className="flex items-center justify-between mb-6">
         <Button variant="outline" size="sm" asChild>
           <Link href={`/token-classification/landing?tab=jobs`} className="flex items-center">
-            <ArrowLeft className="mr-1 h-4 w-4" /> Back to Reports
+            <ArrowLeft className="mr-1 h-4 w-4" /> Back to Scans
           </Link>
         </Button>
         <h1 className="text-2xl font-medium text-center flex-1">
-          {reportData?.ReportName || '[Report Name]'}
+          {reportData?.ReportName || '[Scan Name]'}
         </h1>
         {/* Empty div to maintain spacing */}
         <div className="w-[106px]"></div> {/* Width matches the Back button */}
