@@ -82,6 +82,7 @@
 }
 
 @layer base {
+
   html,
   body,
   #__next {
@@ -121,4 +122,25 @@ input[type='search']::-ms-clear {
 .titlebar {
   -webkit-app-region: drag;
   -webkit-user-select: none;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(var(--shimmer-width, 400px));
+  }
+}
+
+.shimmer-effect::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 40px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  animation: shimmer 2.5s infinite;
 }
