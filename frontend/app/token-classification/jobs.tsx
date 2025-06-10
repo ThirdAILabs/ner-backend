@@ -47,14 +47,14 @@ export default function Jobs() {
           prev.map((r) =>
             r.Id === report.Id
               ? {
-                ...r,
-                SucceededFileCount: detailedReport.SucceededFileCount,
-                detailedStatus: {
-                  ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
-                  InferenceTaskStatuses: detailedReport.InferenceTaskStatuses,
-                },
-                isLoadingStatus: false,
-              }
+                  ...r,
+                  SucceededFileCount: detailedReport.SucceededFileCount,
+                  detailedStatus: {
+                    ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
+                    InferenceTaskStatuses: detailedReport.InferenceTaskStatuses,
+                  },
+                  isLoadingStatus: false,
+                }
               : r
           )
         );
@@ -114,7 +114,7 @@ export default function Jobs() {
       }
     };
     if (healthStatus) fetchReports();
-    return () => { };
+    return () => {};
   }, [healthStatus]);
 
   if (loading) {
@@ -315,25 +315,25 @@ export default function Jobs() {
             {/* Loading animation */}
             {(succeededFileCount + failedFileCount < fileCount ||
               (succeededFileCount + failedFileCount === 0 && fileCount > 0)) && (
-                <Box
-                  className="shimmer-effect"
-                  sx={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    '--shimmer-width':
-                      succeededFileCount + failedFileCount === 0
-                        ? '400px'
-                        : `${((succeededFileCount + failedFileCount) / fileCount) * 400}px`,
-                    width:
-                      succeededFileCount + failedFileCount === 0
-                        ? '100%'
-                        : `${((succeededFileCount + failedFileCount) / fileCount) * 100}%`,
-                  }}
-                />
-              )}
+              <Box
+                className="shimmer-effect"
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  '--shimmer-width':
+                    succeededFileCount + failedFileCount === 0
+                      ? '400px'
+                      : `${((succeededFileCount + failedFileCount) / fileCount) * 400}px`,
+                  width:
+                    succeededFileCount + failedFileCount === 0
+                      ? '100%'
+                      : `${((succeededFileCount + failedFileCount) / fileCount) * 100}%`,
+                }}
+              />
+            )}
           </Box>
           <Typography
             variant="body2"

@@ -82,7 +82,6 @@
 }
 
 @layer base {
-
   html,
   body,
   #__next {
@@ -135,7 +134,7 @@ input[type='search']::-ms-clear {
 }
 
 .shimmer-effect::after {
-  content: "";
+  content: '';
   position: absolute;
   top: 0;
   left: 0;
