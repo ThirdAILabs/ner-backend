@@ -162,12 +162,10 @@ function SafeGPTContent() {
   return (
     <div>
       <div
-        className={`fixed inset-0 flex items-center justify-center z-50 transition-all duration-300 ease-in-out ${
+        className={`fixed inset-0 flex items-start justify-start z-50 transition-all duration-300 ease-in-out p-4 ${
           showNewChatDialog ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
-        style={{ 
-          marginLeft: isSidebarCollapsed ? '0px' : SIDEBAR_WIDTH,
-        }}
+        style={{ paddingTop: '70px' }}
       >
         <div className={`bg-white rounded-lg shadow-lg p-6 border border-gray-200 transition-all duration-300 ease-in-out transform ${
           showNewChatDialog ? 'scale-100 translate-y-0' : 'scale-95 translate-y-2'
