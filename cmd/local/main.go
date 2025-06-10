@@ -33,7 +33,7 @@ type Config struct {
 	Port       int    `env:"PORT" envDefault:"3001"`
 	License    string `env:"LICENSE_KEY" envDefault:""`
 	ModelDir   string `env:"MODEL_DIR" envDefault:""`
-	ModelType  string `env:"MODEL_TYPE" envDefault:"bolt_udt"`
+	ModelType  string `env:"MODEL_TYPE"`
 	AppDataDir string `env:"APP_DATA_DIR" envDefault:"./pocket-shield"`
 }
 
