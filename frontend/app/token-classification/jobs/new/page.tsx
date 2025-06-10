@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Box } from '@mui/material';
+import { Box, CircularProgress } from '@mui/material';
 import { ArrowLeft, Plus, RefreshCw, Edit } from 'lucide-react';
 import { nerService } from '@/lib/backend';
 import { NO_GROUP, uniqueFileNames, getFilesFromElectron } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
+import { CheckIcon, SearchIcon } from '@heroicons/react/solid';
 
 const SUPPORTED_TYPES = ['.pdf', '.txt', '.csv', '.html', '.json', '.xml'];
 
@@ -283,6 +284,31 @@ export default function NewJobPage() {
   //Bi-default Presidio model is selected.
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState<any>(null);
+  const [modelSearchQuery, setModelSearchQuery] = useState('');
+  
+  // Filter custom models
+  const filteredCustomModels = useMemo(() => {
+    return models
+      .filter(model => !['basic', 'advanced'].includes(model.Name.toLowerCase()))
+      .filter(model => 
+        model.Name.toLowerCase().includes(modelSearchQuery.toLowerCase())
+      );
+  }, [models, modelSearchQuery]);
+
+  const builtInModels = useMemo(() => {
+    return [
+      {
+        Id: 'basic',
+        Name: 'Basic',
+        Description: 'Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.'
+      },
+      {
+        Id: 'advanced',
+        Name: 'Advanced',
+        Description: 'Our most advanced AI model, available on enterprise platform. Allows users to perpetually customize fields with user feedback, includes advanced monitoring features.'
+      }
+    ];
+  }, []);
 
   // Tags handling
   const [availableTags, setAvailableTags] = useState<string[]>([]);
@@ -868,18 +894,18 @@ export default function NewJobPage() {
                       className="flex items-center justify-between px-4 py-2 border-b last:border-b-0 hover:bg-gray-50"
                     >
                       <div className="flex items-center">
-                        <div className="text-sm text-gray-600">
-                          {fullPath || file.name}
-                          <span className="text-xs text-gray-400 ml-2">
-                            ({(file.size / 1024).toFixed(1)} KB)
-                          </span>
-                        </div>
+                        <span className="text-sm text-gray-600">
+                          {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                        </span>
+                        {fullPath && (
+                          <span className="ml-2 text-xs text-gray-400">{fullPath}</span>
+                        )}
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                      <button
+                        type="button"
                         onClick={() => removeFile(index)}
-                        className="text-red-500"
+                        className="text-red-500 hover:text-red-700 p-1"
+                        aria-label="Remove file"
                       >
                         <svg
                           className="h-4 w-4"
@@ -894,7 +920,7 @@ export default function NewJobPage() {
                             d="M6 18L18 6M6 6l12 12"
                           />
                         </svg>
-                      </Button>
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -985,120 +1011,138 @@ export default function NewJobPage() {
           </Box>
 
           {/* Model Selection */}
-          <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3 }}>
+          <div className="space-y-6">
             <div>
-              <h2 className="text-2xl font-medium mb-4">Model</h2>
+              <h3 className="text-lg font-semibold mb-4">Built-in Models</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {models.map((model) => (
+                {builtInModels.map((model) => (
                   <ModelOption
                     key={model.Id}
-                    title={model.Name[0].toUpperCase() + model.Name.slice(1)}
-                    description={
-                      'Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.'
-                    }
+                    title={model.Name}
+                    description={model.Description}
                     isSelected={selectedModelId === model.Id}
-                    onClick={() => setSelectedModelId(model.Id)}
-                    disabled={model.Name === 'presidio'}
+                    onClick={() => {
+                      setSelectedModelId(model.Id);
+                      setSelectedModel(model);
+                    }}
                   />
                 ))}
-                <ModelOption
-                  key={'Advanced-Model'}
-                  title={'Advanced'}
-                  description={
-                    <>
-                      Our most advanced AI model, available on enterprise platform. Allows users to
-                      perpetually customize fields with user feedback, includes advanced monitoring
-                      features. Reach out to{' '}
-                      <div className="relative inline-block">
-                        <span
-                          className="text-blue-500 underline cursor-pointer hover:text-blue-700"
-                          onClick={() => copyToClipboard('contact@thirdai.com', 'advanced-model')}
-                          title="Click to copy email"
-                        >
-                          contact@thirdai.com
-                        </span>
-                        {showTooltip['advanced-model'] && (
-                          <div className="absolute left-1/2 -translate-x-1/2 mt-1 w-max px-2 py-1 text-xs bg-gray-800 text-white rounded shadow-md z-10">
-                            Email Copied
-                          </div>
-                        )}
-                      </div>{' '}
-                      for an enterprise subscription.
-                    </>
-                  }
-                  isSelected={false}
-                  onClick={() => {}}
-                  disabled={true}
-                />
               </div>
             </div>
 
-            {/* Tags Section - Only show if a model is selected */}
-            {selectedModelId && (
-              <div>
-                <div className="flex justify-between items-center my-2">
-                  <h2 className="text-lg font-medium">Tags</h2>
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={selectAllTags}
-                      className="text-sm flex items-center"
-                      disabled={isTagsLoading || selectedTags.length === availableTags.length}
-                    >
-                      <span className="mr-1">Select All</span>
-                      <input
-                        type="checkbox"
-                        checked={selectedTags.length === availableTags.length}
-                        onChange={selectAllTags}
-                        className="rounded border-gray-300"
-                      />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedTags([])}
-                      className="text-sm flex items-center"
-                      disabled={isTagsLoading || selectedTags.length === 0}
-                    >
-                      <span className="mr-1">Clear Selection</span>
-                      <input
-                        type="checkbox"
-                        checked={selectedTags.length === 0}
-                        onChange={() => setSelectedTags([])}
-                        className="rounded border-gray-300"
-                      />
-                    </Button>
-                  </div>
+            <div>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">Custom Models</h3>
+                <div className="relative w-64">
+                  <input
+                    type="text"
+                    placeholder="Search custom models..."
+                    value={modelSearchQuery}
+                    onChange={(e) => setModelSearchQuery(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <SearchIcon className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
                 </div>
-
-                {/* Added descriptive note */}
-                <p className="text-sm text-gray-500 mb-4">
-                  Click on any tag to select/unselect it. By default, all tags are selected.
-                </p>
-
-                {isTagsLoading ? (
-                  <div className="flex justify-center py-4">
-                    <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
-                  </div>
-                ) : availableTags.length === 0 ? (
-                  <div className="text-gray-500 py-2">No tags available for this model</div>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {availableTags.map((tag) => (
-                      <Tag
-                        key={tag}
-                        tag={tag}
-                        selected={selectedTags.includes(tag)}
-                        onClick={() => toggleTag(tag)}
-                      />
-                    ))}
-                  </div>
-                )}
               </div>
-            )}
-          </Box>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {filteredCustomModels.map((model) => (
+                  <ModelOption
+                    key={model.Id}
+                    title={model.Name}
+                    description={
+                      <div className="space-y-2">
+                        {model.Status === 'TRAINING' && (
+                          <div className="flex items-center space-x-2 text-blue-600">
+                            <CircularProgress size={16} />
+                            <span className="text-sm">Training in progress...</span>
+                          </div>
+                        )}
+                        {model.Status === 'QUEUED' && (
+                          <p className="text-sm text-orange-600">Queued for training</p>
+                        )}
+                        {model.BaseModelId && (
+                          <p className="text-sm text-gray-600">
+                            Base Model: {models.find(m => m.Id === model.BaseModelId)?.Name || 'Unknown'}
+                          </p>
+                        )}
+                      </div>
+                    }
+                    isSelected={selectedModelId === model.Id}
+                    onClick={() => {
+                      setSelectedModelId(model.Id);
+                      setSelectedModel(model);
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Tags Section - Only show if a model is selected */}
+          {selectedModelId && (
+            <div>
+              <div className="flex justify-between items-center my-2">
+                <h2 className="text-lg font-medium">Tags</h2>
+                <div className="flex space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={selectAllTags}
+                    className="text-sm flex items-center"
+                    disabled={isTagsLoading || selectedTags.length === availableTags.length}
+                  >
+                    <span className="mr-1">Select All</span>
+                    <input
+                      type="checkbox"
+                      checked={selectedTags.length === availableTags.length}
+                      onChange={selectAllTags}
+                      className="rounded border-gray-300"
+                    />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedTags([])}
+                    className="text-sm flex items-center"
+                    disabled={isTagsLoading || selectedTags.length === 0}
+                  >
+                    <span className="mr-1">Clear Selection</span>
+                    <input
+                      type="checkbox"
+                      checked={selectedTags.length === 0}
+                      onChange={() => setSelectedTags([])}
+                      className="rounded border-gray-300"
+                    />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Added descriptive note */}
+              <p className="text-sm text-gray-500 mb-4">
+                Click on any tag to select/unselect it. By default, all tags are selected.
+              </p>
+
+              {isTagsLoading ? (
+                <div className="flex justify-center py-4">
+                  <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
+                </div>
+              ) : availableTags.length === 0 ? (
+                <div className="text-gray-500 py-2">No tags available for this model</div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {availableTags.map((tag) => (
+                    <Tag
+                      key={tag}
+                      tag={tag}
+                      selected={selectedTags.includes(tag)}
+                      onClick={() => toggleTag(tag)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           {/* Custom Tags Section */}
           <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3 }}>
             <h2 className="text-2xl font-medium mb-4">
