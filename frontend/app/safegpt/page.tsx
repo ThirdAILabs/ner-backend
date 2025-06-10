@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, Suspense, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ChevronLeft, ChevronRight, House, FilePlus } from 'lucide-react';
@@ -13,7 +13,7 @@ import ChatInterface from '@/components/chat/Chat';
 import ChatTitle from '@/components/chat/Title';
 import Sidebar from '@/components/chat/Sidebar';
 import Toggle from '@/components/chat/Toggle';
-import useSafeGPT from '@/hooks/useSafeGPT';
+import useSafeGPT, { NEW_CHAT_ID } from '@/hooks/useSafeGPT';
 
 const SIDEBAR_WIDTH = 250;
 
@@ -96,6 +96,18 @@ function SafeGPTContent() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
+  // Dialog box to show when a user clicks the new chat button when the current chat is new
+  const [showNewChatDialog, setShowNewChatDialog] = useState<boolean>(false);
+
+  // Close the new chat dialog after 3 seconds
+  useEffect(() => {
+    if (showNewChatDialog) {
+      const timeoutId = setTimeout(() => {
+        setShowNewChatDialog(false);
+      }, 3000);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [showNewChatDialog]);
 
   const handleToggleRedaction = () => {
     setShowRedaction((prev) => !prev);
@@ -106,7 +118,11 @@ function SafeGPTContent() {
   };
 
   const handleNewChat = () => {
-    router.push(`/safegpt?id=new`);
+    if (selectedId === NEW_CHAT_ID) {
+      setShowNewChatDialog(true);
+      return;
+    }
+    router.push(`/safegpt?id=${NEW_CHAT_ID}`);
   };
 
   const handleSendMessage = async (message: string) => {
@@ -145,6 +161,20 @@ function SafeGPTContent() {
 
   return (
     <div>
+      <div
+        className={`fixed inset-0 flex items-start justify-start z-50 transition-all duration-300 ease-in-out p-4 ${
+          showNewChatDialog ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+        style={{ paddingTop: '70px' }}
+      >
+        <div
+          className={`bg-white rounded-lg shadow-lg p-6 border border-gray-200 transition-all duration-300 ease-in-out transform ${
+            showNewChatDialog ? 'scale-100 translate-y-0' : 'scale-95 translate-y-2'
+          }`}
+        >
+          <p className="text-gray-700 font-medium">This is a new chat. Start chatting!</p>
+        </div>
+      </div>
       <div className="flex h-0 items-end">
         <div
           className="h-[30px] border-r border-gray-200 transition-all duration-100"
