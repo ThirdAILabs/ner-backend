@@ -49,6 +49,7 @@ export default function Jobs() {
               ? {
                   ...r,
                   SucceededFileCount: detailedReport.SucceededFileCount,
+                  FailedFileCount: detailedReport.FailedFileCount,
                   detailedStatus: {
                     ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
                     InferenceTaskStatuses: detailedReport.InferenceTaskStatuses,
