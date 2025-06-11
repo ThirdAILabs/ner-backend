@@ -834,12 +834,6 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 	}
 	defer model.Release()
 
-	if err := model.Finetune(payload.TaskPrompt, payload.Tags, payload.Samples); err != nil {
-		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint:errcheck
-		slog.Error("error finetuning model", "base_model_id", payload.BaseModelId, "model_id", payload.ModelId, "error", err)
-		return fmt.Errorf("error finetuning model: %w", err)
-	}
-
 	localDir := proc.getModelDir(payload.ModelId)
 	if err := os.MkdirAll(localDir, os.ModePerm); err != nil {
 		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint:errcheck
@@ -847,10 +841,10 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 		return fmt.Errorf("error creating local model directory: %w", err)
 	}
 
-	if err := model.Save(localDir); err != nil {
+	if err := model.FinetuneAndSave(payload.TaskPrompt, payload.Tags, payload.Samples, localDir); err != nil {
 		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint:errcheck
-		slog.Error("error saving finetuned model locally", "model_id", payload.ModelId, "error", err)
-		return fmt.Errorf("error saving finetuned model: %w", err)
+		slog.Error("error finetuning model", "base_model_id", payload.BaseModelId, "model_id", payload.ModelId, "error", err)
+		return fmt.Errorf("error finetuning model: %w", err)
 	}
 
 	if err := proc.storage.UploadDir(ctx, proc.modelBucket, payload.ModelId.String(), localDir); err != nil {

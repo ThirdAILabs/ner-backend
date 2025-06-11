@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"ner-backend/internal/core/python"
 	"ner-backend/internal/core/types"
 	"ner-backend/pkg/api"
 
@@ -147,6 +148,10 @@ type OnnxModel struct {
 	session   *ort.DynamicAdvancedSession
 	tokenizer *tokenizers.Tokenizer
 	crf       CRF
+
+	modelPath  string
+	pythonExec string
+	pluginPath string
 }
 
 func decryptModel(encPath, keyB64 string) ([]byte, error) {
@@ -288,12 +293,21 @@ func (m *OnnxModel) Predict(text string) ([]types.Entity, error) {
 	return ents, nil
 }
 
-func (m *OnnxModel) Finetune(_ string, _ []api.TagInfo, _ []api.Sample) error {
-	return fmt.Errorf("finetune not supported for ONNX")
-}
+func (m *OnnxModel) FinetuneAndSave(taskPrompt string, tags []api.TagInfo, samples []api.Sample, savePath string) error {
+	if m.pythonExec != "" || m.pluginPath != "" {
+		return fmt.Errorf("finetune not supported for ONNX with Python exec or plugin path set")
+	}
 
-func (m *OnnxModel) Save(path string) error {
-	return fmt.Errorf("save not supported for ONNX")
+	pythonModel, err := python.LoadCnnModel(m.pythonExec, m.pluginPath, m.modelPath)
+	if err != nil {
+		return fmt.Errorf("failed to load Python model for finetuning: %w", err)
+	}
+
+	if err := pythonModel.FinetuneAndSave(taskPrompt, tags, samples, savePath); err != nil {
+		return fmt.Errorf("error finetuning model: %w", err)
+	}
+
+	return fmt.Errorf("finetune not supported for ONNX")
 }
 
 func (m *OnnxModel) Release() {

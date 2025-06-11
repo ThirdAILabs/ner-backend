@@ -18,9 +18,7 @@ var statelessModelTypes = map[string]struct{}{
 type Model interface {
 	Predict(text string) ([]types.Entity, error)
 
-	Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sample) error
-
-	Save(path string) error
+	FinetuneAndSave(taskPrompt string, tags []api.TagInfo, samples []api.Sample, savePath string) error
 
 	Release()
 }
@@ -48,13 +46,7 @@ func NewModelLoaders(pythonExec, pluginScript string) map[string]ModelLoader {
 			)
 		},
 		"cnn": func(modelDir string) (Model, error) {
-			cfgJSON := fmt.Sprintf(`{"model_path":"%s/cnn_model.pth", "tokenizer_path":"%s/qwen_tokenizer"}`, modelDir, modelDir)
-			return python.LoadPythonModel(
-				pythonExec,
-				pluginScript,
-				"python_cnn_ner_model",
-				cfgJSON,
-			)
+			return python.LoadCnnModel(pythonExec, pluginScript, modelDir)
 		},
 		"presidio": func(_ string) (Model, error) {
 			return NewPresidioModel()

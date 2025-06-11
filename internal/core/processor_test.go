@@ -38,11 +38,7 @@ func (m *regexModel) Predict(text string) ([]types.Entity, error) {
 	return entities, nil
 }
 
-func (m *regexModel) Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sample) error {
-	return nil
-}
-
-func (m *regexModel) Save(path string) error {
+func (m *regexModel) FinetuneAndSave(taskPrompt string, tags []api.TagInfo, samples []api.Sample, savePath string) error {
 	return nil
 }
 
