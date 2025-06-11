@@ -162,7 +162,7 @@ export async function startBackend() {
       cwd: backendDir,
       env: {
         PORT:       FIXED_PORT.toString(),
-        MODEL_DIR: path.join(getBinPath(), modelType),
+        MODEL_DIR: getBinPath(),
         MODEL_TYPE: modelType,
         PLUGIN_SERVER: pluginPath,
         APP_DATA_DIR: appDataDir,
