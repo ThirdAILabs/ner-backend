@@ -187,8 +187,8 @@ func main() {
 			if err := cmd.InitializePythonCnnModel(context.Background(), db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
 				log.Fatalf("Failed to init & upload python CNN model: %v", err)
 			}
-		case "onnx_model":
-			if err := cmd.InitializeOnnxModel(db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
+		case "onnc_cnn":
+			if err := cmd.InitializeOnnxCnnModel(context.Background(), db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
 				log.Fatalf("failed to init ONNX model: %v", err)
 			}
 		default:

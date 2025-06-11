@@ -206,14 +206,15 @@ func InitializeBoltUdtModel(ctx context.Context, db *gorm.DB, s3p storage.Provid
 	)
 }
 
-func InitializeOnnxModel(
+func InitializeOnnxCnnModel(
+	ctx context.Context,
 	db *gorm.DB,
-	s3 storage.Provider,
-	bucket, name, modelDir string,
+	s3p storage.Provider,
+	bucket, name, hostModelDir string,
 ) error {
 	return initializeModel(
-		context.Background(), db, s3, bucket,
-		name, "onnx", filepath.Join(modelDir, "onnx_model"), commonModelTags,
+		context.Background(), db, s3p, bucket,
+		name, "onnx_cnn", filepath.Join(hostModelDir, "onnx_cnn"), commonModelTags,
 	)
 }
 
