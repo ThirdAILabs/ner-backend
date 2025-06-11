@@ -212,3 +212,36 @@ func TestFinetuningAllModels(t *testing.T) {
 		assert.Equal(t, base.Id, *model.BaseModelId)
 	}
 }
+
+func TestFinetuningWithGenerateData(t *testing.T) {
+	_, cancel, s3, db, pub, sub, router := setupCommon(t)
+	defer cancel()
+
+	baseName, baseLoader, baseID := createModel(t, s3, db, modelBucket)
+
+	stop := startWorker(t, db, s3, pub, sub, modelBucket, map[core.ModelType]core.ModelLoader{
+		core.ParseModelType(baseName): baseLoader,
+	})
+	defer stop()
+
+	tp := "Finetuning with data generation"
+	ftReq := api.FinetuneRequest{
+		Name:         "finetuned-with-gen",
+		TaskPrompt:   &tp,
+		Tags:         []api.TagInfo{{Name: "xyz"}},
+		GenerateData: true,
+	}
+
+	_, model := finetune(t, router, baseID.String(), ftReq, 10, 100*time.Millisecond)
+
+	assert.Equal(t, database.ModelTrained, model.Status)
+	assert.Equal(t, "finetuned-with-gen", model.Name)
+	require.NotNil(t, model.BaseModelId)
+	assert.Equal(t, baseID, *model.BaseModelId)
+
+	stream, err := s3.GetObjectStream(modelBucket, fmt.Sprintf("%s/model.json", model.Id))
+	require.NoError(t, err)
+	var data map[string]string
+	require.NoError(t, json.NewDecoder(stream).Decode(&data))
+	assert.Contains(t, data, "xyz")
+}
