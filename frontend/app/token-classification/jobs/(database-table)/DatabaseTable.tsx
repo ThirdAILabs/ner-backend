@@ -7,7 +7,12 @@ import { nerService } from '@/lib/backend';
 import { useSearchParams } from 'next/navigation';
 import { NO_GROUP } from '@/lib/utils';
 
-export function DatabaseTable({ groups: groupsProp, tags, uploadId }: DatabaseTableProps) {
+export function DatabaseTable({
+  groups: groupsProp,
+  tags,
+  uploadId,
+  initialSelectedTag,
+}: DatabaseTableProps) {
   const searchParams = useSearchParams();
   const reportId: string = searchParams.get('jobId') as string;
   const groups = groupsProp.length > 0 ? [...groupsProp, NO_GROUP] : [];
@@ -41,9 +46,12 @@ export function DatabaseTable({ groups: groupsProp, tags, uploadId }: DatabaseTa
     Object.fromEntries(groups.map((group) => [group, true]))
   );
 
-  const [tagFilters, setTagFilters] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(tags.map((tag) => [tag.type, true]))
-  );
+  const [tagFilters, setTagFilters] = useState<Record<string, boolean>>(() => {
+    const allTagKeys = tags.map((tag) => tag.type);
+    return Object.fromEntries(
+      allTagKeys.map((tag) => [tag, initialSelectedTag ? tag === initialSelectedTag : true])
+    );
+  });
 
   const toActiveTagList = (filters: Record<string, boolean>): string[] => {
     return Object.entries(filters)

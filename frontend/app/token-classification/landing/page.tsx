@@ -44,7 +44,7 @@ function PageContents() {
     } else if (newValue === 'jobs') {
       recordEvent({
         UserAction: 'click',
-        UIComponent: 'Reports Dashboard Tab',
+        UIComponent: 'Scans Dashboard Tab',
         UI: 'Token Classification Page',
       });
     }
@@ -132,7 +132,7 @@ function PageContents() {
               '& .MuiTabs-indicator': { backgroundColor: '#1a73e8' },
             }}
           >
-            <Tab label="Reports Dashboard" value="jobs" />
+            <Tab label="Scans Dashboard" value="jobs" />
             <Tab label="Usage Stats" value="monitoring" />
           </Tabs>
         </Box>

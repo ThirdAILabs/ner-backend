@@ -9,6 +9,7 @@ import (
 	"ner-backend/internal/core"
 	"ner-backend/internal/core/types"
 	"ner-backend/internal/database"
+	"ner-backend/internal/licensing"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/storage"
 	"ner-backend/pkg/api"
@@ -260,6 +261,6 @@ func httpRequest(api http.Handler, method, endpoint string, payload any, dest an
 
 type DummyLicenseVerifier struct{}
 
-func (d *DummyLicenseVerifier) VerifyLicense(context.Context) error {
-	return nil
+func (d *DummyLicenseVerifier) VerifyLicense(context.Context) (licensing.LicenseInfo, error) {
+	return licensing.LicenseInfo{}, nil
 }

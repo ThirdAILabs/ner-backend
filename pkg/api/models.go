@@ -1,6 +1,7 @@
 package api
 
 import (
+	"ner-backend/internal/licensing"
 	"time"
 
 	"github.com/google/uuid"
@@ -139,6 +140,11 @@ type ThroughputResponse struct {
 	ThroughputMBPerHour float64   `json:"ThroughputMBPerHour"`
 }
 
+type GetLicenseResponse struct {
+	LicenseInfo  licensing.LicenseInfo
+	LicenseError string
+}
+
 type ValidateGroupDefinitionRequest struct {
 	GroupQuery string
 }
@@ -151,5 +157,5 @@ type ValidateS3BucketRequest struct {
 }
 
 type FileNameToPath struct {
-	Mapping  map[string]string
+	Mapping map[string]string
 }
