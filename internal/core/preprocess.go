@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	punctChars = ",.!?;:-_\"'`)]}([{"
+	punctChars = "-,.!?:_\"'`)]}([{"
 
 	replacePunctFollowedBySpaceRE = regexp.MustCompile(fmt.Sprintf(`(\S)[%s](\s)`, regexp.QuoteMeta(punctChars)))
 	replaceSpaceFollowedByPunctRE = regexp.MustCompile(fmt.Sprintf(`(\s)[%s](\S)`, regexp.QuoteMeta(punctChars)))
