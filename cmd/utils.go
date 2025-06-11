@@ -179,7 +179,12 @@ func initializeModel(
 		slog.Warn("failed to upload model to S3", "model_id", model.Id, "error", err)
 		return fmt.Errorf("error uploading model %s: %w", name, err)
 	}
-	database.UpdateModelStatus(ctx, db, model.Id, database.ModelTrained) // nolint:errcheck
+
+	if err := database.UpdateModelStatus(ctx, db, model.Id, database.ModelTrained); err != nil {
+		slog.Error("failed to update model status after upload", "model_id", model.Id, "error", err)
+		return fmt.Errorf("failed to update model status after upload: %w", err)
+	}
+
 	slog.Info("successfully uploaded model to S3", "model_id", model.Id)
 	return nil
 }

@@ -149,12 +149,14 @@ type OnnxModel struct {
 	tokenizer *tokenizers.Tokenizer
 	crf       CRF
 
-	modelPath  string
-	pythonExec string
-	pluginPath string
+	modelDir     string
+	pythonExec   string
+	pluginScript string
 }
 
-func decryptModel(encPath, keyB64 string) ([]byte, error) {
+func decryptModel(encPath string) ([]byte, error) {
+	keyB64 := "UuTl+ZEVxcUCJoXIDkePg49vS/GYjHa+Fd96kp8vG5E="
+
 	key, err := base64.StdEncoding.DecodeString(keyB64)
 	if err != nil {
 		return nil, fmt.Errorf("invalid MODEL_KEY: %w", err)
@@ -187,15 +189,13 @@ func decryptModel(encPath, keyB64 string) ([]byte, error) {
 	return pt, nil
 }
 
-func LoadOnnxModel(modelDir string) (Model, error) {
-	encPath := filepath.Join(modelDir, "model.onnx.enc")
+func LoadOnnxModel(modelDir, pythonExec, pluginScript string) (Model, error) {
+	encPath := filepath.Join(modelDir, "model.onnx")
 	crfPath := filepath.Join(modelDir, "transitions.json")
 
-	// decrypt the onnx bytes into memory
-	keyB64 := "UuTl+ZEVxcUCJoXIDkePg49vS/GYjHa+Fd96kp8vG5E="
-	onnxBytes, err := decryptModel(encPath, keyB64)
+	onnxBytes, err := os.ReadFile(encPath)
 	if err != nil {
-		return nil, fmt.Errorf("decrypt model: %w", err)
+		return nil, fmt.Errorf("error reading model data: %w", err)
 	}
 
 	crf, err := loadCRF(crfPath)
@@ -219,9 +219,12 @@ func LoadOnnxModel(modelDir string) (Model, error) {
 	}
 
 	return &OnnxModel{
-		session:   session,
-		tokenizer: tk,
-		crf:       crf,
+		session:      session,
+		tokenizer:    tk,
+		crf:          crf,
+		modelDir:     modelDir,
+		pythonExec:   pythonExec,
+		pluginScript: pluginScript,
 	}, nil
 }
 
@@ -294,11 +297,11 @@ func (m *OnnxModel) Predict(text string) ([]types.Entity, error) {
 }
 
 func (m *OnnxModel) FinetuneAndSave(taskPrompt string, tags []api.TagInfo, samples []api.Sample, savePath string) error {
-	if m.pythonExec != "" || m.pluginPath != "" {
-		return fmt.Errorf("finetune not supported for ONNX with Python exec or plugin path set")
+	if m.pythonExec == "" || m.pluginScript == "" {
+		return fmt.Errorf("finetune not supported for ONNX without python exec and plugin script set")
 	}
 
-	pythonModel, err := python.LoadCnnModel(m.pythonExec, m.pluginPath, m.modelPath)
+	pythonModel, err := python.LoadCnnModel(m.pythonExec, m.pluginScript, m.modelDir)
 	if err != nil {
 		return fmt.Errorf("failed to load Python model for finetuning: %w", err)
 	}
@@ -307,7 +310,7 @@ func (m *OnnxModel) FinetuneAndSave(taskPrompt string, tags []api.TagInfo, sampl
 		return fmt.Errorf("error finetuning model: %w", err)
 	}
 
-	return fmt.Errorf("finetune not supported for ONNX")
+	return nil
 }
 
 func (m *OnnxModel) Release() {

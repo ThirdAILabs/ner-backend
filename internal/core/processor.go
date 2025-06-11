@@ -819,6 +819,8 @@ func (proc *TaskProcessor) getModel(ctx context.Context, modelId uuid.UUID) (dat
 func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload messaging.FinetuneTaskPayload) error {
 	database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelTraining) //nolint:errcheck
 
+	slog.Info("processing finetune task", "model_id", payload.ModelId, "base_model_id", payload.BaseModelId)
+
 	baseModel, err := proc.getModel(ctx, payload.BaseModelId)
 	if err != nil {
 		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint:errcheck
@@ -834,6 +836,8 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 	}
 	defer model.Release()
 
+	slog.Info("base model loaded for finetuning", "model_id", payload.ModelId, "base_model_id", payload.BaseModelId)
+
 	localDir := proc.getModelDir(payload.ModelId)
 	if err := os.MkdirAll(localDir, os.ModePerm); err != nil {
 		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint:errcheck
@@ -847,15 +851,21 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 		return fmt.Errorf("error finetuning model: %w", err)
 	}
 
+	slog.Info("finetuning completed", "model_id", payload.ModelId, "base_model_id", payload.BaseModelId)
+
 	if err := proc.storage.UploadDir(ctx, proc.modelBucket, payload.ModelId.String(), localDir); err != nil {
 		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint:errcheck
 		slog.Error("error uploading finetuned model to S3", "model_id", payload.ModelId, "error", err)
 		return fmt.Errorf("error uploading model to S3: %w", err)
 	}
 
+	slog.Info("finetuned model uploaded", "model_id", payload.ModelId, "base_model_id", payload.BaseModelId)
+
 	if err := database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelTrained); err != nil {
 		return fmt.Errorf("error updating model status after finetuning: %w", err)
 	}
+
+	slog.Info("finetuning completed", "model_id", payload.ModelId, "base_model_id", payload.BaseModelId)
 
 	return nil
 }

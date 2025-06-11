@@ -55,7 +55,7 @@ def export_to_onnx(model: CNNNERModelSentenceTokenized, onnx_out: str, max_seq_l
     torch.onnx.export(
         wrapper,
         dummy,
-        os.path.join(onnx_out, "cnn_emissions.onnx"),
+        os.path.join(onnx_out, "model.onnx"),
         input_names=["input_ids"],
         output_names=["emissions"],
         dynamic_axes={
@@ -67,5 +67,5 @@ def export_to_onnx(model: CNNNERModelSentenceTokenized, onnx_out: str, max_seq_l
     )
 
     transitions = model.crf.transitions.cpu().detach().numpy().tolist()
-    with open(os.path.join(onnx_out, "crf_transitions.json"), "w") as f:
+    with open(os.path.join(onnx_out, "transitions.json"), "w") as f:
         json.dump(transitions, f)

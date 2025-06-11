@@ -49,11 +49,18 @@ jobs:
       - name: Install Go modules
         run: go mod download
 
+      - name: Install ONNX Runtime
+        run: |
+          wget https://github.com/microsoft/onnxruntime/releases/download/v1.22.0/onnxruntime-linux-x64-1.22.0.tgz
+          tar -xzf onnxruntime-linux-x64-1.22.0.tgz
+          echo "ONNX_RUNTIME_DYLIB_PATH=$(pwd)/onnxruntime-linux-x64-1.22.0/lib/libonnxruntime.so" >> $GITHUB_ENV
+
       - name: Download NER models from S3
         run: |
           mkdir -p "$MODEL_DIR"
-          aws s3 cp s3://ner-models/cnn_model/         "$MODEL_DIR/cnn_model/"      --recursive
-          aws s3 cp s3://ner-models/transformer_model/ "$MODEL_DIR/transformer_model/" --recursive
+          aws s3 cp s3://ner-models/cnn_model/          "$MODEL_DIR/cnn_model/"         --recursive
+          aws s3 cp s3://ner-models/transformer_model/  "$MODEL_DIR/transformer_model/" --recursive
+          aws s3 cp s3://ner-models/onnx_model/         "$MODEL_DIR/onnx_model/"        --recursive
 
           aws s3 cp s3://ner-models/python_ensemble_ner_model/udt_complete_with_datetime.model "$MODEL_DIR/udt_model/udt_complete.model"
 
