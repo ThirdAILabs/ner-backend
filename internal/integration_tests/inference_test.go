@@ -161,7 +161,7 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 
 	publisher, reciever := setupRabbitMQContainer(t, ctx)
 
-	backend := backend.NewBackendService(db, s3, publisher, 120)
+	backend := backend.NewBackendService(db, s3, publisher, 120, &DummyLicenseVerifier{})
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
@@ -264,7 +264,7 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 
 	publisher, reciever := setupRabbitMQContainer(t, ctx)
 
-	backend := backend.NewBackendService(db, s3, publisher, 120)
+	backend := backend.NewBackendService(db, s3, publisher, 120, &DummyLicenseVerifier{})
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
@@ -318,7 +318,7 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 
 	publisher, receiver := setupRabbitMQContainer(t, ctx)
 
-	backendSvc := backend.NewBackendService(db, s3, publisher, 120)
+	backendSvc := backend.NewBackendService(db, s3, publisher, 120, &DummyLicenseVerifier{})
 	router := chi.NewRouter()
 	backendSvc.AddRoutes(router)
 

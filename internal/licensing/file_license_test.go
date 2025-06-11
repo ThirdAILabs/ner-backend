@@ -19,21 +19,25 @@ func TestFileLicensing(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("valid license", func(t *testing.T) {
-		goodLicense, err := licensing.CreateLicense([]byte(privateKey), time.Now().Add(time.Hour))
+		expiry := time.Now().Add(time.Hour)
+		goodLicense, err := licensing.CreateLicense([]byte(privateKey), expiry)
 		require.NoError(t, err)
 
-		verifier, err := licensing.NewFileLicenseVerifier([]byte(publicKey), goodLicense)
+		verifier := licensing.NewFileLicenseVerifier([]byte(publicKey), goodLicense)
+		licenseInfo, err := verifier.VerifyLicense(context.Background())
 		assert.NoError(t, err)
-		assert.NoError(t, verifier.VerifyLicense(context.Background()))
+		assert.True(t, expiry.Equal(*licenseInfo.Expiry), "Expiry times should be equal")
+		assert.Equal(t, licensing.LocalLicense, licenseInfo.LicenseType)
 	})
 
 	t.Run("expired license", func(t *testing.T) {
 		expiredLicense, err := licensing.CreateLicense([]byte(privateKey), time.Now().Add(-time.Hour))
 		require.NoError(t, err)
 
-		verifier, err := licensing.NewFileLicenseVerifier([]byte(publicKey), expiredLicense)
-		assert.NoError(t, err)
-		assert.ErrorIs(t, licensing.ErrExpiredLicense, verifier.VerifyLicense(context.Background()))
+		verifier := licensing.NewFileLicenseVerifier([]byte(publicKey), expiredLicense)
+		licenseInfo, err := verifier.VerifyLicense(context.Background())
+		assert.ErrorIs(t, licensing.ErrExpiredLicense, err)
+		assert.Equal(t, licensing.LocalLicense, licenseInfo.LicenseType)
 	})
 
 	t.Run("invalid license", func(t *testing.T) {
@@ -54,7 +58,9 @@ func TestFileLicensing(t *testing.T) {
 
 		corruptedLicenseStr := base64.StdEncoding.EncodeToString(buf.Bytes())
 
-		_, err = licensing.NewFileLicenseVerifier([]byte(publicKey), corruptedLicenseStr)
+		verifier := licensing.NewFileLicenseVerifier([]byte(publicKey), corruptedLicenseStr)
+		licenseInfo, err := verifier.VerifyLicense(context.Background())
 		assert.ErrorIs(t, licensing.ErrInvalidLicense, err)
+		assert.Equal(t, licensing.LocalLicense, licenseInfo.LicenseType)
 	})
 }

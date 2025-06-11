@@ -12,6 +12,7 @@ import (
 	"ner-backend/internal/api"
 	"ner-backend/internal/core"
 	"ner-backend/internal/database"
+	"ner-backend/internal/licensing"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/storage"
 	"net/http"
@@ -24,17 +25,19 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	ort "github.com/yalue/onnxruntime_go"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
 type Config struct {
-	Root       string `env:"ROOT" envDefault:"./pocket-shield"`
-	Port       int    `env:"PORT" envDefault:"3001"`
-	License    string `env:"LICENSE_KEY" envDefault:""`
-	ModelDir   string `env:"MODEL_DIR" envDefault:""`
-	ModelType  string `env:"MODEL_TYPE"`
-	AppDataDir string `env:"APP_DATA_DIR" envDefault:"./pocket-shield"`
+	Root             string `env:"ROOT" envDefault:"./pocket-shield"`
+	Port             int    `env:"PORT" envDefault:"3001"`
+	License          string `env:"LICENSE_KEY" envDefault:""`
+	ModelDir         string `env:"MODEL_DIR" envDefault:""`
+	ModelType        string `env:"MODEL_TYPE"`
+	AppDataDir       string `env:"APP_DATA_DIR" envDefault:"./pocket-shield"`
+	OnnxRuntimeDylib string `env:"ONNX_RUNTIME_DYLIB"`
 }
 
 const (
@@ -92,7 +95,7 @@ func createQueue(db *gorm.DB) *messaging.InMemoryQueue {
 	return queue
 }
 
-func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publisher, port int, modelDir, modelType string) *http.Server {
+func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publisher, port int, modelDir, modelType string, licensing licensing.LicenseVerifier) *http.Server {
 	r := chi.NewRouter()
 
 	// Middleware
@@ -109,7 +112,7 @@ func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publish
 	r.Use(middleware.Recoverer)                 // Recover from panics
 	r.Use(middleware.Timeout(60 * time.Second)) // Set request timeout
 
-	apiHandler := api.NewBackendService(db, storage, queue, chunkTargetBytes)
+	apiHandler := api.NewBackendService(db, storage, queue, chunkTargetBytes, licensing)
 
 	loaders := core.NewModelLoaders("python", "plugin/plugin-python/plugin.py")
 
@@ -139,6 +142,19 @@ func main() {
 		log.Fatalf("error parsing config: %v", err)
 	}
 
+	if cfg.OnnxRuntimeDylib == "" {
+		log.Fatalf("ONNX_RUNTIME_DYLIB must be set")
+	}
+	ort.SetSharedLibraryPath(cfg.OnnxRuntimeDylib)
+	if err := ort.InitializeEnvironment(); err != nil {
+		log.Fatalf("could not init ONNX Runtime: %v", err)
+	}
+	defer func() {
+		if err := ort.DestroyEnvironment(); err != nil {
+			log.Fatalf("error destroying onnx env: %v", err)
+		}
+	}()
+
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	if err := os.MkdirAll(cfg.Root, os.ModePerm); err != nil {
 		log.Fatalf("error creating directory for log file: %v", err)
@@ -152,7 +168,7 @@ func main() {
 
 	log.SetOutput(io.MultiWriter(f, os.Stderr))
 
-	slog.Info("starting backend", "root", cfg.Root, "port", cfg.Port, "app_data_dir", cfg.AppDataDir)
+	slog.Info("starting backend", "root", cfg.Root, "port", cfg.Port, "app_data_dir", cfg.AppDataDir, "model_dir", cfg.ModelDir, "model_type", cfg.ModelType)
 
 	db := createDatabase(cfg.AppDataDir)
 
@@ -170,6 +186,10 @@ func main() {
 		case "python_cnn":
 			if err := cmd.InitializePythonCnnModel(context.Background(), db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
 				log.Fatalf("Failed to init & upload python CNN model: %v", err)
+			}
+		case "onnx_model":
+			if err := cmd.InitializeOnnxModel(db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
+				log.Fatalf("failed to init ONNX model: %v", err)
 			}
 		default:
 			log.Fatalf("Invalid model type: %s. Must be either 'bolt_udt' or 'python_cnn'", cfg.ModelType)
@@ -197,7 +217,7 @@ func main() {
 	if err := storage.DownloadDir(context.Background(), modelBucket, basicModel.Id.String(), basicModelDir, true); err != nil {
 		log.Fatalf("failed to download model: %v", err)
 	}
-	server := createServer(db, storage, queue, cfg.Port, basicModelDir, cfg.ModelType)
+	server := createServer(db, storage, queue, cfg.Port, basicModelDir, cfg.ModelType, licensing)
 
 	slog.Info("starting worker")
 	go worker.Start()
