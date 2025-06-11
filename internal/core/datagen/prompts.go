@@ -1,6 +1,9 @@
 package datagen
 
-import "text/template"
+import (
+	"ner-backend/pkg/api"
+	"text/template"
+)
 
 type tagValuePromptFields struct {
 	TaskPrompt  string
@@ -24,17 +27,10 @@ VERY IMPORTANT:
 
 var tagValuePromptTmpl = template.Must(template.New("tagValuePrompt").Parse(tagValuePrompt))
 
-type tagInfoExtendedDescription struct {
-	Name                string
-	Description         string
-	ExtendedDescription string
-	Examples            []string
-}
-
 type templateFromTagPromptFields struct {
 	TaskPrompt   string
 	NumTemplates int
-	TagsInfo     []tagInfoExtendedDescription
+	TagsInfo     []api.TagInfo
 }
 
 // Note: the original prompt included random prompts in the "Key Requirements" section, however this is removed because
@@ -44,7 +40,7 @@ const templateFromTagPrompt = `The goal is to create a dataset for entity recogn
 Tags with their description and example:
 {{ range .TagsInfo }}
 Tag: {{ .Name }}
-Description: {{ .Description }}. {{ .ExtendedDescription }}
+Description: {{ .Description }}.
 Examples: [{{ range $i, $v := .Examples }}{{ if $i }}, {{ end }}{{ $v }}{{ end }}] not limited to given but variations as well.
 
 
@@ -81,7 +77,7 @@ const templateFromSamplePrompt = `The goal is to create a dataset for entity rec
 Tags with their description and example:
 {{ range .TagsInfo }}
 Tag: {{ .Name }}
-Description: {{ .Description }}. {{ .ExtendedDescription }}
+Description: {{ .Description }}.
 Examples: [{{ range $i, $v := .Examples }}{{ if $i }}, {{ end }}{{ $v }}{{ end }}] not limited to given but variations as well.
 
 

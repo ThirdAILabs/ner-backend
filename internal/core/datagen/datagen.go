@@ -104,6 +104,55 @@ func GenerateData(opts DatagenOpts) ([]api.Sample, []api.Sample, error) {
 	return trainSamples, testSamples, nil
 }
 
+func GenerateDataFromFeedbacks(opts DatagenOpts) ([]api.Sample, []api.Sample, error) {
+	llm := NewOpenAI(openai.ChatModelGPT4oMini, 0.8)
+	slog.Info("Generating data with samples only", "taskPrompt", opts.TaskPrompt, "tags", opts.Tags, "samples", opts.Samples)
+
+	values, err := getTagValues(llm, opts.TaskPrompt, opts.Tags, opts.NumValuesPerTag, opts.GenerateAtOnce)
+	if err != nil {
+		slog.Error("error getting tag values", "error", err)
+		return nil, nil, err
+	}
+
+	trainValues, testValues := splitTrainTestValues(values, opts.TestSplit)
+
+	samplePrompts, err := createPromptsFromSamples(opts.TaskPrompt, opts.Tags, opts.Samples, opts.TemplatesPerSample)
+	if err != nil {
+		slog.Error("error creating prompts from samples", "error", err)
+		return nil, nil, err
+	}
+
+	templates, err := generateTemplates(opts.TaskPrompt, samplePrompts, llm)
+	if err != nil {
+		slog.Error("error generating templates", "error", err)
+		return nil, nil, err
+	}
+
+	trainTemplates, testTemplates := trainTestSplit(templates, opts.TestSplit)
+
+	slog.Info("generated tag values")
+
+	trainSamples, err := renderTemplates(trainTemplates, trainValues, opts.SamplesPerTemplate)
+	if err != nil {
+		slog.Error("error rendering train templates", "error", err)
+		return nil, nil, err
+	}
+
+	slog.Info("rendered train templates")
+
+	testSamples, err := renderTemplates(testTemplates, testValues, opts.SamplesPerTemplate)
+	if err != nil {
+		slog.Error("error rendering test templates", "error", err)
+		return nil, nil, err
+	}
+
+	slog.Info("rendered test templates")
+
+	slog.Info("generated data", "trainSamples", len(trainSamples), "testSamples", len(testSamples))
+
+	return trainSamples, testSamples, nil
+}
+
 func getTagValues(llm LLM, taskPrompt string, tags []api.TagInfo, numValuesPerTag, generateAtOnce int) (map[string][]string, error) {
 	faker := newFakerWrapper()
 
@@ -264,8 +313,8 @@ func splitTrainTestValues(values map[string][]string, testSplit float32) (map[st
 }
 
 // This function generates a longer description of each tag using an LLM.
-func getExtendedDescriptions(tags []api.TagInfo, llm LLM) ([]tagInfoExtendedDescription, error) {
-	extendedTags := make([]tagInfoExtendedDescription, 0, len(tags))
+func getExtendedDescriptions(tags []api.TagInfo, llm LLM) ([]api.TagInfo, error) {
+	extendedTags := make([]api.TagInfo, 0, len(tags))
 
 	for _, tag := range tags {
 		prompt := new(strings.Builder)
@@ -283,11 +332,10 @@ func getExtendedDescriptions(tags []api.TagInfo, llm LLM) ([]tagInfoExtendedDesc
 			return nil, fmt.Errorf("error generating extended description: %w", err)
 		}
 
-		extendedTags = append(extendedTags, tagInfoExtendedDescription{
-			Name:                tag.Name,
-			Description:         tag.Description,
-			ExtendedDescription: response,
-			Examples:            tag.Examples,
+		extendedTags = append(extendedTags, api.TagInfo{
+			Name:        tag.Name,
+			Description: response,
+			Examples:    tag.Examples,
 		})
 	}
 
@@ -295,11 +343,11 @@ func getExtendedDescriptions(tags []api.TagInfo, llm LLM) ([]tagInfoExtendedDesc
 }
 
 // This function creates a set of prompts that can be used to generate templates for each tag.
-func createPromptsFromTags(taskPrompt string, tags []tagInfoExtendedDescription, nTemplates, generateAtOnce int) ([]string, error) {
+func createPromptsFromTags(taskPrompt string, tags []api.TagInfo, nTemplates, generateAtOnce int) ([]string, error) {
 	var prompts []string
 
 	for i := 0; i < nTemplates; i += generateAtOnce {
-		tagSubset := make([]tagInfoExtendedDescription, min(len(tags), 4))
+		tagSubset := make([]api.TagInfo, min(len(tags), 4))
 		perm := rand.Perm(len(tags))
 		for i := range tagSubset {
 			tagSubset[i] = tags[perm[i]]
@@ -335,7 +383,7 @@ func sampleAsTemplate(s api.Sample) string {
 }
 
 // This function creates a set of prompts that can be used to generate templates based one each user provided sample.
-func createPromptsFromSamples(taskPrompt string, tags []tagInfoExtendedDescription, samples []api.Sample, templatesPerSample int) ([]string, error) {
+func createPromptsFromSamples(taskPrompt string, tags []api.TagInfo, samples []api.Sample, templatesPerSample int) ([]string, error) {
 	var prompts []string
 
 	for _, sample := range samples {
