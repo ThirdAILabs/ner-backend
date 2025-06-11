@@ -26,6 +26,8 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { useHealth } from '@/contexts/HealthProvider';
 import { alpha } from '@mui/material/styles';
 
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+
 export default function Jobs() {
   const searchParams = useSearchParams();
   const deploymentId = searchParams.get('deploymentId');
@@ -48,6 +50,7 @@ export default function Jobs() {
             r.Id === report.Id
               ? {
                   ...r,
+                  Errors: detailedReport.Errors || [],
                   SucceededFileCount: detailedReport.SucceededFileCount,
                   FailedFileCount: detailedReport.FailedFileCount,
                   detailedStatus: {
@@ -222,6 +225,10 @@ export default function Jobs() {
     }
 
     const { ShardDataTaskStatus, InferenceTaskStatuses } = report.detailedStatus;
+    const reportErrors = report.Errors || [];
+    const monthlyQuotaExceeded =
+      reportErrors.length > 0 &&
+      reportErrors.includes('license verification failed: quota exceeded');
 
     // Check for ShardDataTask failure first
     if (ShardDataTaskStatus === 'FAILED') {
@@ -314,7 +321,7 @@ export default function Jobs() {
               }}
             />
             {/* Loading animation */}
-            {succeededFileCount + failedFileCount < fileCount && (
+            {!monthlyQuotaExceeded && succeededFileCount + failedFileCount < fileCount && (
               <Box
                 className="shimmer-effect"
                 sx={{
@@ -339,11 +346,23 @@ export default function Jobs() {
           </Typography>
         </Box>
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-          {succeededFileCount === fileCount
-            ? `Files: ${fileCount}/${fileCount} Processed`
-            : failedFileCount === fileCount
-              ? `Files: ${failedFileCount}/${fileCount} Failed`
-              : `Files: ${succeededFileCount}/${fileCount} Processed${failedFileCount > 0 ? `, ${failedFileCount}/${fileCount} Failed` : ''}`}
+          {monthlyQuotaExceeded ? (
+            <Box
+              component="span"
+              sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'red' }}
+            >
+              Monthly Quota Exceeded
+              <Tooltip title="This scan exceeds the monthly quota for the free-tier. The quota resets on the 1st of each month.">
+                <InfoOutlinedIcon fontSize="inherit" sx={{ cursor: 'pointer' }} />
+              </Tooltip>
+            </Box>
+          ) : succeededFileCount === fileCount ? (
+            `Files: ${fileCount}/${fileCount} Processed`
+          ) : failedFileCount === fileCount ? (
+            `Files: ${failedFileCount}/${fileCount} Failed`
+          ) : (
+            `Files: ${succeededFileCount}/${fileCount} Processed${failedFileCount > 0 ? `, ${failedFileCount}/${fileCount} Failed` : ''}`
+          )}
         </Typography>
       </Box>
     );
