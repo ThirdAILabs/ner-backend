@@ -6,31 +6,6 @@
 #cgo darwin  LDFLAGS: -L${SRCDIR}/bolt/lib/macos_arm64 \
                      -ltokenizers -lstdc++
 
-#ifdef __linux__
-#define from_file                         tokenizers_from_file
-#define decode                            tokenizers_decode
-#define encode                            tokenizers_encode
-#define free_buffer                       tokenizers_free_buffer
-#define from_bytes                        tokenizers_from_bytes
-#define from_bytes_with_truncation        tokenizers_from_bytes_with_truncation
-#define version                           tokenizers_version
-#define vocab_size                        tokenizers_vocab_size
-#define free_string                       tokenizers_free_string
-#define free_tokenizer                    tokenizers_free_tokenizer
-
-#elif defined(__APPLE__)
-#undef from_file
-#undef decode
-#undef encode
-#undef free_buffer
-#undef from_bytes
-#undef from_bytes_with_truncation
-#undef version
-#undef vocab_size
-#undef free_string
-#undef free_tokenizer
-#endif
-
 */
 
 package core
