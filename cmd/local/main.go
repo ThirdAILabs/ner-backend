@@ -35,7 +35,7 @@ type Config struct {
 	Port             int    `env:"PORT" envDefault:"3001"`
 	License          string `env:"LICENSE_KEY" envDefault:""`
 	ModelDir         string `env:"MODEL_DIR" envDefault:""`
-	ModelType        string `env:"MODEL_TYPE" envDefault:"cnn_model"`
+	ModelType        string `env:"MODEL_TYPE"`
 	AppDataDir       string `env:"APP_DATA_DIR" envDefault:"./pocket-shield"`
 	OnnxRuntimeDylib string `env:"ONNX_RUNTIME_DYLIB"`
 }
@@ -95,7 +95,7 @@ func createQueue(db *gorm.DB) *messaging.InMemoryQueue {
 	return queue
 }
 
-func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publisher, port int, modelDir, modelType string, licensing licensing.LicenseVerifier) *http.Server {
+func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publisher, port int, modelDir string, modelType core.ModelType, licensing licensing.LicenseVerifier) *http.Server {
 	r := chi.NewRouter()
 
 	// Middleware
@@ -116,19 +116,7 @@ func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publish
 
 	loaders := core.NewModelLoaders("python", "plugin/plugin-python/plugin.py")
 
-	var loaderType string
-	switch {
-	case modelType == "udt_model":
-		loaderType = "bolt"
-	case modelType == "cnn_model":
-		loaderType = "cnn"
-	case modelType == "onnx_model":
-		loaderType = "onnx"
-	default:
-		log.Fatalf("Unknown model type in directory: %s", modelDir)
-	}
-
-	nerModel, err := loaders[loaderType](modelDir)
+	nerModel, err := loaders[modelType](modelDir)
 	if err != nil {
 		log.Fatalf("could not load NER model: %v", err)
 	}
@@ -190,21 +178,21 @@ func main() {
 	}
 
 	if cfg.ModelDir != "" {
-		switch cfg.ModelType {
-		case "udt_model":
-			if err := cmd.InitializeBoltModel(db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
+		switch core.ParseModelType(cfg.ModelType) {
+		case core.BoltUdt:
+			if err := cmd.InitializeBoltUdtModel(context.Background(), db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
 				log.Fatalf("Failed to init & upload bolt model: %v", err)
 			}
-		case "cnn_model":
-			if err := cmd.InitializeCnnNerExtractor(context.Background(), db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
-				log.Fatalf("Failed to init & upload CNN model: %v", err)
+		case core.PythonCnn:
+			if err := cmd.InitializePythonCnnModel(context.Background(), db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
+				log.Fatalf("Failed to init & upload python CNN model: %v", err)
 			}
-		case "onnx_model":
-			if err := cmd.InitializeOnnxModel(db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
+		case core.OnnxCnn:
+			if err := cmd.InitializeOnnxCnnModel(context.Background(), db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
 				log.Fatalf("failed to init ONNX model: %v", err)
 			}
 		default:
-			log.Fatalf("Invalid model type: %s. Must be either 'bolt' or 'cnn'", cfg.ModelType)
+			log.Fatalf("Invalid model type: %s. Must be either 'bolt_udt' or 'python_cnn'", cfg.ModelType)
 		}
 	} else {
 		cmd.InitializePresidioModel(db)
@@ -229,7 +217,7 @@ func main() {
 	if err := storage.DownloadDir(context.Background(), modelBucket, basicModel.Id.String(), basicModelDir, true); err != nil {
 		log.Fatalf("failed to download model: %v", err)
 	}
-	server := createServer(db, storage, queue, cfg.Port, basicModelDir, cfg.ModelType, licensing)
+	server := createServer(db, storage, queue, cfg.Port, basicModelDir, core.ParseModelType(cfg.ModelType), licensing)
 
 	slog.Info("starting worker")
 	go worker.Start()
