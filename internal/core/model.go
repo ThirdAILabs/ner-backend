@@ -24,7 +24,7 @@ const (
 func ParseModelType(s string) ModelType {
 	m := ModelType(s)
 	switch m {
-	case BoltUdt, PythonTransformer, PythonCnn, Presidio, OnnxCnn:
+	case BoltUdt, PythonTransformer, PythonCnn, Presidio, OnnxCnn, Regex:
 		return m
 	default:
 		log.Fatalf("invalid model type: %s", s)
