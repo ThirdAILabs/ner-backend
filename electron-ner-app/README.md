@@ -35,12 +35,12 @@ This will start both the Vite development server and the Electron app that conne
 To build the app for production:
 
 ```bash
-MODEL_DIR=/path/to/models MODEL_TYPE=cnn_model npm run build
+MODEL_DIR=/path/to/models MODEL_TYPE=python_cnn npm run build
 ```
 
 Ensure that you have a clean python 3.11 environment activated when running the build command. 
 
-/path/to/models should have a directory called cnn_model with cnn_model.pth and qwen_tokenizer inside, or it should have a directory called udt_model with udt_complete.model inside.
+/path/to/models should have a directory called python_cnn with cnn_model.pth and qwen_tokenizer inside, or it should have a directory called bolt_udt with model.bin inside.
 
 To download the qwen_tokenizer folder, run the following:
 ```bash
@@ -88,14 +88,16 @@ This Electron app now has the Go backend integrated. Here's how to run it:
 
 1. Make sure you have the Go backend built:
    ```
-   cd ..
+   cd cmd/local/
+   go clean -cache
    go build -o main
-   cd electron-ner-app
+   cp main ../../
+   cd ../../electron-ner-app
    ```
 
 2. Start the integrated app:
    ```
-   npm run dev
+   MODEL_DIR=/share/pratik/ MODEL_TYPE=onnx_cnn npm run dev
    ```
    This will:
    - Copy the Go backend to the `bin` directory
@@ -108,7 +110,7 @@ This Electron app now has the Go backend integrated. Here's how to run it:
 To build a macOS DMG with integrated backend:
 
 ```
-npm run build-dmg
+MODEL_DIR=/share/pratik/ MODEL_TYPE=onnx_cnn npm run build
 ```
 
 This will:

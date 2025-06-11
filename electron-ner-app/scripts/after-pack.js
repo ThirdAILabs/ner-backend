@@ -78,6 +78,8 @@ export async function afterPack(context) {
       const appPath = path.join(appOutDir, `${packager.appInfo.productName}.app`);
       const frameworksPath = path.join(appPath, 'Contents', 'Frameworks');
       const libompPath = path.join(frameworksPath, 'libomp.dylib');
+      const onnxPath      = path.join(frameworksPath, 'libonnxruntime.dylib');
+
       
       if (fs.existsSync(libompPath)) {
         console.log('Fixing libomp.dylib path in backend executable...');

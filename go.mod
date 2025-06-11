@@ -7,10 +7,12 @@ toolchain go1.23.6
 require (
 	github.com/alecthomas/participle/v2 v2.1.4
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.17.72
+	github.com/daulet/tokenizers v1.20.2
 	github.com/gen2brain/go-fitz v1.24.14
 	github.com/go-chi/cors v1.2.1
 	github.com/go-gormigrate/gormigrate/v2 v2.1.4
 	github.com/go-resty/resty/v2 v2.16.5
+	github.com/gorilla/schema v1.4.1
 	github.com/hashicorp/go-plugin v1.6.3
 	github.com/jaswdr/faker/v2 v2.3.3
 	github.com/openai/openai-go v0.1.0-beta.10
@@ -19,6 +21,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/minio v0.36.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.36.0
 	github.com/testcontainers/testcontainers-go/modules/rabbitmq v0.37.0
+	github.com/yalue/onnxruntime_go v1.19.0
 	google.golang.org/grpc v1.64.1
 	google.golang.org/protobuf v1.36.6
 	gorm.io/driver/postgres v1.5.11
@@ -50,7 +53,6 @@ require (
 	github.com/go-sql-driver/mysql v1.8.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
-	github.com/gorilla/schema v1.4.1 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0 // indirect
 	github.com/hashicorp/go-hclog v1.6.3 // indirect
 	github.com/hashicorp/yamux v0.1.1 // indirect

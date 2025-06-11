@@ -184,107 +184,38 @@ func initializeModel(
 	return nil
 }
 
-func InitializeCnnNerExtractor(ctx context.Context, db *gorm.DB, s3p storage.Provider, bucket, name, hostModelDir string) error {
-	slog.Info("initializing CNN model", "model_name", "cnn_model", "local_model_path", filepath.Join(hostModelDir, "cnn_model"))
+func InitializePythonCnnModel(ctx context.Context, db *gorm.DB, s3p storage.Provider, bucket, name, hostModelDir string) error {
+	slog.Info("initializing python CNN model", "model_name", "python_cnn", "local_model_path", filepath.Join(hostModelDir, "python_cnn"))
 	return initializeModel(ctx, db, s3p, bucket,
-		name, "cnn", filepath.Join(hostModelDir, "cnn_model"),
+		name, "python_cnn", filepath.Join(hostModelDir, "python_cnn"),
 		commonModelTags,
 	)
 }
 
-func InitializeTransformerModel(ctx context.Context, db *gorm.DB, s3p storage.Provider, bucket, name, hostModelDir string) error {
+func InitializePythonTransformerModel(ctx context.Context, db *gorm.DB, s3p storage.Provider, bucket, name, hostModelDir string) error {
 	return initializeModel(ctx, db, s3p, bucket,
-		name, "transformer", filepath.Join(hostModelDir, "transformer_model"),
+		name, "python_transformer", filepath.Join(hostModelDir, "python_transformer"),
 		commonModelTags,
 	)
 }
 
-func InitializeBoltModel(db *gorm.DB, s3 storage.Provider, modelBucket, name, hostModelDir string) error {
-	localModelPath := filepath.Join(hostModelDir, "udt_model", "udt_complete.model")
-	slog.Info("initializing bolt model", "model_name", name, "local_model_path", localModelPath)
+func InitializeBoltUdtModel(ctx context.Context, db *gorm.DB, s3p storage.Provider, bucket, name, hostModelDir string) error {
+	return initializeModel(ctx, db, s3p, bucket,
+		name, "bolt_udt", filepath.Join(hostModelDir, "bolt_udt"),
+		commonModelTags,
+	)
+}
 
-	tags := filterExcludedTags(commonModelTags)
-	var model database.Model
-
-	// The following section overwrite attributes of an existing model if it exists,
-	// or creates a new one if it doesn't. This is to handle the case of model type
-	// changes when we build our desktop application.
-	// First get the existing model by name
-	result := db.Where(database.Model{Name: name}).First(&model)
-	if result.Error != nil && result.Error != gorm.ErrRecordNotFound {
-		return fmt.Errorf("failed to query existing model: %w", result.Error)
-	}
-
-	if result.Error == gorm.ErrRecordNotFound {
-		model = database.Model{
-			Id:           uuid.New(),
-			Name:         name,
-			Type:         "bolt",
-			Status:       database.ModelQueued,
-			CreationTime: time.Now().UTC(),
-		}
-		// Create the model
-		if err := db.Create(&model).Error; err != nil {
-			return fmt.Errorf("failed to create model: %w", err)
-		}
-	} else {
-		slog.Info("bolt model already exists, will overwrite", "model_id", model.Id)
-		// Update existing model
-		result = db.Model(&model).Updates(database.Model{
-			Type:         "bolt",
-			Status:       database.ModelQueued,
-			CreationTime: time.Now().UTC(),
-		})
-		if result.Error != nil {
-			return fmt.Errorf("failed to update model: %w", result.Error)
-		}
-	}
-
-	// Update tags
-	modelTags := make([]database.ModelTag, len(tags))
-	for i, tag := range tags {
-		modelTags[i] = database.ModelTag{
-			ModelId: model.Id,
-			Tag:     tag,
-		}
-	}
-	if err := db.Model(&model).Association("Tags").Replace(modelTags); err != nil {
-		return fmt.Errorf("failed to update model tags: %w", err)
-	}
-
-	status := database.ModelFailed
-	defer func() {
-		if err := database.UpdateModelStatus(context.Background(), db, model.Id, status); err != nil {
-			slog.Error("failed to update model status during initialization", "model_id", model.Id, "status", status, "error", err)
-		}
-	}()
-
-	if info, err := os.Stat(localModelPath); err != nil {
-		if os.IsNotExist(err) {
-			slog.Error("local model path for bolt model does not exist, skipping upload", "path", localModelPath)
-			return fmt.Errorf("local model path does not exist: %v", err)
-		}
-	} else if info.IsDir() {
-		slog.Error("local model path for bolt model exists but is a directory, skipping upload", "path", localModelPath)
-		return fmt.Errorf("local model path exists but is a directory: %v", err)
-	}
-
-	file, err := os.Open(localModelPath)
-	if err != nil {
-		slog.Error("failed to open local model file", "path", localModelPath, "error", err)
-		return fmt.Errorf("failed to open local model file: %w", err)
-	}
-	defer file.Close()
-
-	if err := s3.PutObject(context.Background(), modelBucket, filepath.Join(model.Id.String(), "model.bin"), file); err != nil {
-		slog.Error("failed to upload bolt model to S3", "model_id", model.Id, "error", err)
-		return fmt.Errorf("failed to upload model to S3: %w", err)
-	}
-
-	slog.Info("successfully uploaded bolt model to S3", "model_id", model.Id)
-	status = database.ModelTrained
-
-	return nil
+func InitializeOnnxCnnModel(
+	ctx context.Context,
+	db *gorm.DB,
+	s3p storage.Provider,
+	bucket, name, hostModelDir string,
+) error {
+	return initializeModel(
+		context.Background(), db, s3p, bucket,
+		name, "onnx_cnn", filepath.Join(hostModelDir, "onnx_cnn"), commonModelTags,
+	)
 }
 
 func CreateLicenseVerifier(db *gorm.DB, license string) licensing.LicenseVerifier {

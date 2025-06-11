@@ -9,7 +9,9 @@
     "copy-model": "node scripts/copy-model.js",
     "copy-backend": "node scripts/copy-backend.js",
     "copy-libomp": "otool -L bin/main | grep libomp | awk '{print $1}' | xargs -I {} cp {} resources/",
-    "prepare-files": "rm -rf bin && ([ \"$MODEL_TYPE\" = \"cnn_model\" ] && npm run build-plugin || true) && npm run copy-backend && npm run copy-model && rm -rf resources && mkdir resources && npm run copy-libomp && npm run sign-libomp",
+    "sign-libonnxruntime": "codesign --force --sign \"ThirdAI Corp (KJ35JRW2T6)\" --options runtime --entitlements build/entitlements.mac.plist resources/libonnxruntime.dylib",
+    "copy-libonnxruntime": "cp build/libonnxruntime.dylib resources/",
+    "prepare-files": "rm -rf bin && ([[ \"$MODEL_TYPE\" == python_* ]] && npm run build-plugin || true) && npm run copy-backend && npm run copy-model && rm -rf resources && mkdir resources && npm run copy-libomp && npm run sign-libomp && npm run copy-libonnxruntime && npm run sign-libonnxruntime",
     "dev": "npm run prepare-files && concurrently --kill-others \"cd ../frontend && npm run dev && cd ../electron-ner-app\" \"wait-on http://localhost:3007 && electron .\"",
     "start-backend": "node scripts/start-backend.js",
     "build-plugin": "cd ../plugin/plugin-python && pip install -r requirements.txt && rm -rf bin dist && python -m PyInstaller plugin.spec --noconfirm && cd ../../electron-ner-app",
@@ -38,7 +40,7 @@
     "@types/node": "^20.14.10",
     "@vitejs/plugin-react": "^4.2.1",
     "concurrently": "^8.2.2",
-    "electron": "^35.4.0",
+    "electron": "^35.5.1",
     "electron-builder": "^24.6.4",
     "typescript": "^5.5.3",
     "vite": "^5.1.4"
@@ -91,6 +93,10 @@
       {
         "from": "resources/libomp.dylib",
         "to": "../Frameworks/libomp.dylib"
+      },
+      {
+        "from": "resources/libonnxruntime.dylib",
+        "to": "../Frameworks/libonnxruntime.dylib"
       }
     ],
     "asarUnpack": [
@@ -99,6 +105,7 @@
     "afterPack": "./scripts/after-pack.js",
     "asar": true,
     "mac": {
+      "identity": "ThirdAI Corp (KJ35JRW2T6)",
       "category": "public.app-category.developer-tools",
       "target": [
         "dmg",
