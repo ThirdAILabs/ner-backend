@@ -260,7 +260,7 @@ export default function useSafeGPT(chatId: string) {
   const updateTitle = async (newTitle: string) => {
     let sessionId = chatId;
     if (chatId === NEW_CHAT_ID) {
-      sessionId = await nerService.startChatSession('gpt-4', newTitle);
+      sessionId = await nerService.startChatSession(model, newTitle);
     }
 
     try {

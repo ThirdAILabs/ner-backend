@@ -12,6 +12,7 @@ import (
 	"ner-backend/internal/api"
 	"ner-backend/internal/core"
 	"ner-backend/internal/database"
+	"ner-backend/internal/licensing"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/storage"
 	"net/http"
@@ -94,7 +95,7 @@ func createQueue(db *gorm.DB) *messaging.InMemoryQueue {
 	return queue
 }
 
-func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publisher, port int, modelDir, modelType string) *http.Server {
+func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publisher, port int, modelDir, modelType string, licensing licensing.LicenseVerifier) *http.Server {
 	r := chi.NewRouter()
 
 	// Middleware
@@ -111,7 +112,7 @@ func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publish
 	r.Use(middleware.Recoverer)                 // Recover from panics
 	r.Use(middleware.Timeout(60 * time.Second)) // Set request timeout
 
-	apiHandler := api.NewBackendService(db, storage, queue, chunkTargetBytes)
+	apiHandler := api.NewBackendService(db, storage, queue, chunkTargetBytes, licensing)
 
 	loaders := core.NewModelLoaders("python", "plugin/plugin-python/plugin.py")
 
@@ -228,7 +229,7 @@ func main() {
 	if err := storage.DownloadDir(context.Background(), modelBucket, basicModel.Id.String(), basicModelDir, true); err != nil {
 		log.Fatalf("failed to download model: %v", err)
 	}
-	server := createServer(db, storage, queue, cfg.Port, basicModelDir, cfg.ModelType)
+	server := createServer(db, storage, queue, cfg.Port, basicModelDir, cfg.ModelType, licensing)
 
 	slog.Info("starting worker")
 	go worker.Start()

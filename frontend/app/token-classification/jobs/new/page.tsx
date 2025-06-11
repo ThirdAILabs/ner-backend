@@ -722,22 +722,22 @@ export default function NewJobPage() {
 
   const validateJobName = (name: string): boolean => {
     if (!name) {
-      setNameError('Report name is required');
+      setNameError('Scan name is required');
       return false;
     }
 
     if (existingReportName.includes(name)) {
-      setNameError('Report with this name already exists.');
+      setNameError('Scan with this name already exists.');
       return false;
     }
 
     if (!/^[A-Za-z0-9_-]+$/.test(name)) {
-      setNameError('Report name can only contain letters, numbers, underscores, and hyphens');
+      setNameError('Scan name can only contain letters, numbers, underscores, and hyphens');
       return false;
     }
 
     if (name.length > 50) {
-      setNameError('Report name must be less than 50 characters');
+      setNameError('Scan name must be less than 50 characters');
       return false;
     }
 
@@ -791,7 +791,7 @@ export default function NewJobPage() {
       <div className="flex items-center justify-between mb-6">
         <Button variant="outline" size="sm" asChild>
           <Link href={`/token-classification/landing?tab=jobs`} className="flex items-center">
-            <ArrowLeft className="mr-1 h-4 w-4" /> Back to Reports
+            <ArrowLeft className="mr-1 h-4 w-4" /> Back to Scans
           </Link>
         </Button>
       </div>
@@ -804,13 +804,13 @@ export default function NewJobPage() {
 
       {success ? (
         <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-6">
-          Scanning in progress! Redirecting to Reports Dashboard...
+          Scanning in progress! Redirecting to Scans Dashboard...
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Job Name Field */}
           <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3 }}>
-            <h2 className="text-2xl font-medium mb-4">Report Name</h2>
+            <h2 className="text-2xl font-medium mb-4">Scan Name</h2>
             <div className="w-full">
               <input
                 type="text"
@@ -824,7 +824,7 @@ export default function NewJobPage() {
                 className={`w-full p-2 border ${
                   nameError ? 'border-red-500' : 'border-gray-300'
                 } rounded`}
-                placeholder="Enter_Report_Name"
+                placeholder="Enter_Scan_Name"
                 required
               />
               {nameError ? (
@@ -1465,7 +1465,7 @@ export default function NewJobPage() {
                   Creating...
                 </>
               ) : (
-                'Create Report'
+                'Create Scan'
               )}{' '}
             </Button>
           </div>
