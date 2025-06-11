@@ -49,9 +49,10 @@ func (m *mockStorage) CreateBucket(ctx context.Context, bucket string) error {
 
 func TestListModels(t *testing.T) {
 	id1, id2 := uuid.New(), uuid.New()
+	fixedTime := time.Date(2025, 6, 11, 12, 0, 0, 0, time.UTC)
 	db := createDB(t,
-		&database.Model{Id: id1, Name: "Model1", Type: "regex", Status: database.ModelTrained, CreationTime: time.Now()},
-		&database.Model{Id: id2, Name: "Model2", Type: "bolt", Status: database.ModelTraining, CreationTime: time.Now()},
+		&database.Model{Id: id1, Name: "Model1", Type: "regex", Status: database.ModelTrained, CreationTime: fixedTime},
+		&database.Model{Id: id2, Name: "Model2", Type: "bolt", Status: database.ModelTraining, CreationTime: fixedTime},
 	)
 
 	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024, nil)
@@ -68,8 +69,8 @@ func TestListModels(t *testing.T) {
 	err := json.Unmarshal(rec.Body.Bytes(), &response)
 	assert.NoError(t, err)
 	assert.ElementsMatch(t, []api.Model{
-		{Id: id1, Name: "Model1", Status: database.ModelTrained},
-		{Id: id2, Name: "Model2", Status: database.ModelTraining},
+		{Id: id1, Name: "Model1", Status: database.ModelTrained, CreationTime: fixedTime},
+		{Id: id2, Name: "Model2", Status: database.ModelTraining, CreationTime: fixedTime},
 	}, response)
 }
 
