@@ -49,12 +49,9 @@ func validateLicense(publicKeyPath, license string) {
 		log.Fatalf("error reading private key file: %v", err)
 	}
 
-	verifier, err := licensing.NewFileLicenseVerifier(publicKeyPem, license)
-	if err != nil {
-		log.Fatalf("Error verifying license: %v", err)
-	}
+	verifier := licensing.NewFileLicenseVerifier(publicKeyPem, license)
 
-	if err := verifier.VerifyLicense(context.Background()); err != nil {
+	if _, err := verifier.VerifyLicense(context.Background()); err != nil {
 		log.Fatalf("License verification failed: %v", err)
 	}
 }

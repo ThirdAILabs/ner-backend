@@ -14,11 +14,11 @@ const DefaultFreeLicenseMaxBytes = 5 * 1024 * 1024 * 1024 // 5 GB
 
 type FreeLicenseVerifier struct {
 	db       *gorm.DB
-	maxBytes int
+	maxBytes int64
 	timeNow  func() time.Time
 }
 
-func NewFreeLicenseVerifier(db *gorm.DB, maxBytes int) *FreeLicenseVerifier {
+func NewFreeLicenseVerifier(db *gorm.DB, maxBytes int64) *FreeLicenseVerifier {
 	return &FreeLicenseVerifier{
 		db:       db,
 		maxBytes: maxBytes,
@@ -30,7 +30,12 @@ func (verifier *FreeLicenseVerifier) SetTimeNow(timeNow func() time.Time) {
 	verifier.timeNow = timeNow
 }
 
-func (verifier *FreeLicenseVerifier) VerifyLicense(ctx context.Context) error {
+func (verifier *FreeLicenseVerifier) VerifyLicense(ctx context.Context) (LicenseInfo, error) {
+
+	licenseInfo := LicenseInfo{
+		LicenseType: FreeLicense,
+	}
+
 	var totalBytes sql.NullInt64
 
 	// Get first day of current month, we apply the quota on a monthly basis
@@ -42,12 +47,17 @@ func (verifier *FreeLicenseVerifier) VerifyLicense(ctx context.Context) error {
 		Where("creation_time >= ?", currentMonth).
 		Scan(&totalBytes).Error; err != nil {
 		slog.Error("error getting total usage", "error", err)
-		return ErrLicenseVerificationFailed
+		return licenseInfo, ErrLicenseVerificationFailed
 	}
 
-	if totalBytes.Valid && int(totalBytes.Int64) > verifier.maxBytes {
-		return ErrQuotaExceeded
+	licenseInfo.Usage = &LicenseUsage{
+		MaxBytes:  verifier.maxBytes,
+		UsedBytes: totalBytes.Int64,
 	}
 
-	return nil
+	if totalBytes.Valid && totalBytes.Int64 > verifier.maxBytes {
+		return licenseInfo, ErrQuotaExceeded
+	}
+
+	return licenseInfo, nil
 }

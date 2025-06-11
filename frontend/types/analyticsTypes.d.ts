@@ -27,6 +27,7 @@ interface DatabaseTableProps {
   groups: string[];
   tags: Tag[];
   uploadId?: string;
+  initialSelectedTag?: string | null;
 }
 
 interface TableContentProps {

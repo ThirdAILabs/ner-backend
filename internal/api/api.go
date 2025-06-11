@@ -5,12 +5,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"mime"
 	"mime/multipart"
 	"ner-backend/internal/core"
 	"ner-backend/internal/database"
+	"ner-backend/internal/licensing"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/storage"
 	"regexp"
@@ -32,6 +34,7 @@ type BackendService struct {
 	storage          storage.Provider
 	publisher        messaging.Publisher
 	chunkTargetBytes int64
+	licensing        licensing.LicenseVerifier
 }
 
 const (
@@ -39,13 +42,13 @@ const (
 	ErrCodeDB    = 1001 // Custom internal code for DB errors
 )
 
-func NewBackendService(db *gorm.DB, storage storage.Provider, pub messaging.Publisher, chunkTargetBytes int64) *BackendService {
+func NewBackendService(db *gorm.DB, storage storage.Provider, pub messaging.Publisher, chunkTargetBytes int64, licenseVerifier licensing.LicenseVerifier) *BackendService {
 	if err := storage.CreateBucket(context.Background(), uploadBucket); err != nil {
 		slog.Error("error creating upload bucket", "error", err)
 		panic("failed to create upload bucket")
 	}
 
-	return &BackendService{db: db, storage: storage, publisher: pub, chunkTargetBytes: chunkTargetBytes}
+	return &BackendService{db: db, storage: storage, publisher: pub, chunkTargetBytes: chunkTargetBytes, licensing: licenseVerifier}
 }
 
 func (s *BackendService) AddRoutes(r chi.Router) {
@@ -87,6 +90,8 @@ func (s *BackendService) AddRoutes(r chi.Router) {
 		r.Post("/{upload_id}", RestHandler(s.StoreFileNameToPath))
 		r.Get("/{upload_id}", RestHandler(s.GetFileNameToPath))
 	})
+
+	r.Get("/license", RestHandler(s.GetLicense))
 }
 
 func (s *BackendService) ListModels(r *http.Request) (any, error) {
@@ -1008,6 +1013,14 @@ func (s *BackendService) ValidateGroupDefinition(r *http.Request) (any, error) {
 		return nil, CodedErrorf(http.StatusUnprocessableEntity, "invalid query '%s': %v", req.GroupQuery, err)
 	}
 	return nil, nil
+}
+
+func (s *BackendService) GetLicense(r *http.Request) (any, error) {
+	licenseInfo, err := s.licensing.VerifyLicense(r.Context())
+	return api.GetLicenseResponse{
+		LicenseInfo:  licenseInfo,
+		LicenseError: fmt.Sprintf("%v", err),
+	}, nil
 }
 
 func validateS3Access(endpoint string, region string, bucket string, prefix string) error {
