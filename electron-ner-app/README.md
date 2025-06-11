@@ -90,7 +90,7 @@ This Electron app now has the Go backend integrated. Here's how to run it:
    ```
    cd cmd/local/
    go clean -cache
-   CGO_LDFLAGS="-L$(pwd)" go build -o main
+   go build -o main
    cp main ../../
    cd ../../electron-ner-app
    ```
