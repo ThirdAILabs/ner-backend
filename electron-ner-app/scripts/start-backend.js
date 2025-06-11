@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { FIXED_PORT, ensurePortIsFree } from './check-port.js';
 import log from 'electron-log';
+import { get } from 'node:http';
 
 log.transports.file.level = 'debug';
 log.transports.file.resolvePath = () => {
@@ -160,9 +161,8 @@ export async function startBackend() {
     {
       cwd: backendDir,
       env: {
-        ...process.env,
         PORT:       FIXED_PORT.toString(),
-        MODEL_DIR: getBinPath(),
+        MODEL_DIR: path.join(getBinPath(), modelType),
         MODEL_TYPE: modelType,
         PLUGIN_SERVER: pluginPath,
         APP_DATA_DIR: appDataDir,
