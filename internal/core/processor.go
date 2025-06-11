@@ -33,7 +33,7 @@ type TaskProcessor struct {
 
 	localModelDir string
 	modelBucket   string
-	modelLoaders  map[string]ModelLoader
+	modelLoaders  map[ModelType]ModelLoader
 }
 
 const bytesPerMB = 1024 * 1024
@@ -45,7 +45,7 @@ var ExcludedTags = map[string]struct{}{
 	"SERVICE_CODE":       {},
 }
 
-func NewTaskProcessor(db *gorm.DB, storage storage.Provider, publisher messaging.Publisher, reciever messaging.Reciever, licenseVerifier licensing.LicenseVerifier, localModelDir string, modelBucket string, modelLoaders map[string]ModelLoader) *TaskProcessor {
+func NewTaskProcessor(db *gorm.DB, storage storage.Provider, publisher messaging.Publisher, reciever messaging.Reciever, licenseVerifier licensing.LicenseVerifier, localModelDir string, modelBucket string, modelLoaders map[ModelType]ModelLoader) *TaskProcessor {
 	return &TaskProcessor{
 		db:            db,
 		storage:       storage,
@@ -230,7 +230,7 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 		return err
 	}
 
-	totalTokens, workerErr := proc.runInferenceOnBucket(ctx, taskId, task.ReportId, storage, task.Report.Model.Id, task.Report.Model.Type, tags, customTags, groupToQuery, task.Report.SourceS3Bucket, s3Objects)
+	totalTokens, workerErr := proc.runInferenceOnBucket(ctx, taskId, task.ReportId, storage, task.Report.Model.Id, ParseModelType(task.Report.Model.Type), tags, customTags, groupToQuery, task.Report.SourceS3Bucket, s3Objects)
 
 	if err := proc.db.
 		Model(&database.InferenceTask{}).
@@ -286,7 +286,7 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 	reportId uuid.UUID,
 	storage storage.Provider,
 	modelId uuid.UUID,
-	modelType string,
+	modelType ModelType,
 	tags map[string]struct{},
 	customTags map[string]string,
 	groupToQuery map[uuid.UUID]string,
@@ -420,7 +420,7 @@ func (proc *TaskProcessor) getModelDir(modelId uuid.UUID) string {
 	return filepath.Join(proc.localModelDir, modelId.String())
 }
 
-func (proc *TaskProcessor) loadModel(ctx context.Context, modelId uuid.UUID, modelType string) (Model, error) {
+func (proc *TaskProcessor) loadModel(ctx context.Context, modelId uuid.UUID, modelType ModelType) (Model, error) {
 
 	var localDir string
 
@@ -826,7 +826,7 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 		return err
 	}
 
-	model, err := proc.loadModel(ctx, payload.BaseModelId, baseModel.Type)
+	model, err := proc.loadModel(ctx, payload.BaseModelId, ParseModelType(baseModel.Type))
 	if err != nil {
 		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint:errcheck
 		slog.Error("error loading base model", "base_model_id", payload.BaseModelId, "model_id", payload.ModelId, "error", err)
