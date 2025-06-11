@@ -35,6 +35,15 @@ export const nerService = {
     }
   },
 
+  getLicense: async (): Promise<License> => {
+    try {
+      const response = await axiosInstance.get('/license');
+      return response.data;
+    } catch (error) {
+      return handleApiError(error, 'Failed to load license information');
+    }
+  },
+
   listModels: async (): Promise<Model[]> => {
     try {
       const response = await axiosInstance.get('/models');
