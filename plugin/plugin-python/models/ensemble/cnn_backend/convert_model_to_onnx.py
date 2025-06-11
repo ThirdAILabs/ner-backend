@@ -57,7 +57,7 @@ def export_to_onnx(
     torch.onnx.export(
         wrapper,
         dummy,
-        os.path.join(onnx_out, "cnn_emissions.onnx"),
+        os.path.join(onnx_out, "model.onnx.enc"),
         input_names=["input_ids"],
         output_names=["emissions"],
         dynamic_axes={
@@ -83,7 +83,7 @@ def export_to_onnx(
     )
 
     with open(
-        os.path.join(onnx_out, "crf_transitions.json"), "w", encoding="utf-8"
+        os.path.join(onnx_out, "transitions.json"), "w", encoding="utf-8"
     ) as f:
         json.dump(
             {
