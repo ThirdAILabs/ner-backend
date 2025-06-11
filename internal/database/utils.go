@@ -64,22 +64,25 @@ func SaveReportError(ctx context.Context, txn *gorm.DB, reportId uuid.UUID, erro
 }
 
 func SetModelTags(ctx context.Context, db *gorm.DB, modelId uuid.UUID, tags []string) error {
-	modelTags := make([]ModelTag, len(tags))
-	for i, tag := range tags {
-		modelTags[i] = ModelTag{
-			ModelId: modelId,
-			Tag:     tag,
-		}
+	newTags := make([]ModelTag, len(tags))
+	for i, t := range tags {
+		newTags[i] = ModelTag{ModelId: modelId, Tag: t}
 	}
 
 	if err := db.WithContext(ctx).
-		Model(&Model{Id: modelId}).
-		Association("Tags").
-		Replace(&modelTags); err != nil {
-		slog.Error("failed to attach tags to model", "model_id", modelId, "error", err)
-		return err
+		Where("model_id = ?", modelId).
+		Delete(&ModelTag{}).
+		Error; err != nil {
+		return fmt.Errorf("could not clear old tags: %w", err)
 	}
 
+	if len(newTags) > 0 {
+		if err := db.WithContext(ctx).
+			Create(&newTags).
+			Error; err != nil {
+			return fmt.Errorf("could not add new tags: %w", err)
+		}
+	}
 	return nil
 }
 
