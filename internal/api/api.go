@@ -15,6 +15,8 @@ import (
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/storage"
 	"regexp"
+	"slices"
+	"strings"
 
 	"ner-backend/pkg/api"
 	"net/http"
@@ -141,7 +143,7 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 
 	if err := s.db.WithContext(ctx).Transaction(func(txn *gorm.DB) error {
 		var baseModel database.Model
-		if err := txn.First(&baseModel, "id = ?", modelId).Error; err != nil {
+		if err := txn.Preload("Tags").First(&baseModel, "id = ?", modelId).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return CodedErrorf(http.StatusNotFound, "base model not found")
 			}
@@ -160,6 +162,7 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 			Type:         baseModel.Type,
 			Status:       database.ModelQueued,
 			CreationTime: time.Now().UTC(),
+			Tags:         baseModel.Tags,
 		}
 
 		if err := txn.WithContext(ctx).Create(&model).Error; err != nil {
@@ -171,15 +174,18 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 	}); err != nil {
 		return nil, err
 	}
-
+	tagNames := make([]string, 0, len(req.Tags))
 	if len(req.Tags) > 0 {
-		tagNames := make([]string, len(req.Tags))
-		for i, t := range req.Tags {
-			tagNames[i] = t.Name
+		for _, tag := range req.Tags {
+			tagNames = append(tagNames, tag.Name)
 		}
 		if err := database.SetModelTags(ctx, s.db, model.Id, tagNames); err != nil {
 			slog.Error("failed to set tags", "model", model.Id, "err", err)
 			return nil, err
+		}
+	} else {
+		for _, tag := range model.Tags {
+			tagNames = append(tagNames, tag.Tag)
 		}
 	}
 
@@ -200,25 +206,17 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 	}
 
 	if req.GenerateData {
-		taskPrompt := ""
-		if req.TaskPrompt != nil {
-			taskPrompt = *req.TaskPrompt
-		}
-
 		opts := datagen.DatagenOpts{
-			TaskPrompt: taskPrompt,
-			Tags:       req.Tags,
-			Samples:    samples,
+			Tags:    tagNames,
+			Samples: samples,
 			// have to adjust these values
 			NumValuesPerTag:    10,
-			SamplesToGenerate:  100,
-			SamplesPerTemplate: 5,
-			GenerateAtOnce:     10,
-			TemplatesPerSample: 2,
+			RecordsToGenerate:  100,
+			RecordsPerTemplate: 5,
 			TestSplit:          0.2,
 		}
 
-		trainSamples, testSamples, err := datagen.GenerateDataFromFeedbacks(opts)
+		trainSamples, testSamples, err := datagen.GenerateData(opts)
 		if err != nil {
 			slog.Error("error generating synthetic data", "error", err)
 			return nil, CodedErrorf(http.StatusInternalServerError, "error generating samples: %v", err)
@@ -1117,7 +1115,7 @@ func (s *BackendService) StoreModelFeedback(r *http.Request) (any, error) {
 
 	ctx := r.Context()
 	var m database.Model
-	if err := s.db.WithContext(ctx).First(&m, "id = ?", modelId).Error; err != nil {
+	if err := s.db.WithContext(ctx).Preload("Tags").First(&m, "id = ?", modelId).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, CodedErrorf(http.StatusNotFound, "model not found")
 		}
@@ -1130,6 +1128,21 @@ func (s *BackendService) StoreModelFeedback(r *http.Request) (any, error) {
 	}
 	if len(req.Tokens) == 0 || len(req.Labels) == 0 || len(req.Tokens) != len(req.Labels) {
 		return nil, CodedErrorf(http.StatusUnprocessableEntity, "tokens and labels must both be non‐empty and of equal length")
+	}
+
+	modelTagsName := make([]string, len(m.Tags))
+	for i, tag := range m.Tags {
+		modelTagsName[i] = tag.Tag
+	}
+
+	unsupportedTags := make([]string, 0, len(req.Labels))
+	for _, feedbackTag := range req.Labels {
+		if !slices.Contains(modelTagsName, feedbackTag) {
+			unsupportedTags = append(unsupportedTags, feedbackTag)
+		}
+	}
+	if len(unsupportedTags) > 0 {
+		return nil, CodedErrorf(http.StatusUnprocessableEntity, "model does not support tags: %s", strings.Join(unsupportedTags, ", "))
 	}
 
 	if err := database.SaveFeedbackSample(ctx, s.db, modelId, req.Tokens, req.Labels); err != nil {
