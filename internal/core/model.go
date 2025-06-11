@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"log"
 	"ner-backend/internal/core/bolt"
 	"ner-backend/internal/core/python"
 	"ner-backend/internal/core/types"
@@ -9,17 +10,27 @@ import (
 	"path/filepath"
 )
 
-// ModelType represents the type of NER model
 type ModelType string
 
-// Available model types
 const (
 	BoltUdt           ModelType = "bolt_udt"
 	PythonTransformer ModelType = "python_transformer"
 	PythonCnn         ModelType = "python_cnn"
 	Presidio          ModelType = "presidio"
 	OnnxCnn           ModelType = "onnx_cnn"
+	Regex             ModelType = "regex" // Model type for tests
 )
+
+func ParseModelType(s string) ModelType {
+	m := ModelType(s)
+	switch m {
+	case BoltUdt, PythonTransformer, PythonCnn, Presidio, OnnxCnn:
+		return m
+	default:
+		log.Fatalf("invalid model type: %s", s)
+		return "" // unreachable, just for compiler
+	}
+}
 
 const defaultPresidioThreshold = 0.5
 

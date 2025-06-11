@@ -168,7 +168,7 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 	modelName, modelLoader, modelId := createModel(t, s3, db, modelBucket)
 
 	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket, map[core.ModelType]core.ModelLoader{
-		core.ModelType(modelName): modelLoader,
+		core.ParseModelType(modelName): modelLoader,
 	})
 
 	go worker.Start()
@@ -271,7 +271,7 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 	modelName, modelLoader, modelId := createModel(t, s3, db, modelBucket)
 
 	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket, map[core.ModelType]core.ModelLoader{
-		core.ModelType(modelName): modelLoader,
+		core.ParseModelType(modelName): modelLoader,
 	})
 
 	go worker.Start()

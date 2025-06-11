@@ -230,7 +230,7 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 		return err
 	}
 
-	totalTokens, workerErr := proc.runInferenceOnBucket(ctx, taskId, task.ReportId, storage, task.Report.Model.Id, ModelType(task.Report.Model.Type), tags, customTags, groupToQuery, task.Report.SourceS3Bucket, s3Objects)
+	totalTokens, workerErr := proc.runInferenceOnBucket(ctx, taskId, task.ReportId, storage, task.Report.Model.Id, ParseModelType(task.Report.Model.Type), tags, customTags, groupToQuery, task.Report.SourceS3Bucket, s3Objects)
 
 	if err := proc.db.
 		Model(&database.InferenceTask{}).
@@ -826,7 +826,7 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 		return err
 	}
 
-	model, err := proc.loadModel(ctx, payload.BaseModelId, ModelType(baseModel.Type))
+	model, err := proc.loadModel(ctx, payload.BaseModelId, ParseModelType(baseModel.Type))
 	if err != nil {
 		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint:errcheck
 		slog.Error("error loading base model", "base_model_id", payload.BaseModelId, "model_id", payload.ModelId, "error", err)

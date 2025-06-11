@@ -178,7 +178,7 @@ func main() {
 	}
 
 	if cfg.ModelDir != "" {
-		switch core.ModelType(cfg.ModelType) {
+		switch core.ParseModelType(cfg.ModelType) {
 		case core.BoltUdt:
 			if err := cmd.InitializeBoltUdtModel(context.Background(), db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
 				log.Fatalf("Failed to init & upload bolt model: %v", err)
@@ -217,7 +217,7 @@ func main() {
 	if err := storage.DownloadDir(context.Background(), modelBucket, basicModel.Id.String(), basicModelDir, true); err != nil {
 		log.Fatalf("failed to download model: %v", err)
 	}
-	server := createServer(db, storage, queue, cfg.Port, basicModelDir, core.ModelType(cfg.ModelType), licensing)
+	server := createServer(db, storage, queue, cfg.Port, basicModelDir, core.ParseModelType(cfg.ModelType), licensing)
 
 	slog.Info("starting worker")
 	go worker.Start()

@@ -92,7 +92,7 @@ func TestFinetuning(t *testing.T) {
 	baseName, baseLoader, baseID := createModel(t, s3, db, modelBucket)
 
 	stop := startWorker(t, db, s3, pub, sub, modelBucket, map[core.ModelType]core.ModelLoader{
-		core.ModelType(baseName): baseLoader,
+		core.ParseModelType(baseName): baseLoader,
 	})
 	defer stop()
 
