@@ -44,7 +44,9 @@ class EmissionModel(nn.Module):
         return emissions
 
 
-def export_to_onnx(model: CNNNERModelSentenceTokenized, onnx_out: str, max_seq_len: int = 128):
+def export_to_onnx(
+    model: CNNNERModelSentenceTokenized, onnx_out: str, max_seq_len: int = 128
+):
     device = torch.device("cpu")
     model.eval()
 
@@ -66,6 +68,29 @@ def export_to_onnx(model: CNNNERModelSentenceTokenized, onnx_out: str, max_seq_l
         do_constant_folding=True,
     )
 
-    transitions = model.crf.transitions.cpu().detach().numpy().tolist()
-    with open(os.path.join(onnx_out, "transitions.json"), "w") as f:
-        json.dump(transitions, f)
+    transitions = model.crf.transitions.detach().cpu().numpy().tolist()
+
+    # some versions expose start_transitions & end_transitions
+    start_probs = (
+        model.crf.start_transitions.detach().cpu().numpy().tolist()
+        if hasattr(model.crf, "start_transitions")
+        else []
+    )
+    end_probs = (
+        model.crf.end_transitions.detach().cpu().numpy().tolist()
+        if hasattr(model.crf, "end_transitions")
+        else []
+    )
+
+    with open(
+        os.path.join(onnx_out, "transitions.json"), "w", encoding="utf-8"
+    ) as f:
+        json.dump(
+            {
+                "Transitions": transitions,
+                "StartProbs": start_probs,
+                "EndProbs": end_probs,
+            },
+            f,
+            indent=2,
+        )
