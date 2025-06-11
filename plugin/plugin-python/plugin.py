@@ -18,7 +18,7 @@ from grpc_health.v1.health import HealthServicer
 
 from models import CnnNerExtractor, CombinedNERModel, Model
 from models.model_interface import TagInfo, Sample
-from py_proto import model_pb2, model_pb2_grpc
+from proto import model_pb2, model_pb2_grpc
 
 model_dict: Dict[str, Model] = {
     "python_combined_ner_model": CombinedNERModel,
