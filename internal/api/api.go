@@ -218,7 +218,7 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 			TestSplit:          0.2,
 		}
 
-		trainSamples, testSamples, err := datagen.GenerateData(opts)
+		trainSamples, testSamples, err := datagen.GenerateDataFromFeedbacks(opts)
 		if err != nil {
 			slog.Error("error generating synthetic data", "error", err)
 			return nil, CodedErrorf(http.StatusInternalServerError, "error generating samples: %v", err)
