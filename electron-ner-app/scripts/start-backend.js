@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { FIXED_PORT, ensurePortIsFree } from './check-port.js';
 import log from 'electron-log';
+import { get } from 'node:http';
 
 log.transports.file.level = 'debug';
 log.transports.file.resolvePath = () => {
@@ -124,7 +125,7 @@ export async function startBackend() {
 
   log.debug('Spawning backend with cwd:', backendDir);
 
-  const modelType = 'cnn_model';  // Default model type
+  let modelType = 'cnn_model';  // Default model type
   try {
     const modelConfig = JSON.parse(fs.readFileSync(modelConfigPath, 'utf8'));
     modelType = modelConfig.model_type || modelType;
@@ -149,18 +150,25 @@ export async function startBackend() {
   // Get the plugin executable path
   const pluginPath = path.join(backendDir, 'plugin', 'plugin');
 
+  const frameworksDir = path.join(
+    process.resourcesPath || __dirname,
+    '..', // up to Resources
+    'Frameworks');
+    
   const proc = spawn(
     backendPath,
     [],
     {
       cwd: backendDir,
       env: {
-        ...process.env,
         PORT:       FIXED_PORT.toString(),
         MODEL_DIR: getBinPath(),
         MODEL_TYPE: modelType,
         PLUGIN_SERVER: pluginPath,
         APP_DATA_DIR: appDataDir,
+        ONNX_RUNTIME_DYLIB: frameworksDir
+        ? path.join(frameworksDir, 'libonnxruntime.dylib')
+        : '',
       },
       stdio: ['pipe', 'pipe', 'pipe']
     }

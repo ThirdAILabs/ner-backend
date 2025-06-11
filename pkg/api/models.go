@@ -1,16 +1,18 @@
 package api
 
 import (
+	"ner-backend/internal/licensing"
 	"time"
 
 	"github.com/google/uuid"
 )
 
 type Model struct {
-	Id          uuid.UUID
-	BaseModelId *uuid.UUID
-	Name        string
-	Status      string
+	Id           uuid.UUID
+	BaseModelId  *uuid.UUID
+	Name         string
+	Status       string
+	CreationTime time.Time
 
 	Tags []string `json:"Tags,omitempty"`
 }
@@ -137,6 +139,11 @@ type ThroughputResponse struct {
 	ModelID             uuid.UUID `json:"ModelId"`
 	ReportID            uuid.UUID `json:"ReportId"`
 	ThroughputMBPerHour float64   `json:"ThroughputMBPerHour"`
+}
+
+type GetLicenseResponse struct {
+	LicenseInfo  licensing.LicenseInfo
+	LicenseError string
 }
 
 type ValidateGroupDefinitionRequest struct {

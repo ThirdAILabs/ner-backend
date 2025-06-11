@@ -49,6 +49,7 @@ export default function Jobs() {
               ? {
                   ...r,
                   SucceededFileCount: detailedReport.SucceededFileCount,
+                  FailedFileCount: detailedReport.FailedFileCount,
                   detailedStatus: {
                     ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
                     InferenceTaskStatuses: detailedReport.InferenceTaskStatuses,
@@ -130,7 +131,7 @@ export default function Jobs() {
             }}
           >
             <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.125rem' }}>
-              Report
+              Scan
             </Typography>
             <Link href={`/token-classification/jobs/new`} passHref>
               <Button
@@ -170,7 +171,7 @@ export default function Jobs() {
             }}
           >
             <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.125rem' }}>
-              Report
+              Scan
             </Typography>
             <Link href={`/token-classification/jobs/new`} passHref>
               <Button
@@ -289,10 +290,11 @@ export default function Jobs() {
             sx={{
               flex: 1,
               height: '8px',
-              bgcolor: '#f1f5f9',
+              bgcolor: '#cbd5e1',
               borderRadius: '9999px',
               overflow: 'hidden',
               display: 'flex',
+              position: 'relative',
             }}
           >
             {/* Green (successful files) */}
@@ -311,6 +313,19 @@ export default function Jobs() {
                 bgcolor: '#ef4444',
               }}
             />
+            {/* Loading animation */}
+            {succeededFileCount + failedFileCount < fileCount && (
+              <Box
+                className="shimmer-effect"
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                }}
+              />
+            )}
           </Box>
           <Typography
             variant="body2"
@@ -375,7 +390,7 @@ export default function Jobs() {
                 color: '#4a5568',
               }}
             >
-              Reports
+              Scans
             </Typography>
           </Box>
           <Link href={`/token-classification/jobs/new`} passHref>
@@ -397,7 +412,7 @@ export default function Jobs() {
               }}
               disabled={!healthStatus}
             >
-              New Report
+              New Scan
             </Button>
           </Link>
         </Box>

@@ -4,6 +4,9 @@ import (
 	"context"
 	"ner-backend/internal/licensing"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -16,40 +19,42 @@ const (
 
 func TestKeygenLicensing(t *testing.T) {
 	t.Run("GoodLicense", func(t *testing.T) {
-		verifier, err := licensing.NewKeygenLicenseVerifier(goodLicense)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := verifier.VerifyLicense(context.Background()); err != nil {
-			t.Fatal(err)
-		}
+		verifier := licensing.NewKeygenLicenseVerifier(goodLicense)
+		licenseInfo, err := verifier.VerifyLicense(context.Background())
+		assert.NoError(t, err)
+		assert.Equal(t, licensing.KeygenLicense, licenseInfo.LicenseType)
+		assert.NotNil(t, licenseInfo.Expiry)
+		assert.True(t, licenseInfo.Expiry.After(time.Now()))
 	})
 
 	t.Run("ExpiredLicense", func(t *testing.T) {
-		_, err := licensing.NewKeygenLicenseVerifier(expiredLicense)
-		if err != licensing.ErrExpiredLicense {
-			t.Fatal(err)
-		}
+		verifier := licensing.NewKeygenLicenseVerifier(expiredLicense)
+		licenseInfo, err := verifier.VerifyLicense(context.Background())
+		assert.ErrorIs(t, err, licensing.ErrExpiredLicense)
+		assert.Equal(t, licensing.KeygenLicense, licenseInfo.LicenseType)
+		assert.NotNil(t, licenseInfo.Expiry)
+		assert.True(t, licenseInfo.Expiry.Before(time.Now()))
 	})
 
 	t.Run("NonexistentLicense", func(t *testing.T) {
-		_, err := licensing.NewKeygenLicenseVerifier(nonexistentLicense)
-		if err != licensing.ErrLicenseNotFound {
-			t.Fatal(err)
-		}
+		verifier := licensing.NewKeygenLicenseVerifier(nonexistentLicense)
+		licenseInfo, err := verifier.VerifyLicense(context.Background())
+		assert.ErrorIs(t, err, licensing.ErrLicenseNotFound)
+		assert.Equal(t, licensing.KeygenLicense, licenseInfo.LicenseType)
 	})
 
 	t.Run("SuspendedLicense", func(t *testing.T) {
-		_, err := licensing.NewKeygenLicenseVerifier(suspendedLicense)
-		if err != licensing.ErrExpiredLicense {
-			t.Fatal(err)
-		}
+		verifier := licensing.NewKeygenLicenseVerifier(suspendedLicense)
+		licenseInfo, err := verifier.VerifyLicense(context.Background())
+		assert.ErrorIs(t, err, licensing.ErrExpiredLicense)
+		assert.Equal(t, licensing.KeygenLicense, licenseInfo.LicenseType)
+		assert.NotNil(t, licenseInfo.Expiry)
 	})
 
 	t.Run("MissingEntitlements", func(t *testing.T) {
-		_, err := licensing.NewKeygenLicenseVerifier(missingEntitlementsLicense)
-		if err != licensing.ErrInvalidLicense {
-			t.Fatal(err)
-		}
+		verifier := licensing.NewKeygenLicenseVerifier(missingEntitlementsLicense)
+		licenseInfo, err := verifier.VerifyLicense(context.Background())
+		assert.ErrorIs(t, err, licensing.ErrInvalidLicense)
+		assert.Equal(t, licensing.KeygenLicense, licenseInfo.LicenseType)
 	})
 }

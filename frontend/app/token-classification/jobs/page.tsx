@@ -213,6 +213,7 @@ function JobDetail() {
   const reportId: string = searchParams.get('jobId') as string;
   const [tabValue, setTabValue] = useState('analytics');
   const [selectedSource, setSelectedSource] = useState<'s3' | 'local'>('s3');
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
   // Remove selectedTags state, just keep availableTags
   const [availableTags, setAvailableTags] = useState<string[]>([]);
@@ -226,6 +227,8 @@ function JobDetail() {
   const [customTags, setCustomTags] = useState<CustomTag[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dataProcessed, setDataProcessed] = useState<number | null>(null);
+
+  const tabChangeByGraph = React.useRef(false);
 
   function setDataProcessedFromReport(report: Report | null) {
     if (report) {
@@ -308,17 +311,31 @@ function JobDetail() {
     };
   }, [reportId, reportData?.SucceededFileCount]);
 
+  useEffect(() => {
+    // There are two ways to get to the 'Review' tab:
+    // 1. By clicking on the tab, in which case we want to have all the filters selected.
+    // 2. By clicking on a bar in the graph, in which case we select that label as the selected tag.
+    // This code is needed to reset the filters selected when the user clicks on the tab directly.
+    if (tabValue === 'output') {
+      if (!tabChangeByGraph.current) {
+        setSelectedTag(null);
+      } else {
+        tabChangeByGraph.current = false;
+      }
+    }
+  }, [tabValue]);
+
   return (
     <div className="container px-4 py-8 mx-auto" style={{ width: '90%' }}>
       {/* Header with Back Button and Title */}
       <div className="flex items-center justify-between mb-6">
         <Button variant="outline" size="sm" asChild>
           <Link href={`/token-classification/landing?tab=jobs`} className="flex items-center">
-            <ArrowLeft className="mr-1 h-4 w-4" /> Back to Reports
+            <ArrowLeft className="mr-1 h-4 w-4" /> Back to Scans
           </Link>
         </Button>
         <h1 className="text-2xl font-medium text-center flex-1">
-          {reportData?.ReportName || '[Report Name]'}
+          {reportData?.ReportName || '[Scan Name]'}
         </h1>
         {/* Empty div to maintain spacing */}
         <div className="w-[106px]"></div> {/* Width matches the Back button */}
@@ -468,6 +485,13 @@ function JobDetail() {
             failedFileCount={reportData?.FailedFileCount || 0}
             totalFileCount={reportData?.FileCount || 1}
             dataProcessed={dataProcessed || 0}
+            setTab={(val) => {
+              tabChangeByGraph.current = true;
+              setTabValue(val);
+            }}
+            setSelectedTag={(tag) => {
+              setSelectedTag(tag);
+            }}
           />
         </TabsContent>
 
@@ -476,6 +500,7 @@ function JobDetail() {
             groups={reportData?.Groups?.map((g) => g.Name) || []}
             tags={availableTagsCount}
             uploadId={reportData?.IsUpload ? reportData?.SourceS3Prefix : ''}
+            initialSelectedTag={selectedTag}
           />
         </TabsContent>
       </Tabs>

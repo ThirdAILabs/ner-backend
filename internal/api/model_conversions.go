@@ -7,9 +7,10 @@ import (
 
 func convertModel(m database.Model) api.Model {
 	model := api.Model{
-		Id:     m.Id,
-		Name:   m.Name,
-		Status: m.Status,
+		Id:           m.Id,
+		Name:         m.Name,
+		Status:       m.Status,
+		CreationTime: m.CreationTime,
 	}
 	if m.BaseModelId.Valid {
 		model.BaseModelId = &m.BaseModelId.UUID
