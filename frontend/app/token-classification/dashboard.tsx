@@ -298,7 +298,7 @@ const Dashboard = () => {
                   color: '#4a5568',
                 }}
               >
-                Free Version (Temp title)
+                Free Tier Quota
               </Typography>
             </Box>
 
@@ -314,7 +314,7 @@ const Dashboard = () => {
               <div style={{ padding: '16px' }}>
                 <MetricsDataViewerCard
                   value={`${formatFileSize(license?.LicenseInfo?.Usage.UsedBytes)} / ${formatFileSize(license?.LicenseInfo?.Usage.MaxBytes)}`}
-                  label="Free Quota"
+                  label="Quota Used"
                 />
               </div>
             </Box>
