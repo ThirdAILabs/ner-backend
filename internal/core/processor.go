@@ -847,7 +847,7 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 		return fmt.Errorf("error creating local model directory: %w", err)
 	}
 
-	if err := model.Save(localDir, baseModel.Type == "cnn"); err != nil {
+	if err := model.Save(localDir); err != nil {
 		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint:errcheck
 		slog.Error("error saving finetuned model locally", "model_id", payload.ModelId, "error", err)
 		return fmt.Errorf("error saving finetuned model: %w", err)

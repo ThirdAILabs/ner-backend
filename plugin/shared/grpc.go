@@ -46,10 +46,9 @@ func (m *GRPCClient) Finetune(prompt string, tags []*proto.TagInfo, samples []*p
 	return nil
 }
 
-func (m *GRPCClient) Save(dir string, exportOnnx bool) error {
+func (m *GRPCClient) Save(dir string) error {
 	resp, err := m.client.Save(context.Background(), &proto.SaveRequest{
-		Dir:        dir,
-		ExportOnnx: exportOnnx,
+		Dir: dir,
 	})
 	if err != nil {
 		return err
@@ -97,7 +96,7 @@ func (m *GRPCServer) Save(
 	ctx context.Context,
 	req *proto.SaveRequest,
 ) (*proto.SaveResponse, error) {
-	err := m.Impl.Save(req.Dir, req.ExportOnnx)
+	err := m.Impl.Save(req.Dir)
 	if err != nil {
 		return &proto.SaveResponse{Success: false}, err
 	}

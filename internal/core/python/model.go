@@ -127,8 +127,8 @@ func (ner *PythonModel) Finetune(prompt string, tags []api.TagInfo, samples []ap
 	return nil
 }
 
-func (ner *PythonModel) Save(path string, exportOnnx bool) error {
-	return ner.model.Save(path, exportOnnx)
+func (ner *PythonModel) Save(path string) error {
+	return ner.model.Save(path)
 }
 
 func (ner *PythonModel) Release() {
