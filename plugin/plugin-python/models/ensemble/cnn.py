@@ -79,6 +79,6 @@ class CnnNerExtractor(Model):
 
         return True
 
-    def save(self, dir: str, export_onnx: bool = False) -> None:
+    def save(self, dir: str) -> None:
         os.makedirs(dir, exist_ok=True)
-        self.model.save(dir, export_onnx)
+        self.model.save(dir)

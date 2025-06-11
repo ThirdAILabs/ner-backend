@@ -175,7 +175,7 @@ class HuggingFaceModel(Model):
     def finetune(self, prompt: str, tags: List[TagInfo], samples: List[Sample]) -> None:
         train_transformer(self.model, self.tokenizer, samples)
 
-    def save(self, path: str, export_onnx: bool = False) -> None:
+    def save(self, path: str) -> None:
         self.model.save_pretrained(path)
         self.tokenizer.save_pretrained(path)
 
@@ -217,7 +217,7 @@ class PresidioWrappedNerModel(Model):
             "Finetuning is not supported for PresidioWrappedNerModel"
         )
 
-    def save(self, path: str, export_onnx: bool = False) -> None:
+    def save(self, path: str) -> None:
         raise NotImplementedError("Saving is not supported for PresidioWrappedNerModel")
 
 
@@ -257,6 +257,6 @@ class CombinedNERModel(Model):
     def finetune(self, prompt: str, tags: List[TagInfo], samples: List[Sample]) -> None:
         self.hf.finetune(prompt, tags, samples)
 
-    def save(self, dir: str, export_onnx: bool = False) -> None:
+    def save(self, dir: str) -> None:
         os.makedirs(dir, exist_ok=True)
         self.hf.save(dir)

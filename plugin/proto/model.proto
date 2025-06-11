@@ -44,7 +44,6 @@ message FinetuneResponse { bool success = 1; }
 
 message SaveRequest {
   string dir = 1;
-  bool export_onnx = 2;
 }
 message SaveResponse { bool success = 1; }
 

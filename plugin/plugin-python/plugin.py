@@ -70,7 +70,7 @@ class ModelServicer(model_pb2_grpc.ModelServicer):
 
     def Save(self, request, context):
         try:
-            self.model.save(request.dir, request.export_onnx)
+            self.model.save(request.dir)
             return model_pb2.SaveResponse(success=True)
         except Exception as e:
             context.set_details(str(e))

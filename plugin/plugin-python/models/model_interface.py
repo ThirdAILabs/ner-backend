@@ -76,5 +76,5 @@ class Model(ABC):
         pass
 
     @abstractmethod
-    def save(self, dir: str, export_onnx: bool = False) -> None:
+    def save(self, dir: str) -> None:
         pass

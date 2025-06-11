@@ -53,14 +53,15 @@ class CNNModel:
             batch_size=batch_size,
         )
 
-    def save(self, dir: str, export_onnx: bool = False) -> None:
+    def save(self, dir: str) -> None:
         cnn_model_path = os.path.join(dir, "cnn_model.pth")
         torch.save(self.model.state_dict(), cnn_model_path)
-        if export_onnx:
-            onnx_dir = os.path.join(dir, "onnx")
-            os.makedirs(onnx_dir, exist_ok=True)
-            export(
-                self.model,
-                onnx_dir,
-            )
+
+        # saving the onnx model
+        onnx_dir = os.path.join(dir, "onnx")
+        os.makedirs(onnx_dir, exist_ok=True)
+        export(
+            self.model,
+            onnx_dir,
+        )
 
