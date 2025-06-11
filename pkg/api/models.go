@@ -7,10 +7,11 @@ import (
 )
 
 type Model struct {
-	Id          uuid.UUID
-	BaseModelId *uuid.UUID
-	Name        string
-	Status      string
+	Id           uuid.UUID
+	BaseModelId  *uuid.UUID
+	Name         string
+	Status       string
+	CreationTime time.Time
 
 	Tags []string `json:"Tags,omitempty"`
 }
