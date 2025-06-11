@@ -285,5 +285,5 @@ func TestFinetuningOnnxModel(t *testing.T) {
 		totalTags += cnt
 	}
 
-	assert.Greater(t, uint64(0), totalTags)
+	assert.Greater(t, totalTags, uint64(0))
 }
