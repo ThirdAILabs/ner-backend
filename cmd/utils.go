@@ -287,6 +287,17 @@ func InitializeBoltModel(db *gorm.DB, s3 storage.Provider, modelBucket, name, ho
 	return nil
 }
 
+func InitializeOnnxModel(
+	db *gorm.DB,
+	s3 storage.Provider,
+	bucket, name, modelDir string,
+) error {
+	return initializeModel(
+		context.Background(), db, s3, bucket,
+		name, "onnx", filepath.Join(modelDir, "onnx_model"), commonModelTags,
+	)
+}
+
 func CreateLicenseVerifier(db *gorm.DB, license string) licensing.LicenseVerifier {
 	if strings.HasPrefix(license, "local:") {
 		return licensing.NewFileLicenseVerifier([]byte(licensing.FileLicensePublicKey), strings.TrimSpace(strings.TrimPrefix(license, "local:")))
