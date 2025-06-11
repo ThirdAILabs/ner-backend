@@ -81,7 +81,14 @@ func (p *LocalProvider) DownloadDir(ctx context.Context, bucket, prefix, dest st
 		}
 	}
 
-	return os.CopyFS(dest, os.DirFS(sourcePath))
+	if err := os.MkdirAll(filepath.Dir(dest), os.ModePerm); err != nil {
+		return fmt.Errorf("failed to create parent directory for destination: %w", err)
+	}
+
+	if err := os.Symlink(sourcePath, dest); err != nil {
+		return fmt.Errorf("failed to create symlink from %s/%s to %s: %w", bucket, prefix, dest, err)
+	}
+	return nil
 }
 
 func (p *LocalProvider) UploadDir(ctx context.Context, bucket, prefix, src string) error {
@@ -93,8 +100,12 @@ func (p *LocalProvider) UploadDir(ctx context.Context, bucket, prefix, src strin
 		}
 	}
 
-	if err := os.CopyFS(destPath, os.DirFS(src)); err != nil {
-		return fmt.Errorf("failed to copy directory from %s to %s/%s: %w", src, bucket, prefix, err)
+	if err := os.MkdirAll(filepath.Dir(destPath), os.ModePerm); err != nil {
+		return fmt.Errorf("failed to create parent directory for %s/%s: %w", bucket, prefix, err)
+	}
+
+	if err := os.Symlink(src, destPath); err != nil {
+		return fmt.Errorf("failed to create symlink from %s to %s/%s: %w", src, bucket, prefix, err)
 	}
 	return nil
 }
