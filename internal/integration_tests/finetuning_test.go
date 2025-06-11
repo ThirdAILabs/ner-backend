@@ -58,7 +58,7 @@ func startWorker(
 	pub messaging.Publisher,
 	sub messaging.Reciever,
 	bucket string,
-	loaders map[string]core.ModelLoader,
+	loaders map[core.ModelType]core.ModelLoader,
 ) (stop func()) {
 	worker := core.NewTaskProcessor(db, s3, pub, sub, &DummyLicenseVerifier{}, t.TempDir(), bucket, loaders)
 	go worker.Start()
@@ -91,8 +91,8 @@ func TestFinetuning(t *testing.T) {
 
 	baseName, baseLoader, baseID := createModel(t, s3, db, modelBucket)
 
-	stop := startWorker(t, db, s3, pub, sub, modelBucket, map[string]core.ModelLoader{
-		baseName: baseLoader,
+	stop := startWorker(t, db, s3, pub, sub, modelBucket, map[core.ModelType]core.ModelLoader{
+		core.ModelType(baseName): baseLoader,
 	})
 	defer stop()
 

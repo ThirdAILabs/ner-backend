@@ -95,7 +95,7 @@ func createQueue(db *gorm.DB) *messaging.InMemoryQueue {
 	return queue
 }
 
-func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publisher, port int, modelDir, modelType string, licensing licensing.LicenseVerifier) *http.Server {
+func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publisher, port int, modelDir string, modelType core.ModelType, licensing licensing.LicenseVerifier) *http.Server {
 	r := chi.NewRouter()
 
 	// Middleware
@@ -178,16 +178,16 @@ func main() {
 	}
 
 	if cfg.ModelDir != "" {
-		switch cfg.ModelType {
-		case "bolt_udt":
+		switch core.ModelType(cfg.ModelType) {
+		case core.BoltUdt:
 			if err := cmd.InitializeBoltUdtModel(context.Background(), db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
 				log.Fatalf("Failed to init & upload bolt model: %v", err)
 			}
-		case "python_cnn":
+		case core.PythonCnn:
 			if err := cmd.InitializePythonCnnModel(context.Background(), db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
 				log.Fatalf("Failed to init & upload python CNN model: %v", err)
 			}
-		case "onnc_cnn":
+		case core.OnnxCnn:
 			if err := cmd.InitializeOnnxCnnModel(context.Background(), db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
 				log.Fatalf("failed to init ONNX model: %v", err)
 			}
@@ -217,7 +217,7 @@ func main() {
 	if err := storage.DownloadDir(context.Background(), modelBucket, basicModel.Id.String(), basicModelDir, true); err != nil {
 		log.Fatalf("failed to download model: %v", err)
 	}
-	server := createServer(db, storage, queue, cfg.Port, basicModelDir, cfg.ModelType, licensing)
+	server := createServer(db, storage, queue, cfg.Port, basicModelDir, core.ModelType(cfg.ModelType), licensing)
 
 	slog.Info("starting worker")
 	go worker.Start()
