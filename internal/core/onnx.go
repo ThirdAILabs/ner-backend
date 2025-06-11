@@ -1,4 +1,15 @@
+/*
+#cgo linux   LDFLAGS: -L${SRCDIR}/bolt/lib/linux_amd64 \
+                     -L${SRCDIR}/bolt/lib/linux_arm64 \
+                     -ltokenizers -lstdc++
+
+#cgo darwin  LDFLAGS: -L${SRCDIR}/bolt/lib/macos_arm64 \
+                     -ltokenizers -lstdc++
+*/
+
 package core
+
+import "C"
 
 import (
 	"crypto/aes"
