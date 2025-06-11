@@ -150,10 +150,22 @@ export async function startBackend() {
   // Get the plugin executable path
   const pluginPath = path.join(backendDir, 'plugin', 'plugin');
 
-  const frameworksDir = path.join(
-    process.resourcesPath || __dirname,
-    '..', // up to Resources
-    'Frameworks');
+  // Determine the correct path for libonnxruntime.dylib based on environment
+  let onnxRuntimePath;
+  const isProduction = process.env.NODE_ENV === 'production' || (process.execPath && process.execPath.includes('Applications'));
+  
+  if (isProduction) {
+    // In production, the library is in the Frameworks directory
+    const frameworksDir = process.platform === 'darwin' 
+      ? path.join(path.dirname(process.execPath), '..', 'Frameworks')
+      : path.join(path.dirname(process.execPath), '..', 'resources');
+    onnxRuntimePath = path.join(frameworksDir, 'libonnxruntime.dylib');
+  } else {
+    // In development, the library is in the resources directory
+    onnxRuntimePath = path.join(__dirname, '..', 'resources', 'libonnxruntime.dylib');
+  }
+  
+  log.debug('ONNX Runtime library path:', onnxRuntimePath);
     
   const proc = spawn(
     backendPath,
@@ -166,9 +178,7 @@ export async function startBackend() {
         MODEL_TYPE: modelType,
         PLUGIN_SERVER: pluginPath,
         APP_DATA_DIR: appDataDir,
-        ONNX_RUNTIME_DYLIB: frameworksDir
-        ? path.join(frameworksDir, 'libonnxruntime.dylib')
-        : '',
+        ONNX_RUNTIME_DYLIB: onnxRuntimePath,
       },
       stdio: ['pipe', 'pipe', 'pipe']
     }
