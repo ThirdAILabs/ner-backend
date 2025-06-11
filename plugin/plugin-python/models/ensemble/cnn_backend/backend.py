@@ -60,7 +60,7 @@ class CNNModel:
         # saving the onnx model
         onnx_dir = os.path.join(dir, "onnx")
         os.makedirs(onnx_dir, exist_ok=True)
-        export(
+        export_to_onnx(
             self.model,
             onnx_dir,
         )

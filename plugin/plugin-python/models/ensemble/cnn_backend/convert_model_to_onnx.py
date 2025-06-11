@@ -1,10 +1,7 @@
-# export_emissions_to_onnx.py
-
 import json
 import torch
 import os
 import torch.nn as nn
-from ...utils import build_tag_vocab
 from .backend import CNNNERModelSentenceTokenized
 
 
@@ -47,7 +44,7 @@ class EmissionModel(nn.Module):
         return emissions
 
 
-def export(model: CNNNERModelSentenceTokenized, onnx_out: str, max_seq_len: int = 128):
+def export_to_onnx(model: CNNNERModelSentenceTokenized, onnx_out: str, max_seq_len: int = 128):
     device = torch.device("cpu")
     model.eval()
 
