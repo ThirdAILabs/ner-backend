@@ -5,7 +5,7 @@ import os
 from transformers import AutoTokenizer
 
 from .impl import CNNNERModelSentenceTokenized
-from .convert_model_to_onnx import export
+from .convert_model_to_onnx import export_to_onnx
 
 class CNNModel:
     def __init__(
