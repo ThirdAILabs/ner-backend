@@ -275,7 +275,7 @@ export default function Jobs() {
     const queued = InferenceTaskStatuses?.QUEUED?.TotalTasks || 0;
     const failed = InferenceTaskStatuses?.FAILED?.TotalTasks || 0;
 
-    const fileCount = report.FileCount || 0;
+    const fileCount = report.FileCount || 1;
     const succeededFileCount = report.SucceededFileCount || 0;
     const failedFileCount = report.FailedFileCount || 0;
     const totalTasks = completed + running + queued + failed;
