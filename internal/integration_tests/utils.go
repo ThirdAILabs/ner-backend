@@ -57,13 +57,17 @@ func (m *regexModel) Predict(text string) ([]types.Entity, error) {
 	return entities, nil
 }
 
-func (m *regexModel) Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sample) error {
+func (m *regexModel) FinetuneAndSave(taskPrompt string, tags []api.TagInfo, samples []api.Sample, savePath string) error {
 	for _, tag := range tags {
 		pattern, err := regexp.Compile(tag.Name)
 		if err != nil {
 			return fmt.Errorf("error compiling regex pattern: %w", err)
 		}
 		m.patterns[tag.Name] = *pattern
+	}
+
+	if err := m.Save(savePath); err != nil {
+		return fmt.Errorf("error saving model: %w", err)
 	}
 
 	return nil
