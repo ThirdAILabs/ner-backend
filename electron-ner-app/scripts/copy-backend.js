@@ -91,7 +91,7 @@ function copyRecursivePreservingSymlinks(src, dest) {
 }
 
 // Copy the plugin directory
-if (process.env.MODEL_TYPE === 'cnn_model') {
+if (process.env.MODEL_TYPE?.startsWith('python_')) {
   try {
     console.log(`Copying plugin directory from ${pluginDir} to ${targetPluginDir}`);
     fs.rmSync(targetPluginDir, { recursive: true, force: true }); // Remove existing target directory
@@ -133,5 +133,5 @@ if (process.env.MODEL_TYPE === 'cnn_model') {
     process.exit(1); // Exit on any error during the copy process
   }
 } else {
-  console.log('Skipping plugin directory copy as MODEL_TYPE is not cnn_model');
+  console.log('Skipping plugin directory copy as MODEL_TYPE is not a python model');
 }

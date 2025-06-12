@@ -60,7 +60,7 @@ func startWorker(
 	pub messaging.Publisher,
 	sub messaging.Reciever,
 	bucket string,
-	loaders map[string]core.ModelLoader,
+	loaders map[core.ModelType]core.ModelLoader,
 ) (stop func()) {
 	worker := core.NewTaskProcessor(db, s3, pub, sub, &DummyLicenseVerifier{}, t.TempDir(), bucket, loaders)
 	go worker.Start()
@@ -93,8 +93,8 @@ func TestFinetuning(t *testing.T) {
 
 	baseName, baseLoader, baseID := createModel(t, s3, db, modelBucket)
 
-	stop := startWorker(t, db, s3, pub, sub, modelBucket, map[string]core.ModelLoader{
-		baseName: baseLoader,
+	stop := startWorker(t, db, s3, pub, sub, modelBucket, map[core.ModelType]core.ModelLoader{
+		core.ParseModelType(baseName): baseLoader,
 	})
 	defer stop()
 
@@ -138,18 +138,18 @@ func TestFinetuningAllModels(t *testing.T) {
 	)
 	defer stop()
 
-	models := []string{"bolt", "cnn", "transformer"}
+	models := []string{"bolt_udt", "python_cnn", "python_transformer"}
 
 	for _, modelType := range models {
 		var modelName string
-		if modelType == "bolt" {
-			require.NoError(t, cmd.InitializeBoltModel(db, s3, modelBucket, "basic", os.Getenv("HOST_MODEL_DIR")))
+		if modelType == "bolt_udt" {
+			require.NoError(t, cmd.InitializeBoltUdtModel(ctx, db, s3, modelBucket, "basic", os.Getenv("HOST_MODEL_DIR")))
 			modelName = "basic"
-		} else if modelType == "cnn" {
-			require.NoError(t, cmd.InitializeCnnNerExtractor(ctx, db, s3, modelBucket, "advanced", os.Getenv("HOST_MODEL_DIR")))
+		} else if modelType == "python_cnn" {
+			require.NoError(t, cmd.InitializePythonCnnModel(ctx, db, s3, modelBucket, "advanced", os.Getenv("HOST_MODEL_DIR")))
 			modelName = "advanced"
-		} else if modelType == "transformer" {
-			require.NoError(t, cmd.InitializeTransformerModel(ctx, db, s3, modelBucket, "ultra", os.Getenv("HOST_MODEL_DIR")))
+		} else if modelType == "python_transformer" {
+			require.NoError(t, cmd.InitializePythonTransformerModel(ctx, db, s3, modelBucket, "ultra", os.Getenv("HOST_MODEL_DIR")))
 			modelName = "ultra"
 		} else {
 			t.Fatalf("Invalid model type: %s", modelType)
