@@ -104,7 +104,7 @@ function SafeGPTContent() {
     if (showNewChatDialog) {
       const timeoutId = setTimeout(() => {
         setShowNewChatDialog(false);
-      }, 3000);
+      }, 1500);
       return () => clearTimeout(timeoutId);
     }
   }, [showNewChatDialog]);
@@ -168,7 +168,7 @@ function SafeGPTContent() {
         style={{ paddingTop: '70px' }}
       >
         <div
-          className={`bg-white rounded-lg shadow-lg p-6 border border-gray-200 transition-all duration-300 ease-in-out transform ${
+          className={`bg-white rounded-lg shadow-lg p-3 border border-gray-200 transition-all duration-300 ease-in-out transform ${
             showNewChatDialog ? 'scale-100 translate-y-0' : 'scale-95 translate-y-2'
           }`}
         >
