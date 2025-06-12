@@ -210,14 +210,19 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 		})
 	}
 
+	if len(samples) == 0 {
+		slog.Error("no feedback samples found for model", "model_id", modelId)
+		return nil, CodedErrorf(http.StatusUnprocessableEntity, "no feedback samples found for model %s", modelId)
+	}
+
 	if req.GenerateData {
 		opts := datagen.DatagenOpts{
 			Tags:    tagNames,
 			Samples: samples,
 			// have to adjust these values
-			NumValuesPerTag:    10,
-			RecordsToGenerate:  100,
-			RecordsPerTemplate: 5,
+			NumValuesPerTag:    30,
+			RecordsToGenerate:  200,
+			RecordsPerTemplate: 3,
 			TestSplit:          0.2,
 		}
 

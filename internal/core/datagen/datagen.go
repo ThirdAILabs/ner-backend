@@ -28,12 +28,38 @@ type DatagenOpts struct {
 	TestSplit float32
 }
 
+func getFeedbackTagValues(tags []string, samples []api.Sample) map[string][]string {
+	values := make(map[string][]string)
+
+	// This is being done so that later we don't need to pass tag name seperately to the LLM
+	for _, tag := range tags {
+		values[tag] = make([]string, 0)
+	}
+
+	for _, sample := range samples {
+		for i, label := range sample.Labels {
+			if label == "O" {
+				continue
+			}
+
+			if i > 0 && label == sample.Labels[i-1] {
+				values[sample.Tokens[i]][len(values[sample.Tokens[i]])-1] += " " + label
+			} else {
+				values[sample.Tokens[i]] = append(values[sample.Tokens[i]], label)
+			}
+
+		}
+	}
+	return values
+}
+
 func GenerateData(opts DatagenOpts) ([]api.Sample, []api.Sample, error) {
 	llm := NewOpenAI(openai.ChatModelGPT4oMini, 0.8)
 
 	slog.Info("starting data generation", "tags", opts.Tags, "samples", len(opts.Samples), "numValuesPerTag", opts.NumValuesPerTag, "recordsToGenerate", opts.RecordsToGenerate, "recordsPerTemplate", opts.RecordsPerTemplate, "testSplit", opts.TestSplit)
 
-	values, err := getTagValues(llm, opts.Tags, opts.NumValuesPerTag, maxConcurrentLLMCalls)
+	tagFeedbackValues := getFeedbackTagValues(opts.Tags, opts.Samples)
+	values, err := getTagValues(llm, tagFeedbackValues, opts.NumValuesPerTag, 15)
 	if err != nil {
 		slog.Error("error getting tag values", "error", err)
 		return nil, nil, err
@@ -85,25 +111,24 @@ func GenerateData(opts DatagenOpts) ([]api.Sample, []api.Sample, error) {
 	return trainSamples, testSamples, nil
 }
 
-func getTagValues(llm LLM, tags []string, numValuesPerTag, generateAtOnce int) (map[string][]string, error) {
+func getTagValues(llm LLM, tags map[string][]string, numValuesPerTag, generateAtOnce int) (map[string][]string, error) {
 	faker := newFakerWrapper()
 
 	values := make(map[string][]string)
 
-	for _, tagName := range tags {
+	for tagName, feedbackTagValues := range tags {
 
-		fakerValues := faker.getTagValues(tagName, numValuesPerTag*3/2)
+		allValues := faker.getTagValues(tagName, numValuesPerTag*3/2)
 
-		allValues := make([]string, 0)
-		if len(fakerValues) > 0 {
-			allValues = append(allValues, fakerValues...)
-		} else {
-			llmValues, err := getTagValuesFromLLM(llm, tagName, numValuesPerTag, generateAtOnce)
-			if err != nil {
-				return nil, fmt.Errorf("error getting values from llm for tag '%s': %w", tagName, err)
-			}
-			allValues = append(allValues, llmValues...)
+		if len(feedbackTagValues) < 20 {
+			// mixin faker values if we don't have enough feedback samples
+			feedbackTagValues = append(feedbackTagValues, randomSample(allValues, min(len(allValues), 20-len(feedbackTagValues)))...)
 		}
+		llmValues, err := getTagValuesFromLLM(llm, tagName, feedbackTagValues, numValuesPerTag, generateAtOnce)
+		if err != nil {
+			return nil, fmt.Errorf("error getting values from llm for tag '%s': %w", tagName, err)
+		}
+		allValues = append(allValues, llmValues...)
 
 		seen := make(map[string]struct{})
 		unique := make([]string, 0, len(allValues))
@@ -155,6 +180,20 @@ func newFakerWrapper() *fakerWrapper {
 	return wrapper
 }
 
+func randomSample[T any](input []T, k int) []T {
+	if k > len(input) {
+		panic(fmt.Sprintf("k (%d) cannot be greater than the length of input (%d)", k, len(input)))
+	}
+
+	indices := rand.Perm(len(input))[:k]
+
+	result := make([]T, k)
+	for i, idx := range indices {
+		result[i] = input[idx]
+	}
+	return result
+}
+
 func (w *fakerWrapper) getTagValues(tag string, numValuesPerTag int) []string {
 	cleanedTag := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(tag, "_", ""), "-", ""))
 
@@ -165,16 +204,17 @@ func (w *fakerWrapper) getTagValues(tag string, numValuesPerTag int) []string {
 		}
 		return values
 	}
-	return nil
+	return make([]string, 0)
 }
 
-func getTagValuesFromLLM(llm LLM, tagName string, numValuesPerTag, generateAtOnce int) ([]string, error) {
+func getTagValuesFromLLM(llm LLM, tagName string, examples []string, numValuesPerTag, generateAtOnce int) ([]string, error) {
 	prompts := make([]string, 0, numValuesPerTag/generateAtOnce)
 	for i := 0; i < numValuesPerTag; i += generateAtOnce {
 		prompt := new(strings.Builder)
 		err := tagValuePromptTmpl.Execute(prompt, tagValuePromptFields{
 			NumValues: min(generateAtOnce, numValuesPerTag-i),
 			Tag:       tagName,
+			Examples:  randomSample(examples, min(6, len(examples))),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("error rendering tagValues template: %w", err)
@@ -212,20 +252,11 @@ func getTagValuesFromLLM(llm LLM, tagName string, numValuesPerTag, generateAtOnc
 
 func trainTestSplit[T any](data []T, testSplit float32) ([]T, []T) {
 	trainLen := int(float32(len(data)) * (1 - testSplit))
-	perm := rand.Perm(len(data))
 
-	train := make([]T, 0, trainLen)
-	test := make([]T, 0, len(data)-trainLen)
+	// shuffle the data
+	data = randomSample(data, len(data))
 
-	for _, i := range perm[:trainLen] {
-		train = append(train, data[i])
-	}
-
-	for _, i := range perm[trainLen:] {
-		test = append(test, data[i])
-	}
-
-	return train, test
+	return data[:trainLen], data[trainLen:]
 }
 
 // This function splits the sets of candidate values in separate train and test sets. This prevents the model
