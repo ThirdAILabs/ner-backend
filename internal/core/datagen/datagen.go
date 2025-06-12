@@ -86,7 +86,7 @@ func GenerateData(opts DatagenOpts) ([]api.Sample, []api.Sample, error) {
 
 	slog.Info("starting data generation", "tags", opts.Tags, "samples", len(opts.Samples), "numValuesPerTag", opts.NumValuesPerTag, "recordsToGenerate", opts.RecordsToGenerate, "recordsPerTemplate", opts.RecordsPerTemplate, "testSplit", opts.TestSplit)
 
-	feedbackTemplates, tagFeedbackValues := templatizeSamples(opts.Samples)
+	feedbackTemplates, tagFeedbackValues := templatizeSamples(opts.Tags, opts.Samples)
 
 	values, err := getTagValues(llm, tagFeedbackValues, opts.NumValuesPerTag, 15)
 	if err != nil {
