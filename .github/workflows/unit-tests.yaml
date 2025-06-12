@@ -60,7 +60,7 @@ jobs:
           mkdir -p "$MODEL_DIR"
           aws s3 cp s3://ner-models/cnn_model/         "$MODEL_DIR/python_cnn/"      --recursive
           aws s3 cp s3://ner-models/transformer_model/ "$MODEL_DIR/python_transformer/" --recursive
-          aws s3 cp s3://ner-models/onnx_model/        "$MODEL_DIR/onnx_model/"        --recursive
+          aws s3 cp s3://ner-models/onnx_model/        "$MODEL_DIR/onnx_cnn/"        --recursive
 
 
           aws s3 cp s3://ner-models/python_ensemble_ner_model/udt_complete_with_datetime.model "$MODEL_DIR/bolt_udt/model.bin"
