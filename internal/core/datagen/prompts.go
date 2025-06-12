@@ -8,19 +8,26 @@ import (
 type tagValuePromptFields struct {
 	NumValues int
 	Tag       string
+	Examples  []string
 }
 
-const tagValuePrompt = `You are an expert in generating diverse and realistic data samples. 
+const tagValuePrompt = `You are an expert in generating diverse and realistic data samples.
 
-Please generate {{ .NumValues }} unique and varied values for the "{{ .Tag }}" named entity. Ensure the values reflect realistic examples in the context of a US citizen.
+Please generate {{ .NumValues }} unique and varied values for the "{{ .Tag }}" named entity. The values should reflect realistic and plausible examples, especially for a US citizen, but may include occasional international or uncommon formatting when relevant.
 
+Goal:
+- Ensure high diversity and realism, especially for formats. For example, phone numbers might appear as:
+- Generate data that appears naturally varied, as seen across different systems, regions, and user input styles.
+{{ if .Examples }}
+Example value for the "{{ .Tag }}" entity:
+{{ range .Examples }}
+{{ . }}
+{{ end }}
+{{ end }}
 Requirements:
-- Each value must start on a new line.
-- **DO NOT** add any headers, footers, bullet points, or any other formatting.
-- **DO NOT** use bullet points, quotes, emojis, or any prefix.
-- Include a wide range of formats and variations typical for the "{{ .Tag }}" entity.
-
-Make the values as diverse and representative as possible.`
+- Each value must appear on a new line with no additional formatting.
+- **DO NOT** include any headers, footers, bullet points, quotes, emojis, or prefixes.
+- Provide a **diverse range of formats, structures, and variations** commonly seen with the "{{ .Tag }}" entity.`
 
 var tagValuePromptTmpl = template.Must(template.New("tagValuePrompt").Parse(tagValuePrompt))
 

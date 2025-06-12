@@ -28,12 +28,67 @@ type DatagenOpts struct {
 	TestSplit float32
 }
 
+func templatizeSamples(tagsName []string, sample []api.Sample) ([]string, map[string][]string) {
+	tagExamples := make(map[string][]string)
+
+	// We should generate values for all tags, even if they are not present in any sample.
+	for _, Name := range tagsName {
+		tagExamples[Name] = make([]string, 0)
+	}
+
+	templatizeSingleSample := func(sample api.Sample) (string, map[string][]string) {
+		template := make([]string, 0, len(sample.Tokens))
+		sampleTagExamples := make(map[string][]string)
+
+		for i, token := range sample.Tokens {
+			if sample.Labels[i] != "O" {
+				if i > 0 && sample.Labels[i] == sample.Labels[i-1] {
+					sampleTagExamples[sample.Labels[i]][len(sampleTagExamples[sample.Labels[i]])-1] += " " + token
+				} else {
+					template = append(template, fmt.Sprintf("[%s]", sample.Labels[i]))
+					sampleTagExamples[sample.Labels[i]] = append(sampleTagExamples[sample.Labels[i]], token)
+				}
+			} else {
+				template = append(template, token)
+			}
+		}
+		return strings.Join(template, " "), sampleTagExamples
+	}
+
+	templates := make([]string, 0, len(sample))
+	for _, s := range sample {
+		template, tagExamplesInSample := templatizeSingleSample(s)
+		templates = append(templates, template)
+
+		for tag, values := range tagExamplesInSample {
+			tagExamples[tag] = append(tagExamples[tag], values...)
+		}
+	}
+
+	// Remove duplicates from tagExamples
+	for tag, examples := range tagExamples {
+		seen := make(map[string]struct{})
+		unique := make([]string, 0, len(examples))
+		for _, v := range examples {
+			if _, ok := seen[v]; !ok {
+				seen[v] = struct{}{}
+				unique = append(unique, v)
+			}
+		}
+		tagExamples[tag] = unique
+	}
+
+	return templates, tagExamples
+}
+
 func GenerateData(opts DatagenOpts) ([]api.Sample, []api.Sample, error) {
 	llm := NewOpenAI(openai.ChatModelGPT4oMini, 0.8)
 
 	slog.Info("starting data generation", "tags", opts.Tags, "samples", len(opts.Samples), "numValuesPerTag", opts.NumValuesPerTag, "recordsToGenerate", opts.RecordsToGenerate, "recordsPerTemplate", opts.RecordsPerTemplate, "testSplit", opts.TestSplit)
 
-	values, err := getTagValues(llm, opts.Tags, opts.NumValuesPerTag, maxConcurrentLLMCalls)
+	feedbackTemplates, tagFeedbackValues := templatizeSamples(opts.Samples)
+
+	values, err := getTagValues(llm, tagFeedbackValues, opts.NumValuesPerTag, 15)
 	if err != nil {
 		slog.Error("error getting tag values", "error", err)
 		return nil, nil, err
@@ -46,7 +101,7 @@ func GenerateData(opts DatagenOpts) ([]api.Sample, []api.Sample, error) {
 	slog.Info("generated prompts from tags")
 
 	totalTemplates := opts.RecordsToGenerate / opts.RecordsPerTemplate
-	templateGenerationPrompts, err := createPromptsFromSamples(opts.Tags, opts.Samples, totalTemplates)
+	templateGenerationPrompts, err := createPromptsFromSamples(opts.Tags, feedbackTemplates, totalTemplates)
 	if err != nil {
 		slog.Error("error creating prompts from samples", "error", err)
 		return nil, nil, err
@@ -85,25 +140,24 @@ func GenerateData(opts DatagenOpts) ([]api.Sample, []api.Sample, error) {
 	return trainSamples, testSamples, nil
 }
 
-func getTagValues(llm LLM, tags []string, numValuesPerTag, generateAtOnce int) (map[string][]string, error) {
+func getTagValues(llm LLM, tagsExamples map[string][]string, numValuesPerTag, generateAtOnce int) (map[string][]string, error) {
 	faker := newFakerWrapper()
 
 	values := make(map[string][]string)
 
-	for _, tagName := range tags {
+	for tagName, feedbackTagValues := range tagsExamples {
 
-		fakerValues := faker.getTagValues(tagName, numValuesPerTag*3/2)
+		allValues := faker.getTagValues(tagName, numValuesPerTag*3/2)
 
-		allValues := make([]string, 0)
-		if len(fakerValues) > 0 {
-			allValues = append(allValues, fakerValues...)
-		} else {
-			llmValues, err := getTagValuesFromLLM(llm, tagName, numValuesPerTag, generateAtOnce)
-			if err != nil {
-				return nil, fmt.Errorf("error getting values from llm for tag '%s': %w", tagName, err)
-			}
-			allValues = append(allValues, llmValues...)
+		if len(feedbackTagValues) < 20 {
+			// mixin faker values if we don't have enough feedback samples
+			feedbackTagValues = append(feedbackTagValues, randomSample(allValues, min(len(allValues), 20))...)
 		}
+		llmValues, err := getTagValuesFromLLM(llm, tagName, feedbackTagValues, numValuesPerTag, generateAtOnce)
+		if err != nil {
+			return nil, fmt.Errorf("error getting values from llm for tag '%s': %w", tagName, err)
+		}
+		allValues = append(allValues, llmValues...)
 
 		seen := make(map[string]struct{})
 		unique := make([]string, 0, len(allValues))
@@ -155,6 +209,20 @@ func newFakerWrapper() *fakerWrapper {
 	return wrapper
 }
 
+func randomSample[T any](input []T, k int) []T {
+	if k > len(input) {
+		panic(fmt.Sprintf("k (%d) cannot be greater than the length of input (%d)", k, len(input)))
+	}
+
+	indices := rand.Perm(len(input))[:k]
+
+	result := make([]T, k)
+	for i, idx := range indices {
+		result[i] = input[idx]
+	}
+	return result
+}
+
 func (w *fakerWrapper) getTagValues(tag string, numValuesPerTag int) []string {
 	cleanedTag := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(tag, "_", ""), "-", ""))
 
@@ -165,16 +233,17 @@ func (w *fakerWrapper) getTagValues(tag string, numValuesPerTag int) []string {
 		}
 		return values
 	}
-	return nil
+	return make([]string, 0)
 }
 
-func getTagValuesFromLLM(llm LLM, tagName string, numValuesPerTag, generateAtOnce int) ([]string, error) {
+func getTagValuesFromLLM(llm LLM, tagName string, examples []string, numValuesPerTag, generateAtOnce int) ([]string, error) {
 	prompts := make([]string, 0, numValuesPerTag/generateAtOnce)
 	for i := 0; i < numValuesPerTag; i += generateAtOnce {
 		prompt := new(strings.Builder)
 		err := tagValuePromptTmpl.Execute(prompt, tagValuePromptFields{
 			NumValues: min(generateAtOnce, numValuesPerTag-i),
 			Tag:       tagName,
+			Examples:  randomSample(examples, min(6, len(examples))),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("error rendering tagValues template: %w", err)
@@ -212,20 +281,11 @@ func getTagValuesFromLLM(llm LLM, tagName string, numValuesPerTag, generateAtOnc
 
 func trainTestSplit[T any](data []T, testSplit float32) ([]T, []T) {
 	trainLen := int(float32(len(data)) * (1 - testSplit))
-	perm := rand.Perm(len(data))
 
-	train := make([]T, 0, trainLen)
-	test := make([]T, 0, len(data)-trainLen)
+	// shuffle the data
+	data = randomSample(data, len(data))
 
-	for _, i := range perm[:trainLen] {
-		train = append(train, data[i])
-	}
-
-	for _, i := range perm[trainLen:] {
-		test = append(test, data[i])
-	}
-
-	return train, test
+	return data[:trainLen], data[trainLen:]
 }
 
 // This function splits the sets of candidate values in separate train and test sets. This prevents the model
@@ -241,20 +301,8 @@ func splitTrainTestValues(values map[string][]string, testSplit float32) (map[st
 	return train, test
 }
 
-func sampleAsTemplate(s api.Sample) string {
-	output := make([]string, 0, len(s.Tokens))
-	for i, token := range s.Tokens {
-		if s.Labels[i] == "O" {
-			output = append(output, token)
-		} else {
-			output = append(output, fmt.Sprintf("[%s]", s.Labels[i]))
-		}
-	}
-	return strings.Join(output, " ")
-}
-
 // This function creates a set of prompts that can be used to generate templates based one each user provided sample.
-func createPromptsFromSamples(tags []string, samples []api.Sample, totalTemplates int) ([]string, error) {
+func createPromptsFromSamples(tags []string, exampleTemplates []string, totalTemplates int) ([]string, error) {
 	var prompts []string
 
 	templatesPerPrompt := 10
@@ -263,15 +311,12 @@ func createPromptsFromSamples(tags []string, samples []api.Sample, totalTemplate
 		prompt := new(strings.Builder)
 
 		// pick 3 random samples from the provided samples
-		sampleSubset := make([]string, 0, min(3, len(samples)))
-		perm := rand.Perm(len(samples))
-		for j := range sampleSubset {
-			sampleSubset[j] = sampleAsTemplate(samples[perm[j]])
-		}
+		sampledExampleTemplates := randomSample(exampleTemplates, min(3, len(exampleTemplates)))
+
 		err := templateFromSamplePromptTmpl.Execute(prompt, templateFromSamplePromptFields{
 			NumTemplates: min(templatesPerPrompt, totalTemplates-i),
 			TagsName:     tags,
-			Samples:      sampleSubset,
+			Samples:      sampledExampleTemplates,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("error rendering promptFromSample template: %w", err)
