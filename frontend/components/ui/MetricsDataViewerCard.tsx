@@ -2,7 +2,7 @@ import { Card, CardContent, Box, Typography } from '@mui/material';
 
 interface MetricsDataViewerCardProps {
   value: number | string;
-  label: string;
+  label: React.ReactNode;
 }
 
 function getFontSize(value: string) {

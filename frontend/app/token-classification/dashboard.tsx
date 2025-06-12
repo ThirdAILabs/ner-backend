@@ -21,6 +21,9 @@ import useTelemetry from '@/hooks/useTelemetry';
 import MetricsDataViewerCard from '@/components/ui/MetricsDataViewerCard';
 import { formatFileSize } from '@/lib/utils';
 
+import Tooltip from '@mui/material/Tooltip';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+
 const Dashboard = () => {
   const recordEvent = useTelemetry();
   React.useEffect(() => {
@@ -314,7 +317,14 @@ const Dashboard = () => {
               <div style={{ padding: '16px' }}>
                 <MetricsDataViewerCard
                   value={`${formatFileSize(license?.LicenseInfo?.Usage.UsedBytes)} / ${formatFileSize(license?.LicenseInfo?.Usage.MaxBytes)}`}
-                  label="Quota Used"
+                  label={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      Quota Used
+                      <Tooltip title="Resets on the 1st of each month.">
+                        <InfoOutlinedIcon fontSize="inherit" sx={{ cursor: 'pointer' }} />
+                      </Tooltip>
+                    </Box>
+                  }
                 />
               </div>
             </Box>
