@@ -258,12 +258,7 @@ func TestFinetuningOnnxModel(t *testing.T) {
 		},
 	}
 
-	_, model := finetune(
-		t, router,
-		base.Id.String(),
-		ftReq,
-		50, 5*time.Second,
-	)
+	_, model := finetune(t, router, base.Id.String(), ftReq, 50, 5*time.Second)
 
 	assert.Equal(t, database.ModelTrained, model.Status)
 
