@@ -2,7 +2,7 @@ import { Card, CardContent, Box, Typography } from '@mui/material';
 
 interface MetricsDataViewerCardProps {
   value: number | string;
-  label: string;
+  label: React.ReactNode;
 }
 
 function getFontSize(value: string) {
@@ -42,8 +42,8 @@ const MetricsDataViewerCard: React.FC<MetricsDataViewerCardProps> = ({ value, la
       >
         <Box
           sx={{
-            height: '128px',
-            width: '128px',
+            height: 100,
+            width: '100%',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -56,6 +56,9 @@ const MetricsDataViewerCard: React.FC<MetricsDataViewerCardProps> = ({ value, la
               fontWeight: 600,
               color: '#4a5568',
               textAlign: 'center',
+              lineHeight: 1.2,
+              maxWidth: '100%',
+              wordBreak: 'break-word',
             }}
           >
             {value}

@@ -30,6 +30,7 @@ interface DatabaseTableProps {
   tags: Tag[];
   uploadId?: string;
   addFeedback: (tokens: FeedbackMetadata, objectTokens: string[], objectTags: string[]) => void;
+  initialSelectedTag?: string | null;
 }
 
 interface TableContentProps {

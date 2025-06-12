@@ -49,12 +49,13 @@ func (m *mockStorage) CreateBucket(ctx context.Context, bucket string) error {
 
 func TestListModels(t *testing.T) {
 	id1, id2 := uuid.New(), uuid.New()
+	fixedTime := time.Date(2025, 6, 11, 12, 0, 0, 0, time.UTC)
 	db := createDB(t,
-		&database.Model{Id: id1, Name: "Model1", Type: "regex", Status: database.ModelTrained, CreationTime: time.Now()},
-		&database.Model{Id: id2, Name: "Model2", Type: "bolt", Status: database.ModelTraining, CreationTime: time.Now()},
+		&database.Model{Id: id1, Name: "Model1", Type: "regex", Status: database.ModelTrained, CreationTime: fixedTime},
+		&database.Model{Id: id2, Name: "Model2", Type: "bolt", Status: database.ModelTraining, CreationTime: fixedTime},
 	)
 
-	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024, nil)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -68,8 +69,8 @@ func TestListModels(t *testing.T) {
 	err := json.Unmarshal(rec.Body.Bytes(), &response)
 	assert.NoError(t, err)
 	assert.ElementsMatch(t, []api.Model{
-		{Id: id1, Name: "Model1", Status: database.ModelTrained},
-		{Id: id2, Name: "Model2", Status: database.ModelTraining},
+		{Id: id1, Name: "Model1", Status: database.ModelTrained, CreationTime: fixedTime},
+		{Id: id2, Name: "Model2", Status: database.ModelTraining, CreationTime: fixedTime},
 	}, response)
 }
 
@@ -82,7 +83,7 @@ func TestGetModel(t *testing.T) {
 		&database.ModelTag{ModelId: modelId, Tag: "phone"},
 	)
 
-	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024, nil)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -104,7 +105,7 @@ func TestFinetuneModel(t *testing.T) {
 		&database.Model{Id: modelId, Name: "Model1", Type: "regex", Status: database.ModelTrained},
 	)
 
-	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024, nil)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -158,7 +159,7 @@ func TestCreateReport(t *testing.T) {
 		&database.ModelTag{ModelId: modelId, Tag: "phone"},
 	)
 
-	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024, nil)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -223,7 +224,7 @@ func TestCreateReport_InvalidS3(t *testing.T) {
 		&database.ModelTag{ModelId: modelId, Tag: "phone"},
 	)
 
-	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024, nil)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -286,7 +287,7 @@ func TestGetReport(t *testing.T) {
 		&database.ObjectEntity{ReportId: reportId, Object: "object1", Start: 2, End: 3, Label: "label3", Text: "text3"},
 	)
 
-	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024, nil)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -390,7 +391,7 @@ func TestDeleteReport(t *testing.T) {
 		&database.Report{Id: reportId, ModelId: modelId},
 	)
 
-	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024, nil)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -434,7 +435,7 @@ func TestStopReport(t *testing.T) {
 		&database.Report{Id: reportId, ModelId: modelId},
 	)
 
-	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024, nil)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -481,7 +482,7 @@ func TestReportSearch(t *testing.T) {
 		&database.ObjectEntity{ReportId: reportId, Object: "object4", Start: 4, End: 5, Label: "label3", Text: "12xyz34"},
 	)
 
-	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024, nil)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -553,7 +554,7 @@ func TestGetReportPreviews(t *testing.T) {
 
 	db := createDB(t, p1, p2, p3, e1, e2, e3)
 
-	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024, nil)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -626,7 +627,7 @@ func TestGetReportPreviews(t *testing.T) {
 func TestGetInferenceMetrics_NoTasks(t *testing.T) {
 	db := createDB(t)
 
-	svc := backend.NewBackendService(db, &mockStorage{}, nil /*chunkTargetBytes*/, 0)
+	svc := backend.NewBackendService(db, &mockStorage{}, nil /*chunkTargetBytes*/, 0, nil)
 	router := chi.NewRouter()
 	svc.AddRoutes(router)
 
@@ -671,7 +672,7 @@ func TestGetInferenceMetrics_WithTasks(t *testing.T) {
 		TokenCount:   300,
 	})
 
-	svc := backend.NewBackendService(db, &mockStorage{}, nil, 0)
+	svc := backend.NewBackendService(db, &mockStorage{}, nil, 0, nil)
 	router := chi.NewRouter()
 	svc.AddRoutes(router)
 
@@ -736,7 +737,7 @@ func TestGetInferenceMetrics_WithTasks(t *testing.T) {
 }
 
 func TestValidateGroupDefinition_ValidDefinition(t *testing.T) {
-	service := backend.NewBackendService(nil, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(nil, &mockStorage{}, messaging.NewInMemoryQueue(), 1024, nil)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -750,7 +751,7 @@ func TestValidateGroupDefinition_ValidDefinition(t *testing.T) {
 }
 
 func TestValidateGroupDefinition_InvalidDefinition(t *testing.T) {
-	service := backend.NewBackendService(nil, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(nil, &mockStorage{}, messaging.NewInMemoryQueue(), 1024, nil)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -765,7 +766,7 @@ func TestValidateGroupDefinition_InvalidDefinition(t *testing.T) {
 }
 
 func TestValidateS3Bucket_PublicBucket(t *testing.T) {
-	service := backend.NewBackendService(nil, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(nil, &mockStorage{}, messaging.NewInMemoryQueue(), 1024, nil)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -779,7 +780,7 @@ func TestValidateS3Bucket_PublicBucket(t *testing.T) {
 }
 
 func TestValidateS3Bucket_InvalidBucket(t *testing.T) {
-	service := backend.NewBackendService(nil, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(nil, &mockStorage{}, messaging.NewInMemoryQueue(), 1024, nil)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -795,7 +796,7 @@ func TestValidateS3Bucket_InvalidBucket(t *testing.T) {
 
 func TestStoreAndGetFileNameToPath(t *testing.T) {
 	db := createDB(t)
-	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024)
+	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024, nil)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 

@@ -18,6 +18,7 @@ export function DatabaseTable({
   tags,
   uploadId,
   addFeedback,
+  initialSelectedTag,
 }: DatabaseTableProps) {
   const searchParams = useSearchParams();
   const reportId: string = searchParams.get('jobId') as string;
@@ -52,9 +53,12 @@ export function DatabaseTable({
     Object.fromEntries(groups.map((group) => [group, true]))
   );
 
-  const [tagFilters, setTagFilters] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(tags.map((tag) => [tag.type, true]))
-  );
+  const [tagFilters, setTagFilters] = useState<Record<string, boolean>>(() => {
+    const allTagKeys = tags.map((tag) => tag.type);
+    return Object.fromEntries(
+      allTagKeys.map((tag) => [tag, initialSelectedTag ? tag === initialSelectedTag : true])
+    );
+  });
 
   const toActiveTagList = (filters: Record<string, boolean>): string[] => {
     return Object.entries(filters)

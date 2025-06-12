@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { FIXED_PORT, ensurePortIsFree } from './check-port.js';
 import log from 'electron-log';
+import { get } from 'node:http';
 
 log.transports.file.level = 'debug';
 log.transports.file.resolvePath = () => {
@@ -124,7 +125,7 @@ export async function startBackend() {
 
   log.debug('Spawning backend with cwd:', backendDir);
 
-  const modelType = 'cnn_model';  // Default model type
+  let modelType = 'bolt_udt';  // Default model type
   try {
     const modelConfig = JSON.parse(fs.readFileSync(modelConfigPath, 'utf8'));
     modelType = modelConfig.model_type || modelType;
@@ -149,18 +150,35 @@ export async function startBackend() {
   // Get the plugin executable path
   const pluginPath = path.join(backendDir, 'plugin', 'plugin');
 
+  // Determine the correct path for libonnxruntime.dylib based on environment
+  let onnxRuntimePath;
+  const isProduction = process.env.NODE_ENV === 'production' || (process.execPath && process.execPath.includes('Applications'));
+  
+  if (isProduction) {
+    // In production, the library is in the Frameworks directory
+    const frameworksDir = process.platform === 'darwin' 
+      ? path.join(path.dirname(process.execPath), '..', 'Frameworks')
+      : path.join(path.dirname(process.execPath), '..', 'resources');
+    onnxRuntimePath = path.join(frameworksDir, 'libonnxruntime.dylib');
+  } else {
+    // In development, the library is in the resources directory
+    onnxRuntimePath = path.join(__dirname, '..', 'resources', 'libonnxruntime.dylib');
+  }
+  
+  log.debug('ONNX Runtime library path:', onnxRuntimePath);
+    
   const proc = spawn(
     backendPath,
     [],
     {
       cwd: backendDir,
       env: {
-        ...process.env,
         PORT:       FIXED_PORT.toString(),
         MODEL_DIR: getBinPath(),
         MODEL_TYPE: modelType,
         PLUGIN_SERVER: pluginPath,
         APP_DATA_DIR: appDataDir,
+        ONNX_RUNTIME_DYLIB: onnxRuntimePath,
       },
       stdio: ['pipe', 'pipe', 'pipe']
     }

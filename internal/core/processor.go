@@ -33,7 +33,7 @@ type TaskProcessor struct {
 
 	localModelDir string
 	modelBucket   string
-	modelLoaders  map[string]ModelLoader
+	modelLoaders  map[ModelType]ModelLoader
 }
 
 const bytesPerMB = 1024 * 1024
@@ -45,7 +45,7 @@ var ExcludedTags = map[string]struct{}{
 	"SERVICE_CODE":       {},
 }
 
-func NewTaskProcessor(db *gorm.DB, storage storage.Provider, publisher messaging.Publisher, reciever messaging.Reciever, licenseVerifier licensing.LicenseVerifier, localModelDir string, modelBucket string, modelLoaders map[string]ModelLoader) *TaskProcessor {
+func NewTaskProcessor(db *gorm.DB, storage storage.Provider, publisher messaging.Publisher, reciever messaging.Reciever, licenseVerifier licensing.LicenseVerifier, localModelDir string, modelBucket string, modelLoaders map[ModelType]ModelLoader) *TaskProcessor {
 	return &TaskProcessor{
 		db:            db,
 		storage:       storage,
@@ -201,7 +201,7 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 		slog.Error("error marking task as running", "error", err)
 	}
 
-	if err := proc.licensing.VerifyLicense(ctx); err != nil {
+	if _, err := proc.licensing.VerifyLicense(ctx); err != nil {
 		slog.Error("license verification failed", "error", err)
 		database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobFailed) //nolint:errcheck
 		database.SaveReportError(ctx, proc.db, reportId, fmt.Sprintf("license verification failed: %s", err.Error()))
@@ -230,7 +230,7 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 		return err
 	}
 
-	totalTokens, workerErr := proc.runInferenceOnBucket(ctx, taskId, task.ReportId, storage, task.Report.Model.Id, task.Report.Model.Type, tags, customTags, groupToQuery, task.Report.SourceS3Bucket, s3Objects)
+	totalTokens, workerErr := proc.runInferenceOnBucket(ctx, taskId, task.ReportId, storage, task.Report.Model.Id, ParseModelType(task.Report.Model.Type), tags, customTags, groupToQuery, task.Report.SourceS3Bucket, s3Objects)
 
 	if err := proc.db.
 		Model(&database.InferenceTask{}).
@@ -286,7 +286,7 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 	reportId uuid.UUID,
 	storage storage.Provider,
 	modelId uuid.UUID,
-	modelType string,
+	modelType ModelType,
 	tags map[string]struct{},
 	customTags map[string]string,
 	groupToQuery map[uuid.UUID]string,
@@ -420,7 +420,7 @@ func (proc *TaskProcessor) getModelDir(modelId uuid.UUID) string {
 	return filepath.Join(proc.localModelDir, modelId.String())
 }
 
-func (proc *TaskProcessor) loadModel(ctx context.Context, modelId uuid.UUID, modelType string) (Model, error) {
+func (proc *TaskProcessor) loadModel(ctx context.Context, modelId uuid.UUID, modelType ModelType) (Model, error) {
 
 	var localDir string
 
@@ -699,7 +699,7 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 
 	database.UpdateShardDataTaskStatus(ctx, proc.db, reportId, database.JobRunning) //nolint:errcheck
 
-	if err := proc.licensing.VerifyLicense(ctx); err != nil {
+	if _, err := proc.licensing.VerifyLicense(ctx); err != nil {
 		slog.Error("license verification failed", "error", err)
 		database.UpdateShardDataTaskStatus(ctx, proc.db, reportId, database.JobFailed) //nolint:errcheck
 		database.SaveReportError(ctx, proc.db, reportId, fmt.Sprintf("license verification failed: %s", err.Error()))
@@ -819,6 +819,8 @@ func (proc *TaskProcessor) getModel(ctx context.Context, modelId uuid.UUID) (dat
 func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload messaging.FinetuneTaskPayload) error {
 	database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelTraining) //nolint:errcheck
 
+	slog.Info("processing finetune task", "model_id", payload.ModelId, "base_model_id", payload.BaseModelId)
+
 	baseModel, err := proc.getModel(ctx, payload.BaseModelId)
 	if err != nil {
 		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint:errcheck
@@ -826,7 +828,7 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 		return err
 	}
 
-	model, err := proc.loadModel(ctx, payload.BaseModelId, baseModel.Type)
+	model, err := proc.loadModel(ctx, payload.BaseModelId, ParseModelType(baseModel.Type))
 	if err != nil {
 		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint:errcheck
 		slog.Error("error loading base model", "base_model_id", payload.BaseModelId, "model_id", payload.ModelId, "error", err)
@@ -834,11 +836,7 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 	}
 	defer model.Release()
 
-	if err := model.Finetune(payload.TaskPrompt, payload.Tags, payload.Samples); err != nil {
-		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint:errcheck
-		slog.Error("error finetuning model", "base_model_id", payload.BaseModelId, "model_id", payload.ModelId, "error", err)
-		return fmt.Errorf("error finetuning model: %w", err)
-	}
+	slog.Info("base model loaded for finetuning", "model_id", payload.ModelId, "base_model_id", payload.BaseModelId)
 
 	localDir := proc.getModelDir(payload.ModelId)
 	if err := os.MkdirAll(localDir, os.ModePerm); err != nil {
@@ -847,11 +845,13 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 		return fmt.Errorf("error creating local model directory: %w", err)
 	}
 
-	if err := model.Save(localDir); err != nil {
+	if err := model.FinetuneAndSave(payload.TaskPrompt, payload.Tags, payload.Samples, localDir); err != nil {
 		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint:errcheck
-		slog.Error("error saving finetuned model locally", "model_id", payload.ModelId, "error", err)
-		return fmt.Errorf("error saving finetuned model: %w", err)
+		slog.Error("error finetuning model", "base_model_id", payload.BaseModelId, "model_id", payload.ModelId, "error", err)
+		return fmt.Errorf("error finetuning model: %w", err)
 	}
+
+	slog.Info("finetuning completed", "model_id", payload.ModelId, "base_model_id", payload.BaseModelId)
 
 	if err := proc.storage.UploadDir(ctx, proc.modelBucket, payload.ModelId.String(), localDir); err != nil {
 		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint:errcheck
@@ -859,9 +859,13 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 		return fmt.Errorf("error uploading model to S3: %w", err)
 	}
 
+	slog.Info("finetuned model uploaded", "model_id", payload.ModelId, "base_model_id", payload.BaseModelId)
+
 	if err := database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelTrained); err != nil {
 		return fmt.Errorf("error updating model status after finetuning: %w", err)
 	}
+
+	slog.Info("finetuning completed", "model_id", payload.ModelId, "base_model_id", payload.BaseModelId)
 
 	return nil
 }

@@ -64,7 +64,17 @@ func LoadPythonModel(PythonExecutable, PluginScript, PluginModelName, KwargsJSON
 	}, nil
 }
 
-func (ner *PythonModel) Finetune(prompt string, tags []api.TagInfo, samples []api.Sample) error {
+func LoadCnnModel(pythonExec, pluginScript, modelDir string) (*PythonModel, error) {
+	cfgJSON := fmt.Sprintf(`{"model_path":"%s/cnn_model.pth", "tokenizer_path":"%s/qwen_tokenizer"}`, modelDir, modelDir)
+	return LoadPythonModel(
+		pythonExec,
+		pluginScript,
+		"python_cnn_ner_model",
+		cfgJSON,
+	)
+}
+
+func (ner *PythonModel) FinetuneAndSave(prompt string, tags []api.TagInfo, samples []api.Sample, savePath string) error {
 	const maxPayload = 2 * 1024 * 1024 // 2 MB
 
 	// convert TagInfo
@@ -124,6 +134,11 @@ func (ner *PythonModel) Finetune(prompt string, tags []api.TagInfo, samples []ap
 			return fmt.Errorf("final finetune chunk error: %w", err)
 		}
 	}
+
+	if err := ner.Save(savePath); err != nil {
+		return fmt.Errorf("error saving model: %w", err)
+	}
+
 	return nil
 }
 

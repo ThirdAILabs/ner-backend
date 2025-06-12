@@ -5,15 +5,20 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"mime"
 	"mime/multipart"
 	"ner-backend/internal/core"
+	"ner-backend/internal/core/datagen"
 	"ner-backend/internal/database"
+	"ner-backend/internal/licensing"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/storage"
 	"regexp"
+	"slices"
+	"strings"
 
 	"ner-backend/pkg/api"
 	"net/http"
@@ -32,6 +37,7 @@ type BackendService struct {
 	storage          storage.Provider
 	publisher        messaging.Publisher
 	chunkTargetBytes int64
+	licensing        licensing.LicenseVerifier
 }
 
 const (
@@ -39,13 +45,13 @@ const (
 	ErrCodeDB    = 1001 // Custom internal code for DB errors
 )
 
-func NewBackendService(db *gorm.DB, storage storage.Provider, pub messaging.Publisher, chunkTargetBytes int64) *BackendService {
+func NewBackendService(db *gorm.DB, storage storage.Provider, pub messaging.Publisher, chunkTargetBytes int64, licenseVerifier licensing.LicenseVerifier) *BackendService {
 	if err := storage.CreateBucket(context.Background(), uploadBucket); err != nil {
 		slog.Error("error creating upload bucket", "error", err)
 		panic("failed to create upload bucket")
 	}
 
-	return &BackendService{db: db, storage: storage, publisher: pub, chunkTargetBytes: chunkTargetBytes}
+	return &BackendService{db: db, storage: storage, publisher: pub, chunkTargetBytes: chunkTargetBytes, licensing: licenseVerifier}
 }
 
 func (s *BackendService) AddRoutes(r chi.Router) {
@@ -87,6 +93,8 @@ func (s *BackendService) AddRoutes(r chi.Router) {
 		r.Post("/{upload_id}", RestHandler(s.StoreFileNameToPath))
 		r.Get("/{upload_id}", RestHandler(s.GetFileNameToPath))
 	})
+
+	r.Get("/license", RestHandler(s.GetLicense))
 }
 
 func (s *BackendService) ListModels(r *http.Request) (any, error) {
@@ -140,7 +148,7 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 
 	if err := s.db.WithContext(ctx).Transaction(func(txn *gorm.DB) error {
 		var baseModel database.Model
-		if err := txn.First(&baseModel, "id = ?", modelId).Error; err != nil {
+		if err := txn.Preload("Tags").First(&baseModel, "id = ?", modelId).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return CodedErrorf(http.StatusNotFound, "base model not found")
 			}
@@ -159,6 +167,7 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 			Type:         baseModel.Type,
 			Status:       database.ModelQueued,
 			CreationTime: time.Now().UTC(),
+			Tags:         baseModel.Tags,
 		}
 
 		if err := txn.WithContext(ctx).Create(&model).Error; err != nil {
@@ -170,17 +179,23 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 	}); err != nil {
 		return nil, err
 	}
-
+	tagNames := make([]string, 0, len(req.Tags))
 	if len(req.Tags) > 0 {
-		tagNames := make([]string, len(req.Tags))
-		for i, t := range req.Tags {
-			tagNames[i] = t.Name
+		for _, tag := range req.Tags {
+			tagNames = append(tagNames, tag.Name)
 		}
 		if err := database.SetModelTags(ctx, s.db, model.Id, tagNames); err != nil {
 			slog.Error("failed to set tags", "model", model.Id, "err", err)
 			return nil, err
 		}
+	} else {
+		for _, tag := range model.Tags {
+			tagNames = append(tagNames, tag.Tag)
+		}
 	}
+
+	samples := make([]api.Sample, 0, len(req.Samples))
+	samples = append(samples, req.Samples...)
 
 	tokensList, labelsList, err := database.GetFeedbackSamples(ctx, s.db, modelId)
 	if err != nil {
@@ -189,17 +204,42 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 	}
 
 	for i := range tokensList {
-		req.Samples = append(req.Samples, api.Sample{
+		samples = append(samples, api.Sample{
 			Tokens: tokensList[i],
 			Labels: labelsList[i],
 		})
+	}
+
+	if len(samples) == 0 {
+		slog.Error("no feedback samples found for model", "model_id", modelId)
+		return nil, CodedErrorf(http.StatusUnprocessableEntity, "no feedback samples found for model %s", modelId)
+	}
+
+	if req.GenerateData {
+		opts := datagen.DatagenOpts{
+			Tags:    tagNames,
+			Samples: samples,
+			// have to adjust these values
+			NumValuesPerTag:    30,
+			RecordsToGenerate:  200,
+			RecordsPerTemplate: 3,
+			TestSplit:          0.2,
+		}
+
+		trainSamples, testSamples, err := datagen.GenerateData(opts)
+		if err != nil {
+			slog.Error("error generating synthetic data", "error", err)
+			return nil, CodedErrorf(http.StatusInternalServerError, "error generating samples: %v", err)
+		}
+		samples = append(samples, trainSamples...)
+		samples = append(samples, testSamples...)
 	}
 
 	payload := messaging.FinetuneTaskPayload{
 		ModelId:     model.Id,
 		BaseModelId: model.BaseModelId.UUID,
 		Tags:        req.Tags,
-		Samples:     req.Samples,
+		Samples:     samples,
 	}
 	if req.TaskPrompt != nil {
 		payload.TaskPrompt = *req.TaskPrompt
@@ -1010,6 +1050,14 @@ func (s *BackendService) ValidateGroupDefinition(r *http.Request) (any, error) {
 	return nil, nil
 }
 
+func (s *BackendService) GetLicense(r *http.Request) (any, error) {
+	licenseInfo, err := s.licensing.VerifyLicense(r.Context())
+	return api.GetLicenseResponse{
+		LicenseInfo:  licenseInfo,
+		LicenseError: fmt.Sprintf("%v", err),
+	}, nil
+}
+
 func validateS3Access(endpoint string, region string, bucket string, prefix string) error {
 	s3Client, err := storage.NewS3Provider(storage.S3ProviderConfig{
 		S3EndpointURL: endpoint,
@@ -1085,7 +1133,7 @@ func (s *BackendService) StoreModelFeedback(r *http.Request) (any, error) {
 
 	ctx := r.Context()
 	var m database.Model
-	if err := s.db.WithContext(ctx).First(&m, "id = ?", modelId).Error; err != nil {
+	if err := s.db.WithContext(ctx).Preload("Tags").First(&m, "id = ?", modelId).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, CodedErrorf(http.StatusNotFound, "model not found")
 		}
@@ -1098,6 +1146,21 @@ func (s *BackendService) StoreModelFeedback(r *http.Request) (any, error) {
 	}
 	if len(req.Tokens) == 0 || len(req.Labels) == 0 || len(req.Tokens) != len(req.Labels) {
 		return nil, CodedErrorf(http.StatusUnprocessableEntity, "tokens and labels must both be non‐empty and of equal length")
+	}
+
+	modelTagsName := make([]string, len(m.Tags))
+	for i, tag := range m.Tags {
+		modelTagsName[i] = tag.Tag
+	}
+
+	unsupportedTags := make([]string, 0, len(req.Labels))
+	for _, feedbackTag := range req.Labels {
+		if !slices.Contains(modelTagsName, feedbackTag) {
+			unsupportedTags = append(unsupportedTags, feedbackTag)
+		}
+	}
+	if len(unsupportedTags) > 0 {
+		return nil, CodedErrorf(http.StatusUnprocessableEntity, "model does not support tags: %s", strings.Join(unsupportedTags, ", "))
 	}
 
 	if err := database.SaveFeedbackSample(ctx, s.db, modelId, req.Tokens, req.Labels); err != nil {

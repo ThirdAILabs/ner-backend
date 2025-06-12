@@ -32,6 +32,7 @@ type APIConfig struct {
 	WorkerConcurrency int    `env:"CONCURRENCY" envDefault:"1"`
 	APIPort           string `env:"API_PORT" envDefault:"8001"`
 	ChunkTargetBytes  int64  `env:"S3_CHUNK_TARGET_BYTES" envDefault:"10737418240"`
+	LicenseKey        string `env:"LICENSE_KEY" envDefault:""`
 	HostModelDir      string `env:"HOST_MODEL_DIR" envDefault:"/app/models"`
 }
 
@@ -67,12 +68,12 @@ func main() {
 
 	cmd.InitializePresidioModel(db)
 
-	if err := cmd.InitializeCnnNerExtractor(context.Background(), db, s3Client, cfg.ModelBucketName, "advanced", cfg.HostModelDir); err != nil {
-		log.Fatalf("Failed to init & upload CNN NER model: %v", err)
+	if err := cmd.InitializePythonCnnModel(context.Background(), db, s3Client, cfg.ModelBucketName, "advanced", cfg.HostModelDir); err != nil {
+		log.Fatalf("Failed to init & upload python CNN model: %v", err)
 	}
 
-	if err := cmd.InitializeTransformerModel(context.Background(), db, s3Client, cfg.ModelBucketName, "ultra", cfg.HostModelDir); err != nil {
-		log.Fatalf("Failed to init & upload Transformer model: %v", err)
+	if err := cmd.InitializePythonTransformerModel(context.Background(), db, s3Client, cfg.ModelBucketName, "ultra", cfg.HostModelDir); err != nil {
+		log.Fatalf("Failed to init & upload python transformer model: %v", err)
 	}
 
 	if err := cmd.RemoveExcludedTagsFromAllModels(db); err != nil {
@@ -103,7 +104,13 @@ func main() {
 	r.Use(middleware.Recoverer)                 // Recover from panics
 	r.Use(middleware.Timeout(60 * time.Second)) // Set request timeout
 
-	apiHandler := api.NewBackendService(db, s3Client, publisher, cfg.ChunkTargetBytes)
+	licensing := cmd.CreateLicenseVerifier(db, cfg.LicenseKey)
+	licenseInfo, err := licensing.VerifyLicense(context.Background())
+	if err != nil {
+		log.Fatalf("License verification failed - Info: %v, Error: %v", licenseInfo, err)
+	}
+
+	apiHandler := api.NewBackendService(db, s3Client, publisher, cfg.ChunkTargetBytes, licensing)
 
 	// Your existing API routes should be prefixed with /api to avoid conflicts
 	r.Route("/api/v1", func(r chi.Router) {

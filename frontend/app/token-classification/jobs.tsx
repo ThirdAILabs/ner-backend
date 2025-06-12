@@ -26,6 +26,8 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { useHealth } from '@/contexts/HealthProvider';
 import { alpha } from '@mui/material/styles';
 
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+
 export default function Jobs() {
   const searchParams = useSearchParams();
   const deploymentId = searchParams.get('deploymentId');
@@ -48,7 +50,9 @@ export default function Jobs() {
             r.Id === report.Id
               ? {
                   ...r,
+                  Errors: detailedReport.Errors || [],
                   SucceededFileCount: detailedReport.SucceededFileCount,
+                  FailedFileCount: detailedReport.FailedFileCount,
                   detailedStatus: {
                     ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
                     InferenceTaskStatuses: detailedReport.InferenceTaskStatuses,
@@ -129,7 +133,7 @@ export default function Jobs() {
             }}
           >
             <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.125rem' }}>
-              Report
+              Scan
             </Typography>
             <Link href={`/token-classification/jobs/new`} passHref>
               <Button
@@ -169,7 +173,7 @@ export default function Jobs() {
             }}
           >
             <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.125rem' }}>
-              Report
+              Scan
             </Typography>
             <Link href={`/token-classification/jobs/new`} passHref>
               <Button
@@ -220,6 +224,10 @@ export default function Jobs() {
     }
 
     const { ShardDataTaskStatus, InferenceTaskStatuses } = report.detailedStatus;
+    const reportErrors = report.Errors || [];
+    const monthlyQuotaExceeded =
+      reportErrors.length > 0 &&
+      reportErrors.includes('license verification failed: quota exceeded');
 
     // Check for ShardDataTask failure first
     if (ShardDataTaskStatus === 'FAILED') {
@@ -288,10 +296,11 @@ export default function Jobs() {
             sx={{
               flex: 1,
               height: '8px',
-              bgcolor: '#f1f5f9',
+              bgcolor: '#cbd5e1',
               borderRadius: '9999px',
               overflow: 'hidden',
               display: 'flex',
+              position: 'relative',
             }}
           >
             {/* Green (successful files) */}
@@ -310,6 +319,19 @@ export default function Jobs() {
                 bgcolor: '#ef4444',
               }}
             />
+            {/* Loading animation */}
+            {!monthlyQuotaExceeded && succeededFileCount + failedFileCount < fileCount && (
+              <Box
+                className="shimmer-effect"
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                }}
+              />
+            )}
           </Box>
           <Typography
             variant="body2"
@@ -323,11 +345,23 @@ export default function Jobs() {
           </Typography>
         </Box>
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-          {succeededFileCount === fileCount
-            ? `Files: ${fileCount}/${fileCount} Processed`
-            : failedFileCount === fileCount
-              ? `Files: ${failedFileCount}/${fileCount} Failed`
-              : `Files: ${succeededFileCount}/${fileCount} Processed${failedFileCount > 0 ? `, ${failedFileCount}/${fileCount} Failed` : ''}`}
+          {monthlyQuotaExceeded ? (
+            <Box
+              component="span"
+              sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'red' }}
+            >
+              Monthly Quota Exceeded
+              <Tooltip title="This scan exceeds the monthly quota for the free-tier. The quota resets on the 1st of each month.">
+                <InfoOutlinedIcon fontSize="inherit" sx={{ cursor: 'pointer' }} />
+              </Tooltip>
+            </Box>
+          ) : succeededFileCount === fileCount ? (
+            `Files: ${fileCount}/${fileCount} Processed`
+          ) : failedFileCount === fileCount ? (
+            `Files: ${failedFileCount}/${fileCount} Failed`
+          ) : (
+            `Files: ${succeededFileCount}/${fileCount} Processed${failedFileCount > 0 ? `, ${failedFileCount}/${fileCount} Failed` : ''}`
+          )}
         </Typography>
       </Box>
     );
@@ -374,7 +408,7 @@ export default function Jobs() {
                 color: '#4a5568',
               }}
             >
-              Reports
+              Scans
             </Typography>
           </Box>
           <Link href={`/token-classification/jobs/new`} passHref>
@@ -396,7 +430,7 @@ export default function Jobs() {
               }}
               disabled={!healthStatus}
             >
-              New Report
+              New Scan
             </Button>
           </Link>
         </Box>

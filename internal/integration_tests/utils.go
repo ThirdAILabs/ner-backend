@@ -9,6 +9,7 @@ import (
 	"ner-backend/internal/core"
 	"ner-backend/internal/core/types"
 	"ner-backend/internal/database"
+	"ner-backend/internal/licensing"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/storage"
 	"ner-backend/pkg/api"
@@ -56,13 +57,17 @@ func (m *regexModel) Predict(text string) ([]types.Entity, error) {
 	return entities, nil
 }
 
-func (m *regexModel) Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sample) error {
+func (m *regexModel) FinetuneAndSave(taskPrompt string, tags []api.TagInfo, samples []api.Sample, savePath string) error {
 	for _, tag := range tags {
 		pattern, err := regexp.Compile(tag.Name)
 		if err != nil {
 			return fmt.Errorf("error compiling regex pattern: %w", err)
 		}
 		m.patterns[tag.Name] = *pattern
+	}
+
+	if err := m.Save(savePath); err != nil {
+		return fmt.Errorf("error saving model: %w", err)
 	}
 
 	return nil
@@ -260,6 +265,6 @@ func httpRequest(api http.Handler, method, endpoint string, payload any, dest an
 
 type DummyLicenseVerifier struct{}
 
-func (d *DummyLicenseVerifier) VerifyLicense(context.Context) error {
-	return nil
+func (d *DummyLicenseVerifier) VerifyLicense(context.Context) (licensing.LicenseInfo, error) {
+	return licensing.LicenseInfo{}, nil
 }

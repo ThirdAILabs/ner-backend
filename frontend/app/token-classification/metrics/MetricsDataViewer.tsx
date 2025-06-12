@@ -262,12 +262,12 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
           }}
         >
           {/* In-Progress Tasks */}
-          <MetricsDataViewerCard value={infMetrics.InProgress} label="In-Progress Reports" />
+          <MetricsDataViewerCard value={infMetrics.InProgress} label="In-Progress Scans" />
 
           {/* Completed Tasks */}
           <MetricsDataViewerCard
             value={infMetrics.Completed + infMetrics.Failed}
-            label="Completed Reports"
+            label="Completed Scans"
           />
 
           {/* Throughput */}

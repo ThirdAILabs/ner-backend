@@ -12,6 +12,7 @@ import (
 	"ner-backend/internal/api"
 	"ner-backend/internal/core"
 	"ner-backend/internal/database"
+	"ner-backend/internal/licensing"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/storage"
 	"net/http"
@@ -24,17 +25,19 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	ort "github.com/yalue/onnxruntime_go"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
 type Config struct {
-	Root       string `env:"ROOT" envDefault:"./pocket-shield"`
-	Port       int    `env:"PORT" envDefault:"3001"`
-	License    string `env:"LICENSE_KEY" envDefault:""`
-	ModelDir   string `env:"MODEL_DIR" envDefault:""`
-	ModelType  string `env:"MODEL_TYPE" envDefault:"cnn_model"`
-	AppDataDir string `env:"APP_DATA_DIR" envDefault:"./pocket-shield"`
+	Root             string `env:"ROOT" envDefault:"./pocket-shield"`
+	Port             int    `env:"PORT" envDefault:"3001"`
+	License          string `env:"LICENSE_KEY" envDefault:""`
+	ModelDir         string `env:"MODEL_DIR" envDefault:""`
+	ModelType        string `env:"MODEL_TYPE"`
+	AppDataDir       string `env:"APP_DATA_DIR" envDefault:"./pocket-shield"`
+	OnnxRuntimeDylib string `env:"ONNX_RUNTIME_DYLIB"`
 }
 
 const (
@@ -92,7 +95,7 @@ func createQueue(db *gorm.DB) *messaging.InMemoryQueue {
 	return queue
 }
 
-func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publisher, port int, modelDir, modelType string) *http.Server {
+func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publisher, port int, modelDir string, modelType core.ModelType, licensing licensing.LicenseVerifier) *http.Server {
 	r := chi.NewRouter()
 
 	// Middleware
@@ -109,21 +112,11 @@ func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publish
 	r.Use(middleware.Recoverer)                 // Recover from panics
 	r.Use(middleware.Timeout(60 * time.Second)) // Set request timeout
 
-	apiHandler := api.NewBackendService(db, storage, queue, chunkTargetBytes)
+	apiHandler := api.NewBackendService(db, storage, queue, chunkTargetBytes, licensing)
 
 	loaders := core.NewModelLoaders("python", "plugin/plugin-python/plugin.py")
 
-	var loaderType string
-	switch {
-	case modelType == "udt_model":
-		loaderType = "bolt"
-	case modelType == "cnn_model":
-		loaderType = "cnn"
-	default:
-		log.Fatalf("Unknown model type in directory: %s", modelDir)
-	}
-
-	nerModel, err := loaders[loaderType](modelDir)
+	nerModel, err := loaders[modelType](modelDir)
 	if err != nil {
 		log.Fatalf("could not load NER model: %v", err)
 	}
@@ -149,6 +142,19 @@ func main() {
 		log.Fatalf("error parsing config: %v", err)
 	}
 
+	if cfg.OnnxRuntimeDylib == "" {
+		log.Fatalf("ONNX_RUNTIME_DYLIB must be set")
+	}
+	ort.SetSharedLibraryPath(cfg.OnnxRuntimeDylib)
+	if err := ort.InitializeEnvironment(); err != nil {
+		log.Fatalf("could not init ONNX Runtime: %v", err)
+	}
+	defer func() {
+		if err := ort.DestroyEnvironment(); err != nil {
+			log.Fatalf("error destroying onnx env: %v", err)
+		}
+	}()
+
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	if err := os.MkdirAll(cfg.Root, os.ModePerm); err != nil {
 		log.Fatalf("error creating directory for log file: %v", err)
@@ -162,7 +168,7 @@ func main() {
 
 	log.SetOutput(io.MultiWriter(f, os.Stderr))
 
-	slog.Info("starting backend", "root", cfg.Root, "port", cfg.Port, "app_data_dir", cfg.AppDataDir)
+	slog.Info("starting backend", "root", cfg.Root, "port", cfg.Port, "app_data_dir", cfg.AppDataDir, "model_dir", cfg.ModelDir, "model_type", cfg.ModelType)
 
 	db := createDatabase(cfg.AppDataDir)
 
@@ -172,17 +178,21 @@ func main() {
 	}
 
 	if cfg.ModelDir != "" {
-		switch cfg.ModelType {
-		case "udt_model":
-			if err := cmd.InitializeBoltModel(db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
+		switch core.ParseModelType(cfg.ModelType) {
+		case core.BoltUdt:
+			if err := cmd.InitializeBoltUdtModel(context.Background(), db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
 				log.Fatalf("Failed to init & upload bolt model: %v", err)
 			}
-		case "cnn_model":
-			if err := cmd.InitializeCnnNerExtractor(context.Background(), db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
-				log.Fatalf("Failed to init & upload CNN model: %v", err)
+		case core.PythonCnn:
+			if err := cmd.InitializePythonCnnModel(context.Background(), db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
+				log.Fatalf("Failed to init & upload python CNN model: %v", err)
+			}
+		case core.OnnxCnn:
+			if err := cmd.InitializeOnnxCnnModel(context.Background(), db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
+				log.Fatalf("failed to init ONNX model: %v", err)
 			}
 		default:
-			log.Fatalf("Invalid model type: %s. Must be either 'bolt' or 'cnn'", cfg.ModelType)
+			log.Fatalf("Invalid model type: %s. Must be either 'bolt_udt' or 'python_cnn'", cfg.ModelType)
 		}
 	} else {
 		cmd.InitializePresidioModel(db)
@@ -207,7 +217,7 @@ func main() {
 	if err := storage.DownloadDir(context.Background(), modelBucket, basicModel.Id.String(), basicModelDir, true); err != nil {
 		log.Fatalf("failed to download model: %v", err)
 	}
-	server := createServer(db, storage, queue, cfg.Port, basicModelDir, cfg.ModelType)
+	server := createServer(db, storage, queue, cfg.Port, basicModelDir, core.ParseModelType(cfg.ModelType), licensing)
 
 	slog.Info("starting worker")
 	go worker.Start()

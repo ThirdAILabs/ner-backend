@@ -5,6 +5,7 @@ import os
 from transformers import AutoTokenizer
 
 from .impl import CNNNERModelSentenceTokenized
+from .convert_model_to_onnx import export_to_onnx
 
 
 class CNNModel:
@@ -17,7 +18,9 @@ class CNNModel:
     ):
         # Try loading from local path first if provided, otherwise use pretrained
         if tokenizer_path and os.path.exists(tokenizer_path):
-            self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_path, local_files_only=True)
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                tokenizer_path, local_files_only=True
+            )
         else:
             self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
         self.tag2idx = tag2idx
@@ -54,4 +57,8 @@ class CNNModel:
         )
 
     def save(self, dir: str) -> None:
-        torch.save(self.model.state_dict(), os.path.join(dir, "cnn_model.pth"))
+        cnn_model_path = os.path.join(dir, "cnn_model.pth")
+        torch.save(self.model.state_dict(), cnn_model_path)
+
+        # saving the onnx model
+        export_to_onnx(self.model, dir)
