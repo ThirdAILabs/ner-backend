@@ -63,10 +63,10 @@ export default function Jobs() {
           )
         );
 
-        // If files are complete, return true to stop polling
         return (
+          detailedReport.FileCount === 0 &&
           detailedReport.SucceededFileCount + detailedReport.FailedFileCount ===
-          detailedReport.FileCount
+            detailedReport.FileCount
         );
       } catch (err) {
         console.error(`Error fetching status for report ${report.Id}:`, err);
@@ -82,7 +82,10 @@ export default function Jobs() {
     const poll = async () => {
       const isComplete = await pollStatus();
 
-      if (isComplete) {
+      if (
+        isComplete &&
+        (report.ShardDataTaskStatus === 'COMPLETED' || report.ShardDataTaskStatus === 'FAILED')
+      ) {
         clearInterval(pollInterval);
       }
     };
@@ -260,7 +263,7 @@ export default function Jobs() {
               fontWeight: 'medium',
             }}
           >
-            Failed (Data Sharding Error)
+            Failed
           </Typography>
         </Box>
       );
@@ -277,17 +280,35 @@ export default function Jobs() {
     const failedFileCount = report.FailedFileCount || 0;
     const totalTasks = completed + running + queued + failed;
 
-    const progress = succeededFileCount > 0 ? (succeededFileCount / fileCount) * 100 : 0;
+    function getProgressOutput() {
+      if (monthlyQuotaExceeded) {
+        return (
+          <Box
+            component="span"
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5,
+              color: 'red',
+            }}
+          >
+            Monthly Quota Exceeded
+            <Tooltip title="This scan exceeds the monthly quota for the free-tier. The quota resets on the 1st of each month.">
+              <InfoOutlinedIcon fontSize="inherit" sx={{ cursor: 'pointer' }} />
+            </Tooltip>
+          </Box>
+        );
+      } else if (totalTasks === 0) {
+        return `Gathering files...`;
+      } else if (fileCount > 0 && succeededFileCount === fileCount) {
+        return `Files: ${fileCount}/${fileCount} Processed`;
+      } else if (fileCount > 0 && failedFileCount === fileCount) {
+        return `Files: ${failedFileCount}/${fileCount} Failed`;
+      } else if (fileCount > 0) {
+        return `Files: ${succeededFileCount}/${fileCount} Processed${failedFileCount > 0 ? `, ${failedFileCount}/${fileCount} Failed` : ''}`;
+      }
 
-    // If no tasks yet, show just the ShardDataTaskStatus
-    if (totalTasks === 0) {
-      return (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            {ShardDataTaskStatus || 'PENDING'}
-          </Typography>
-        </Box>
-      );
+      return 'Gathering files...';
     }
 
     return (
@@ -346,23 +367,7 @@ export default function Jobs() {
           </Typography>
         </Box>
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-          {monthlyQuotaExceeded ? (
-            <Box
-              component="span"
-              sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'red' }}
-            >
-              Monthly Quota Exceeded
-              <Tooltip title="This scan exceeds the monthly quota for the free-tier. The quota resets on the 1st of each month.">
-                <InfoOutlinedIcon fontSize="inherit" sx={{ cursor: 'pointer' }} />
-              </Tooltip>
-            </Box>
-          ) : succeededFileCount === fileCount ? (
-            `Files: ${fileCount}/${fileCount} Processed`
-          ) : failedFileCount === fileCount ? (
-            `Files: ${failedFileCount}/${fileCount} Failed`
-          ) : (
-            `Files: ${succeededFileCount}/${fileCount} Processed${failedFileCount > 0 ? `, ${failedFileCount}/${fileCount} Failed` : ''}`
-          )}
+          {getProgressOutput()}
         </Typography>
       </Box>
     );
