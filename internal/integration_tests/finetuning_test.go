@@ -199,7 +199,7 @@ func TestFinetuningOnnxModel(t *testing.T) {
 		t.Fatalf("ONNX_RUNTIME_DYLIB_PATH, PYTHON_EXECUTABLE_PATH, PYTHON_MODEL_PLUGIN_SCRIPT_PATH, and HOST_MODEL_DIR env vars must be set")
 	}
 
-	_, cancel, s3, db, pub, sub, router := setupCommon(t)
+	ctx, cancel, s3, db, pub, sub, router := setupCommon(t)
 	defer cancel()
 
 	require.NoError(t, s3.CreateBucket(context.Background(), modelBucket))
@@ -225,7 +225,7 @@ func TestFinetuningOnnxModel(t *testing.T) {
 		}
 	}()
 
-	require.NoError(t, cmd.InitializeOnnxModel(db, s3, modelBucket, modelName, hostModelDir))
+	require.NoError(t, cmd.InitializeOnnxCnnModel(ctx, db, s3, modelBucket, modelName, hostModelDir))
 
 	var base database.Model
 	require.NoError(t, db.First(&base, "name = ?", modelName).Error)
