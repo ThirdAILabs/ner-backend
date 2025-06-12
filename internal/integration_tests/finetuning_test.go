@@ -98,6 +98,18 @@ func TestFinetuning(t *testing.T) {
 	})
 	defer stop()
 
+	sample := api.FeedbackRequest{
+		Tokens: []string{"foo"},
+		Labels: []string{"xyz"},
+	}
+	require.NoError(t, httpRequest(
+		router,
+		"POST",
+		fmt.Sprintf("/models/%s/feedback", baseID.String()),
+		sample,
+		nil,
+	))
+
 	tp := "Finetuning test"
 
 	// No in-body samples; just do a normal finetune request
