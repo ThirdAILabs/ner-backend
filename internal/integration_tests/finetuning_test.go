@@ -238,6 +238,18 @@ func TestFinetuningWithGenerateData(t *testing.T) {
 	})
 	defer stop()
 
+	sample := api.FeedbackRequest{
+		Tokens: []string{"foo"},
+		Labels: []string{"xyz"},
+	}
+	require.NoError(t, httpRequest(
+		router,
+		"POST",
+		fmt.Sprintf("/models/%s/feedback", baseID.String()),
+		sample,
+		nil,
+	))
+
 	tp := "Finetuning with data generation"
 	ftReq := api.FinetuneRequest{
 		Name:         "finetuned-with-gen",
