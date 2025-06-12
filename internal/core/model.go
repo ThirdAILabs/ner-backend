@@ -79,7 +79,7 @@ func NewModelLoaders(pythonExec, pluginScript string) map[ModelType]ModelLoader 
 		Presidio: func(_ string) (Model, error) {
 			return NewPresidioModel()
 		},
-		"onnx": func(modelDir string) (Model, error) {
+		OnnxCnn: func(modelDir string) (Model, error) {
 			return LoadOnnxModel(modelDir, pythonExec, pluginScript)
 		},
 	}
