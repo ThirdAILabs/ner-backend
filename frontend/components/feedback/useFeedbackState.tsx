@@ -43,7 +43,24 @@ const useFeedbackState = (modelId: string, reportId: string) => {
     objectTokens: string[],
     objectTags: string[]
   ) => {
-    setFeedback([...feedback, { id: uuidv4(), body: newFeedback }]);
+
+    const { tag: _, ...feedbackWithoutTag } = newFeedback;
+
+    // Check for duplicate feedback and remove existing entries
+    const updatedFeedback = feedback.filter(existingFeedback => {
+      const { tag: __, ...existingFeedbackWithoutTag } = existingFeedback.body;
+
+      const isDuplicate =
+        feedbackWithoutTag.highlightedText === existingFeedbackWithoutTag.highlightedText &&
+        feedbackWithoutTag.objectId === existingFeedbackWithoutTag.objectId &&
+        feedbackWithoutTag.startIndex === existingFeedbackWithoutTag.startIndex &&
+        feedbackWithoutTag.endIndex === existingFeedbackWithoutTag.endIndex;
+
+      return !isDuplicate;
+    });
+
+    setFeedback([...updatedFeedback, { id: uuidv4(), body: newFeedback }]);
+
     if (!objects[newFeedback.objectId]) {
       setObjects({
         ...objects,
