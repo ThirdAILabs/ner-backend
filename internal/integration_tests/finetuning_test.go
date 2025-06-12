@@ -304,9 +304,11 @@ func TestFinetuningOnnxModel(t *testing.T) {
 		tagInfos[i] = api.TagInfo{Name: tag}
 	}
 
+	tp := fmt.Sprintf("%s finetune test", modelName)
+
 	ftReq := api.FinetuneRequest{
 		Name:       fmt.Sprintf("finetuned-%s", modelName),
-		TaskPrompt: fmt.Sprintf("%s finetune test", modelName),
+		TaskPrompt: &tp,
 		Tags:       tagInfos,
 		Samples: []api.Sample{
 			{
