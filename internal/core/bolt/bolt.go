@@ -10,6 +10,7 @@ import "C"
 import (
 	"encoding/csv"
 	"errors"
+	"fmt"
 	"io"
 	"ner-backend/internal/core/types"
 	"ner-backend/internal/core/utils"
@@ -85,7 +86,7 @@ func (ner *NER) train(filename string, learningRate float32, epochs int) error {
 	return nil
 }
 
-func (ner *NER) Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sample) error {
+func (ner *NER) FinetuneAndSave(taskPrompt string, tags []api.TagInfo, samples []api.Sample, savePath string) error {
 	var cTokensCol, cTagsCol *C.char
 	C.NER_source_target_cols(ner.model, &cTokensCol, &cTagsCol)
 	tokensCol := C.GoString(cTokensCol)
@@ -108,6 +109,10 @@ func (ner *NER) Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sa
 	const defaultEpochs = 1
 	if err := ner.train(tmpFile.Name(), defaultLearningRate, defaultEpochs); err != nil {
 		return err
+	}
+
+	if err := ner.Save(savePath); err != nil {
+		return fmt.Errorf("error saving model: %w", err)
 	}
 
 	return nil

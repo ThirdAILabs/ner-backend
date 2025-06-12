@@ -41,9 +41,7 @@ var statelessModelTypes = map[ModelType]struct{}{
 type Model interface {
 	Predict(text string) ([]types.Entity, error)
 
-	Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sample) error
-
-	Save(path string) error
+	FinetuneAndSave(taskPrompt string, tags []api.TagInfo, samples []api.Sample, savePath string) error
 
 	Release()
 }
@@ -82,7 +80,7 @@ func NewModelLoaders(pythonExec, pluginScript string) map[ModelType]ModelLoader 
 			return NewPresidioModel()
 		},
 		OnnxCnn: func(modelDir string) (Model, error) {
-			return LoadOnnxModel(modelDir)
+			return LoadOnnxModel(modelDir, pythonExec, pluginScript)
 		},
 	}
 }

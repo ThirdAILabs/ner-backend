@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"testing"
 	"time"
@@ -19,6 +20,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	ort "github.com/yalue/onnxruntime_go"
 	"gorm.io/gorm"
 )
 
@@ -244,4 +246,101 @@ func TestFinetuningWithGenerateData(t *testing.T) {
 	var data map[string]string
 	require.NoError(t, json.NewDecoder(stream).Decode(&data))
 	assert.Contains(t, data, "xyz")
+}
+
+func TestFinetuningOnnxModel(t *testing.T) {
+	var (
+		modelName    = "onnx_cnn"
+		onnxDylib    = os.Getenv("ONNX_RUNTIME_DYLIB_PATH")
+		pythonExec   = os.Getenv("PYTHON_EXECUTABLE_PATH")
+		pluginScript = os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH")
+		hostModelDir = os.Getenv("HOST_MODEL_DIR")
+	)
+
+	if onnxDylib == "" || pythonExec == "" || pluginScript == "" || hostModelDir == "" {
+		t.Fatalf("ONNX_RUNTIME_DYLIB_PATH, PYTHON_EXECUTABLE_PATH, PYTHON_MODEL_PLUGIN_SCRIPT_PATH, and HOST_MODEL_DIR env vars must be set")
+	}
+
+	ctx, cancel, s3, db, pub, sub, router := setupCommon(t)
+	defer cancel()
+
+	require.NoError(t, s3.CreateBucket(context.Background(), modelBucket))
+
+	os.Setenv("AWS_ACCESS_KEY_ID", minioUsername)
+	os.Setenv("AWS_SECRET_ACCESS_KEY", minioPassword)
+
+	stop := startWorker(t, db, s3, pub, sub, modelBucket,
+		core.NewModelLoaders(
+			os.Getenv("PYTHON_EXECUTABLE_PATH"),
+			os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH"),
+		),
+	)
+	defer stop()
+
+	ort.SetSharedLibraryPath(onnxDylib)
+	if err := ort.InitializeEnvironment(); err != nil {
+		log.Fatalf("could not init ONNX Runtime: %v", err)
+	}
+	defer func() {
+		if err := ort.DestroyEnvironment(); err != nil {
+			log.Fatalf("error destroying onnx env: %v", err)
+		}
+	}()
+
+	require.NoError(t, cmd.InitializeOnnxCnnModel(ctx, db, s3, modelBucket, modelName, hostModelDir))
+
+	var base database.Model
+	require.NoError(t, db.First(&base, "name = ?", modelName).Error)
+
+	tags := []string{
+		"ADDRESS", "CARD_NUMBER", "COMPANY", "CREDIT_SCORE", "DATE",
+		"EMAIL", "ETHNICITY", "GENDER", "ID_NUMBER", "LICENSE_PLATE",
+		"LOCATION", "NAME", "O", "PHONENUMBER", "SERVICE_CODE",
+		"SEXUAL_ORIENTATION", "SSN", "URL", "VIN",
+	}
+
+	tagInfos := make([]api.TagInfo, len(tags))
+	for i, tag := range tags {
+		tagInfos[i] = api.TagInfo{Name: tag}
+	}
+
+	ftReq := api.FinetuneRequest{
+		Name:       fmt.Sprintf("finetuned-%s", modelName),
+		TaskPrompt: fmt.Sprintf("%s finetune test", modelName),
+		Tags:       tagInfos,
+		Samples: []api.Sample{
+			{
+				Tokens: []string{"I", "started", "working", "at", "ThirdAI", "in", "2022"},
+				Labels: []string{"O", "O", "O", "O", "COMPANY", "O", "DATE"},
+			},
+			{
+				Tokens: []string{"I", "started", "working", "at", "ThirdAI", "in", "2022"},
+				Labels: []string{"O", "O", "O", "O", "COMPANY", "O", "DATE"},
+			},
+		},
+	}
+
+	_, model := finetune(t, router, base.Id.String(), ftReq, 50, 5*time.Second)
+
+	assert.Equal(t, database.ModelTrained, model.Status)
+
+	uploadId := createUpload(t, router)
+
+	reportId := createReport(t, router, api.CreateReportRequest{
+		ReportName: "test-report",
+		ModelId:    model.Id,
+		UploadId:   uploadId,
+		Tags:       tags,
+	})
+
+	report := waitForReport(t, router, reportId, 10)
+
+	assert.Equal(t, model.Id, report.Model.Id)
+
+	totalTags := uint64(0)
+	for _, cnt := range report.TagCounts {
+		totalTags += cnt
+	}
+
+	assert.Greater(t, totalTags, uint64(0))
 }
