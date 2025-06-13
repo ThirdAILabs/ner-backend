@@ -4,7 +4,13 @@ from torch.utils.data import Dataset, DataLoader
 import os
 from transformers import AutoTokenizer
 from typing import List, Any, Tuple
-from ..model_interface import BatchPredictions, Entity, Sample
+from ..model_interface import (
+    BatchPredictions,
+    Entity,
+    Sample,
+    Model,
+    SentencePredictions,
+)
 import sys
 from ..utils import clean_text_with_spans
 import json
@@ -72,8 +78,10 @@ IDX_TO_TAG = [
     "VIN",
 ]
 
+TAG_TO_IDX = {t: i for i, t in enumerate(IDX_TO_TAG)}
 
-class CnnModel:
+
+class CnnModel(Model):
     def __init__(self, model_dir: str, tokenizer_name: str = "Qwen/Qwen2.5-0.5B"):
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
 
@@ -82,7 +90,9 @@ class CnnModel:
 
         self.crf = CRF(num_tags=len(IDX_TO_TAG), batch_first=True)
         state_dict = torch.load(
-            os.join(model_dir, "crf.pth"), map_location=torch.device("cpu")
+            os.path.join(model_dir, "crf.pth"),
+            map_location=torch.device("cpu"),
+            # weights_only=False,
         )
         self.crf.load_state_dict(state_dict)
         self.crf.eval()
@@ -137,9 +147,12 @@ class CnnModel:
                 if tag != "O"
             ]
 
-            results.append(entities)
+            results.append(SentencePredictions(entities=entities))
 
         return results
+
+    def predict(self, text: str) -> SentencePredictions:
+        return self.predict_batch([text]).predictions[0]
 
     def predict_batch(self, texts: List[str]) -> BatchPredictions:
         self.model.eval()
@@ -187,7 +200,7 @@ class CnnModel:
             offsets = enc["offset_mapping"]
             wids = manual_word_ids(text, offsets)
             lab_ids = [
-                self.tag2idx.get(sample.labels[w], 0) if w is not None else 0
+                TAG_TO_IDX.get(sample.labels[w], 0) if w is not None else 0
                 for w in wids
             ]
             processed.append((ids, lab_ids))
@@ -226,6 +239,8 @@ class CnnModel:
         self.crf.eval()
 
     def save(self, save_dir: str):
+        os.makedirs(save_dir, exist_ok=True)
+
         torch.jit.save(self.model, os.path.join(save_dir, "model.pt"))
         torch.save(self.crf.state_dict(), os.path.join(save_dir, "crf.pth"))
 
