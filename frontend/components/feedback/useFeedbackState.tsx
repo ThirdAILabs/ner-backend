@@ -46,14 +46,15 @@ const useFeedbackState = (modelId: string, reportId: string) => {
     const { tag: _, ...feedbackWithoutTag } = newFeedback;
 
     // Check for duplicate feedback and remove existing entries
+    // Duplicate is defined as same token selection with same context
     const updatedFeedback = feedback.filter((existingFeedback) => {
-      const { tag: __, ...existingFeedbackWithoutTag } = existingFeedback.body;
-
       const isDuplicate =
-        feedbackWithoutTag.highlightedText === existingFeedbackWithoutTag.highlightedText &&
-        feedbackWithoutTag.objectId === existingFeedbackWithoutTag.objectId &&
-        feedbackWithoutTag.startIndex === existingFeedbackWithoutTag.startIndex &&
-        feedbackWithoutTag.endIndex === existingFeedbackWithoutTag.endIndex;
+        existingFeedback.body.highlightedText === newFeedback.highlightedText &&
+        existingFeedback.body.objectId === newFeedback.objectId &&
+        existingFeedback.body.startIndex === newFeedback.startIndex &&
+        existingFeedback.body.endIndex === newFeedback.endIndex &&
+        existingFeedback.body.leftContext === newFeedback.leftContext &&
+        existingFeedback.body.rightContext === newFeedback.rightContext;
 
       return !isDuplicate;
     });
