@@ -5,7 +5,6 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { Menu, MenuItem } from '@mui/material';
 import { DisplayedToken } from '@/components/feedback/useFeedbackState';
-import { FeedbackMetadata } from '@/components/feedback/useFeedbackState';
 
 interface HighlightColor {
   text: string;
@@ -19,11 +18,6 @@ interface TokenHighlighterProps {
   spotlightEndIndex?: number;
   editable?: boolean;
   onTagAssign?: (startIndex: number, endIndex: number, newTag: string) => void;
-  objectId?: string;
-}
-interface Feedback {
-  id: string;
-  body: FeedbackMetadata;
 }
 
 const SELECTING_COLOR = '#EFEFEF';
@@ -39,7 +33,6 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
   spotlightEndIndex,
   editable = false,
   onTagAssign,
-  objectId,
 }) => {
   const [selectionStart, setSelectionStart] = useState<number | null>(null);
   const [selectionEnd, setSelectionEnd] = useState<number | null>(null);
@@ -136,34 +129,6 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
     setQuery(e.target.value);
   };
 
-  const getReportId = () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get('jobId') || '';
-  };
-
-  const reportId = getReportId();
-  const FEEDBACK_STORAGE_KEY = `feedback-${reportId}`;
-  const initialFeedback: Feedback[] = JSON.parse(
-    localStorage.getItem(FEEDBACK_STORAGE_KEY) || '[]'
-  );
-
-  function isFeedbackGiven(start: number, end: number, text: string, objectId: string) {
-    for (let index = 0; index < initialFeedback.length; index++) {
-      const feedback = initialFeedback[index];
-
-      const isTokenMatched =
-        feedback.body.objectId === objectId &&
-        feedback.body.startIndex === start &&
-        feedback.body.endIndex === end &&
-        feedback.body.highlightedText === text;
-
-      if (isTokenMatched) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   return (
     <div ref={containerRef} onMouseUp={handleMouseUp} onMouseLeave={handleMouseLeaveFeedbackBox}>
       <div className="flex flex-wrap gap-0.5">
@@ -178,7 +143,6 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
             spotlightEndIndex &&
             index >= spotlightStartIndex &&
             index <= spotlightEndIndex;
-
           return (
             <span
               key={index}
@@ -198,22 +162,7 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
               }}
               onMouseDown={() => handleMouseDown(index)}
             >
-              <span
-                style={{
-                  textDecoration:
-                    objectId && isFeedbackGiven(index, index, token.text, objectId)
-                      ? 'underline'
-                      : 'none',
-                  textDecorationColor:
-                    objectId && isFeedbackGiven(index, index, token.text, objectId)
-                      ? '#0000EE'
-                      : 'none',
-                  textDecorationThickness: '2px',
-                }}
-              >
-                {token.text}
-              </span>
-
+              {token.text}
               {token.tag !== 'O' &&
                 (index === tokens.length - 1 || tokens[index + 1]?.tag !== token.tag) && (
                   <span
@@ -221,7 +170,6 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
                     style={{
                       backgroundColor: tagColors[token.tag]?.tag || DEFAULT_COLOR.tag,
                       color: 'white',
-                      textDecoration: 'none',
                     }}
                   >
                     {token.tag}

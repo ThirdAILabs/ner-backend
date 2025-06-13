@@ -142,9 +142,7 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
         {/* Collapsed bar */}
         {collapsed ? (
           <>
-            <span className="text-base font-semibold text-white">
-              Feedback{feedbacks.length > 1 && 's'} ({feedbacks.length})
-            </span>
+            <span className="text-base font-semibold text-white">Feedback{feedbacks.length > 1 && 's'} ({feedbacks.length})</span>
             <svg
               width="20"
               height="20"
@@ -206,11 +204,10 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
             {/* Submit button */}
             <div className="px-4 pb-4 flex-shrink-0">
               <button
-                className={`w-full text-white border rounded-md py-2 text-base font-medium transition shadow-md ${
-                  isSubmitting
-                    ? 'bg-blue-400 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700 border-blue-700'
-                }`}
+                className={`w-full text-white border rounded-md py-2 text-base font-medium transition shadow-md ${isSubmitting
+                  ? 'bg-blue-400 cursor-not-allowed'
+                  : 'bg-blue-600 hover:bg-blue-700 border-blue-700'
+                  }`}
                 onClick={handleSubmit}
                 style={{ position: 'relative', zIndex: 10 }}
                 disabled={isSubmitting}

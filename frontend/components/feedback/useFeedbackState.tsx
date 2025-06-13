@@ -43,10 +43,11 @@ const useFeedbackState = (modelId: string, reportId: string) => {
     objectTokens: string[],
     objectTags: string[]
   ) => {
+
     const { tag: _, ...feedbackWithoutTag } = newFeedback;
 
     // Check for duplicate feedback and remove existing entries
-    const updatedFeedback = feedback.filter((existingFeedback) => {
+    const updatedFeedback = feedback.filter(existingFeedback => {
       const { tag: __, ...existingFeedbackWithoutTag } = existingFeedback.body;
 
       const isDuplicate =
