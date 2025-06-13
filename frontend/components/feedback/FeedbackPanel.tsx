@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { TokenHighlighter } from './TokenHighlighter';
 import { Trash2 } from 'lucide-react';
+import { Toaster, toast } from 'react-hot-toast';
 
 interface Token {
   text: string;
@@ -93,6 +94,7 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
   onSubmit,
 }) => {
   const [collapsed, setCollapsed] = useState(feedbacks.length === 0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const prevFeedbackCountRef = useRef(feedbacks.length);
 
   useEffect(() => {
@@ -102,90 +104,124 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
     prevFeedbackCountRef.current = feedbacks.length;
   }, [feedbacks]);
 
+  const handleSubmit = () => {
+    setIsSubmitting(true);
+    try {
+      onSubmit();
+      toast.success('Feedback submitted successfully!', {
+        duration: 3000,
+        style: {
+          background: '#4CAF50',
+          color: '#fff',
+          padding: '16px',
+          borderRadius: '8px',
+        },
+        icon: '✓',
+      });
+    } catch (error) {
+      toast.error('Failed to submit feedback. Please try again.', {
+        duration: 3000,
+      });
+    } finally {
+      setIsSubmitting(false);
+      setCollapsed(true);
+    }
+  };
+
   return (
-    <div
-      className={
-        collapsed
-          ? 'bg-blue-600 rounded-lg shadow-lg border border-gray-200 w-full h-12 flex items-center justify-between px-4 cursor-pointer transition-all duration-200 hover:bg-blue-700 '
-          : 'flex flex-col h-full w-full bg-white rounded-lg shadow-lg border border-gray-200 transition-all duration-200'
-      }
-      onClick={collapsed ? () => setCollapsed(false) : undefined}
-    >
-      {/* Collapsed bar */}
-      {collapsed ? (
-        <>
-          <span className="text-base font-semibold text-white">Feedback ({feedbacks.length})</span>
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="white"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
-        </>
-      ) : (
-        <>
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 rounded-t-lg bg-white flex-shrink-0">
-            <span className="text-base font-semibold text-gray-800">
-              Feedback ({feedbacks.length})
+    <>
+      <Toaster position="top-right" />
+      <div
+        className={
+          collapsed
+            ? 'bg-blue-600 rounded-lg shadow-lg border border-gray-200 w-full h-12 flex items-center justify-between px-4 cursor-pointer transition-all duration-200 hover:bg-blue-700 '
+            : 'flex flex-col h-full w-full bg-white rounded-lg shadow-lg border border-gray-200 transition-all duration-200'
+        }
+        onClick={collapsed ? () => setCollapsed(false) : undefined}
+      >
+        {/* Collapsed bar */}
+        {collapsed ? (
+          <>
+            <span className="text-base font-semibold text-white">
+              Feedback{feedbacks.length > 1 && 's'} ({feedbacks.length})
             </span>
-            <button
-              className="p-1 rounded hover:bg-gray-100 transition"
-              onClick={() => setCollapsed((c) => !c)}
-              aria-label={collapsed ? 'Expand' : 'Collapse'}
-              type="button"
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-              {/* Minus icon when expanded */}
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </>
+        ) : (
+          <>
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-2 border-b border-gray-200 rounded-t-lg bg-white flex-shrink-0">
+              <span className="text-base font-semibold text-gray-800">
+                Feedback{feedbacks.length > 1 && 's'} ({feedbacks.length})
+              </span>
+              <button
+                className="p-1 rounded hover:bg-gray-100 transition"
+                onClick={() => setCollapsed((c) => !c)}
+                aria-label={collapsed ? 'Expand' : 'Collapse'}
+                type="button"
               >
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
-            </button>
-          </div>
+                {/* Minus icon when expanded */}
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+              </button>
+            </div>
 
-          {/* Feedback list */}
-          <div className="flex-1 overflow-y-auto px-4 py-1 divide-y divide-gray-200">
-            {feedbacks.map((fb) => (
-              <FeedbackRow
-                key={fb.id}
-                id={fb.id}
-                tokens={fb.tokens}
-                availableTags={availableTags}
-                spotlightStartIndex={fb.spotlightStartIndex}
-                spotlightEndIndex={fb.spotlightEndIndex}
-                onDelete={onDelete}
-              />
-            ))}
-          </div>
+            {/* Feedback list */}
+            <div className="flex-1 overflow-y-auto px-4 py-1 divide-y divide-gray-200">
+              {feedbacks.map((fb) => (
+                <FeedbackRow
+                  key={fb.id}
+                  id={fb.id}
+                  tokens={fb.tokens}
+                  availableTags={availableTags}
+                  spotlightStartIndex={fb.spotlightStartIndex}
+                  spotlightEndIndex={fb.spotlightEndIndex}
+                  onDelete={onDelete}
+                />
+              ))}
+            </div>
 
-          {/* Submit button */}
-          <div className="px-4 pb-4 flex-shrink-0">
-            <button
-              className="w-full bg-blue-600 text-white border border-blue-700 rounded-md py-2 text-base font-medium hover:bg-blue-700 transition shadow-md"
-              onClick={onSubmit}
-              style={{ position: 'relative', zIndex: 10 }}
-              type="button"
-            >
-              Submit
-            </button>
-          </div>
-        </>
-      )}
-    </div>
+            {/* Submit button */}
+            <div className="px-4 pb-4 flex-shrink-0">
+              <button
+                className={`w-full text-white border rounded-md py-2 text-base font-medium transition shadow-md ${
+                  isSubmitting
+                    ? 'bg-blue-400 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700 border-blue-700'
+                }`}
+                onClick={handleSubmit}
+                style={{ position: 'relative', zIndex: 10 }}
+                disabled={isSubmitting}
+                type="button"
+              >
+                {isSubmitting ? 'Submitting...' : 'Submit'}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </>
   );
 };

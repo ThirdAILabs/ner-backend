@@ -317,6 +317,7 @@ export function TableContent({
       ) : (
         filteredRecords.map((record, index) => {
           const fileIdentifier = record.sourceObject;
+          console.log('File identifier...', fileIdentifier);
           const { fullPath, openFile } = handleFullPath(fileIdentifier);
           const tokens = record.taggedTokens.flatMap((token) => {
             const [text, tag] = token;
@@ -392,6 +393,7 @@ export function TableContent({
                   editable
                   availableTags={tags.map((tag) => tag.type)}
                   onTagAssign={onTagAssign}
+                  objectId={fileIdentifier}
                 />
                 ...
                 <br />
