@@ -37,7 +37,7 @@ export default function Jobs() {
   const { healthStatus } = useHealth();
 
   const fetchReportStatus = async (report: ReportWithStatus) => {
-    const pollStatus = async () => {
+    const reportCompletionStatus = async () => {
       try {
         setReports((prev) =>
           prev.map((r) => (r.Id === report.Id ? { ...r, isLoadingStatus: true } : r))
@@ -53,6 +53,7 @@ export default function Jobs() {
                   Errors: detailedReport.Errors || [],
                   SucceededFileCount: detailedReport.SucceededFileCount,
                   FailedFileCount: detailedReport.FailedFileCount,
+                  FileCount: detailedReport.FileCount,
                   detailedStatus: {
                     ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
                     InferenceTaskStatuses: detailedReport.InferenceTaskStatuses,
@@ -63,10 +64,10 @@ export default function Jobs() {
           )
         );
 
-        // If files are complete, return true to stop polling
         return (
+          detailedReport.FileCount !== 0 &&
           detailedReport.SucceededFileCount + detailedReport.FailedFileCount ===
-          detailedReport.FileCount
+            detailedReport.FileCount
         );
       } catch (err) {
         console.error(`Error fetching status for report ${report.Id}:`, err);
@@ -80,9 +81,11 @@ export default function Jobs() {
     let pollInterval: NodeJS.Timeout;
 
     const poll = async () => {
-      const isComplete = await pollStatus();
-
-      if (isComplete) {
+      const isComplete = await reportCompletionStatus();
+      if (
+        isComplete &&
+        (report.ShardDataTaskStatus === 'COMPLETED' || report.ShardDataTaskStatus === 'FAILED')
+      ) {
         clearInterval(pollInterval);
       }
     };
@@ -260,7 +263,7 @@ export default function Jobs() {
               fontWeight: 'medium',
             }}
           >
-            Failed (Data Sharding Error)
+            Failed
           </Typography>
         </Box>
       );
@@ -272,22 +275,44 @@ export default function Jobs() {
     const queued = InferenceTaskStatuses?.QUEUED?.TotalTasks || 0;
     const failed = InferenceTaskStatuses?.FAILED?.TotalTasks || 0;
 
-    const fileCount = report.FileCount || 0;
+    const fileCount = report.FileCount || 1;
     const succeededFileCount = report.SucceededFileCount || 0;
     const failedFileCount = report.FailedFileCount || 0;
     const totalTasks = completed + running + queued + failed;
 
-    const progress = succeededFileCount > 0 ? (succeededFileCount / fileCount) * 100 : 0;
+    function getProgressOutput() {
+      if (monthlyQuotaExceeded) {
+        return (
+          <Box
+            component="span"
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 0.5,
+              color: 'red',
+            }}
+          >
+            Monthly Quota Exceeded
+            <Tooltip title="This scan exceeds the monthly quota for the free-tier. The quota resets on the 1st of each month.">
+              <InfoOutlinedIcon fontSize="inherit" sx={{ cursor: 'pointer' }} />
+            </Tooltip>
+          </Box>
+        );
+      } else if (totalTasks === 0 && report.IsUpload) {
+        // Local Upload
+        return `Queued...`;
+      } else if (totalTasks === 0 && !report.IsUpload) {
+        // S3 Upload
+        return 'Gathering Files...';
+      } else if (fileCount > 0 && succeededFileCount === fileCount) {
+        return `Files: ${fileCount}/${fileCount} Processed`;
+      } else if (fileCount > 0 && failedFileCount === fileCount) {
+        return `Files: ${failedFileCount}/${fileCount} Failed`;
+      } else if (fileCount > 0) {
+        return `Files: ${succeededFileCount}/${fileCount} Processed${failedFileCount > 0 ? `, ${failedFileCount}/${fileCount} Failed` : ''}`;
+      }
 
-    // If no tasks yet, show just the ShardDataTaskStatus
-    if (totalTasks === 0) {
-      return (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            {ShardDataTaskStatus || 'PENDING'}
-          </Typography>
-        </Box>
-      );
+      return 'Queued...';
     }
 
     return (
@@ -346,23 +371,7 @@ export default function Jobs() {
           </Typography>
         </Box>
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-          {monthlyQuotaExceeded ? (
-            <Box
-              component="span"
-              sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: 'red' }}
-            >
-              Monthly Quota Exceeded
-              <Tooltip title="This scan exceeds the monthly quota for the free-tier. The quota resets on the 1st of each month.">
-                <InfoOutlinedIcon fontSize="inherit" sx={{ cursor: 'pointer' }} />
-              </Tooltip>
-            </Box>
-          ) : succeededFileCount === fileCount ? (
-            `Files: ${fileCount}/${fileCount} Processed`
-          ) : failedFileCount === fileCount ? (
-            `Files: ${failedFileCount}/${fileCount} Failed`
-          ) : (
-            `Files: ${succeededFileCount}/${fileCount} Processed${failedFileCount > 0 ? `, ${failedFileCount}/${fileCount} Failed` : ''}`
-          )}
+          {getProgressOutput()}
         </Typography>
       </Box>
     );
