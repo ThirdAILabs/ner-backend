@@ -192,6 +192,7 @@ func decryptModel(encPath string) ([]byte, error) {
 func LoadOnnxModel(modelDir, pythonExec, pluginScript string) (Model, error) {
 	encPath := filepath.Join(modelDir, "model.onnx")
 	crfPath := filepath.Join(modelDir, "transitions.json")
+	tokenizerPath := filepath.Join(modelDir, "qwen_tokenizer/tokenizer.json")
 
 	onnxBytes, err := os.ReadFile(encPath)
 	if err != nil {
@@ -203,9 +204,18 @@ func LoadOnnxModel(modelDir, pythonExec, pluginScript string) (Model, error) {
 		return nil, fmt.Errorf("CRF load error: %w", err)
 	}
 
-	tk, err := tokenizers.FromPretrained("Qwen/Qwen2.5-0.5B")
-	if err != nil {
-		return nil, fmt.Errorf("tokenizer load: %w", err)
+	var tk *tokenizers.Tokenizer
+
+	if _, err := os.Stat(tokenizerPath); err == nil {
+		tk, err = tokenizers.FromFile(tokenizerPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load tokenizer from local dir: %w", err)
+		}
+	} else {
+		tk, err = tokenizers.FromPretrained("Qwen/Qwen2.5-0.5B")
+		if err != nil {
+			return nil, fmt.Errorf("tokenizer load: %w", err)
+		}
 	}
 
 	session, err := ort.NewDynamicAdvancedSessionWithONNXData(
