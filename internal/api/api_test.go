@@ -116,6 +116,12 @@ func TestFinetuneModel(t *testing.T) {
 			Name:       "FinetunedModel",
 			TaskPrompt: &tp,
 			Tags:       []api.TagInfo{{Name: "tag1"}},
+			Samples: []api.Sample{
+				{
+					Tokens: []string{"example"},
+					Labels: []string{"tag1"},
+				},
+			},
 		}
 		body, err := json.Marshal(payload)
 		assert.NoError(t, err)
