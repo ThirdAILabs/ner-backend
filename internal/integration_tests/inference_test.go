@@ -9,6 +9,7 @@ import (
 	"ner-backend/cmd"
 	backend "ner-backend/internal/api"
 	"ner-backend/internal/core"
+	"ner-backend/internal/core/python"
 	"ner-backend/internal/database"
 	"ner-backend/internal/storage"
 	"ner-backend/pkg/api"
@@ -322,8 +323,13 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 	router := chi.NewRouter()
 	backendSvc.AddRoutes(router)
 
+	python.EnablePythonPlugin(
+		os.Getenv("PYTHON_EXECUTABLE_PATH"),
+		os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH"),
+	)
+
 	tempDir := t.TempDir()
-	worker := core.NewTaskProcessor(db, s3, publisher, receiver, &DummyLicenseVerifier{}, tempDir, modelBucket, core.NewModelLoaders(os.Getenv("PYTHON_EXECUTABLE_PATH"), os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH")))
+	worker := core.NewTaskProcessor(db, s3, publisher, receiver, &DummyLicenseVerifier{}, tempDir, modelBucket, core.NewModelLoaders())
 	go worker.Start()
 	t.Cleanup(worker.Stop)
 
