@@ -295,45 +295,9 @@ export default function NewJobPage() {
       );
   }, [models, modelSearchQuery]);
 
+  // Filter built-in models from the database models
   const builtInModels = useMemo(() => {
-    // Find the actual basic model from the loaded models
-    const basicModel = models.find(m => m.Name.toLowerCase() === 'basic');
-    
-    const builtIns = [];
-    
-    // Add Basic model with actual ID if it exists
-    if (basicModel) {
-      builtIns.push({
-        Id: basicModel.Id,
-        Name: 'Basic',
-        Description: 'Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.'
-      });
-    } else {
-      // Fallback to hardcoded if not found
-      builtIns.push({
-        Id: 'basic',
-        Name: 'Basic',
-        Description: 'Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.'
-      });
-    }
-    
-    // Always show Advanced model as hardcoded option
-    builtIns.push({
-      Id: 'advanced',
-      Name: 'Advanced', 
-      Description: (
-        <>
-          Our most advanced AI model, available on enterprise platform. Allows users to perpetually customize fields with user feedback, includes advanced monitoring features. Reach out to{' '}
-          <a href="mailto:contact@thirdai.com" className="text-blue-600 hover:underline">
-            contact@thirdai.com
-          </a>
-          {' '}for an enterprise subscription.
-        </>
-      ),
-      disabled: true
-    });
-    
-    return builtIns;
+    return models.filter(model => ['basic', 'advanced'].includes(model.Name.toLowerCase()));
   }, [models]);
 
   // Tags handling
@@ -1046,16 +1010,37 @@ export default function NewJobPage() {
                   {builtInModels.map((model) => (
                     <ModelOption
                       key={model.Id}
-                      title={model.Name}
-                      description={model.Description}
+                      title={model.Name[0].toUpperCase() + model.Name.slice(1)}
+                      description={
+                        model.Name.toLowerCase() === 'basic' 
+                          ? 'Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.'
+                          : 'Advanced AI model with additional features'
+                      }
                       isSelected={selectedModelId === model.Id}
-                      disabled={model.disabled}
+                      disabled={false}
                       onClick={() => {
                         setSelectedModelId(model.Id);
                         setSelectedModel(model);
                       }}
                     />
                   ))}
+                  {/* Always show Advanced model as a disabled option */}
+                  <ModelOption
+                    key="advanced-disabled"
+                    title="Advanced"
+                    description={
+                      <>
+                        Our most advanced AI model, available on enterprise platform. Allows users to perpetually customize fields with user feedback, includes advanced monitoring features. Reach out to{' '}
+                        <a href="mailto:contact@thirdai.com" className="text-blue-600 hover:underline">
+                          contact@thirdai.com
+                        </a>
+                        {' '}for an enterprise subscription.
+                      </>
+                    }
+                    isSelected={false}
+                    disabled={true}
+                    onClick={() => {}}
+                  />
                 </div>
               </div>
 
