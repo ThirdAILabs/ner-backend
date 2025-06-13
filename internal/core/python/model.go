@@ -65,7 +65,7 @@ func LoadPythonModel(PythonExecutable, PluginScript, PluginModelName, KwargsJSON
 }
 
 func LoadCnnModel(pythonExec, pluginScript, modelDir string) (*PythonModel, error) {
-	cfgJSON := fmt.Sprintf(`{"model_path":"%s/cnn_model.pth", "tokenizer_path":"%s/qwen_tokenizer"}`, modelDir, modelDir)
+	cfgJSON := fmt.Sprintf(`{"model_path":"%s", "tokenizer_path":"%s/qwen_tokenizer"}`, modelDir, modelDir)
 	return LoadPythonModel(
 		pythonExec,
 		pluginScript,

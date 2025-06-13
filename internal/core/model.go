@@ -68,13 +68,7 @@ func NewModelLoaders(pythonExec, pluginScript string) map[ModelType]ModelLoader 
 			)
 		},
 		PythonCnn: func(modelDir string) (Model, error) {
-			cfgJSON := fmt.Sprintf(`{"model_path":"%s/cnn_model.pth", "tokenizer_path":"%s/qwen_tokenizer"}`, modelDir, modelDir)
-			return python.LoadPythonModel(
-				pythonExec,
-				pluginScript,
-				"python_cnn_ner_model",
-				cfgJSON,
-			)
+			return python.LoadCnnModel(pythonExec, pluginScript, modelDir)
 		},
 		Presidio: func(_ string) (Model, error) {
 			return NewPresidioModel()

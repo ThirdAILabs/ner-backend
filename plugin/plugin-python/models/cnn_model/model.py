@@ -82,15 +82,25 @@ TAG_TO_IDX = {t: i for i, t in enumerate(IDX_TO_TAG)}
 
 
 class CnnModel(Model):
-    def __init__(self, model_dir: str, tokenizer_name: str = "Qwen/Qwen2.5-0.5B"):
-        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
+    def __init__(
+        self,
+        model_path: str,
+        tokenizer_name: str = "Qwen/Qwen2.5-0.5B",
+        tokenizer_path: str = None,
+    ):
+        if tokenizer_path and os.path.exists(tokenizer_path):
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                tokenizer_path, local_files_only=True
+            )
+        else:
+            self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
 
-        self.model = torch.jit.load(os.path.join(model_dir, "model.pt"))
+        self.model = torch.jit.load(os.path.join(model_path, "model.pt"))
         self.model.eval()
 
         self.crf = CRF(num_tags=len(IDX_TO_TAG), batch_first=True)
         state_dict = torch.load(
-            os.path.join(model_dir, "crf.pth"),
+            os.path.join(model_path, "crf.pth"),
             map_location=torch.device("cpu"),
             # weights_only=False,
         )
