@@ -48,6 +48,11 @@ python -c "from transformers import AutoTokenizer; tokenizer = AutoTokenizer.fro
 ```
 
 ### Windows Build
+
+The following steps are for a fresh windows installation. However, if you're on this branch, all of the libraries are already built and pushed to this branch.
+You can skip the steps where you build/copy libraries to ner-backend if those files already exist in ner-backend. You would only have to rebuild them if you
+update the version of tokenizers/onnx/gcc/etc that you are using (in theory).
+
 1. Install Git Bash (https://git-scm.com/downloads). Use Git Bash Terminal until step 5
 2. Clone this repo (ner-backend) in Git Bash in your Documents folder (or any folder you want)
 3. Install NVM (https://github.com/coreybutler/nvm-windows) in Git Bash
