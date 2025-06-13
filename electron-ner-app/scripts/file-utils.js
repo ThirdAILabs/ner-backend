@@ -55,6 +55,11 @@ export const openFileChooser = async (supportedTypes) => {
     allFilePaths: [],
   }
 
+  // On Windows, we cannot have both openFile and openDirectory
+  const dialogProperties = process.platform === 'win32' 
+    ? ['openFile', 'multiSelections']
+    : ['openFile', 'openDirectory', 'multiSelections'];
+
   const dialogResult = await dialog.showOpenDialog({
     filters: [
       {
@@ -62,12 +67,7 @@ export const openFileChooser = async (supportedTypes) => {
         extensions: supportedTypes
       },
     ],
-    properties: [
-      // Note: we cannot both have openFile and openDirectory on Windows.
-      'openFile',
-      'openDirectory',
-      'multiSelections',
-    ]
+    properties: dialogProperties
   });
 
   if (dialogResult.canceled) {
@@ -91,8 +91,26 @@ export const openFileChooser = async (supportedTypes) => {
 } 
 
 export const openFile = async (filePath) => {
-  const error = await shell.openPath(filePath);
-  if (error) {
-    throw new Error(error);
+  try {
+    // Normalize path for Windows
+    const normalizedPath = process.platform === 'win32' 
+      ? filePath.replace(/\//g, '\\') 
+      : filePath;
+    
+    console.log('Opening file:', normalizedPath);
+    
+    // Check if file exists before trying to open
+    if (!fs.existsSync(normalizedPath)) {
+      throw new Error(`File not found: ${normalizedPath}`);
+    }
+    
+    const error = await shell.openPath(normalizedPath);
+    if (error) {
+      console.error('Error opening file:', error);
+      throw new Error(error);
+    }
+  } catch (err) {
+    console.error('Failed to open file:', err);
+    throw err;
   }
 }

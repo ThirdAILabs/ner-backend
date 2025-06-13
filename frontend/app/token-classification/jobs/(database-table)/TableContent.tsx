@@ -196,10 +196,26 @@ export function TableContent({
   };
 
   const handleFullPath = (fileIdentifier: string) => {
-    const fullPath = pathMap?.[fileIdentifier.split('/').slice(-1).join('')];
+    const filename = fileIdentifier.split('/').slice(-1).join('');
+    const fullPath = pathMap?.[filename];
+    
+    console.log('handleFullPath:', {
+      fileIdentifier,
+      filename,
+      fullPath,
+      pathMap: Object.keys(pathMap || {}).length
+    });
+    
     const openFile = () => {
+      if (!fullPath) {
+        console.error('No full path found for file:', filename);
+        return;
+      }
       // @ts-ignore
-      window.electron?.openFile?.(fullPath);
+      window.electron?.openFile?.(fullPath).catch((err: any) => {
+        console.error('Error opening file:', err);
+        alert(`Failed to open file: ${err.message || err}`);
+      });
     };
     return { fullPath, openFile };
   };
