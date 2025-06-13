@@ -47,6 +47,29 @@ To download the qwen_tokenizer folder, run the following:
 python -c "from transformers import AutoTokenizer; tokenizer = AutoTokenizer.from_pretrained('Qwen/Qwen2.5-0.5B'); tokenizer.save_pretrained('qwen_tokenizer')"
 ```
 
+### Windows Build
+1. Install Git Bash (https://git-scm.com/downloads). Use Git Bash Terminal until step 5
+2. Clone this repo (ner-backend) in Git Bash in your Documents folder (or any folder you want)
+3. Install NVM (https://github.com/coreybutler/nvm-windows) in Git Bash
+4. Install Node v22 using NVM in Git Bash
+5. Run npm i and npm run build in the frontend/ dir
+6. Install https://www.msys2.org/. This will install a UCRT64 terminal environment. Use UCRT64 Terminal until step 16
+7. Open the UCRT64 terminal and install mingw-w64 GCC (https://www.msys2.org/)
+8. Clone the tokenizers repo (https://github.com/daulet/tokenizers) in the same directory as you cloned ner-backend. To navigate there, you will run `cd /c/Users/<username>/Documents`
+9. cd into the tokenizers repo and checkout branch v1.20.2 (same version as in our go dependencies) and run `make build` (you might run into some errors here, I forgot what I did to fix them but u got this)
+10. A file called libtokenizers.a will be created, copy this to the ner-backend directory
+11. Download the onnxruntime dll (https://github.com/microsoft/onnxruntime/releases) for windows x64. Open the zip file, go to lib/ and copy the onnxruntime.dll to ner-backend
+12. cd into /ucrt64/bin and copy the following three files into ner-backend: libstdc++-6.dll, libwinpthread-1.dll, libgcc_s_seh-1.dll
+13. In ner-backend, run `touch empty.c && gcc -c empty.c` and `ar rcs libdl.a empty.o`
+14. Go to https://go.dev/dl/ and download the windows msi for go 1.23.10. Run through the installation.
+15. Run `export PATH="/c/Program Files/Go/bin:$PATH"` in the terminal
+16. Run `GOOS=windows GOARCH=amd64 CGO_LDFLAGS="-L. -lws2_32 -lbcrypt -luserenv -lntdll" go build -o main ./cmd/local/main.go` in ner-backend
+17. Open the Git Bash terminal, navigate to ner-backend and download the onnx model checkpoint to models/
+18. Run MODEL_DIR=/c/Users/Administrator/Documents/ner-backend/models MODEL_TYPE=onnx_cnn npm run build
+
+in theory, these steps should build a .exe! probably won't though, good luck and have fun. enjoy the journey.
+
+
 ## Migration Notes
 
 The migration process involves:

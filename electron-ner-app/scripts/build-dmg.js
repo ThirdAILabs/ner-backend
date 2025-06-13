@@ -21,7 +21,7 @@ console.log('Go project directory:', goProjectDir);
 // Step 1: Check the Go backend executable
 console.log('\n=== Checking Go backend ===');
 try {
-  const backendExecutable = path.join(goProjectDir, 'main');
+  const backendExecutable = path.join(goProjectDir, 'main.exe');
   
   if (!fs.existsSync(backendExecutable)) {
     console.error('Error: Go backend executable not found at:', backendExecutable);

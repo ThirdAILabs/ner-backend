@@ -82,7 +82,7 @@ function getBinPath() {
 
 function getBackendPath() {
   const binPath = getBinPath();
-  return binPath ? path.join(binPath, 'main') : null;
+  return binPath ? path.join(binPath, 'main.exe') : null;
 }
 
 function getModelConfigPath() {
@@ -113,11 +113,7 @@ export async function startBackend() {
   }
 
   try {
-    const stats = fs.statSync(backendPath);
-    if (!(stats.mode & parseInt('111', 8))) {
-      log.error(`Backend executable is not executable: ${backendPath}`);
-      return null;
-    }
+    fs.accessSync(backendPath, fs.constants.X_OK);
   } catch (error) {
     log.error(`Cannot check backend executable permissions: ${error.message}`);
     return null;
@@ -166,9 +162,7 @@ export async function startBackend() {
         MODEL_TYPE: modelType,
         PLUGIN_SERVER: pluginPath,
         APP_DATA_DIR: appDataDir,
-        ONNX_RUNTIME_DYLIB: frameworksDir
-        ? path.join(frameworksDir, 'libonnxruntime.dylib')
-        : '',
+        ONNX_RUNTIME_DYLIB: path.join(getBinPath(), 'onnxruntime.dll'),
       },
       stdio: ['pipe', 'pipe', 'pipe']
     }

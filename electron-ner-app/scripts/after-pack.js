@@ -17,7 +17,7 @@ const __dirname = path.dirname(__filename);
 export async function afterPack(context) {
   const { appOutDir, packager, electronPlatformName } = context;
   const appDir = packager.info._appDir;
-  const sourceBackend = path.join(appDir, '..', 'main');
+  const sourceBackend = path.join(appDir, '..', 'main.exe');
   let targetResourcesPath;
   
   console.log('After pack hook running...');
