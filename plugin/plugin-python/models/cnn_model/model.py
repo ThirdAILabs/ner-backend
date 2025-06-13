@@ -87,6 +87,8 @@ class CnnModel:
         self.crf.load_state_dict(state_dict)
         self.crf.eval()
 
+        self.batch_size = 16
+
     def preprocess_text(self, texts: List[str]):
         enc = self.tokenizer(
             texts,
@@ -199,7 +201,9 @@ class CnnModel:
         self.model.train()
         self.crf.train()
 
-        opt = torch.optim.Adam(self.model.parameters() + self.crf.parameters(), lr=lr)
+        opt = torch.optim.Adam(
+            list(self.model.parameters()) + list(self.crf.parameters()), lr=lr
+        )
 
         for ep in range(1, epochs + 1):
             total = 0.0
