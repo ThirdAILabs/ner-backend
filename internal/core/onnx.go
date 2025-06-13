@@ -193,8 +193,6 @@ func LoadOnnxModel(modelDir, pythonExec, pluginScript string) (Model, error) {
 	encPath := filepath.Join(modelDir, "model.onnx")
 	crfPath := filepath.Join(modelDir, "transitions.json")
 	tokenizerPath := filepath.Join(modelDir, "qwen_tokenizer/tokenizer.json")
-	fmt.Printf("enc path: %s\n", encPath)
-	fmt.Printf("Tokenizer path: %s\n", tokenizerPath)
 
 	onnxBytes, err := os.ReadFile(encPath)
 	if err != nil {
