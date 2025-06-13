@@ -20,6 +20,7 @@ export interface FeedbackMetadata {
 // TODO: Common function for tokenizing objects
 
 const useFeedbackState = (modelId: string, reportId: string) => {
+  console.log("Report Id", reportId);
   const FEEDBACK_STORAGE_KEY = `feedback-${reportId}`;
   const OBJECTS_STORAGE_KEY = `objects-${reportId}`;
 
