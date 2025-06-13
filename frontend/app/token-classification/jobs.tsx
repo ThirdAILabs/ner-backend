@@ -37,7 +37,7 @@ export default function Jobs() {
   const { healthStatus } = useHealth();
 
   const fetchReportStatus = async (report: ReportWithStatus) => {
-    const pollStatus = async () => {
+    const reportCompletionStatus = async () => {
       try {
         setReports((prev) =>
           prev.map((r) => (r.Id === report.Id ? { ...r, isLoadingStatus: true } : r))
@@ -53,6 +53,7 @@ export default function Jobs() {
                   Errors: detailedReport.Errors || [],
                   SucceededFileCount: detailedReport.SucceededFileCount,
                   FailedFileCount: detailedReport.FailedFileCount,
+                  FileCount: detailedReport.FileCount,
                   detailedStatus: {
                     ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
                     InferenceTaskStatuses: detailedReport.InferenceTaskStatuses,
@@ -64,7 +65,7 @@ export default function Jobs() {
         );
 
         return (
-          detailedReport.FileCount === 0 &&
+          detailedReport.FileCount !== 0 &&
           detailedReport.SucceededFileCount + detailedReport.FailedFileCount ===
             detailedReport.FileCount
         );
@@ -80,8 +81,7 @@ export default function Jobs() {
     let pollInterval: NodeJS.Timeout;
 
     const poll = async () => {
-      const isComplete = await pollStatus();
-
+      const isComplete = await reportCompletionStatus();
       if (
         isComplete &&
         (report.ShardDataTaskStatus === 'COMPLETED' || report.ShardDataTaskStatus === 'FAILED')
@@ -298,8 +298,12 @@ export default function Jobs() {
             </Tooltip>
           </Box>
         );
-      } else if (totalTasks === 0) {
-        return `Gathering files...`;
+      } else if (totalTasks === 0 && report.IsUpload) {
+        // Local Upload
+        return `Queued...`;
+      } else if (totalTasks === 0 && !report.IsUpload) {
+        // S3 Upload
+        return 'Gathering Files...';
       } else if (fileCount > 0 && succeededFileCount === fileCount) {
         return `Files: ${fileCount}/${fileCount} Processed`;
       } else if (fileCount > 0 && failedFileCount === fileCount) {
@@ -308,7 +312,7 @@ export default function Jobs() {
         return `Files: ${succeededFileCount}/${fileCount} Processed${failedFileCount > 0 ? `, ${failedFileCount}/${fileCount} Failed` : ''}`;
       }
 
-      return 'Gathering files...';
+      return 'Queued...';
     }
 
     return (
