@@ -20,7 +20,6 @@ export interface FeedbackMetadata {
 // TODO: Common function for tokenizing objects
 
 const useFeedbackState = (modelId: string, reportId: string) => {
-  console.log("Report Id", reportId);
   const FEEDBACK_STORAGE_KEY = `feedback-${reportId}`;
   const OBJECTS_STORAGE_KEY = `objects-${reportId}`;
 
@@ -44,11 +43,10 @@ const useFeedbackState = (modelId: string, reportId: string) => {
     objectTokens: string[],
     objectTags: string[]
   ) => {
-
     const { tag: _, ...feedbackWithoutTag } = newFeedback;
 
     // Check for duplicate feedback and remove existing entries
-    const updatedFeedback = feedback.filter(existingFeedback => {
+    const updatedFeedback = feedback.filter((existingFeedback) => {
       const { tag: __, ...existingFeedbackWithoutTag } = existingFeedback.body;
 
       const isDuplicate =

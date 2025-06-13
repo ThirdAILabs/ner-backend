@@ -39,7 +39,7 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
   spotlightEndIndex,
   editable = false,
   onTagAssign,
-  objectId
+  objectId,
 }) => {
   const [selectionStart, setSelectionStart] = useState<number | null>(null);
   const [selectionEnd, setSelectionEnd] = useState<number | null>(null);
@@ -143,20 +143,21 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
 
   const reportId = getReportId();
   const FEEDBACK_STORAGE_KEY = `feedback-${reportId}`;
-  const initialFeedback: Feedback[] = JSON.parse(localStorage.getItem(FEEDBACK_STORAGE_KEY) || '[]');
+  const initialFeedback: Feedback[] = JSON.parse(
+    localStorage.getItem(FEEDBACK_STORAGE_KEY) || '[]'
+  );
 
   function isFeedbackGiven(start: number, end: number, text: string, objectId: string) {
-    // console.log("Hue Hue");
     for (let index = 0; index < initialFeedback.length; index++) {
       const feedback = initialFeedback[index];
 
-      const isTokenMatched = feedback.body.objectId === objectId &&
+      const isTokenMatched =
+        feedback.body.objectId === objectId &&
         feedback.body.startIndex === start &&
         feedback.body.endIndex === end &&
         feedback.body.highlightedText === text;
 
       if (isTokenMatched) {
-
         return true;
       }
     }
@@ -177,8 +178,7 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
             spotlightEndIndex &&
             index >= spotlightStartIndex &&
             index <= spotlightEndIndex;
-          // const thisStart = start;
-          // start += token.text.length;
+
           return (
             <span
               key={index}
@@ -198,11 +198,21 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
               }}
               onMouseDown={() => handleMouseDown(index)}
             >
-              <span style={{
-                textDecoration: objectId && isFeedbackGiven(index, index, token.text, objectId) ? 'underline' : 'none',
-                textDecorationColor: objectId && isFeedbackGiven(index, index, token.text, objectId) ? '#0000EE' : 'none',
-                textDecorationThickness: '2px',
-              }}>{token.text}</span>
+              <span
+                style={{
+                  textDecoration:
+                    objectId && isFeedbackGiven(index, index, token.text, objectId)
+                      ? 'underline'
+                      : 'none',
+                  textDecorationColor:
+                    objectId && isFeedbackGiven(index, index, token.text, objectId)
+                      ? '#0000EE'
+                      : 'none',
+                  textDecorationThickness: '2px',
+                }}
+              >
+                {token.text}
+              </span>
 
               {token.tag !== 'O' &&
                 (index === tokens.length - 1 || tokens[index + 1]?.tag !== token.tag) && (
@@ -211,7 +221,7 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
                     style={{
                       backgroundColor: tagColors[token.tag]?.tag || DEFAULT_COLOR.tag,
                       color: 'white',
-                      textDecoration: 'none'
+                      textDecoration: 'none',
                     }}
                   >
                     {token.tag}

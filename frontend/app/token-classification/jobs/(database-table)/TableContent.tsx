@@ -319,7 +319,7 @@ export function TableContent({
       ) : (
         filteredRecords.map((record, index) => {
           const fileIdentifier = record.sourceObject;
-          console.log("File identifier...", fileIdentifier);
+          console.log('File identifier...', fileIdentifier);
           const { fullPath, openFile } = handleFullPath(fileIdentifier);
           const tokens = record.taggedTokens.flatMap((token) => {
             const [text, tag] = token;
