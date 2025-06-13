@@ -159,6 +159,20 @@ func (proc *TaskProcessor) getStorageClient(report *database.Report) (storage.Pr
 		return proc.storage, nil
 	}
 
+	if strings.HasPrefix(report.S3Endpoint.String, storage.BigTablePrefix) {
+		prefixSplit := strings.Split(report.SourceS3Prefix.String, ":")
+		columnFamilyName := prefixSplit[0]
+		columnName := prefixSplit[1]
+
+		return storage.NewBigTableProvider(storage.BigTableProviderConfig{
+			Project: strings.TrimPrefix(report.S3Endpoint.String, storage.BigTablePrefix),
+			Instance: report.S3Region.String,
+			TableName: report.SourceS3Bucket,
+			ColumnFamilyName: columnFamilyName,
+			ColumnName: columnName,
+		})
+	}
+
 	// If we are not using the internal storage provider, then we assume allow the client
 	// to load credentials from the environment, either environment variables or IAM roles, etc.
 	s3Client, err := storage.NewS3Provider(storage.S3ProviderConfig{
