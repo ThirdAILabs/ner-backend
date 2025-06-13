@@ -11,6 +11,7 @@ import (
 	"ner-backend/cmd"
 	"ner-backend/internal/api"
 	"ner-backend/internal/core"
+	"ner-backend/internal/core/python"
 	"ner-backend/internal/database"
 	"ner-backend/internal/licensing"
 	"ner-backend/internal/messaging"
@@ -38,6 +39,7 @@ type Config struct {
 	ModelType        string `env:"MODEL_TYPE"`
 	AppDataDir       string `env:"APP_DATA_DIR" envDefault:"./pocket-shield"`
 	OnnxRuntimeDylib string `env:"ONNX_RUNTIME_DYLIB"`
+	EnablePython     bool   `env:"ENABLE_PYTHON" envDefault:"true"`
 }
 
 const (
@@ -114,7 +116,7 @@ func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publish
 
 	apiHandler := api.NewBackendService(db, storage, queue, chunkTargetBytes, licensing)
 
-	loaders := core.NewModelLoaders("python", "plugin/plugin-python/plugin.py")
+	loaders := core.NewModelLoaders()
 
 	nerModel, err := loaders[modelType](modelDir)
 	if err != nil {
@@ -168,6 +170,10 @@ func main() {
 
 	log.SetOutput(io.MultiWriter(f, os.Stderr))
 
+	if cfg.EnablePython {
+		python.EnablePythonPlugin("python", "plugin/plugin-python/plugin.py")
+	}
+
 	slog.Info("starting backend", "root", cfg.Root, "port", cfg.Port, "app_data_dir", cfg.AppDataDir, "model_dir", cfg.ModelDir, "model_type", cfg.ModelType)
 
 	db := createDatabase(cfg.AppDataDir)
@@ -206,7 +212,7 @@ func main() {
 
 	licensing := cmd.CreateLicenseVerifier(db, cfg.License)
 
-	worker := core.NewTaskProcessor(db, storage, queue, queue, licensing, filepath.Join(cfg.Root, "models"), modelBucket, core.NewModelLoaders("python", "plugin/plugin-python/plugin.py"))
+	worker := core.NewTaskProcessor(db, storage, queue, queue, licensing, filepath.Join(cfg.Root, "models"), modelBucket, core.NewModelLoaders())
 
 	var basicModel database.Model
 	if err := db.Where("name = ?", "basic").First(&basicModel).Error; err != nil {

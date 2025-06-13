@@ -149,9 +149,7 @@ type OnnxModel struct {
 	tokenizer *tokenizers.Tokenizer
 	crf       CRF
 
-	modelDir     string
-	pythonExec   string
-	pluginScript string
+	modelDir string
 }
 
 func decryptModel(encPath string) ([]byte, error) {
@@ -189,7 +187,7 @@ func decryptModel(encPath string) ([]byte, error) {
 	return pt, nil
 }
 
-func LoadOnnxModel(modelDir, pythonExec, pluginScript string) (Model, error) {
+func LoadOnnxModel(modelDir string) (Model, error) {
 	encPath := filepath.Join(modelDir, "model.onnx")
 	crfPath := filepath.Join(modelDir, "transitions.json")
 
@@ -219,12 +217,10 @@ func LoadOnnxModel(modelDir, pythonExec, pluginScript string) (Model, error) {
 	}
 
 	return &OnnxModel{
-		session:      session,
-		tokenizer:    tk,
-		crf:          crf,
-		modelDir:     modelDir,
-		pythonExec:   pythonExec,
-		pluginScript: pluginScript,
+		session:   session,
+		tokenizer: tk,
+		crf:       crf,
+		modelDir:  modelDir,
 	}, nil
 }
 
@@ -297,11 +293,7 @@ func (m *OnnxModel) Predict(text string) ([]types.Entity, error) {
 }
 
 func (m *OnnxModel) FinetuneAndSave(taskPrompt string, tags []api.TagInfo, samples []api.Sample, savePath string) error {
-	if m.pythonExec == "" || m.pluginScript == "" {
-		return fmt.Errorf("finetune not supported for ONNX without python exec and plugin script set")
-	}
-
-	pythonModel, err := python.LoadCnnModel(m.pythonExec, m.pluginScript, m.modelDir)
+	pythonModel, err := python.LoadCnnModel(m.modelDir)
 	if err != nil {
 		return fmt.Errorf("failed to load Python model for finetuning: %w", err)
 	}

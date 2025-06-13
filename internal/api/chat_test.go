@@ -35,7 +35,7 @@ func initializeChatService() chi.Router {
 	}
 
 	// presidio model doesn't require python path or plugin path
-	loaders := core.NewModelLoaders("dummy python path executable ", "dummy python plugin path executable")
+	loaders := core.NewModelLoaders()
 	nerModel, err := loaders["presidio"]("")
 	if err != nil {
 		log.Fatalf("could not load NER model: %v", err)
