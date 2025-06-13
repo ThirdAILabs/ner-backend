@@ -122,8 +122,21 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
     setDropdownPosition(null);
   };
 
+  // Check if any selected token has a tag (not 'O')
+  const hasTaggedTokens = useMemo(() => {
+    if (selectionStart === null || selectionEnd === null) return false;
+    const start = Math.min(selectionStart, selectionEnd);
+    const end = Math.max(selectionStart, selectionEnd);
+    for (let i = start; i <= end; i++) {
+      if (tokens[i] && tokens[i].tag !== 'O') {
+        return true;
+      }
+    }
+    return false;
+  }, [selectionStart, selectionEnd, tokens]);
+
   const filteredTags = [
-    REMOVE_TAG_NAME,
+    ...(hasTaggedTokens ? [REMOVE_TAG_NAME] : []),
     ...(query
       ? availableTags.filter((tag) => tag.toLowerCase().includes(query.toLowerCase()))
       : availableTags),
