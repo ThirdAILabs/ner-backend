@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Box,
   Typography,
@@ -35,6 +35,7 @@ export default function Jobs() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { healthStatus } = useHealth();
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const fetchReportStatus = async (report: ReportWithStatus) => {
     const pollStatus = async () => {
@@ -77,21 +78,21 @@ export default function Jobs() {
       }
     };
 
-    let pollInterval: NodeJS.Timeout;
-
     const poll = async () => {
       const isComplete = await pollStatus();
 
       if (isComplete) {
-        clearInterval(pollInterval);
+        clearInterval(pollIntervalRef.current!);
       }
     };
 
     poll();
-    pollInterval = setInterval(poll, 5000);
+    pollIntervalRef.current = setInterval(poll, 5000);
 
     return () => {
-      clearInterval(pollInterval);
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
     };
   };
 
