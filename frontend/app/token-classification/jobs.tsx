@@ -55,8 +55,7 @@ function JobStatus({ report }: { report: ReportWithStatus }) {
   const { ShardDataTaskStatus, InferenceTaskStatuses } = report.detailedStatus;
   const reportErrors = report.Errors || [];
   const monthlyQuotaExceeded =
-    reportErrors.length > 0 &&
-    reportErrors.includes('license verification failed: quota exceeded');
+    reportErrors.length > 0 && reportErrors.includes('license verification failed: quota exceeded');
 
   // Check for ShardDataTask failure first
   if (ShardDataTaskStatus === 'FAILED') {
@@ -200,7 +199,7 @@ function JobStatus({ report }: { report: ReportWithStatus }) {
       </Typography>
     </Box>
   );
-};
+}
 
 interface JobProps {
   initialReport: ReportWithStatus;
@@ -210,14 +209,14 @@ interface JobProps {
 function Job({ initialReport, onDelete }: JobProps) {
   const [report, setReport] = useState<ReportWithStatus>(initialReport);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   const reportCompletionStatus = async () => {
     try {
-      setReport(prev => ({...prev, isLoadingStatus: true}));
-      
+      setReport((prev) => ({ ...prev, isLoadingStatus: true }));
+
       const detailedReport = await nerService.getReport(report.Id);
 
-      setReport(prev => ({
+      setReport((prev) => ({
         ...prev,
         Errors: detailedReport.Errors || [],
         SucceededFileCount: detailedReport.SucceededFileCount,
@@ -232,10 +231,8 @@ function Job({ initialReport, onDelete }: JobProps) {
 
       const seenFileCount = detailedReport.SucceededFileCount + detailedReport.FailedFileCount;
 
-      const isCompleted = (
-        detailedReport.FileCount !== 0 &&
-        seenFileCount === detailedReport.FileCount
-      );
+      const isCompleted =
+        detailedReport.FileCount !== 0 && seenFileCount === detailedReport.FileCount;
 
       return isCompleted;
     } catch (err) {
@@ -247,10 +244,7 @@ function Job({ initialReport, onDelete }: JobProps) {
 
   const pollReportStatus = async () => {
     const isComplete = await reportCompletionStatus();
-    if (
-      isComplete &&
-      pollIntervalRef.current
-    ) {
+    if (isComplete && pollIntervalRef.current) {
       clearInterval(pollIntervalRef.current);
     }
   };
@@ -258,7 +252,7 @@ function Job({ initialReport, onDelete }: JobProps) {
   useEffect(() => {
     pollReportStatus();
     pollIntervalRef.current = setInterval(pollReportStatus, 5000);
-    
+
     return () => {
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current);
@@ -382,7 +376,7 @@ function Job({ initialReport, onDelete }: JobProps) {
         </Box>
       </TableCell>
     </TableRow>
-  )
+  );
 }
 
 export default function Jobs() {
@@ -401,7 +395,6 @@ export default function Jobs() {
             new Date(b.CreationTime).getTime() - new Date(a.CreationTime).getTime()
         );
         setReports(reportsData as ReportWithStatus[]);
-
       } catch (err) {
         setError('Failed to fetch reports');
         console.error('Error fetching reports:', err);
