@@ -384,11 +384,11 @@ export default function Jobs() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { healthStatus } = useHealth();
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const fetchReports = async () => {
       try {
-        setLoading(true);
         const reportsData = await nerService.listReports();
         reportsData.sort(
           (a: ReportWithStatus, b: ReportWithStatus) =>
@@ -402,8 +402,21 @@ export default function Jobs() {
         setLoading(false);
       }
     };
-    if (healthStatus) fetchReports();
-    return () => {};
+
+    // Poll for all reports to stay current on new reports.
+    if (healthStatus) {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+      fetchReports();
+      pollingIntervalRef.current = setInterval(fetchReports, 5000);
+    }
+
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
   }, [healthStatus]);
 
   if (loading) {
