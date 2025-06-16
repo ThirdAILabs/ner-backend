@@ -327,33 +327,18 @@ func (s *S3Provider) IterObjects(ctx context.Context, bucket, prefix string) Obj
 }
 
 func (s *S3Provider) DeleteObjects(ctx context.Context, bucket string, prefix string) error {
-	objects, err := s.ListObjects(ctx, bucket, prefix)
-	if err != nil {
-		return fmt.Errorf("failed to list objects in bucket %s with prefix %s: %w", bucket, prefix, err)
-	}
+	for obj, err := range s.IterObjects(ctx, bucket, prefix) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate objects in bucket %s with prefix %s: %w", bucket, prefix, err)
+		}
 
-	if len(objects) == 0 {
-		return nil
-	}
-
-	var objectIdentifiers []types.ObjectIdentifier
-	for _, obj := range objects {
-		objectIdentifiers = append(objectIdentifiers, types.ObjectIdentifier{
-			Key: aws.String(obj.Name),
+		_, err := s.client.DeleteObject(ctx, &s3.DeleteObjectInput{
+			Bucket: aws.String(bucket),
+			Key:    aws.String(obj.Name),
 		})
-	}
-
-	// Delete objects
-	_, err = s.client.DeleteObjects(ctx, &s3.DeleteObjectsInput{
-		Bucket: aws.String(bucket),
-		Delete: &types.Delete{
-			Objects: objectIdentifiers,
-		},
-	}, func(o *s3.Options) {
-		o.RequestChecksumCalculation = aws.RequestChecksumCalculationWhenRequired
-	})
-	if err != nil {
-		return fmt.Errorf("failed to delete objects in bucket %s with prefix %s: %w", bucket, prefix, err)
+		if err != nil {
+			return fmt.Errorf("failed to delete objects in bucket %s with prefix %s: %w", bucket, prefix, err)
+		}
 	}
 
 	slog.Info("Objects deleted successfully", "bucket", bucket, "prefix", prefix)
