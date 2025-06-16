@@ -18,6 +18,7 @@ interface FeedbackPanelProps {
   availableTags: string[];
   onDelete: (id: string) => void;
   onSubmit: () => void;
+  style?: React.CSSProperties;
 }
 
 interface FeedbackRowProps {
@@ -92,6 +93,7 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
   availableTags,
   onDelete,
   onSubmit,
+  style={}
 }) => {
   const [collapsed, setCollapsed] = useState(feedbacks.length === 0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -138,6 +140,7 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
             : 'flex flex-col h-full w-full bg-white rounded-lg shadow-lg border border-gray-200 transition-all duration-200'
         }
         onClick={collapsed ? () => setCollapsed(false) : undefined}
+        style={collapsed ? {} : style}
       >
         {/* Collapsed bar */}
         {collapsed ? (

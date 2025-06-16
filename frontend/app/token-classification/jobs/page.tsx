@@ -509,12 +509,13 @@ function JobDetail() {
             addFeedback={addFeedback}
             initialSelectedTag={selectedTag}
           />
-          <div className="fixed bottom-[30px] right-[30px] z-50 w-[300px] h-[500px] flex items-end">
+          <div className="fixed bottom-[30px] right-[30px] z-50 w-[300px] flex flex-col">
             <FeedbackPanel
               feedbacks={displayedFeedback}
               availableTags={availableTags}
               onDelete={removeFeedback}
               onSubmit={submitFeedback}
+              style={{ height: '500px' }}
             />
           </div>
         </TabsContent>
