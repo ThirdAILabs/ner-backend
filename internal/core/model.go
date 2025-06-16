@@ -53,28 +53,23 @@ func IsStatelessModel(modelType ModelType) bool {
 	return exists
 }
 
-func NewModelLoaders(pythonExec, pluginScript string) map[ModelType]ModelLoader {
+func NewModelLoaders() map[ModelType]ModelLoader {
 	return map[ModelType]ModelLoader{
 		BoltUdt: func(modelDir string) (Model, error) {
 			return bolt.LoadNER(filepath.Join(modelDir, "model.bin"))
 		},
 		PythonTransformer: func(modelDir string) (Model, error) {
 			cfgJSON := fmt.Sprintf(`{"model_path":"%s","threshold":0.5}`, modelDir)
-			return python.LoadPythonModel(
-				pythonExec,
-				pluginScript,
-				"python_combined_ner_model",
-				cfgJSON,
-			)
+			return python.LoadPythonModel("python_combined_ner_model", cfgJSON)
 		},
 		PythonCnn: func(modelDir string) (Model, error) {
-			return python.LoadCnnModel(pythonExec, pluginScript, modelDir)
+			return python.LoadCnnModel(modelDir)
 		},
 		Presidio: func(_ string) (Model, error) {
 			return NewPresidioModel()
 		},
 		OnnxCnn: func(modelDir string) (Model, error) {
-			return LoadOnnxModel(modelDir, pythonExec, pluginScript)
+			return LoadOnnxModel(modelDir)
 		},
 	}
 }

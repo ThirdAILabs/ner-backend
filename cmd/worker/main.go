@@ -4,6 +4,7 @@ import (
 	"log" // Adjust import path
 	"ner-backend/cmd"
 	"ner-backend/internal/core"
+	"ner-backend/internal/core/python"
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/storage"
@@ -66,7 +67,9 @@ func main() {
 
 	licensing := cmd.CreateLicenseVerifier(db, cfg.LicenseKey)
 
-	loaders := core.NewModelLoaders(cfg.PythonExecutablePath, cfg.PythonModelPluginScriptPath)
+	python.EnablePythonPlugin(cfg.PythonExecutablePath, cfg.PythonModelPluginScriptPath)
+
+	loaders := core.NewModelLoaders()
 
 	worker := core.NewTaskProcessor(db, s3Client, publisher, receiver, licensing, "./tmp_models_TODO", cfg.ModelBucketName, loaders)
 
