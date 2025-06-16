@@ -161,6 +161,14 @@ func (p *LocalProvider) IterObjects(ctx context.Context, bucket, dir string) Obj
 	}
 }
 
+func (p *LocalProvider) DeleteObjects(ctx context.Context, bucket string, dir string) error {
+	fullPath := p.fullpath(bucket, dir)
+	if err := os.RemoveAll(fullPath); err != nil {
+		return fmt.Errorf("failed to delete objects in %s/%s: %w", bucket, dir, err)
+	}
+	return nil
+}
+
 func (p *LocalProvider) ValidateAccess(ctx context.Context, bucket, prefix string) error {
 	return nil
 }
