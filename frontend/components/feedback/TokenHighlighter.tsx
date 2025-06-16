@@ -124,11 +124,10 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
 
   const filteredTags = [
     ...(selectionStart !== null &&
-      selectionEnd !== null &&
-      tokens.slice(
-        Math.min(selectionStart, selectionEnd),
-        Math.max(selectionStart, selectionEnd) + 1
-      ).some(token => token.tag !== 'O')
+    selectionEnd !== null &&
+    tokens
+      .slice(Math.min(selectionStart, selectionEnd), Math.max(selectionStart, selectionEnd) + 1)
+      .some((token) => token.tag !== 'O')
       ? [REMOVE_TAG_NAME]
       : []),
     ...(query
