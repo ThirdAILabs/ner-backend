@@ -125,7 +125,8 @@ class CnnModel(Model):
 
     def postprocess_tags(
         self,
-        texts: List[str],
+        orig_texts: List[str],
+        cleaned_texts: List[str],
         paths: List[List[int]],
         offsets_batch,
         spans_batch: List[List[Tuple[int, int]]],
@@ -133,12 +134,11 @@ class CnnModel(Model):
         sub_tags_batch = [[IDX_TO_TAG[idx] for idx in path] for path in paths]
 
         results = []
-        for orig_text, offsets, sub_tags, spans in zip(
-            texts, offsets_batch, sub_tags_batch, spans_batch
+        for orig_text, cleaned_text, offsets, sub_tags, spans in zip(
+            orig_texts, cleaned_texts, offsets_batch, sub_tags_batch, spans_batch
         ):
-            word_ids = manual_word_ids(orig_text, offsets)
-            words = orig_text.split()
-            word_preds = ["O"] * len(words)
+            word_ids = manual_word_ids(cleaned_text, offsets)
+            word_preds = ["O"] * len(orig_text.split())
             for wid, tag in zip(word_ids, sub_tags):
                 if wid is None:
                     continue
@@ -181,7 +181,8 @@ class CnnModel(Model):
 
             results.extend(
                 self.postprocess_tags(
-                    texts=batch,
+                    orig_texts=batch,
+                    cleaned_texts=cleaned_texts,
                     paths=paths_batch,
                     offsets_batch=offsets_batch,
                     spans_batch=spans_batch,
@@ -195,7 +196,7 @@ class CnnModel(Model):
         prompt: str,
         tags: List[Any],
         samples: List[Sample],
-    ):
+    ) -> None:
         batch_size = 16
         lr = 3e-4
         epochs = 1
@@ -248,7 +249,7 @@ class CnnModel(Model):
         self.model.eval()
         self.crf.eval()
 
-    def save(self, save_dir: str):
+    def save(self, save_dir: str) -> None:
         os.makedirs(save_dir, exist_ok=True)
 
         torch.jit.save(self.model, os.path.join(save_dir, "model.pt"))
