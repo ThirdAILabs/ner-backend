@@ -253,7 +253,7 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		return nil, CodedErrorf(http.StatusUnprocessableEntity, "the following fields are required: SourceS3Bucket or UploadId")
 	}
 
-	if req.UploadId == uuid.Nil && !strings.HasPrefix(s3Endpoint, storage.BigTablePrefix) {
+	if req.UploadId == uuid.Nil && !strings.HasPrefix(sourceS3Bucket, storage.BigTablePrefix) {
 		if err := validateS3Access(s3Endpoint, s3Region, sourceS3Bucket, s3Prefix); err != nil {
 			return nil, err
 		}

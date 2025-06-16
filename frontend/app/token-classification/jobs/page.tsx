@@ -384,15 +384,20 @@ function JobDetail() {
                   }}
                 >
                   <h3 className="text-lg font-medium mb-1">BigTable</h3>
-                  <p className="text-sm text-gray-600">
-                    Table: {reportData.SourceS3Bucket}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    Column family: {reportData.SourceS3Prefix?.split(":")[0]}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    Column: {reportData.SourceS3Prefix?.split(":")[1]}
-                  </p>
+                  {
+                    reportData.SourceS3Bucket.substring("bigtable://".length).split(":").map((part, index) => (
+                      <p className="text-sm text-gray-600">
+                        <b>{["Project", "Instance", "Table"][index]}:</b> {part}
+                      </p>
+                    ))
+                  }
+                  {
+                    reportData.SourceS3Prefix?.split(":").map((part, index) => (
+                      <p className="text-sm text-gray-600">
+                        <b>{["Column Family", "Column"][index]}:</b> {part}
+                      </p>
+                    ))
+                  }
                 </Box>
               )}
               

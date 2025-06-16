@@ -712,9 +712,7 @@ export default function NewJobPage() {
               SourceS3Prefix: sourceS3Prefix || undefined,
             }
           : selectedSource === 'bigtable' ? {
-            S3Endpoint: `bigtable://${bigTableProject}`,
-            S3Region: bigTableInstance,
-            SourceS3Bucket: bigTableName,
+            SourceS3Bucket: `bigtable://${bigTableProject}:${bigTableInstance}:${bigTableName}`,
             SourceS3Prefix: `${bigTableColumnFamily}:${bigTableColumn}`,
           } : {
               UploadId: uploadId,

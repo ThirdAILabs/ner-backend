@@ -159,15 +159,20 @@ func (proc *TaskProcessor) getStorageClient(report *database.Report) (storage.Pr
 		return proc.storage, nil
 	}
 
-	if strings.HasPrefix(report.S3Endpoint.String, storage.BigTablePrefix) {
+	if strings.HasPrefix(report.SourceS3Bucket, storage.BigTablePrefix) {
+		bucketSplit := strings.Split(strings.TrimPrefix(report.SourceS3Bucket, storage.BigTablePrefix), ":")
+		project := bucketSplit[0]
+		instance := bucketSplit[1]
+		tableName := bucketSplit[2]
+		
 		prefixSplit := strings.Split(report.SourceS3Prefix.String, ":")
 		columnFamilyName := prefixSplit[0]
 		columnName := prefixSplit[1]
 
 		return storage.NewBigTableProvider(storage.BigTableProviderConfig{
-			Project: strings.TrimPrefix(report.S3Endpoint.String, storage.BigTablePrefix),
-			Instance: report.S3Region.String,
-			TableName: report.SourceS3Bucket,
+			Project: project,
+			Instance: instance,
+			TableName: tableName,
 			ColumnFamilyName: columnFamilyName,
 			ColumnName: columnName,
 		})
