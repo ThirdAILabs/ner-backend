@@ -228,6 +228,19 @@ func TestFinetuningAllModels(t *testing.T) {
 	}
 }
 
+func waitFor[T any](t *testing.T, attempts int, delay time.Duration, getter func() T, ok func(T) bool) T {
+	var last T
+	for i := 0; i < attempts; i++ {
+		last = getter()
+		if ok(last) {
+			return last
+		}
+		time.Sleep(delay)
+	}
+	t.Fatalf("gave up after %d attempts; last value: %+v", attempts, last)
+	return last
+}
+
 func TestFinetuningWithGenerateData(t *testing.T) {
 	_, cancel, s3, db, pub, sub, router := setupCommon(t)
 	defer cancel()
@@ -261,12 +274,31 @@ func TestFinetuningWithGenerateData(t *testing.T) {
 
 	_, model := finetune(t, router, baseID.String(), ftReq, 10, 100*time.Millisecond)
 
-	assert.Equal(t, database.ModelTrained, model.Status)
-	assert.Equal(t, "finetuned-with-gen", model.Name)
-	require.NotNil(t, model.BaseModelId)
-	assert.Equal(t, baseID, *model.BaseModelId)
+	assert.Equal(t, database.ModelTraining, model.Status)
 
-	stream, err := s3.GetObjectStream(modelBucket, fmt.Sprintf("%s/model.json", model.Id))
+	// now wait for the worker to finish both datagen and finetune, i.e. status=TRAINED and model.json exists
+	done := waitFor(t, 20, 200*time.Millisecond,
+		func() api.Model {
+			var mm api.Model
+			require.NoError(t, httpRequest(router, "GET", fmt.Sprintf("/models/%s", model.Id), nil, &mm))
+			return mm
+		},
+		func(mm api.Model) bool {
+			if mm.Status != database.ModelTrained {
+				return false
+			}
+			// also verify model.json is present
+			_, err := s3.GetObjectStream(modelBucket, fmt.Sprintf("%s/model.json", mm.Id))
+			return err == nil
+		},
+	)
+
+	assert.Equal(t, database.ModelTrained, done.Status)
+	assert.Equal(t, "finetuned-with-gen", done.Name)
+	require.NotNil(t, done.BaseModelId)
+	assert.Equal(t, baseID, *done.BaseModelId)
+
+	stream, err := s3.GetObjectStream(modelBucket, fmt.Sprintf("%s/model.json", done.Id))
 	require.NoError(t, err)
 	var data map[string]string
 	require.NoError(t, json.NewDecoder(stream).Decode(&data))
