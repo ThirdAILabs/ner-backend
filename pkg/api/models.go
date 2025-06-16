@@ -38,6 +38,8 @@ type Report struct {
 	ReportName     string
 	SourceS3Bucket string
 	SourceS3Prefix string
+	S3Endpoint     string
+	S3Region       string
 	IsUpload       bool
 
 	Stopped            bool

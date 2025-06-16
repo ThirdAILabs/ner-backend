@@ -12,6 +12,7 @@ import (
 	"ner-backend/cmd"
 	backendpkg "ner-backend/internal/api"
 	"ner-backend/internal/core"
+	"ner-backend/internal/core/python"
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/storage"
@@ -145,12 +146,12 @@ func TestFinetuningAllModels(t *testing.T) {
 	os.Setenv("AWS_ACCESS_KEY_ID", minioUsername)
 	os.Setenv("AWS_SECRET_ACCESS_KEY", minioPassword)
 
-	stop := startWorker(t, db, s3, pub, sub, modelBucket,
-		core.NewModelLoaders(
-			os.Getenv("PYTHON_EXECUTABLE_PATH"),
-			os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH"),
-		),
+	python.EnablePythonPlugin(
+		os.Getenv("PYTHON_EXECUTABLE_PATH"),
+		os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH"),
 	)
+
+	stop := startWorker(t, db, s3, pub, sub, modelBucket, core.NewModelLoaders())
 	defer stop()
 
 	models := []string{"bolt_udt", "python_cnn", "python_transformer"}
@@ -293,12 +294,12 @@ func TestFinetuningOnnxModel(t *testing.T) {
 	os.Setenv("AWS_ACCESS_KEY_ID", minioUsername)
 	os.Setenv("AWS_SECRET_ACCESS_KEY", minioPassword)
 
-	stop := startWorker(t, db, s3, pub, sub, modelBucket,
-		core.NewModelLoaders(
-			os.Getenv("PYTHON_EXECUTABLE_PATH"),
-			os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH"),
-		),
+	python.EnablePythonPlugin(
+		os.Getenv("PYTHON_EXECUTABLE_PATH"),
+		os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH"),
 	)
+
+	stop := startWorker(t, db, s3, pub, sub, modelBucket, core.NewModelLoaders())
 	defer stop()
 
 	ort.SetSharedLibraryPath(onnxDylib)
