@@ -2,6 +2,7 @@ package database
 
 import (
 	"log"
+	"log/slog"
 	"ner-backend/internal/database/versions/migration_0"
 	"ner-backend/internal/database/versions/migration_1"
 	"ner-backend/internal/database/versions/migration_2"
@@ -40,6 +41,14 @@ func GetMigrator(db *gorm.DB) *gormigrate.Gormigrate {
 		// the latest database state.
 
 		log.Println("clean database detected, running full schema initialization")
+
+		dbType := db.Dialector.Name()
+		if dbType == "sqlite" || dbType == "sqlite3" {
+			// Sqlite does not enable foreign key constraints by default, so we need to enable them manually.
+			if err := txn.Exec("PRAGMA foreign_keys = ON").Error; err != nil {
+				slog.Error("error enabling foreign keys for SQLite", "error", err)
+			}
+		}
 
 		return db.AutoMigrate(
 			&Model{}, &ModelTag{}, &Report{}, &ReportTag{}, &CustomTag{}, &ShardDataTask{}, &InferenceTask{}, &Group{}, &ObjectGroup{}, &ObjectEntity{}, &ReportError{}, &ObjectPreview{}, &ChatHistory{}, &ChatSession{}, &FileNameToPath{},

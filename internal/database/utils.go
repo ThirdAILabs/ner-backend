@@ -80,3 +80,11 @@ func SetModelTags(ctx context.Context, db *gorm.DB, modelId uuid.UUID, tags []st
 
 	return nil
 }
+
+func DeleteReport(ctx context.Context, txn *gorm.DB, reportId uuid.UUID) error {
+	if err := txn.WithContext(ctx).Model(&Report{Id: reportId}).Delete(&Report{}).Error; err != nil {
+		slog.Error("error deleting report", "report_id", reportId, "error", err)
+		return err
+	}
+	return nil
+}
