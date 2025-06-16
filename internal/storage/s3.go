@@ -349,6 +349,8 @@ func (s *S3Provider) DeleteObjects(ctx context.Context, bucket string, prefix st
 		Delete: &types.Delete{
 			Objects: objectIdentifiers,
 		},
+	}, func(o *s3.Options) {
+		o.RequestChecksumCalculation = aws.RequestChecksumCalculationWhenRequired
 	})
 	if err != nil {
 		return fmt.Errorf("failed to delete objects in bucket %s with prefix %s: %w", bucket, prefix, err)
