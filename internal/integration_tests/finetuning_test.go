@@ -228,19 +228,6 @@ func TestFinetuningAllModels(t *testing.T) {
 	}
 }
 
-func waitFor[T any](t *testing.T, attempts int, delay time.Duration, getter func() T, ok func(T) bool) T {
-	var last T
-	for i := 0; i < attempts; i++ {
-		last = getter()
-		if ok(last) {
-			return last
-		}
-		time.Sleep(delay)
-	}
-	t.Fatalf("gave up after %d attempts; last value: %+v", attempts, last)
-	return last
-}
-
 func TestFinetuningWithGenerateData(t *testing.T) {
 	_, cancel, s3, db, pub, sub, router := setupCommon(t)
 	defer cancel()
