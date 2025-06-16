@@ -195,13 +195,18 @@ export function AnalyticsDashboard({
               </h3>
             </div>
 
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex-1 flex flex-col items-center justify-center">
               <span
-                className={`font-bold tracking-tight bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent ${timeTakenToTextSize(
+                className={`text-4xl font-bold tracking-tight bg-gradient-to-r from-purple-600 to-purple-800 bg-clip-text text-transparent ${timeTakenToTextSize(
                   formattedTime
                 )}`}
               >
                 {formattedTime}
+              </span>
+
+              {/* Ghost element to match height of Data Processed */}
+              <span className="text-sm text-transparent mt-2 select-none">
+                Processed of {formatFileSize(tokensProcessed)}
               </span>
             </div>
           </CardContent>

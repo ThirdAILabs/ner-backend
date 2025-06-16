@@ -58,6 +58,8 @@ func convertReport(r database.Report) api.Report {
 		ReportName:         r.ReportName,
 		SourceS3Bucket:     r.SourceS3Bucket,
 		SourceS3Prefix:     r.SourceS3Prefix.String,
+		S3Endpoint:         r.S3Endpoint.String,
+		S3Region:           r.S3Region.String,
 		IsUpload:           r.IsUpload,
 		Stopped:            r.Stopped,
 		CreationTime:       r.CreationTime,

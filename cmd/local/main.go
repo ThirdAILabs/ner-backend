@@ -178,6 +178,22 @@ func main() {
 
 	db := createDatabase(cfg.AppDataDir)
 
+	if err := db.
+		Model(&database.ShardDataTask{}).
+		Where("status IN ?", []string{database.JobQueued, database.JobRunning}).
+		Update("status", database.JobAborted).
+		Error; err != nil {
+		log.Fatalf("failed to abort stale shard tasks: %v", err)
+	}
+
+	if err := db.
+		Model(&database.InferenceTask{}).
+		Where("status IN ?", []string{database.JobQueued, database.JobRunning}).
+		Update("status", database.JobAborted).
+		Error; err != nil {
+		log.Fatalf("failed to abort stale inference tasks: %v", err)
+	}
+
 	storage, err := storage.NewLocalProvider(filepath.Join(cfg.Root, "storage"))
 	if err != nil {
 		log.Fatalf("Worker: Failed to create storage client: %v", err)
