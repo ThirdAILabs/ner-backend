@@ -213,6 +213,9 @@ func TestFinetuningAllModels(t *testing.T) {
 		assert.Equal(t, fmt.Sprintf("finetuned-%s", modelType), model.Name)
 		require.NotNil(t, model.BaseModelId)
 		assert.Equal(t, base.Id, *model.BaseModelId)
+
+		// To prevent disk full errors
+		require.NoError(t, s3.DeleteObjects(ctx, modelBucket, model.BaseModelId.String()))
 	}
 }
 

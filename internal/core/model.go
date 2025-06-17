@@ -63,8 +63,7 @@ func NewModelLoaders() map[ModelType]ModelLoader {
 			return python.LoadPythonModel("python_combined_ner_model", cfgJSON)
 		},
 		PythonCnn: func(modelDir string) (Model, error) {
-			cfgJSON := fmt.Sprintf(`{"model_path":"%s/cnn_model.pth", "tokenizer_path":"%s/qwen_tokenizer"}`, modelDir, modelDir)
-			return python.LoadPythonModel("python_cnn_ner_model", cfgJSON)
+			return python.LoadCnnModel(modelDir)
 		},
 		Presidio: func(_ string) (Model, error) {
 			return NewPresidioModel()

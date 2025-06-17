@@ -18,6 +18,8 @@ import MetricsDataViewer from './metrics/MetricsDataViewer';
 import { useHealth } from '@/contexts/HealthProvider';
 import useTelemetry from '@/hooks/useTelemetry';
 
+import { useLicense } from '@/hooks/useLicense';
+
 import MetricsDataViewerCard from '@/components/ui/MetricsDataViewerCard';
 import { formatFileSize } from '@/lib/utils';
 
@@ -34,6 +36,7 @@ const Dashboard = () => {
     });
   }, []);
   const { healthStatus } = useHealth();
+  const { license } = useLicense();
   const searchParams = useSearchParams();
   const deploymentId = searchParams.get('deploymentId');
   const [isLoading, setIsLoading] = useState(true);
@@ -92,17 +95,6 @@ const Dashboard = () => {
     // Cleanup interval on unmount
     return () => clearInterval(intervalId);
   }, [healthStatus]);
-
-  const [license, setLicense] = useState<License | null>(null);
-  useEffect(() => {
-    nerService
-      .getLicense()
-      .then((lic) => setLicense(lic))
-      .catch((err) => {
-        console.log('Failed to load license:', err);
-        setLicense(null);
-      });
-  }, []);
 
   if (!healthStatus) {
     return (
