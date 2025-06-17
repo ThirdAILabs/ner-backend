@@ -98,11 +98,13 @@ function JobStatus({ report }: { report: ReportWithStatus }) {
   const running = InferenceTaskStatuses?.RUNNING?.TotalTasks || 0;
   const queued = InferenceTaskStatuses?.QUEUED?.TotalTasks || 0;
   const failed = InferenceTaskStatuses?.FAILED?.TotalTasks || 0;
+  const aborted = InferenceTaskStatuses?.ABORTED?.TotalTasks || 0;
 
   const fileCount = report.FileCount || 1;
   const succeededFileCount = report.SucceededFileCount || 0;
   const failedFileCount = report.FailedFileCount || 0;
-  const totalTasks = completed + running + queued + failed;
+
+  const totalTasks = completed + running + queued + failed + aborted;
 
   function getProgressOutput() {
     if (monthlyQuotaExceeded) {
@@ -128,6 +130,15 @@ function JobStatus({ report }: { report: ReportWithStatus }) {
     } else if (totalTasks === 0 && !report.IsUpload) {
       // S3 Upload
       return 'Gathering Files...';
+    } else if (aborted > 0) {
+      let msg = `Scan stopped before completion`;
+      if (succeededFileCount > 0) {
+        msg += `: ${succeededFileCount}/${fileCount} Processed`;
+      }
+      if (failedFileCount > 0) {
+        msg += `, ${failedFileCount}/${fileCount} Failed`;
+      }
+      return msg;
     } else if (fileCount > 0 && succeededFileCount === fileCount) {
       return `Files: ${fileCount}/${fileCount} Processed`;
     } else if (fileCount > 0 && failedFileCount === fileCount) {
@@ -170,18 +181,20 @@ function JobStatus({ report }: { report: ReportWithStatus }) {
             }}
           />
           {/* Loading animation */}
-          {!monthlyQuotaExceeded && succeededFileCount + failedFileCount < fileCount && (
-            <Box
-              className="shimmer-effect"
-              sx={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-              }}
-            />
-          )}
+          {!monthlyQuotaExceeded &&
+            succeededFileCount + failedFileCount < fileCount &&
+            aborted === 0 && (
+              <Box
+                className="shimmer-effect"
+                sx={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                }}
+              />
+            )}
         </Box>
         <Typography
           variant="body2"
@@ -207,13 +220,14 @@ interface JobProps {
 }
 
 function Job({ initialReport, onDelete }: JobProps) {
-  const [report, setReport] = useState<ReportWithStatus>(initialReport);
+  const [report, setReport] = useState<ReportWithStatus>({
+    ...initialReport,
+    isLoadingStatus: true,
+  });
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const reportCompletionStatus = async () => {
     try {
-      setReport((prev) => ({ ...prev, isLoadingStatus: true }));
-
       const detailedReport = await nerService.getReport(report.Id);
 
       setReport((prev) => ({
