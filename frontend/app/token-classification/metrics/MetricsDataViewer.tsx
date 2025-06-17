@@ -24,6 +24,7 @@ import {
   TextField,
 } from '@mui/material';
 import type { SavedFeedback, FinetuneRequest } from '@/lib/backend';
+import { Toaster, toast } from 'react-hot-toast';
 
 interface MetricsDataViewerProps {
   modelId?: string;
@@ -220,13 +221,20 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
       const response = await nerService.finetuneModel(modelId, request);
       console.log('Finetuning started for new model:', response.ModelId);
 
-      // Close dialog and reset state
       setShowFinetuneDialog(false);
       setFinetuneModelName('');
       setFinetuneTaskPrompt('');
 
-      // You could show a success message or redirect to the new model
-      alert(`Finetuning started successfully! New model ID: ${response.ModelId}`);
+      toast.success('Finetuning started successfully!', {
+        duration: 3000,
+        style: {
+          background: '#4CAF50',
+          color: '#fff',
+          padding: '10px',
+          borderRadius: '8px',
+        },
+        icon: '✓',
+      });
     } catch (error) {
       console.error('Finetuning failed:', error);
       // Error handling is already done in the service layer
@@ -442,6 +450,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
           </Button>
         </DialogActions>
       </Dialog>
+      <Toaster position="top-right" />
     </>
   );
 };

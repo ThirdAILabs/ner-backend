@@ -121,7 +121,7 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
         style: {
           background: '#4CAF50',
           color: '#fff',
-          padding: '16px',
+          padding: '10px',
           borderRadius: '8px',
         },
         icon: '✓',

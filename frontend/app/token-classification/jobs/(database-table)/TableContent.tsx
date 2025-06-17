@@ -3,7 +3,7 @@ import { TableHead, TableRow, TableHeader, TableBody, TableCell } from '@/compon
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NO_GROUP } from '@/lib/utils';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, File } from 'lucide-react';
 import { TokenHighlighter } from '@/components/feedback/TokenHighlighter';
 import * as _ from 'lodash';
 import type { TableContentProps } from '@/types/analyticsTypes';
@@ -360,23 +360,12 @@ export function TableContent({
               key={index}
               className="group text-sm leading-relaxed bg-white rounded border border-gray-100 shadow-sm mb-4"
             >
-              <summary className="p-3 cursor-pointer bg-gray-100 flex items-center">
+              <summary className="p-3 cursor-pointer bg-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <ChevronRight className="w-4 h-4 transition-transform group-open:rotate-90" />
                   {/* @ts-ignore */}
                   {fullPath && typeof window !== 'undefined' && window.electron ? (
-                    <span
-                      className="font-semibold"
-                      style={{
-                        textDecoration: 'underline',
-                        color: 'inherit',
-                        cursor: 'pointer',
-                        userSelect: 'none',
-                      }}
-                      onClick={openFile}
-                    >
-                      {truncateFilePath(fullPath)}
-                    </span>
+                    <span className="font-semibold">{truncateFilePath(fullPath)}</span>
                   ) : (
                     <span
                       className="font-semibold"
@@ -386,7 +375,36 @@ export function TableContent({
                     </span>
                   )}
                 </div>
+
+                {/* @ts-ignore */}
+                {fullPath && typeof window !== 'undefined' && window.electron && (
+                  <span
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      openFile();
+                    }}
+                    className="cursor-pointer user-select-none text-inherit hover:text-blue-500 transition-colors"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="lucide lucide-file-icon lucide-file"
+                    >
+                      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+                      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+                    </svg>
+                  </span>
+                )}
               </summary>
+
               <div className="p-4">
                 <TokenHighlighter
                   tokens={tokens}
