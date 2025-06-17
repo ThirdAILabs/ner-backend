@@ -426,7 +426,7 @@ export default function NewJobPage() {
       return;
     }
 
-    if (!editingGroup && groups[groupName]) {
+    if (!editingGroup && groups[groupName.toUpperCase()]) {
       setGroupDialogError('Group name must be unique.');
       return;
     }
@@ -477,7 +477,6 @@ export default function NewJobPage() {
     setGroups(newGroups);
   };
 
-  // Add a custom tag
   const handleAddCustomTag = () => {
     setDialogError(null);
 
@@ -869,58 +868,61 @@ export default function NewJobPage() {
               <FileSources selectSource={setSelectedSource} handleLocalFiles={handleLocalFiles} />
             </div>
 
-            {(selectedSource === 'files' || selectedSource === 'directory') && selectedFiles.length > 0 && (
-              <div className="mt-6">
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-sm font-medium text-gray-700">
-                    Selected Files ({selectedFiles.length})
-                  </h3>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSelectedFiles([])}
-                    className="text-red-500"
-                  >
-                    Clear all
-                  </Button>
-                </div>
-                <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-md">
-                  {selectedFiles.map(([file, fullPath], index) => (
-                    <div
-                      key={`${file.name}-${fullPath}-${index}`}
-                      className="flex items-center justify-between px-4 py-2 border-b last:border-b-0 hover:bg-gray-50"
+            {(selectedSource === 'files' || selectedSource === 'directory') &&
+              selectedFiles.length > 0 && (
+                <div className="mt-6">
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-sm font-medium text-gray-700">
+                      Selected Files ({selectedFiles.length})
+                    </h3>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedFiles([])}
+                      className="text-red-500"
                     >
-                      <div className="flex items-center">
-                        <span className="text-sm text-gray-600">
-                          {file.name} ({(file.size / 1024).toFixed(1)} KB)
-                        </span>
-                        {fullPath && <span className="ml-2 text-xs text-gray-400">{fullPath}</span>}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeFile(index)}
-                        className="text-red-500 hover:text-red-700 p-1"
-                        aria-label="Remove file"
+                      Clear all
+                    </Button>
+                  </div>
+                  <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-md">
+                    {selectedFiles.map(([file, fullPath], index) => (
+                      <div
+                        key={`${file.name}-${fullPath}-${index}`}
+                        className="flex items-center justify-between px-4 py-2 border-b last:border-b-0 hover:bg-gray-50"
                       >
-                        <svg
-                          className="h-4 w-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
+                        <div className="flex items-center">
+                          <span className="text-sm text-gray-600">
+                            {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                          </span>
+                          {fullPath && (
+                            <span className="ml-2 text-xs text-gray-400">{fullPath}</span>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeFile(index)}
+                          className="text-red-500 hover:text-red-700 p-1"
+                          aria-label="Remove file"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M6 18L18 6M6 6l12 12"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-                  ))}
+                          <svg
+                            className="h-4 w-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M6 18L18 6M6 6l12 12"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {selectedSource === 's3' && (
               <div className="space-y-4">
