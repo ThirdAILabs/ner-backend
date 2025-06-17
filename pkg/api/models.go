@@ -164,6 +164,7 @@ type FileNameToPath struct {
 }
 
 type FeedbackRequest struct {
+	Id     uuid.UUID `json:"id"`
 	Tokens []string `json:"tokens"`
 	Labels []string `json:"labels"`
 }

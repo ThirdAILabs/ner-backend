@@ -61,6 +61,7 @@ func (s *BackendService) AddRoutes(r chi.Router) {
 		r.Get("/{model_id}", RestHandler(s.GetModel))
 		r.Post("/{model_id}/finetune", RestHandler(s.FinetuneModel))
 		r.Post("/{model_id}/feedback", RestHandler(s.StoreModelFeedback))
+		r.Delete("/{model_id}/feedback/{feedback_id}", RestHandler(s.DeleteModelFeedback))
 		r.Get("/{model_id}/feedback", RestHandler(s.ListModelFeedback))
 	})
 	r.Route("/reports", func(r chi.Router) {
@@ -197,7 +198,7 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 	samples := make([]api.Sample, 0, len(req.Samples))
 	samples = append(samples, req.Samples...)
 
-	tokensList, labelsList, err := database.GetFeedbackSamples(ctx, s.db, modelId)
+	_, tokensList, labelsList, err := database.GetFeedbackSamples(ctx, s.db, modelId)
 	if err != nil {
 		slog.Error("failed to load feedback samples", "model_id", modelId, "error", err)
 		return nil, CodedErrorf(http.StatusInternalServerError, "could not load feedback samples: %v", err)
@@ -1170,6 +1171,21 @@ func (s *BackendService) StoreModelFeedback(r *http.Request) (any, error) {
 	return nil, nil
 }
 
+func (s *BackendService) DeleteModelFeedback(r *http.Request) (any, error) {
+	modelId, err := URLParamUUID(r, "model_id")
+	if err != nil {
+		return nil, err
+	}
+	feedbackId, err := URLParamUUID(r, "feedback_id")
+	if err != nil {
+		return nil, err
+	}
+	if err := s.db.Delete(&database.FeedbackSample{}, "id = ? AND model_id = ?", feedbackId, modelId).Error; err != nil {
+		return nil, CodedErrorf(http.StatusInternalServerError, "failed to delete feedback: %v", err)
+	}
+	return nil, nil
+}
+
 func (s *BackendService) ListModelFeedback(r *http.Request) (any, error) {
 	modelId, err := URLParamUUID(r, "model_id")
 	if err != nil {
@@ -1185,7 +1201,7 @@ func (s *BackendService) ListModelFeedback(r *http.Request) (any, error) {
 		return nil, CodedErrorf(http.StatusInternalServerError, "error %d: could not retrieve model", ErrCodeDB)
 	}
 
-	tokensList, labelsList, err := database.GetFeedbackSamples(ctx, s.db, modelId)
+	ids, tokensList, labelsList, err := database.GetFeedbackSamples(ctx, s.db, modelId)
 	if err != nil {
 		return nil, CodedErrorf(http.StatusInternalServerError, "could not fetch feedback: %v", err)
 	}
@@ -1193,6 +1209,7 @@ func (s *BackendService) ListModelFeedback(r *http.Request) (any, error) {
 	out := make([]api.FeedbackRequest, len(tokensList))
 	for i := range tokensList {
 		out[i] = api.FeedbackRequest{
+			Id:     ids[i],
 			Tokens: tokensList[i],
 			Labels: labelsList[i],
 		}

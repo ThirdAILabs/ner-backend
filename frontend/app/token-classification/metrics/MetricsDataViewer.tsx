@@ -23,7 +23,7 @@ import {
   DialogActions,
   TextField,
 } from '@mui/material';
-import type { Feedback, FinetuneRequest } from '@/lib/backend';
+import type { SavedFeedback, FinetuneRequest } from '@/lib/backend';
 
 interface MetricsDataViewerProps {
   modelId?: string;
@@ -40,7 +40,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
   const { healthStatus } = useHealth();
 
   // State for feedback data
-  const [feedbackData, setFeedbackData] = useState<Feedback[]>([]);
+  const [feedbackData, setFeedbackData] = useState<SavedFeedback[]>([]);
   const [loadingFeedback, setLoadingFeedback] = useState(false);
 
   // State for finetuning
@@ -184,6 +184,16 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
         </span>
       </span>
     );
+  };
+
+  const handleDeleteFeedback = async (id: string) => {
+    if (!modelId) return;
+    try {
+      await nerService.deleteModelFeedback(modelId, id);
+      setFeedbackData(feedbackData.filter((feedback) => feedback.id !== id));
+    } catch (error) {
+      console.error('Failed to delete feedback:', error);
+    }
   };
 
   const handleFinetuneClick = () => {
@@ -354,10 +364,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
                         <TableCell className="text-right">
                           <button
                             className="text-gray-700 hover:text-gray-700 transition-colors"
-                            onClick={() => {
-                              // TODO: Implement delete functionality when backend is ready
-                              console.log('Delete feedback:', feedback);
-                            }}
+                            onClick={() => handleDeleteFeedback(feedback.id)}
                             title="Delete feedback"
                           >
                             ✕

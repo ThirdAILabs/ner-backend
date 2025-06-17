@@ -102,6 +102,12 @@ export interface Feedback {
   labels: string[];
 }
 
+export interface SavedFeedback {
+  id: string;
+  tokens: string[];
+  labels: string[];
+}
+
 export interface TagInfo {
   name: string;
   description: string;
@@ -467,12 +473,20 @@ export const nerService = {
     return data;
   },
 
-  getFeedbackSamples: async (modelId: string): Promise<Feedback[]> => {
+  getFeedbackSamples: async (modelId: string): Promise<SavedFeedback[]> => {
     try {
       const { data } = await axiosInstance.get(`/models/${modelId}/feedback`);
       return data;
     } catch (error) {
       return handleApiError(error, `Failed to load feedback samples for model ${modelId}`);
+    }
+  },
+
+  deleteModelFeedback: async (modelId: string, feedbackId: string): Promise<void> => {
+    try {
+      await axiosInstance.delete(`/models/${modelId}/feedback/${feedbackId}`);
+    } catch (error) {
+      return handleApiError(error, `Failed to delete feedback ${feedbackId} for model ${modelId}`);
     }
   },
 
