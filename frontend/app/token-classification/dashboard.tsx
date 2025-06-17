@@ -64,9 +64,9 @@ const Dashboard = () => {
     });
   };
   const [models, setModels] = useState<Model[]>([]);
-  const [selectedModel, setSelectedModel] = useState<string>('');
+  const [selectedModel, setSelectedModel] = useState<Model | null>(null);
   const handleModelChange = (e: SelectChangeEvent<string>) => {
-    const model = e.target.value;
+    const model = models.find((m) => m.Id === e.target.value) || null;
     setSelectedModel(model);
     recordEvent({
       UserAction: 'select',
@@ -228,7 +228,7 @@ const Dashboard = () => {
                 }}
               >
                 <Select
-                  value={selectedModel}
+                  value={selectedModel?.Name || ''}
                   displayEmpty
                   onChange={handleModelChange}
                   renderValue={(val) =>
@@ -257,7 +257,14 @@ const Dashboard = () => {
                       value={m.Id}
                       sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
                     >
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1 }}>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                          flexGrow: 1,
+                        }}
+                      >
                         {m.Name.charAt(0).toUpperCase() + m.Name.slice(1)}
                         {m.Status === 'TRAINING' && (
                           <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -283,15 +290,23 @@ const Dashboard = () => {
           {/* Model Details */}
           {selectedModel && (
             <Box sx={{ mb: 4, ml: 4 }}>
-              <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>
-                Started Training: {new Date('2025-06-10T12:00:00').toLocaleString()}
-              </Typography>
-              {models.find((m) => m.Id === selectedModel)?.BaseModelId && (
+              {/* Don't put dummy data like this. */}
+              {selectedModel.CreationTime && (
+                <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>
+                  Started Training: {new Date(selectedModel.CreationTime).toLocaleString()}
+                </Typography>
+              )}
+
+              {selectedModel.BaseModelId && (
                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                   Base Model:{' '}
-                  {models.find(
-                    (m) => m.Id === models.find((m) => m.Id === selectedModel)?.BaseModelId
-                  )?.Name || 'Unknown'}
+                  {(() => {
+                    const baseModel = models.find((m) => m.Id === selectedModel?.BaseModelId);
+                    if (baseModel?.Name) {
+                      return baseModel.Name.charAt(0).toUpperCase() + baseModel.Name.slice(1);
+                    }
+                    return 'Unknown';
+                  })()}
                 </Typography>
               )}
             </Box>
@@ -307,7 +322,7 @@ const Dashboard = () => {
               overflow: 'hidden',
             }}
           >
-            <MetricsDataViewer modelId={selectedModel || undefined} days={days} />
+            <MetricsDataViewer modelId={selectedModel?.Id || undefined} days={days} />
           </Box>
         </CardContent>
       </Card>
