@@ -93,7 +93,7 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
   availableTags,
   onDelete,
   onSubmit,
-  style={}
+  style = {},
 }) => {
   const [collapsed, setCollapsed] = useState(feedbacks.length === 0);
   const [isSubmitting, setIsSubmitting] = useState(false);
