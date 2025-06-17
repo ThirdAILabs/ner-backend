@@ -149,9 +149,7 @@ type OnnxModel struct {
 	tokenizer *tokenizers.Tokenizer
 	crf       CRF
 
-	modelDir     string
-	pythonExec   string
-	pluginScript string
+	modelDir string
 }
 
 func decryptModel(encPath string) ([]byte, error) {
@@ -189,9 +187,10 @@ func decryptModel(encPath string) ([]byte, error) {
 	return pt, nil
 }
 
-func LoadOnnxModel(modelDir, pythonExec, pluginScript string) (Model, error) {
+func LoadOnnxModel(modelDir string) (Model, error) {
 	encPath := filepath.Join(modelDir, "model.onnx")
 	crfPath := filepath.Join(modelDir, "transitions.json")
+	tokenizerPath := filepath.Join(modelDir, "qwen_tokenizer/tokenizer.json")
 
 	onnxBytes, err := os.ReadFile(encPath)
 	if err != nil {
@@ -203,9 +202,18 @@ func LoadOnnxModel(modelDir, pythonExec, pluginScript string) (Model, error) {
 		return nil, fmt.Errorf("CRF load error: %w", err)
 	}
 
-	tk, err := tokenizers.FromPretrained("Qwen/Qwen2.5-0.5B")
-	if err != nil {
-		return nil, fmt.Errorf("tokenizer load: %w", err)
+	var tk *tokenizers.Tokenizer
+
+	if _, err := os.Stat(tokenizerPath); err == nil {
+		tk, err = tokenizers.FromFile(tokenizerPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load tokenizer from local dir: %w", err)
+		}
+	} else {
+		tk, err = tokenizers.FromPretrained("Qwen/Qwen2.5-0.5B")
+		if err != nil {
+			return nil, fmt.Errorf("tokenizer load: %w", err)
+		}
 	}
 
 	session, err := ort.NewDynamicAdvancedSessionWithONNXData(
@@ -219,12 +227,10 @@ func LoadOnnxModel(modelDir, pythonExec, pluginScript string) (Model, error) {
 	}
 
 	return &OnnxModel{
-		session:      session,
-		tokenizer:    tk,
-		crf:          crf,
-		modelDir:     modelDir,
-		pythonExec:   pythonExec,
-		pluginScript: pluginScript,
+		session:   session,
+		tokenizer: tk,
+		crf:       crf,
+		modelDir:  modelDir,
 	}, nil
 }
 
@@ -297,11 +303,7 @@ func (m *OnnxModel) Predict(text string) ([]types.Entity, error) {
 }
 
 func (m *OnnxModel) FinetuneAndSave(taskPrompt string, tags []api.TagInfo, samples []api.Sample, savePath string) error {
-	if m.pythonExec == "" || m.pluginScript == "" {
-		return fmt.Errorf("finetune not supported for ONNX without python exec and plugin script set")
-	}
-
-	pythonModel, err := python.LoadCnnModel(m.pythonExec, m.pluginScript, m.modelDir)
+	pythonModel, err := python.LoadCnnModel(m.modelDir)
 	if err != nil {
 		return fmt.Errorf("failed to load Python model for finetuning: %w", err)
 	}

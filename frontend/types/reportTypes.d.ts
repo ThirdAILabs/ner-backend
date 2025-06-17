@@ -24,6 +24,8 @@ interface Report {
   Model: Model;
   SourceS3Bucket: string;
   SourceS3Prefix?: string;
+  S3Endpoint?: string;
+  S3Region?: string;
   IsUpload?: boolean;
   CreationTime: string;
   Tags?: string[];

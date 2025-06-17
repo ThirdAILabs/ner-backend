@@ -16,6 +16,20 @@ import (
 	"github.com/hashicorp/go-plugin"
 )
 
+var (
+	pythonExecutable string
+	pluginScript     string
+)
+
+func EnablePythonPlugin(_pythonExecutable, _pluginScript string) {
+	pythonExecutable = _pythonExecutable
+	pluginScript = _pluginScript
+}
+
+func PythonPluginEnabled() bool {
+	return pythonExecutable != "" && pluginScript != ""
+}
+
 // TODO: this object is not thread-safe, implement a mutex to protect
 // concurrent access to the plugin client APIs
 type PythonModel struct {
@@ -23,15 +37,18 @@ type PythonModel struct {
 	model  shared.Model
 }
 
-func LoadPythonModel(PythonExecutable, PluginScript, PluginModelName, KwargsJSON string) (*PythonModel, error) {
+func LoadPythonModel(pluginModelName, kwargsJSON string) (*PythonModel, error) {
 	var cmd *exec.Cmd
 
 	// If PLUGIN_SERVER env var is set, use the PyInstaller executable
 	if pluginServer := os.Getenv("PLUGIN_SERVER"); pluginServer != "" {
-		cmd = exec.Command(pluginServer, "--model-name", PluginModelName, "--model-config", KwargsJSON)
+		cmd = exec.Command(pluginServer, "--model-name", pluginModelName, "--model-config", kwargsJSON)
 	} else {
+		if !PythonPluginEnabled() {
+			return nil, fmt.Errorf("python is not enabled for finetuning or inference on this model")
+		}
 		// Fallback to using Python interpreter + script for development
-		cmd = exec.Command(PythonExecutable, PluginScript, "--model-name", PluginModelName, "--model-config", KwargsJSON)
+		cmd = exec.Command(pythonExecutable, pluginScript, "--model-name", pluginModelName, "--model-config", kwargsJSON)
 	}
 
 	client := plugin.NewClient(&plugin.ClientConfig{
@@ -66,14 +83,9 @@ func LoadPythonModel(PythonExecutable, PluginScript, PluginModelName, KwargsJSON
 	}, nil
 }
 
-func LoadCnnModel(pythonExec, pluginScript, modelDir string) (*PythonModel, error) {
+func LoadCnnModel(modelDir string) (*PythonModel, error) {
 	cfgJSON := fmt.Sprintf(`{"model_path":"%s/cnn_model.pth", "tokenizer_path":"%s/qwen_tokenizer"}`, modelDir, modelDir)
-	return LoadPythonModel(
-		pythonExec,
-		pluginScript,
-		"python_cnn_ner_model",
-		cfgJSON,
-	)
+	return LoadPythonModel("python_cnn_ner_model", cfgJSON)
 }
 
 func (ner *PythonModel) FinetuneAndSave(prompt string, tags []api.TagInfo, samples []api.Sample, savePath string) error {

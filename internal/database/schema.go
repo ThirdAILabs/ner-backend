@@ -40,6 +40,7 @@ const (
 	JobRunning   string = "RUNNING"
 	JobCompleted string = "COMPLETED"
 	JobFailed    string = "FAILED"
+	JobAborted   string = "ABORTED"
 )
 
 type Report struct {
