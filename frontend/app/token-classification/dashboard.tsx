@@ -260,7 +260,11 @@ const Dashboard = () => {
                     <em>All Models</em>
                   </MenuItem>
                   {models.map((m) => (
-                    <MenuItem key={m.Id} value={m.Id} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <MenuItem
+                      key={m.Id}
+                      value={m.Id}
+                      sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                    >
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1 }}>
                         {m.Name.charAt(0).toUpperCase() + m.Name.slice(1)}
                         {m.Status === 'TRAINING' && (
@@ -290,10 +294,12 @@ const Dashboard = () => {
               <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>
                 Started Training: {new Date('2025-06-10T12:00:00').toLocaleString()}
               </Typography>
-              {models.find(m => m.Id === selectedModel)?.BaseModelId && (
+              {models.find((m) => m.Id === selectedModel)?.BaseModelId && (
                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                   Base Model:{' '}
-                  {models.find(m => m.Id === models.find(m => m.Id === selectedModel)?.BaseModelId)?.Name || 'Unknown'}
+                  {models.find(
+                    (m) => m.Id === models.find((m) => m.Id === selectedModel)?.BaseModelId
+                  )?.Name || 'Unknown'}
                 </Typography>
               )}
             </Box>

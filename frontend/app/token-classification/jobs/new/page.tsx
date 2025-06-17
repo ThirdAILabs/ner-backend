@@ -285,14 +285,12 @@ export default function NewJobPage() {
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState<any>(null);
   const [modelSearchQuery, setModelSearchQuery] = useState('');
-  
+
   // Filter custom models
   const filteredCustomModels = useMemo(() => {
     return models
-      .filter(model => !['basic', 'advanced'].includes(model.Name.toLowerCase()))
-      .filter(model => 
-        model.Name.toLowerCase().includes(modelSearchQuery.toLowerCase())
-      );
+      .filter((model) => !['basic', 'advanced'].includes(model.Name.toLowerCase()))
+      .filter((model) => model.Name.toLowerCase().includes(modelSearchQuery.toLowerCase()));
   }, [models, modelSearchQuery]);
 
   const builtInModels = useMemo(() => {
@@ -300,13 +298,15 @@ export default function NewJobPage() {
       {
         Id: 'basic',
         Name: 'Basic',
-        Description: 'Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.'
+        Description:
+          'Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.',
       },
       {
         Id: 'advanced',
         Name: 'Advanced',
-        Description: 'Our most advanced AI model, available on enterprise platform. Allows users to perpetually customize fields with user feedback, includes advanced monitoring features.'
-      }
+        Description:
+          'Our most advanced AI model, available on enterprise platform. Allows users to perpetually customize fields with user feedback, includes advanced monitoring features.',
+      },
     ];
   }, []);
 
@@ -897,9 +897,7 @@ export default function NewJobPage() {
                         <span className="text-sm text-gray-600">
                           {file.name} ({(file.size / 1024).toFixed(1)} KB)
                         </span>
-                        {fullPath && (
-                          <span className="ml-2 text-xs text-gray-400">{fullPath}</span>
-                        )}
+                        {fullPath && <span className="ml-2 text-xs text-gray-400">{fullPath}</span>}
                       </div>
                       <button
                         type="button"
@@ -1049,7 +1047,7 @@ export default function NewJobPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {filteredCustomModels
-                    .filter(model => model.Status !== 'TRAINING' && model.Status !== 'QUEUED')
+                    .filter((model) => model.Status !== 'TRAINING' && model.Status !== 'QUEUED')
                     .map((model) => (
                       <ModelOption
                         key={model.Id}
@@ -1058,7 +1056,8 @@ export default function NewJobPage() {
                           <div className="space-y-2">
                             {model.BaseModelId && (
                               <p className="text-sm text-gray-600">
-                                Base Model: {models.find(m => m.Id === model.BaseModelId)?.Name || 'Unknown'}
+                                Base Model:{' '}
+                                {models.find((m) => m.Id === model.BaseModelId)?.Name || 'Unknown'}
                               </p>
                             )}
                           </div>
@@ -1069,7 +1068,7 @@ export default function NewJobPage() {
                           setSelectedModel(model);
                         }}
                       />
-                  ))}
+                    ))}
                 </div>
               </div>
 
