@@ -94,9 +94,6 @@ const useFeedbackState = (modelId: string, reportId: string) => {
                       <span className="font-medium">"{fb.highlightedText}"</span>
                       <div className="flex items-center gap-2 text-xs text-gray-600">
                         <span className="bg-red-100 px-2 py-0.5 rounded">Tag: {fb.tag}</span>
-                        <span>
-                          Position: {fb.startIndex}-{fb.endIndex}
-                        </span>
                       </div>
                     </div>
                   </li>
