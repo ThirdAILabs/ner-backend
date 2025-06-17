@@ -12,6 +12,7 @@ import Link from 'next/link';
 import Dashboard from '../dashboard';
 import Jobs from '../jobs';
 import useTelemetry from '@/hooks/useTelemetry';
+import ModelCustomization from './ModelCustomization';
 
 function PageContents() {
   const searchParams = useSearchParams();
@@ -134,11 +135,13 @@ function PageContents() {
           >
             <Tab label="Scans Dashboard" value="jobs" />
             <Tab label="Usage Stats" value="monitoring" />
+            <Tab label="Model Customization" value="customization" />
           </Tabs>
         </Box>
 
         {tabValue === 'monitoring' && <Dashboard />}
         {tabValue === 'jobs' && <Jobs />}
+        {tabValue === 'customization' && <ModelCustomization />}
       </main>
     </div>
   );

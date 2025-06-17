@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Box, Card, CardContent, Typography, CircularProgress } from '@mui/material';
+import { Box, Typography, CircularProgress } from '@mui/material';
 import { nerService } from '@/lib/backend';
-import type { InferenceMetrics, ThroughputMetrics } from './inferenceTypes';
 import { formatFileSize, formatNumber } from '@/lib/utils';
 import { useHealth } from '@/contexts/HealthProvider';
 import MetricsDataViewerCard from '@/components/ui/MetricsDataViewerCard';
@@ -298,150 +297,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
             label="Tokens Processed"
           />
         </Box>
-
-        {/* Fine-tuned Feedback Data */}
-        {modelId && (
-          <Box sx={{ mt: 4 }}>
-            <Box
-              sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}
-            >
-              <Typography
-                variant="h6"
-                sx={{
-                  fontWeight: 600,
-                  fontSize: '1.25rem',
-                  color: '#4a5568',
-                }}
-              >
-                User Feedback
-              </Typography>
-              {feedbackData.length > 0 && (
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={handleFinetuneClick}
-                  disabled={loadingFeedback}
-                  sx={{
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    px: 3,
-                  }}
-                >
-                  Finetune Model
-                </Button>
-              )}
-            </Box>
-            <div className="border rounded-md">
-              {loadingFeedback ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-                  <CircularProgress size={20} />
-                </Box>
-              ) : feedbackData.length === 0 ? (
-                <Box sx={{ p: 4, textAlign: 'center' }}>
-                  <Typography sx={{ color: 'text.secondary', fontSize: '0.875rem' }}>
-                    No feedback data available for this model
-                  </Typography>
-                </Box>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Feedback Text</TableHead>
-                      <TableHead className="w-[50px]"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {feedbackData.map((feedback, index) => (
-                      <TableRow key={index}>
-                        <TableCell>
-                          {feedback.tokens.map((token, tokenIndex) => (
-                            <span key={tokenIndex}>
-                              {renderHighlightedToken(token, feedback.labels[tokenIndex])}
-                              {tokenIndex < feedback.tokens.length - 1 ? ' ' : ''}
-                            </span>
-                          ))}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <button
-                            className="text-gray-700 hover:text-gray-700 transition-colors"
-                            onClick={() => handleDeleteFeedback(feedback.id)}
-                            title="Delete feedback"
-                          >
-                            ✕
-                          </button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </div>
-          </Box>
-        )}
       </Box>
-
-      {/* Finetune Dialog */}
-      <Dialog open={showFinetuneDialog} onClose={handleFinetuneCancel} maxWidth="sm" fullWidth>
-        <DialogTitle>Finetune Model</DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 1 }}>
-            <Typography variant="body2" sx={{ mb: 3, color: 'text.secondary' }}>
-              Create a new finetuned model using the feedback data you've reviewed. This will use
-              all {feedbackData.length} feedback samples as training data.
-            </Typography>
-
-            <TextField
-              autoFocus
-              margin="dense"
-              label="Model Name"
-              fullWidth
-              variant="outlined"
-              value={finetuneModelName}
-              onChange={(e) => setFinetuneModelName(e.target.value)}
-              helperText="Enter a name for the new finetuned model"
-              sx={{ mb: 2 }}
-              required
-            />
-
-            <TextField
-              margin="dense"
-              label="Task Prompt (Optional)"
-              fullWidth
-              multiline
-              rows={3}
-              variant="outlined"
-              value={finetuneTaskPrompt}
-              onChange={(e) => setFinetuneTaskPrompt(e.target.value)}
-              helperText="Optional custom prompt to guide the finetuning process"
-              placeholder="e.g., Focus on improving accuracy for person names and locations..."
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button
-            onClick={handleFinetuneCancel}
-            disabled={finetuning}
-            sx={{ textTransform: 'none' }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleFinetuneSubmit}
-            variant="contained"
-            disabled={finetuning || !finetuneModelName.trim()}
-            sx={{ textTransform: 'none', ml: 1 }}
-          >
-            {finetuning ? (
-              <>
-                <CircularProgress size={16} sx={{ mr: 1 }} />
-                Starting Finetuning...
-              </>
-            ) : (
-              'Start Finetuning'
-            )}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </>
   );
 };
