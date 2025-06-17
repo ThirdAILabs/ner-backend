@@ -102,7 +102,6 @@ class CnnModel(Model):
         state_dict = torch.load(
             os.path.join(model_path, "crf.pth"),
             map_location=torch.device("cpu"),
-            # weights_only=False,
         )
         self.crf.load_state_dict(state_dict)
         self.crf.eval()
@@ -196,10 +195,11 @@ class CnnModel(Model):
         prompt: str,
         tags: List[Any],
         samples: List[Sample],
+        lr: float = 3e-4,
+        epochs: int = 5,
+        batch_size: int = 16,
     ) -> None:
-        batch_size = 16
-        lr = 3e-4
-        epochs = 1
+        default_tag = TAG_TO_IDX["O"]
 
         processed = []
         for sample in samples:
@@ -211,7 +211,11 @@ class CnnModel(Model):
             offsets = enc["offset_mapping"]
             wids = manual_word_ids(text, offsets)
             lab_ids = [
-                TAG_TO_IDX.get(sample.labels[w], 0) if w is not None else 0
+                (
+                    TAG_TO_IDX.get(sample.labels[w], default_tag)
+                    if w is not None
+                    else default_tag
+                )
                 for w in wids
             ]
             processed.append((ids, lab_ids))
