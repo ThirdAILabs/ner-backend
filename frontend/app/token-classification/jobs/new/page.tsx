@@ -869,7 +869,7 @@ export default function NewJobPage() {
               <FileSources selectSource={setSelectedSource} handleLocalFiles={handleLocalFiles} />
             </div>
 
-            {selectedFiles.length > 0 && (
+            {(selectedSource === 'files' || selectedSource === 'directory') && selectedFiles.length > 0 && (
               <div className="mt-6">
                 <div className="flex justify-between items-center mb-2">
                   <h3 className="text-sm font-medium text-gray-700">
