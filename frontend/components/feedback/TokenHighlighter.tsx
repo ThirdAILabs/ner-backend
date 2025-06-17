@@ -281,7 +281,7 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
           )}
 
           {filteredTags.map((tag) => (
-            <MenuItem key={tag} value={tag}>
+            <MenuItem key={tag} value={tag} onClick={() => handleTagSelect(tag)}>
               <span style={{ display: 'flex', alignItems: 'center' }}>
                 {tag === REMOVE_TAG_NAME ? (
                   <svg

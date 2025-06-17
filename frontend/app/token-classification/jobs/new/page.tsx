@@ -427,7 +427,7 @@ export default function NewJobPage() {
     }
 
     if (!editingGroup && groups[groupName.toUpperCase()]) {
-      setGroupDialogError('Group name must be unique.');
+      setGroupDialogError('Group name already exists.');
       return;
     }
 
@@ -498,7 +498,7 @@ export default function NewJobPage() {
       for (let index = 0; index < customTags.length; index++) {
         const thisTag = customTags[index];
         if (thisTag.name === customTagName.toUpperCase()) {
-          setDialogError('Custom Tag name must be unique');
+          setDialogError('Custom Tag name already exists.');
           return;
         }
       }
