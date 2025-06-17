@@ -16,6 +16,7 @@ import {
   TextField,
   Button,
 } from '@mui/material';
+import { Toaster, toast } from 'react-hot-toast';
 import { nerService } from '@/lib/backend';
 import { useHealth } from '@/contexts/HealthProvider';
 import { TokenHighlighter } from '@/components/feedback/TokenHighlighter';
@@ -278,7 +279,16 @@ const ModelCustomization: React.FC = () => {
       setShowFinetuneDialog(false);
       setFinetuneModelName('');
       setFinetuneTaskPrompt('');
-      alert(`Finetuning started successfully! New model ID: ${response.ModelId}`);
+      toast.success('Finetuning started successfully!', {
+        duration: 3000,
+        style: {
+          background: '#4CAF50',
+          color: '#fff',
+          padding: '10px',
+          borderRadius: '8px',
+        },
+        icon: '✓',
+      });
     } catch (error) {
       console.error('Finetuning failed:', error);
     } finally {
@@ -301,95 +311,98 @@ const ModelCustomization: React.FC = () => {
   }
 
   return (
-    <Card
-      sx={{
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        bgcolor: 'white',
-        borderRadius: '12px',
-        mx: 'auto',
-        maxWidth: '1400px',
-      }}
-    >
-      <CardContent sx={{ p: 4 }}>
-        <Typography
-          variant="h5"
-          sx={{ fontWeight: 600, fontSize: '1.5rem', color: '#4a5568', mb: 4 }}
-        >
-          Model Customization
-        </Typography>
-        <Box sx={{ maxWidth: 300, mb: 4 }}>
+    <>
+      <Card
+        sx={{
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          bgcolor: 'white',
+          borderRadius: '12px',
+          mx: 'auto',
+          maxWidth: '1400px',
+        }}
+      >
+        <CardContent sx={{ p: 4 }}>
           <Typography
-            variant="subtitle2"
-            gutterBottom
-            sx={{ fontWeight: 600, color: '#475569', mb: 1 }}
+            variant="h5"
+            sx={{ fontWeight: 600, fontSize: '1.5rem', color: '#4a5568', mb: 4 }}
           >
-            Model
+            Model Customization
           </Typography>
-          <FormControl size="small" fullWidth>
-            <Select
-              value={selectedModel?.Id || ''}
-              displayEmpty
-              onChange={handleModelChange}
-              renderValue={(val) =>
-                val === ''
-                  ? models.length > 0
-                    ? models[0].Name
-                    : 'Select Model'
-                  : models.find((m) => m.Id === val)?.Name
-                    ? models
-                        .find((m) => m.Id === val)!
-                        .Name.charAt(0)
-                        .toUpperCase() + models.find((m) => m.Id === val)!.Name.slice(1)
-                    : val
-              }
-              sx={{ bgcolor: '#f8fafc', '&:hover': { bgcolor: '#f1f5f9' } }}
+          <Box sx={{ maxWidth: 300, mb: 4 }}>
+            <Typography
+              variant="subtitle2"
+              gutterBottom
+              sx={{ fontWeight: 600, color: '#475569', mb: 1 }}
             >
-              {models.map((m) => (
-                <MenuItem
-                  key={m.Id}
-                  value={m.Id}
-                  sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1 }}>
-                    {m.Name.charAt(0).toUpperCase() + m.Name.slice(1)}
-                    {m.Status === 'TRAINING' && (
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <CircularProgress size={16} sx={{ ml: 1 }} />
+              Model
+            </Typography>
+            <FormControl size="small" fullWidth>
+              <Select
+                value={selectedModel?.Id || ''}
+                displayEmpty
+                onChange={handleModelChange}
+                renderValue={(val) =>
+                  val === ''
+                    ? models.length > 0
+                      ? models[0].Name
+                      : 'Select Model'
+                    : models.find((m) => m.Id === val)?.Name
+                      ? models
+                          .find((m) => m.Id === val)!
+                          .Name.charAt(0)
+                          .toUpperCase() + models.find((m) => m.Id === val)!.Name.slice(1)
+                      : val
+                }
+                sx={{ bgcolor: '#f8fafc', '&:hover': { bgcolor: '#f1f5f9' } }}
+              >
+                {models.map((m) => (
+                  <MenuItem
+                    key={m.Id}
+                    value={m.Id}
+                    sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1 }}>
+                      {m.Name.charAt(0).toUpperCase() + m.Name.slice(1)}
+                      {m.Status === 'TRAINING' && (
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <CircularProgress size={16} sx={{ ml: 1 }} />
+                          <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
+                            Training...
+                          </Typography>
+                        </Box>
+                      )}
+                      {m.Status === 'QUEUED' && (
                         <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
-                          Training...
+                          Queued
                         </Typography>
-                      </Box>
-                    )}
-                    {m.Status === 'QUEUED' && (
-                      <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
-                        Queued
-                      </Typography>
-                    )}
-                  </Box>
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Box>
-        {selectedModel && (
-          <UserFeedbackSection
-            feedbackData={feedbackData}
-            loadingFeedback={loadingFeedback}
-            handleDeleteFeedback={handleDeleteFeedback}
-            handleFinetuneClick={handleFinetuneClick}
-            showFinetuneDialog={showFinetuneDialog}
-            finetuneModelName={finetuneModelName}
-            setFinetuneModelName={setFinetuneModelName}
-            finetuneTaskPrompt={finetuneTaskPrompt}
-            setFinetuneTaskPrompt={setFinetuneTaskPrompt}
-            finetuning={finetuning}
-            handleFinetuneSubmit={handleFinetuneSubmit}
-            handleFinetuneCancel={handleFinetuneCancel}
-            availableTags={feedbackData.map((f) => f.labels).flat()}
-          />
-        )}
-      </CardContent>
-    </Card>
+                      )}
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
+          {selectedModel && (
+            <UserFeedbackSection
+              feedbackData={feedbackData}
+              loadingFeedback={loadingFeedback}
+              handleDeleteFeedback={handleDeleteFeedback}
+              handleFinetuneClick={handleFinetuneClick}
+              showFinetuneDialog={showFinetuneDialog}
+              finetuneModelName={finetuneModelName}
+              setFinetuneModelName={setFinetuneModelName}
+              finetuneTaskPrompt={finetuneTaskPrompt}
+              setFinetuneTaskPrompt={setFinetuneTaskPrompt}
+              finetuning={finetuning}
+              handleFinetuneSubmit={handleFinetuneSubmit}
+              handleFinetuneCancel={handleFinetuneCancel}
+              availableTags={feedbackData.map((f) => f.labels).flat()}
+            />
+          )}
+        </CardContent>
+      </Card>
+      <Toaster position="top-right" />
+    </>
   );
 };
 
