@@ -183,7 +183,6 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
           const selectionMade = selectionStart !== null && selectionEnd !== null;
           const startIndex = selectionMade ? Math.min(selectionStart, selectionEnd) : tokens.length;
           const endIndex = selectionMade ? Math.max(selectionStart, selectionEnd) : -1;
-          console.log("selection", selectionStart, selectionEnd, index, startIndex, endIndex);
           const isSelected = index >= startIndex && index <= endIndex;
           const isSpotlighted =
             spotlightStartIndex &&
