@@ -215,9 +215,9 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 
 	if _, err := proc.licensing.VerifyLicense(ctx); err != nil {
 		slog.Error("license verification failed", "error", err)
-		// if err.Error() == "quota exceeded" {
-		// 	database.DeleteReport(ctx, proc.db, reportId)
-		// }
+		if err.Error() == "quota exceeded" {
+			database.DeleteReport(ctx, proc.db, reportId)
+		}
 		database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobFailed) //nolint:errcheck
 		database.SaveReportError(ctx, proc.db, reportId, fmt.Sprintf("license verification failed: %s", err.Error()))
 		return err
@@ -716,9 +716,9 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 
 	if _, err := proc.licensing.VerifyLicense(ctx); err != nil {
 		slog.Error("license verification failed", "error", err)
-		// if err.Error() == "quota exceeded" {
-		// 	database.DeleteReport(ctx, proc.db, reportId)
-		// }
+		if err.Error() == "quota exceeded" {
+			database.DeleteReport(ctx, proc.db, reportId)
+		}
 		database.UpdateShardDataTaskStatus(ctx, proc.db, reportId, database.JobFailed) //nolint:errcheck
 		database.SaveReportError(ctx, proc.db, reportId, fmt.Sprintf("license verification failed: %s", err.Error()))
 		return err
