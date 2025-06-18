@@ -423,6 +423,15 @@ export default function NewJobPage() {
       return;
     }
 
+    const nameExists = Object.keys(groups).some(
+      (name) => name.toUpperCase() === formattedGroupName
+    );
+
+    if (nameExists) {
+      setGroupDialogError(`Group name "${formattedGroupName}" already exists.`);
+      return;
+    }
+
     setGroups((prev) => {
       const updatedGroups = { ...prev };
       if (editingGroup && editingGroup.name !== formattedGroupName) {
@@ -467,18 +476,19 @@ export default function NewJobPage() {
       pattern: customTagPattern,
     };
 
+    for (let index = 0; index < customTags.length; index++) {
+      const thisTag = customTags[index];
+      if (thisTag.name === customTagName.toUpperCase()) {
+        setDialogError(`Custom Tag name "${customTagName}" already exists.`);
+        return;
+      }
+    }
+
     if (editingTag) {
       setCustomTags((prev) =>
         prev.map((tag) => (tag.name === editingTag.name ? newCustomTag : tag))
       );
     } else {
-      for (let index = 0; index < customTags.length; index++) {
-        const thisTag = customTags[index];
-        if (thisTag.name === customTagName.toUpperCase()) {
-          setDialogError('Custom Tag name must be unique');
-          return;
-        }
-      }
       setCustomTags((prev) => [...prev, newCustomTag]);
     }
 
