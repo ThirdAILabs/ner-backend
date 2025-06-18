@@ -1,6 +1,8 @@
 package api
 
 import (
+	"ner-backend/internal/core"
+	"ner-backend/internal/core/python"
 	"ner-backend/internal/database"
 	"ner-backend/pkg/api"
 )
@@ -20,6 +22,14 @@ func convertModel(m database.Model) api.Model {
 		model.Tags = append(model.Tags, tag.Tag)
 	}
 
+	switch core.ModelType(m.Type) {
+	case core.Presidio:
+		model.Finetunable = false
+	case core.BoltUdt, core.PythonTransformer, core.PythonCnn:
+		model.Finetunable = true
+	case core.OnnxCnn:
+		model.Finetunable = python.PythonPluginEnabled()
+	}
 	return model
 }
 
