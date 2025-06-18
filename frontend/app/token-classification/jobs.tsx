@@ -403,7 +403,7 @@ export default function Jobs() {
       UI: 'Token Classification Page',
     });
   }, []);
-  
+
   const [reports, setReports] = useState<ReportWithStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
