@@ -452,10 +452,6 @@ export default function Jobs() {
       setQuotaUsedPercentage(
         (license.LicenseInfo.Usage.UsedBytes / license.LicenseInfo.Usage.MaxBytes) * 100
       );
-      console.log(
-        'Quota Used Percentage:',
-        (license.LicenseInfo.Usage.UsedBytes / license.LicenseInfo.Usage.MaxBytes) * 100
-      );
     }
   }, [reports]);
 
