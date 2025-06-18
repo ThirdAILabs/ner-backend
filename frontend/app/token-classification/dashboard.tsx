@@ -17,14 +17,8 @@ import { nerService } from '@/lib/backend';
 import MetricsDataViewer from './metrics/MetricsDataViewer';
 import { useHealth } from '@/contexts/HealthProvider';
 import useTelemetry from '@/hooks/useTelemetry';
-
 import { useLicense } from '@/hooks/useLicense';
-
-import MetricsDataViewerCard from '@/components/ui/MetricsDataViewerCard';
 import { formatFileSize } from '@/lib/utils';
-
-import Tooltip from '@mui/material/Tooltip';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import Image from 'next/image';
 
 const Dashboard = () => {
