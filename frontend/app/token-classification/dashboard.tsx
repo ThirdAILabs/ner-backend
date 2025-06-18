@@ -237,9 +237,9 @@ const Dashboard = () => {
                       ? 'All Models'
                       : models.find((m) => m.Id === val)?.Name
                         ? models
-                          .find((m) => m.Id === val)!
-                          .Name.charAt(0)
-                          .toUpperCase() + models.find((m) => m.Id === val)!.Name.slice(1)
+                            .find((m) => m.Id === val)!
+                            .Name.charAt(0)
+                            .toUpperCase() + models.find((m) => m.Id === val)!.Name.slice(1)
                         : val
                   }
                   sx={{
@@ -313,26 +313,29 @@ const Dashboard = () => {
           )}
 
           {/* Metrics Viewer */}
-          <div className='mt-[-20px] p-0'>
+          <div className="mt-[-20px] p-0">
             <MetricsDataViewer modelId={selectedModel?.Id || undefined} days={days} />
           </div>
         </CardContent>
       </Card>
 
       {license && license?.LicenseInfo?.LicenseType === 'free' && (
-        <div className=' mt-[-60px]'
-        >
-          <Box sx={{
-            display: 'flex',
-            flexDirection: 'row',
-            alignItems: 'center'
-          }}>
-            <Box sx={{
+        <div className=" mt-[-60px]">
+          <Box
+            sx={{
               display: 'flex',
-              flexDirection: 'column',
-              gap: 2,
-              flex: '0 0 50%'
-            }}>
+              flexDirection: 'row',
+              alignItems: 'center',
+            }}
+          >
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 2,
+                flex: '0 0 50%',
+              }}
+            >
               <Typography
                 variant="h4"
                 sx={{
@@ -377,11 +380,13 @@ const Dashboard = () => {
               </Box>
             </Box>
 
-            <Box sx={{
-              flex: '0 0 50%',
-              display: 'flex',
-              justifyContent: 'flex-end'
-            }}>
+            <Box
+              sx={{
+                flex: '0 0 50%',
+                display: 'flex',
+                justifyContent: 'flex-end',
+              }}
+            >
               <Image
                 src="/image.png"
                 alt="Background pattern"

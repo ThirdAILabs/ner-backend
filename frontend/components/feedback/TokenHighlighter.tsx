@@ -209,13 +209,9 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
               <span
                 style={{
                   textDecoration:
-                    objectId && isFeedbackGiven(index, objectId)
-                      ? 'underline'
-                      : 'none',
+                    objectId && isFeedbackGiven(index, objectId) ? 'underline' : 'none',
                   textDecorationColor:
-                    objectId && isFeedbackGiven(index, objectId)
-                      ? '#0000EE'
-                      : 'none',
+                    objectId && isFeedbackGiven(index, objectId) ? '#0000EE' : 'none',
                   textDecorationThickness: '1px',
                 }}
               >
