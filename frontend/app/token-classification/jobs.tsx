@@ -530,17 +530,17 @@ export default function Jobs() {
   return (
     <>
       {!isLicenseValid && (
-          <div
-            className={`
+        <div
+          className={`
                       px-4 py-3 rounded mb-6 border 
                       bg-red-100 border-red-200 text-red-600
                     `}
-          >
-            {license && license.LicenseError === 'expired license'
-              ? 'Your license has expired. Please contact ThirdAI support to renew your license.'
-              : 'Your license is invalid. Please check your license key or contact ThirdAI support.'}
-          </div>
-        )}
+        >
+          {license && license.LicenseError === 'expired license'
+            ? 'Your license has expired. Please contact ThirdAI support to renew your license.'
+            : 'Your license is invalid. Please check your license key or contact ThirdAI support.'}
+        </div>
+      )}
       <Card
         sx={{
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
