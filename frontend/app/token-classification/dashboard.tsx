@@ -18,11 +18,14 @@ import MetricsDataViewer from './metrics/MetricsDataViewer';
 import { useHealth } from '@/contexts/HealthProvider';
 import useTelemetry from '@/hooks/useTelemetry';
 
+import { useLicense } from '@/hooks/useLicense';
+
 import MetricsDataViewerCard from '@/components/ui/MetricsDataViewerCard';
 import { formatFileSize } from '@/lib/utils';
 
 import Tooltip from '@mui/material/Tooltip';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import Image from 'next/image';
 
 const Dashboard = () => {
   const recordEvent = useTelemetry();
@@ -34,6 +37,7 @@ const Dashboard = () => {
     });
   }, []);
   const { healthStatus } = useHealth();
+  const { license } = useLicense();
   const searchParams = useSearchParams();
   const deploymentId = searchParams.get('deploymentId');
   const [isLoading, setIsLoading] = useState(true);
@@ -61,9 +65,9 @@ const Dashboard = () => {
     });
   };
   const [models, setModels] = useState<Model[]>([]);
-  const [selectedModel, setSelectedModel] = useState<string>('');
+  const [selectedModel, setSelectedModel] = useState<Model | null>(null);
   const handleModelChange = (e: SelectChangeEvent<string>) => {
-    const model = e.target.value;
+    const model = models.find((m) => m.Id === e.target.value) || null;
     setSelectedModel(model);
     recordEvent({
       UserAction: 'select',
@@ -92,17 +96,6 @@ const Dashboard = () => {
     // Cleanup interval on unmount
     return () => clearInterval(intervalId);
   }, [healthStatus]);
-
-  const [license, setLicense] = useState<License | null>(null);
-  useEffect(() => {
-    nerService
-      .getLicense()
-      .then((lic) => setLicense(lic))
-      .catch((err) => {
-        console.log('Failed to load license:', err);
-        setLicense(null);
-      });
-  }, []);
 
   if (!healthStatus) {
     return (
@@ -236,7 +229,7 @@ const Dashboard = () => {
                 }}
               >
                 <Select
-                  value={selectedModel}
+                  value={selectedModel?.Name || ''}
                   displayEmpty
                   onChange={handleModelChange}
                   renderValue={(val) =>
@@ -244,9 +237,9 @@ const Dashboard = () => {
                       ? 'All Models'
                       : models.find((m) => m.Id === val)?.Name
                         ? models
-                            .find((m) => m.Id === val)!
-                            .Name.charAt(0)
-                            .toUpperCase() + models.find((m) => m.Id === val)!.Name.slice(1)
+                          .find((m) => m.Id === val)!
+                          .Name.charAt(0)
+                          .toUpperCase() + models.find((m) => m.Id === val)!.Name.slice(1)
                         : val
                   }
                   sx={{
@@ -265,7 +258,14 @@ const Dashboard = () => {
                       value={m.Id}
                       sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
                     >
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1 }}>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                          flexGrow: 1,
+                        }}
+                      >
                         {m.Name.charAt(0).toUpperCase() + m.Name.slice(1)}
                         {m.Status === 'TRAINING' && (
                           <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -291,92 +291,109 @@ const Dashboard = () => {
           {/* Model Details */}
           {selectedModel && (
             <Box sx={{ mb: 4, ml: 4 }}>
-              <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>
-                Started Training: {new Date('2025-06-10T12:00:00').toLocaleString()}
-              </Typography>
-              {models.find((m) => m.Id === selectedModel)?.BaseModelId && (
+              {selectedModel.CreationTime && (
+                <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>
+                  Started Training: {new Date(selectedModel.CreationTime).toLocaleString()}
+                </Typography>
+              )}
+
+              {selectedModel.BaseModelId && (
                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                   Base Model:{' '}
-                  {models.find(
-                    (m) => m.Id === models.find((m) => m.Id === selectedModel)?.BaseModelId
-                  )?.Name || 'Unknown'}
+                  {(() => {
+                    const baseModel = models.find((m) => m.Id === selectedModel?.BaseModelId);
+                    if (baseModel?.Name) {
+                      return baseModel.Name.charAt(0).toUpperCase() + baseModel.Name.slice(1);
+                    }
+                    return 'Unknown';
+                  })()}
                 </Typography>
               )}
             </Box>
           )}
 
           {/* Metrics Viewer */}
-          <Box
-            sx={{
-              bgcolor: 'white',
-              borderRadius: '12px',
-              border: '1px solid',
-              borderColor: 'grey.200',
-              overflow: 'hidden',
-            }}
-          >
-            <MetricsDataViewer modelId={selectedModel || undefined} days={days} />
-          </Box>
+          <div className='mt-[-20px] p-0'>
+            <MetricsDataViewer modelId={selectedModel?.Id || undefined} days={days} />
+          </div>
         </CardContent>
       </Card>
 
       {license && license?.LicenseInfo?.LicenseType === 'free' && (
-        <Card
-          sx={{
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            bgcolor: 'white',
-            borderRadius: '12px',
-            mx: 'auto',
-            mt: 4,
-            maxWidth: '1400px',
-          }}
+        <div className=' mt-[-60px]'
         >
-          <CardContent sx={{ p: 4 }}>
-            <Box
-              sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                mb: 4,
-              }}
-            >
+          <Box sx={{
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center'
+          }}>
+            <Box sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 2,
+              flex: '0 0 50%'
+            }}>
               <Typography
-                variant="h5"
+                variant="h4"
                 sx={{
                   fontWeight: 600,
+                  color: 'rgb(102,102,102)',
                   fontSize: '1.5rem',
-                  color: '#4a5568',
                 }}
               >
                 Free Tier Quota
               </Typography>
+
+              <Typography
+                variant="body1"
+                sx={{
+                  color: '#64748b',
+                  mb: 2,
+                }}
+              >
+                {`${formatFileSize(license?.LicenseInfo?.Usage.UsedBytes)} / ${formatFileSize(
+                  license?.LicenseInfo?.Usage.MaxBytes
+                )} monthly quota used`}
+              </Typography>
+
+              <Box
+                sx={{
+                  width: '100%',
+                  height: 8,
+                  bgcolor: '#e2e8f0',
+                  borderRadius: 4,
+                  overflow: 'hidden',
+                }}
+              >
+                <Box
+                  sx={{
+                    width: `${(license?.LicenseInfo?.Usage.UsedBytes / license?.LicenseInfo?.Usage.MaxBytes) * 100}%`,
+                    height: '100%',
+                    bgcolor: '#60a5fa',
+                    borderRadius: 4,
+                    transition: 'width 0.5s ease-in-out',
+                  }}
+                />
+              </Box>
             </Box>
 
-            <Box
-              sx={{
-                bgcolor: 'white',
-                borderRadius: '12px',
-                border: '1px solid',
-                borderColor: 'grey.200',
-                overflow: 'hidden',
-              }}
-            >
-              <div style={{ padding: '16px' }}>
-                <MetricsDataViewerCard
-                  value={`${formatFileSize(license?.LicenseInfo?.Usage.UsedBytes)} / ${formatFileSize(license?.LicenseInfo?.Usage.MaxBytes)}`}
-                  label={
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      Quota Used
-                      <Tooltip title="Resets on the 1st of each month.">
-                        <InfoOutlinedIcon fontSize="inherit" sx={{ cursor: 'pointer' }} />
-                      </Tooltip>
-                    </Box>
-                  }
-                />
-              </div>
+            <Box sx={{
+              flex: '0 0 50%',
+              display: 'flex',
+              justifyContent: 'flex-end'
+            }}>
+              <Image
+                src="/image.png"
+                alt="Background pattern"
+                width={400}
+                height={256}
+                style={{
+                  objectFit: 'contain',
+                }}
+              />
             </Box>
-          </CardContent>
-        </Card>
+          </Box>
+        </div>
       )}
     </>
   );

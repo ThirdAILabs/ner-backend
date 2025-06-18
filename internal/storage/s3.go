@@ -326,6 +326,26 @@ func (s *S3Provider) IterObjects(ctx context.Context, bucket, prefix string) Obj
 	}
 }
 
+func (s *S3Provider) DeleteObjects(ctx context.Context, bucket string, prefix string) error {
+	for obj, err := range s.IterObjects(ctx, bucket, prefix) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate objects in bucket %s with prefix %s: %w", bucket, prefix, err)
+		}
+
+		_, err := s.client.DeleteObject(ctx, &s3.DeleteObjectInput{
+			Bucket: aws.String(bucket),
+			Key:    aws.String(obj.Name),
+		})
+		if err != nil {
+			return fmt.Errorf("failed to delete objects in bucket %s with prefix %s: %w", bucket, prefix, err)
+		}
+	}
+
+	slog.Info("Objects deleted successfully", "bucket", bucket, "prefix", prefix)
+
+	return nil
+}
+
 func (s *S3Provider) ValidateAccess(ctx context.Context, bucket, prefix string) error {
 	if _, err := s.client.HeadBucket(ctx, &s3.HeadBucketInput{
 		Bucket: aws.String(bucket),

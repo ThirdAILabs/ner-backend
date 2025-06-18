@@ -108,25 +108,27 @@ func SaveFeedbackSample(ctx context.Context, db *gorm.DB, modelId uuid.UUID, tok
 	return nil
 }
 
-func GetFeedbackSamples(ctx context.Context, db *gorm.DB, modelId uuid.UUID) ([][]string, [][]string, error) {
+func GetFeedbackSamples(ctx context.Context, db *gorm.DB, modelId uuid.UUID) ([]uuid.UUID,[][]string, [][]string, error) {
 	var rows []FeedbackSample
 	if err := db.WithContext(ctx).Where("model_id = ?", modelId).Find(&rows).Error; err != nil {
-		return nil, nil, fmt.Errorf("could not query feedback samples: %w", err)
+		return nil, nil, nil, fmt.Errorf("could not query feedback samples: %w", err)
 	}
 
+	allIds := make([]uuid.UUID, 0, len(rows))
 	allTokens := make([][]string, 0, len(rows))
 	allLabels := make([][]string, 0, len(rows))
 	for _, r := range rows {
 		var toks []string
 		var labs []string
 		if err := json.Unmarshal(r.Tokens, &toks); err != nil {
-			return nil, nil, fmt.Errorf("invalid tokens JSON: %w", err)
+			return nil, nil, nil, fmt.Errorf("invalid tokens JSON: %w", err)
 		}
 		if err := json.Unmarshal(r.Labels, &labs); err != nil {
-			return nil, nil, fmt.Errorf("invalid labels JSON: %w", err)
+			return nil, nil, nil, fmt.Errorf("invalid labels JSON: %w", err)
 		}
+		allIds = append(allIds, r.ID)
 		allTokens = append(allTokens, toks)
 		allLabels = append(allLabels, labs)
 	}
-	return allTokens, allLabels, nil
+	return allIds, allTokens, allLabels, nil
 }

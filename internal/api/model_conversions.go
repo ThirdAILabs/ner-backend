@@ -1,6 +1,8 @@
 package api
 
 import (
+	"ner-backend/internal/core"
+	"ner-backend/internal/core/python"
 	"ner-backend/internal/database"
 	"ner-backend/pkg/api"
 )
@@ -20,6 +22,14 @@ func convertModel(m database.Model) api.Model {
 		model.Tags = append(model.Tags, tag.Tag)
 	}
 
+	switch core.ParseModelType(m.Type) {
+	case core.Presidio:
+		model.Finetunable = false
+	case core.BoltUdt:
+		model.Finetunable = true
+	case core.PythonTransformer, core.PythonCnn, core.OnnxCnn:
+		model.Finetunable = python.PythonPluginEnabled()
+	}
 	return model
 }
 
@@ -59,6 +69,8 @@ func convertReport(r database.Report) api.Report {
 		ReportName:         r.ReportName,
 		SourceS3Bucket:     r.SourceS3Bucket,
 		SourceS3Prefix:     r.SourceS3Prefix.String,
+		S3Endpoint:         r.S3Endpoint.String,
+		S3Region:           r.S3Region.String,
 		IsUpload:           r.IsUpload,
 		Stopped:            r.Stopped,
 		CreationTime:       r.CreationTime,

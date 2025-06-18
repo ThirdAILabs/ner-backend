@@ -31,7 +31,7 @@ const MetricsDataViewerCard: React.FC<MetricsDataViewerCardProps> = ({ value, la
     >
       <CardContent
         sx={{
-          p: 3,
+          p: 2,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',

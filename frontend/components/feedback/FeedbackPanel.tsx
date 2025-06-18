@@ -96,10 +96,16 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
   style = {},
 }) => {
   const [collapsed, setCollapsed] = useState(feedbacks.length === 0);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const prevFeedbackCountRef = useRef(feedbacks.length);
+  const [disableSubmitBtn, setDisableSubmitBtn] = useState(feedbacks && feedbacks.length === 0);
 
   useEffect(() => {
+    if (feedbacks && feedbacks.length > 0) {
+      setDisableSubmitBtn(false);
+    } else {
+      setDisableSubmitBtn(true);
+    }
+
     if (prevFeedbackCountRef.current === 0 && feedbacks.length > 0) {
       setCollapsed(false);
     }
@@ -107,7 +113,7 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
   }, [feedbacks]);
 
   const handleSubmit = () => {
-    setIsSubmitting(true);
+    setDisableSubmitBtn(true);
     try {
       onSubmit();
       toast.success('Feedback submitted successfully!', {
@@ -115,7 +121,7 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
         style: {
           background: '#4CAF50',
           color: '#fff',
-          padding: '16px',
+          padding: '10px',
           borderRadius: '8px',
         },
         icon: '✓',
@@ -125,7 +131,7 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
         duration: 3000,
       });
     } finally {
-      setIsSubmitting(false);
+      setDisableSubmitBtn(false);
       setCollapsed(true);
     }
   };
@@ -210,16 +216,16 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
             <div className="px-4 pb-4 flex-shrink-0">
               <button
                 className={`w-full text-white border rounded-md py-2 text-base font-medium transition shadow-md ${
-                  isSubmitting
+                  disableSubmitBtn
                     ? 'bg-blue-400 cursor-not-allowed'
                     : 'bg-blue-600 hover:bg-blue-700 border-blue-700'
                 }`}
                 onClick={handleSubmit}
                 style={{ position: 'relative', zIndex: 10 }}
-                disabled={isSubmitting}
+                disabled={disableSubmitBtn}
                 type="button"
               >
-                {isSubmitting ? 'Submitting...' : 'Submit'}
+                {'Submit'}
               </button>
             </div>
           </>

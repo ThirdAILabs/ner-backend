@@ -10,6 +10,7 @@ import { nerService } from '@/lib/backend';
 import { NO_GROUP, uniqueFileNames, getFilesFromElectron } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { CheckIcon, SearchIcon } from '@heroicons/react/solid';
+import { useLicense } from '@/hooks/useLicense';
 
 const SUPPORTED_TYPES = ['.pdf', '.txt', '.csv', '.html', '.json', '.xml'];
 
@@ -59,10 +60,9 @@ const ModelOption: React.FC<ModelOptionProps> = ({
   <div
     className={`relative p-6 border rounded-md transition-all
       ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200 border-2'}
-      ${
-        disabled
-          ? 'opacity-85 cursor-not-allowed bg-gray-50'
-          : 'cursor-pointer hover:border-blue-300'
+      ${disabled
+        ? 'opacity-85 cursor-not-allowed bg-gray-50'
+        : 'cursor-pointer hover:border-blue-300'
       }
     `}
     onClick={() => !disabled && onClick()}
@@ -257,7 +257,6 @@ const FileSources: React.FC<FileSourcesProps> = ({ selectSource, handleLocalFile
   );
 };
 
-// Custom Tag interface
 interface CustomTag {
   name: string;
   pattern: string;
@@ -265,6 +264,8 @@ interface CustomTag {
 
 export default function NewJobPage() {
   const router = useRouter();
+
+  const { license } = useLicense();
 
   // Essential state
   const [selectedSource, setSelectedSource] = useState<'s3' | 'files' | 'directory' | ''>('files');
@@ -276,39 +277,39 @@ export default function NewJobPage() {
   const [selectedFiles, setSelectedFiles] = useState<[File, string][]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [existingReportName, setExistingReportName] = useState<string[]>([]);
-  //Job Name
   const [jobName, setJobName] = useState('');
 
-  // Model selection
   const [models, setModels] = useState<any[]>([]);
-  //Bi-default Presidio model is selected.
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState<any>(null);
   const [modelSearchQuery, setModelSearchQuery] = useState('');
 
-  // Filter custom models
   const filteredCustomModels = useMemo(() => {
     return models
       .filter((model) => !['basic', 'advanced'].includes(model.Name.toLowerCase()))
       .filter((model) => model.Name.toLowerCase().includes(modelSearchQuery.toLowerCase()));
   }, [models, modelSearchQuery]);
 
-  const builtInModels = useMemo(() => {
+  const defaultModels = useMemo(() => {
     return [
       {
-        Id: 'basic',
+        Id: models.find((model) => model.Name === 'basic')?.Id || 'basic',
         Name: 'Basic',
+        Disabled: false,
         Description:
-          'Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.',
+          license && license?.LicenseInfo?.LicenseType === 'free'
+            ? 'Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.'
+            : 'Fast and lightweight AI model, does not allow customization of the fields with user feedback, gives basic usage statistics.',
       },
       {
         Id: 'advanced',
         Name: 'Advanced',
+        Disabled: true,
         Description:
           'Our most advanced AI model, available on enterprise platform. Allows users to perpetually customize fields with user feedback, includes advanced monitoring features.',
       },
     ];
-  }, []);
+  }, [models]);
 
   // Tags handling
   const [availableTags, setAvailableTags] = useState<string[]>([]);
@@ -347,12 +348,10 @@ export default function NewJobPage() {
     return SUPPORTED_TYPES.some((ext) => filename.toLowerCase().endsWith(ext));
   };
 
-  // Fetch models on page load
   useEffect(() => {
     const fetchModels = async () => {
       try {
         const modelData = await nerService.listModels();
-        // Only show trained models that can be used for inference
         const trainedModels = modelData.filter((model) => model.Status === 'TRAINED');
         setModels(trainedModels.reverse());
         setSelectedModelId(trainedModels[0].Id);
@@ -398,7 +397,6 @@ export default function NewJobPage() {
     fetchTags();
   }, [selectedModelId]);
 
-  // Toggle tag selection
   const toggleTag = (tag: string) => {
     if (selectedTags.includes(tag)) {
       setSelectedTags(selectedTags.filter((t) => t !== tag));
@@ -407,7 +405,6 @@ export default function NewJobPage() {
     }
   };
 
-  // Select all tags
   const selectAllTags = () => {
     setSelectedTags([...availableTags]);
   };
@@ -428,8 +425,8 @@ export default function NewJobPage() {
       return;
     }
 
-    if (!editingGroup && groups[groupName]) {
-      setGroupDialogError('Group name must be unique.');
+    if (!editingGroup && groups[groupName.toUpperCase()]) {
+      setGroupDialogError('Group name already exists.');
       return;
     }
 
@@ -479,7 +476,6 @@ export default function NewJobPage() {
     setGroups(newGroups);
   };
 
-  // Add a custom tag
   const handleAddCustomTag = () => {
     setDialogError(null);
 
@@ -501,7 +497,7 @@ export default function NewJobPage() {
       for (let index = 0; index < customTags.length; index++) {
         const thisTag = customTags[index];
         if (thisTag.name === customTagName.toUpperCase()) {
-          setDialogError('Custom Tag name must be unique');
+          setDialogError('Custom Tag name already exists.');
           return;
         }
       }
@@ -636,7 +632,6 @@ export default function NewJobPage() {
     validateCustomTagName(value);
   };
 
-  // Submit the new job
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -706,14 +701,14 @@ export default function NewJobPage() {
         CustomTags: customTagsObj,
         ...(selectedSource === 's3'
           ? {
-              S3Endpoint: sourceS3Endpoint,
-              S3Region: sourceS3Region,
-              SourceS3Bucket: sourceS3Bucket,
-              SourceS3Prefix: sourceS3Prefix || undefined,
-            }
+            S3Endpoint: sourceS3Endpoint,
+            S3Region: sourceS3Region,
+            SourceS3Bucket: sourceS3Bucket,
+            SourceS3Prefix: sourceS3Prefix || undefined,
+          }
           : {
-              UploadId: uploadId,
-            }),
+            UploadId: uploadId,
+          }),
         Groups: groups,
         report_name: jobName,
       });
@@ -847,9 +842,8 @@ export default function NewJobPage() {
                   validateJobName(value);
                 }}
                 onBlur={() => validateJobName(jobName)}
-                className={`w-full p-2 border ${
-                  nameError ? 'border-red-500' : 'border-gray-300'
-                } rounded`}
+                className={`w-full p-2 border ${nameError ? 'border-red-500' : 'border-gray-300'
+                  } rounded`}
                 placeholder="Enter_Scan_Name"
                 required
               />
@@ -872,58 +866,61 @@ export default function NewJobPage() {
               <FileSources selectSource={setSelectedSource} handleLocalFiles={handleLocalFiles} />
             </div>
 
-            {selectedFiles.length > 0 && (
-              <div className="mt-6">
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-sm font-medium text-gray-700">
-                    Selected Files ({selectedFiles.length})
-                  </h3>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSelectedFiles([])}
-                    className="text-red-500"
-                  >
-                    Clear all
-                  </Button>
-                </div>
-                <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-md">
-                  {selectedFiles.map(([file, fullPath], index) => (
-                    <div
-                      key={`${file.name}-${fullPath}-${index}`}
-                      className="flex items-center justify-between px-4 py-2 border-b last:border-b-0 hover:bg-gray-50"
+            {(selectedSource === 'files' || selectedSource === 'directory') &&
+              selectedFiles.length > 0 && (
+                <div className="mt-6">
+                  <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-sm font-medium text-gray-700">
+                      Selected Files ({selectedFiles.length})
+                    </h3>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedFiles([])}
+                      className="text-red-500"
                     >
-                      <div className="flex items-center">
-                        <span className="text-sm text-gray-600">
-                          {file.name} ({(file.size / 1024).toFixed(1)} KB)
-                        </span>
-                        {fullPath && <span className="ml-2 text-xs text-gray-400">{fullPath}</span>}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeFile(index)}
-                        className="text-red-500 hover:text-red-700 p-1"
-                        aria-label="Remove file"
+                      Clear all
+                    </Button>
+                  </div>
+                  <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-md">
+                    {selectedFiles.map(([file, fullPath], index) => (
+                      <div
+                        key={`${file.name}-${fullPath}-${index}`}
+                        className="flex items-center justify-between px-4 py-2 border-b last:border-b-0 hover:bg-gray-50"
                       >
-                        <svg
-                          className="h-4 w-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
+                        <div className="flex items-center">
+                          <span className="text-sm text-gray-600">
+                            {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                          </span>
+                          {fullPath && (
+                            <span className="ml-2 text-xs text-gray-400">{fullPath}</span>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeFile(index)}
+                          className="text-red-500 hover:text-red-700 p-1"
+                          aria-label="Remove file"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M6 18L18 6M6 6l12 12"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-                  ))}
+                          <svg
+                            className="h-4 w-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M6 18L18 6M6 6l12 12"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {selectedSource === 's3' && (
               <div className="space-y-4">
@@ -1015,62 +1012,66 @@ export default function NewJobPage() {
               <div>
                 <h3 className="text-lg font-semibold mb-4">Built-in Models</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {builtInModels.map((model) => (
+                  {defaultModels.map((model) => (
                     <ModelOption
                       key={model.Id}
-                      title={model.Name}
-                      description={model.Description}
+                      title={model.Name[0].toUpperCase() + model.Name.slice(1)}
+                      description={model.Description || ''}
                       isSelected={selectedModelId === model.Id}
                       onClick={() => {
                         setSelectedModelId(model.Id);
                         setSelectedModel(model);
                       }}
+                      disabled={model.Disabled}
                     />
                   ))}
                 </div>
               </div>
 
-              <div>
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold">Custom Models</h3>
-                  <div className="relative w-64">
-                    <input
-                      type="text"
-                      placeholder="Search custom models..."
-                      value={modelSearchQuery}
-                      onChange={(e) => setModelSearchQuery(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                    <SearchIcon className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
+              {filteredCustomModels.length > 0 && (
+                <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold">Custom Models</h3>
+                    <div className="relative w-64">
+                      <input
+                        type="text"
+                        placeholder="Search custom models..."
+                        value={modelSearchQuery}
+                        onChange={(e) => setModelSearchQuery(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <SearchIcon className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {filteredCustomModels
+                      .filter((model) => model.Status !== 'TRAINING' && model.Status !== 'QUEUED')
+                      .map((model) => (
+                        <ModelOption
+                          key={model.Id}
+                          title={model.Name}
+                          description={
+                            <div className="space-y-2">
+                              {model.BaseModelId && (
+                                <p className="text-sm text-gray-600">
+                                  Base Model:{' '}
+                                  {models.find((m) => m.Id === model.BaseModelId)?.Name ||
+                                    'Unknown'}
+                                </p>
+                              )}
+                            </div>
+                          }
+                          isSelected={selectedModelId === model.Id}
+                          onClick={() => {
+                            setSelectedModelId(model.Id);
+                            setSelectedModel(model);
+                          }}
+                        />
+                      ))}
                   </div>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {filteredCustomModels
-                    .filter((model) => model.Status !== 'TRAINING' && model.Status !== 'QUEUED')
-                    .map((model) => (
-                      <ModelOption
-                        key={model.Id}
-                        title={model.Name}
-                        description={
-                          <div className="space-y-2">
-                            {model.BaseModelId && (
-                              <p className="text-sm text-gray-600">
-                                Base Model:{' '}
-                                {models.find((m) => m.Id === model.BaseModelId)?.Name || 'Unknown'}
-                              </p>
-                            )}
-                          </div>
-                        }
-                        isSelected={selectedModelId === model.Id}
-                        onClick={() => {
-                          setSelectedModelId(model.Id);
-                          setSelectedModel(model);
-                        }}
-                      />
-                    ))}
-                </div>
-              </div>
+              )}
 
               {/* Tags Section - Only show if a model is selected */}
               {selectedModelId && (
@@ -1228,9 +1229,8 @@ export default function NewJobPage() {
                         value={customTagName}
                         onChange={(e) => handleTagNameChange(e.target.value)}
                         onBlur={(e) => handleTagNameChange(e.target.value)}
-                        className={`w-full p-2 border ${
-                          nameError ? 'border-red-500' : 'border-gray-300'
-                        } rounded`}
+                        className={`w-full p-2 border ${nameError ? 'border-red-500' : 'border-gray-300'
+                          } rounded`}
                         placeholder="CUSTOM_TAG_NAME"
                         required
                       />

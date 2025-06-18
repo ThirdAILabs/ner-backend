@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Box, Card, CardContent, Typography, CircularProgress } from '@mui/material';
+import { Box, Typography, CircularProgress } from '@mui/material';
 import { nerService } from '@/lib/backend';
-import type { InferenceMetrics, ThroughputMetrics } from './inferenceTypes';
 import { formatFileSize, formatNumber } from '@/lib/utils';
 import { useHealth } from '@/contexts/HealthProvider';
 import MetricsDataViewerCard from '@/components/ui/MetricsDataViewerCard';
@@ -23,7 +22,8 @@ import {
   DialogActions,
   TextField,
 } from '@mui/material';
-import type { Feedback, FinetuneRequest } from '@/lib/backend';
+import type { SavedFeedback, FinetuneRequest } from '@/lib/backend';
+import { Toaster, toast } from 'react-hot-toast';
 
 interface MetricsDataViewerProps {
   modelId?: string;
@@ -40,14 +40,8 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
   const { healthStatus } = useHealth();
 
   // State for feedback data
-  const [feedbackData, setFeedbackData] = useState<Feedback[]>([]);
+  const [feedbackData, setFeedbackData] = useState<SavedFeedback[]>([]);
   const [loadingFeedback, setLoadingFeedback] = useState(false);
-
-  // State for finetuning
-  const [showFinetuneDialog, setShowFinetuneDialog] = useState(false);
-  const [finetuneModelName, setFinetuneModelName] = useState('');
-  const [finetuneTaskPrompt, setFinetuneTaskPrompt] = useState('');
-  const [finetuning, setFinetuning] = useState(false);
 
   function getFontSize(value: string) {
     if (!value) return '2rem';
@@ -186,49 +180,14 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
     );
   };
 
-  const handleFinetuneClick = () => {
+  const handleDeleteFeedback = async (id: string) => {
     if (!modelId) return;
-
-    // Generate a default name based on the current model
-    const timestamp = new Date().toISOString().slice(0, 16).replace('T', '_').replace(':', '-');
-    setFinetuneModelName(`finetuned_${timestamp}`);
-    setFinetuneTaskPrompt('');
-    setShowFinetuneDialog(true);
-  };
-
-  const handleFinetuneSubmit = async () => {
-    if (!modelId || !finetuneModelName.trim()) return;
-
-    setFinetuning(true);
     try {
-      const request: FinetuneRequest = {
-        name: finetuneModelName.trim(),
-        task_prompt: finetuneTaskPrompt.trim() || undefined,
-        samples: feedbackData.length > 0 ? feedbackData : undefined,
-      };
-
-      const response = await nerService.finetuneModel(modelId, request);
-      console.log('Finetuning started for new model:', response.ModelId);
-
-      // Close dialog and reset state
-      setShowFinetuneDialog(false);
-      setFinetuneModelName('');
-      setFinetuneTaskPrompt('');
-
-      // You could show a success message or redirect to the new model
-      alert(`Finetuning started successfully! New model ID: ${response.ModelId}`);
+      await nerService.deleteModelFeedback(modelId, id);
+      setFeedbackData(feedbackData.filter((feedback) => feedback.id !== id));
     } catch (error) {
-      console.error('Finetuning failed:', error);
-      // Error handling is already done in the service layer
-    } finally {
-      setFinetuning(false);
+      console.error('Failed to delete feedback:', error);
     }
-  };
-
-  const handleFinetuneCancel = () => {
-    setShowFinetuneDialog(false);
-    setFinetuneModelName('');
-    setFinetuneTaskPrompt('');
   };
 
   if (loading) {
@@ -252,190 +211,42 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
   }
 
   return (
-    <>
-      <Box sx={{ p: 3 }}>
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(5, 1fr)',
-            gap: 3,
-          }}
-        >
-          {/* In-Progress Tasks */}
-          <MetricsDataViewerCard value={infMetrics.InProgress} label="In-Progress Scans" />
+    <Box sx={{ py: 2, px: 0 }}>
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(5, 1fr)',
+          gap: 3,
+        }}
+      >
+        {/* In-Progress Tasks */}
+        <MetricsDataViewerCard value={infMetrics.InProgress} label="In-Progress Scans" />
 
-          {/* Completed Tasks */}
-          <MetricsDataViewerCard
-            value={infMetrics.Completed + infMetrics.Failed}
-            label="Completed Scans"
-          />
+        {/* Completed Tasks */}
+        <MetricsDataViewerCard
+          value={infMetrics.Completed + infMetrics.Failed}
+          label="Completed Scans"
+        />
 
-          {/* Throughput */}
-          <MetricsDataViewerCard
-            value={throughput === '-' ? '-' : `${throughput}/Hour`}
-            label="Throughput"
-          />
+        {/* Throughput */}
+        <MetricsDataViewerCard
+          value={throughput === '-' ? '-' : `${throughput}/Hour`}
+          label="Throughput"
+        />
 
-          {/* Data Processed */}
-          <MetricsDataViewerCard
-            value={formatFileSize(infMetrics.DataProcessedMB * 1024 * 1024)}
-            label="Data Processed"
-          />
+        {/* Data Processed */}
+        <MetricsDataViewerCard
+          value={formatFileSize(infMetrics.DataProcessedMB * 1024 * 1024)}
+          label="Data Processed"
+        />
 
-          {/* Tokens Processed */}
-          <MetricsDataViewerCard
-            value={formatNumber(infMetrics.TokensProcessed)}
-            label="Tokens Processed"
-          />
-        </Box>
-
-        {/* Fine-tuned Feedback Data */}
-        {modelId && (
-          <Box sx={{ mt: 4 }}>
-            <Box
-              sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}
-            >
-              <Typography
-                variant="h6"
-                sx={{
-                  fontWeight: 600,
-                  fontSize: '1.25rem',
-                  color: '#4a5568',
-                }}
-              >
-                User Feedback
-              </Typography>
-              {feedbackData.length > 0 && (
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={handleFinetuneClick}
-                  disabled={loadingFeedback}
-                  sx={{
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    px: 3,
-                  }}
-                >
-                  Finetune Model
-                </Button>
-              )}
-            </Box>
-            <div className="border rounded-md">
-              {loadingFeedback ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-                  <CircularProgress size={20} />
-                </Box>
-              ) : feedbackData.length === 0 ? (
-                <Box sx={{ p: 4, textAlign: 'center' }}>
-                  <Typography sx={{ color: 'text.secondary', fontSize: '0.875rem' }}>
-                    No feedback data available for this model
-                  </Typography>
-                </Box>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Feedback Text</TableHead>
-                      <TableHead className="w-[50px]"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {feedbackData.map((feedback, index) => (
-                      <TableRow key={index}>
-                        <TableCell>
-                          {feedback.tokens.map((token, tokenIndex) => (
-                            <span key={tokenIndex}>
-                              {renderHighlightedToken(token, feedback.labels[tokenIndex])}
-                              {tokenIndex < feedback.tokens.length - 1 ? ' ' : ''}
-                            </span>
-                          ))}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <button
-                            className="text-gray-700 hover:text-gray-700 transition-colors"
-                            onClick={() => {
-                              // TODO: Implement delete functionality when backend is ready
-                              console.log('Delete feedback:', feedback);
-                            }}
-                            title="Delete feedback"
-                          >
-                            ✕
-                          </button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </div>
-          </Box>
-        )}
+        {/* Tokens Processed */}
+        <MetricsDataViewerCard
+          value={formatNumber(infMetrics.TokensProcessed)}
+          label="Tokens Processed"
+        />
       </Box>
-
-      {/* Finetune Dialog */}
-      <Dialog open={showFinetuneDialog} onClose={handleFinetuneCancel} maxWidth="sm" fullWidth>
-        <DialogTitle>Finetune Model</DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 1 }}>
-            <Typography variant="body2" sx={{ mb: 3, color: 'text.secondary' }}>
-              Create a new finetuned model using the feedback data you've reviewed. This will use
-              all {feedbackData.length} feedback samples as training data.
-            </Typography>
-
-            <TextField
-              autoFocus
-              margin="dense"
-              label="Model Name"
-              fullWidth
-              variant="outlined"
-              value={finetuneModelName}
-              onChange={(e) => setFinetuneModelName(e.target.value)}
-              helperText="Enter a name for the new finetuned model"
-              sx={{ mb: 2 }}
-              required
-            />
-
-            <TextField
-              margin="dense"
-              label="Task Prompt (Optional)"
-              fullWidth
-              multiline
-              rows={3}
-              variant="outlined"
-              value={finetuneTaskPrompt}
-              onChange={(e) => setFinetuneTaskPrompt(e.target.value)}
-              helperText="Optional custom prompt to guide the finetuning process"
-              placeholder="e.g., Focus on improving accuracy for person names and locations..."
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button
-            onClick={handleFinetuneCancel}
-            disabled={finetuning}
-            sx={{ textTransform: 'none' }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleFinetuneSubmit}
-            variant="contained"
-            disabled={finetuning || !finetuneModelName.trim()}
-            sx={{ textTransform: 'none', ml: 1 }}
-          >
-            {finetuning ? (
-              <>
-                <CircularProgress size={16} sx={{ mr: 1 }} />
-                Starting Finetuning...
-              </>
-            ) : (
-              'Start Finetuning'
-            )}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </>
+    </Box>
   );
 };
 

@@ -45,7 +45,10 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
   const [selectionEnd, setSelectionEnd] = useState<number | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [dropdownPosition, setDropdownPosition] = useState<{ x: number; y: number } | null>(null);
+  const [dropdownPosition, setDropdownPosition] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [query, setQuery] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
@@ -123,7 +126,13 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
   };
 
   const filteredTags = [
-    REMOVE_TAG_NAME,
+    ...(selectionStart !== null &&
+    selectionEnd !== null &&
+    tokens
+      .slice(Math.min(selectionStart, selectionEnd), Math.max(selectionStart, selectionEnd) + 1)
+      .some((token) => token.tag !== 'O')
+      ? [REMOVE_TAG_NAME]
+      : []),
     ...(query
       ? availableTags.filter((tag) => tag.toLowerCase().includes(query.toLowerCase()))
       : availableTags),
@@ -259,7 +268,7 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
               value={query}
               onChange={handleInputChange}
               className="w-full p-2 border border-gray-300 rounded mb-1 bg-white text-base"
-              placeholder="Search tags..."
+              placeholder="Search Tags..."
               autoFocus
             />
           </div>
@@ -277,22 +286,40 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
           )}
 
           {filteredTags.map((tag) => (
-            <MenuItem
-              key={tag}
-              onClick={() => handleTagSelect(tag)}
-              className="flex items-center justify-between font-bold text-black bg-white rounded-md mx-2 my-0.5 px-3 py-2 transition-colors group hover:bg-opacity-100 hover:bg-[var(--tag-pastel)]"
-              style={{
-                ['--tag-pastel' as any]: tagColors[tag]?.text || DEFAULT_COLOR.text,
-              }}
-            >
-              <span>{tag}</span>
-              <span
-                className="ml-3 inline-block rounded-full transition-colors w-2.5 h-2.5 group-hover:bg-[var(--tag-dark)]"
-                style={{
-                  background: tagColors[tag]?.text || DEFAULT_COLOR.text,
-                  ['--tag-dark' as any]: tagColors[tag]?.tag || DEFAULT_COLOR.tag,
-                }}
-              />
+            <MenuItem key={tag} value={tag} onClick={() => handleTagSelect(tag)}>
+              <span style={{ display: 'flex', alignItems: 'center' }}>
+                {tag === REMOVE_TAG_NAME ? (
+                  <svg
+                    width="16"
+                    height="16"
+                    fill="none"
+                    stroke="#ef4444"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                    style={{
+                      marginRight: 8,
+                      display: 'inline-block',
+                      verticalAlign: 'middle',
+                    }}
+                  >
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                ) : (
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      width: 12,
+                      height: 12,
+                      borderRadius: '50%',
+                      background: tagColors[tag]?.text || DEFAULT_COLOR.text,
+                      marginRight: 8,
+                      verticalAlign: 'middle',
+                    }}
+                  />
+                )}
+                <span>{tag}</span>
+              </span>
             </MenuItem>
           ))}
         </Menu>

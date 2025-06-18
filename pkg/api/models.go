@@ -13,6 +13,7 @@ type Model struct {
 	Name         string
 	Status       string
 	CreationTime time.Time
+	Finetunable  bool
 
 	Tags []string `json:"Tags,omitempty"`
 }
@@ -38,6 +39,8 @@ type Report struct {
 	ReportName     string
 	SourceS3Bucket string
 	SourceS3Prefix string
+	S3Endpoint     string
+	S3Region       string
 	IsUpload       bool
 
 	Stopped            bool
@@ -162,6 +165,7 @@ type FileNameToPath struct {
 }
 
 type FeedbackRequest struct {
-	Tokens []string `json:"tokens"`
-	Labels []string `json:"labels"`
+	Id     uuid.UUID `json:"id"`
+	Tokens []string  `json:"tokens"`
+	Labels []string  `json:"labels"`
 }

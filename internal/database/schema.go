@@ -21,7 +21,7 @@ type Model struct {
 	BaseModelId uuid.NullUUID `gorm:"type:uuid"`
 	BaseModel   *Model        `gorm:"foreignKey:BaseModelId"`
 
-	Name           string
+	Name           string `gorm:"unique;not null"`
 	Type           string `gorm:"size:20;not null"`
 	Status         string `gorm:"size:20;not null"`
 	CreationTime   time.Time
@@ -40,6 +40,7 @@ const (
 	JobRunning   string = "RUNNING"
 	JobCompleted string = "COMPLETED"
 	JobFailed    string = "FAILED"
+	JobAborted   string = "ABORTED"
 )
 
 type Report struct {

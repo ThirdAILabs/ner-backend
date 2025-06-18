@@ -66,7 +66,6 @@ export function DatabaseTable({
       .map(([tagType]) => tagType);
   };
 
-  // Load records functions
   const loadTokenRecords = (newOffset = 0, tagFilter: string[], limit = TOKENS_LIMIT) => {
     if (isLoadingTokenRecords || (!hasMoreTokens && newOffset > 0)) {
       console.log('Skipping token records load - already loading or no more data');
@@ -122,7 +121,6 @@ export function DatabaseTable({
 
     setIsLoadingObjectRecords(true);
 
-    // Use the API service to fetch objects with pagination
     nerService
       .getReportObjects(reportId, {
         offset: newOffset,
@@ -147,7 +145,6 @@ export function DatabaseTable({
           setObjectRecords((prev) => [...prev, ...mappedRecords]);
         }
 
-        // Update pagination state
         setHasMoreObjects(objects.length === OBJECTS_LIMIT);
         setObjectOffset(newOffset + objects.length);
         setIsLoadingObjectRecords(false);
@@ -158,7 +155,6 @@ export function DatabaseTable({
       });
   };
 
-  // Search function
   const handleSearch = async (searchQuery: string) => {
     if (!searchQuery.trim()) {
       // If empty query, reset filters and reload data
@@ -171,7 +167,6 @@ export function DatabaseTable({
     setIsSearching(true);
     try {
       const result = await nerService.searchReport(reportId, searchQuery);
-      // Reset pagination and clear existing records
       resetPagination();
 
       // Load records filtered by the object names
@@ -188,7 +183,6 @@ export function DatabaseTable({
     }
   };
 
-  // Helper function to reset pagination state
   const resetPagination = () => {
     setTokenOffset(0);
     setObjectOffset(0);
@@ -200,7 +194,6 @@ export function DatabaseTable({
 
   // Initial load
   useEffect(() => {
-    // Force immediate loading of token records
     console.log('Component mounted, loading initial data');
     resetPagination();
     loadTokenRecords(0, toActiveTagList(tagFilters));
@@ -252,7 +245,7 @@ export function DatabaseTable({
     }
   };
 
-  // Filter handlers
+  /* START -- Filter Handlers */
   const handleGroupFilterChange = (filterKey: string) => {
     setGroupFilters((prev) => ({
       ...prev,
@@ -305,7 +298,8 @@ export function DatabaseTable({
     resetPagination();
   };
 
-  // Handle view mode changes
+  /* ENDS -- Filter Handlers */
+
   const handleViewModeChange = (newMode: ViewMode) => {
     setViewMode(newMode);
 
@@ -317,7 +311,6 @@ export function DatabaseTable({
     }
   };
 
-  // Other handlers
   const handleQueryChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setQuery(event.target.value);
   };

@@ -3,6 +3,7 @@ interface Model {
   Name: string;
   Status: string;
   BaseModelId?: string;
+  CreationTime?: string;
   Tags?: string[];
 }
 
@@ -24,6 +25,8 @@ interface Report {
   Model: Model;
   SourceS3Bucket: string;
   SourceS3Prefix?: string;
+  S3Endpoint?: string;
+  S3Region?: string;
   IsUpload?: boolean;
   CreationTime: string;
   Tags?: string[];
