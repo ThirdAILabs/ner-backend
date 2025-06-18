@@ -180,10 +180,10 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
     <div ref={containerRef} onMouseUp={handleMouseUp} onMouseLeave={handleMouseLeaveFeedbackBox}>
       <div className="flex flex-wrap gap-0.5">
         {tokens.map((token, index) => {
-          const startIndex =
-            selectionStart && selectionEnd ? Math.min(selectionStart, selectionEnd) : tokens.length;
-          const endIndex =
-            selectionStart && selectionEnd ? Math.max(selectionStart, selectionEnd) : -1;
+          const selectionMade = selectionStart !== null && selectionEnd !== null;
+          const startIndex = selectionMade ? Math.min(selectionStart, selectionEnd) : tokens.length;
+          const endIndex = selectionMade ? Math.max(selectionStart, selectionEnd) : -1;
+          console.log("selection", selectionStart, selectionEnd, index, startIndex, endIndex);
           const isSelected = index >= startIndex && index <= endIndex;
           const isSpotlighted =
             spotlightStartIndex &&
