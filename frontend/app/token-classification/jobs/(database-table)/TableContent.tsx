@@ -6,6 +6,7 @@ import { ChevronRight, File } from 'lucide-react';
 import { TokenHighlighter } from '@/components/feedback/TokenHighlighter';
 import * as _ from 'lodash';
 import type { TableContentProps } from '@/types/analyticsTypes';
+import { useLicense } from '@/hooks/useLicense';
 
 const PASTELS = ['#E5A49C', '#F6C886', '#FBE7AA', '#99E3B5', '#A6E6E7', '#A5A1E1', '#D8A4E2'];
 const DARKERS = ['#D34F3E', '#F09336', '#F7CF5F', '#5CC96E', '#65CFD0', '#597CE2', '#B64DC8'];
@@ -31,6 +32,8 @@ export function TableContent({
   pathMap,
   addFeedback,
 }: TableContentProps) {
+  const { isEnterprise } = useLicense();
+  
   const tagColors = useMemo(() => {
     const colors: Record<string, HighlightColor> = {};
     tags
@@ -264,7 +267,7 @@ export function TableContent({
               <div className="p-4">
                 <TokenHighlighter
                   tokens={tokens}
-                  editable
+                  editable={isEnterprise}
                   availableTags={tags.map((tag) => tag.type)}
                   onTagAssign={onTagAssign}
                   objectId={fileIdentifier}
