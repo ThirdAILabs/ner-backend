@@ -534,15 +534,11 @@ export default function Jobs() {
 
   return (
     <>
-      {typeof quotaUsedPercentage === 'number' && quotaUsedPercentage > 50 && (
+      {typeof quotaUsedPercentage === 'number' && quotaUsedPercentage > 75 && (
         <div
           className={`
                       px-4 py-3 rounded mb-6 border 
-                      ${
-                        quotaUsedPercentage > 80
-                          ? 'bg-red-100 border-red-200 text-red-600'
-                          : 'bg-yellow-100 border-yellow-200 text-yellow-600'
-                      }
+                      bg-yellow-100 border-yellow-200 text-yellow-600
                     `}
         >
           You have used {quotaUsedPercentage?.toFixed(2)}% of your monthly quota. Any report
