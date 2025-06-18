@@ -211,44 +211,42 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
   }
 
   return (
-    <>
-      <Box sx={{ p: 3 }}>
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(5, 1fr)',
-            gap: 3,
-          }}
-        >
-          {/* In-Progress Tasks */}
-          <MetricsDataViewerCard value={infMetrics.InProgress} label="In-Progress Scans" />
+    <Box sx={{ p: 3 }}>
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(5, 1fr)',
+          gap: 3,
+        }}
+      >
+        {/* In-Progress Tasks */}
+        <MetricsDataViewerCard value={infMetrics.InProgress} label="In-Progress Scans" />
 
-          {/* Completed Tasks */}
-          <MetricsDataViewerCard
-            value={infMetrics.Completed + infMetrics.Failed}
-            label="Completed Scans"
-          />
+        {/* Completed Tasks */}
+        <MetricsDataViewerCard
+          value={infMetrics.Completed + infMetrics.Failed}
+          label="Completed Scans"
+        />
 
-          {/* Throughput */}
-          <MetricsDataViewerCard
-            value={throughput === '-' ? '-' : `${throughput}/Hour`}
-            label="Throughput"
-          />
+        {/* Throughput */}
+        <MetricsDataViewerCard
+          value={throughput === '-' ? '-' : `${throughput}/Hour`}
+          label="Throughput"
+        />
 
-          {/* Data Processed */}
-          <MetricsDataViewerCard
-            value={formatFileSize(infMetrics.DataProcessedMB * 1024 * 1024)}
-            label="Data Processed"
-          />
+        {/* Data Processed */}
+        <MetricsDataViewerCard
+          value={formatFileSize(infMetrics.DataProcessedMB * 1024 * 1024)}
+          label="Data Processed"
+        />
 
-          {/* Tokens Processed */}
-          <MetricsDataViewerCard
-            value={formatNumber(infMetrics.TokensProcessed)}
-            label="Tokens Processed"
-          />
-        </Box>
+        {/* Tokens Processed */}
+        <MetricsDataViewerCard
+          value={formatNumber(infMetrics.TokensProcessed)}
+          label="Tokens Processed"
+        />
       </Box>
-    </>
+    </Box>
   );
 };
 

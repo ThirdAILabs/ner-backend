@@ -26,7 +26,6 @@ import { floor } from 'lodash';
 import { FeedbackPanel } from '@/components/feedback/FeedbackPanel';
 import useFeedbackState from '@/components/feedback/useFeedbackState';
 
-// Calculate progress based on InferenceTaskStatuses
 const calculateProgress = (report: Report | null): number => {
   const successfulFiles = report?.SucceededFileCount || 0;
   const failedFiles = report?.FailedFileCount || 0;
@@ -35,7 +34,6 @@ const calculateProgress = (report: Report | null): number => {
   return floor(((successfulFiles + failedFiles) / totalFiles) * 100);
 };
 
-// Get the total number of processed tokens
 const getProcessedTokens = (report: Report | null): number => {
   if (!report || !report.InferenceTaskStatuses) {
     return 0;
@@ -48,7 +46,6 @@ const getProcessedTokens = (report: Report | null): number => {
   );
 };
 
-// Source option card component
 interface SourceOptionProps {
   title: string;
   description: string;
@@ -80,7 +77,6 @@ const SourceOption: React.FC<SourceOptionProps> = ({
   </div>
 );
 
-// Tag chip component
 interface TagProps {
   tag: string;
   selected?: boolean;
@@ -109,7 +105,6 @@ const Tag: React.FC<TagProps> = ({
   );
 };
 
-// Group card component
 interface GroupProps {
   name: string;
   definition: string;
@@ -257,7 +252,6 @@ function JobDetail() {
 
       setTimeTaken((report.TotalInferenceTimeSeconds || 0) + (report.ShardDataTimeSeconds || 0));
 
-      // Set selectedSource based on IsUpload field
       if (report.IsUpload) {
         setSelectedSource('local');
       } else {

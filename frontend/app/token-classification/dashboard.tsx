@@ -290,7 +290,6 @@ const Dashboard = () => {
           {/* Model Details */}
           {selectedModel && (
             <Box sx={{ mb: 4, ml: 4 }}>
-              {/* Don't put dummy data like this. */}
               {selectedModel.CreationTime && (
                 <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>
                   Started Training: {new Date(selectedModel.CreationTime).toLocaleString()}
