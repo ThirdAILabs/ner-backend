@@ -125,14 +125,15 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
     setDropdownPosition(null);
   };
 
-  const filteredTags = [
-    ...(selectionStart !== null &&
-    selectionEnd !== null &&
+  // Display the 'Remove Tag' option only if there are tags to remove;
+  // it doesn't make sense to remove tags when the whole span consists of "O" tags.
+  const hasTagsToRemove = selectionStart !== null && selectionEnd !== null &&
     tokens
       .slice(Math.min(selectionStart, selectionEnd), Math.max(selectionStart, selectionEnd) + 1)
-      .some((token) => token.tag !== 'O')
-      ? [REMOVE_TAG_NAME]
-      : []),
+      .some((token) => token.tag !== 'O');
+
+  const filteredTags = [
+    ...(hasTagsToRemove ? [REMOVE_TAG_NAME] : []),
     ...(query
       ? availableTags.filter((tag) => tag.toLowerCase().includes(query.toLowerCase()))
       : availableTags),
