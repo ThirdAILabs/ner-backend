@@ -12,7 +12,6 @@ import {
   Card,
   CardContent,
 } from '@mui/material';
-import { useSearchParams } from 'next/navigation';
 import { nerService } from '@/lib/backend';
 import MetricsDataViewer from './metrics/MetricsDataViewer';
 import { useHealth } from '@/contexts/HealthProvider';
@@ -32,9 +31,6 @@ const Dashboard = () => {
   }, []);
   const { healthStatus } = useHealth();
   const { license } = useLicense();
-  const searchParams = useSearchParams();
-  const deploymentId = searchParams.get('deploymentId');
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Don't make API calls if health check hasn't passed
@@ -78,6 +74,7 @@ const Dashboard = () => {
         .then((ms) => setModels(ms))
         .catch((err) => {
           console.error('Failed to load models:', err);
+          setError('Failed to load models: ' + err);
         });
     };
 
