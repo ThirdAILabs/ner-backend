@@ -6,21 +6,11 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ArrowLeft, RefreshCw, Square } from 'lucide-react';
+import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
 import { DatabaseTable } from './(database-table)/DatabaseTable';
 import { nerService } from '@/lib/backend';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Box } from '@mui/material';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import { Suspense } from 'react';
 import { floor } from 'lodash';
 import { FeedbackPanel } from '@/components/feedback/FeedbackPanel';
@@ -47,37 +37,6 @@ const getProcessedTokens = (report: Report | null): number => {
   );
 };
 
-interface SourceOptionProps {
-  title: string;
-  description: string;
-  isSelected?: boolean;
-  disabled?: boolean;
-  onClick: () => void;
-}
-
-const SourceOption: React.FC<SourceOptionProps> = ({
-  title,
-  description,
-  isSelected = false,
-  disabled = false,
-  onClick,
-}) => (
-  <div
-    className={`relative p-6 border rounded-md transition-all
-      ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200'}
-      ${
-        disabled
-          ? 'opacity-50 cursor-not-allowed bg-gray-50'
-          : 'cursor-pointer hover:border-blue-300'
-      }
-    `}
-    onClick={() => !disabled && onClick()}
-  >
-    <h3 className="text-base font-medium">{title}</h3>
-    <p className="text-sm text-gray-500 mt-1">{description}</p>
-  </div>
-);
-
 interface TagProps {
   tag: string;
   selected?: boolean;
@@ -87,14 +46,7 @@ interface TagProps {
   displayOnly?: boolean;
 }
 
-const Tag: React.FC<TagProps> = ({
-  tag,
-  selected = true,
-  onClick,
-  custom = false,
-  addNew = false,
-  displayOnly = false,
-}) => {
+const Tag: React.FC<TagProps> = ({ tag, selected = true, onClick, displayOnly = false }) => {
   return (
     <div
       className={`px-3 py-1 text-sm font-medium rounded-sm ${displayOnly ? 'bg-blue-100 text-blue-800' : selected ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'} ${!displayOnly && onClick ? 'cursor-pointer' : ''}`}
@@ -125,86 +77,6 @@ const GroupCard: React.FC<GroupProps> = ({ name, definition }) => (
 interface CustomTag {
   [key: string]: string;
 }
-
-const NewTagDialog: React.FC<{
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (tag: CustomTag) => void;
-  existingTags: string[];
-}> = ({ isOpen, onClose, onSubmit, existingTags }) => {
-  const [tagName, setTagName] = useState('');
-  const [pattern, setPattern] = useState('');
-  const [error, setError] = useState('');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (existingTags.includes(tagName)) {
-      setError('Tag name already exists');
-      return;
-    }
-
-    if (!tagName || !pattern) {
-      setError('Both fields are required');
-      return;
-    }
-
-    onSubmit({ name: tagName, pattern });
-    setTagName('');
-    setPattern('');
-    setError('');
-    onClose();
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Create Custom Tag</DialogTitle>
-          <DialogDescription>Define a new custom tag with a regex pattern.</DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="tagName">Tag Name</Label>
-              <Input
-                id="tagName"
-                value={tagName}
-                onChange={(e) => setTagName(e.target.value.toUpperCase())}
-                placeholder="CUSTOM_TAG_NAME"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="pattern">Regex Pattern</Label>
-              <Input
-                id="pattern"
-                value={pattern}
-                onChange={(e) => setPattern(e.target.value)}
-                placeholder="\b[A-Z]{2}\d{6}\b"
-              />
-              <p className="text-sm text-gray-500">
-                Example patterns:
-                <br />
-                Phone: \d{3}[-.]?\d{3}[-.]?\d{4}
-                <br />
-                Custom ID: [A-Z]{2}\d{6}
-              </p>
-            </div>
-            {error && <p className="text-red-500 text-sm">{error}</p>}
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="default" className="bg-blue-400 hover:bg-blue-500">
-              Create Tag
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-};
 
 function JobDetail() {
   const { isEnterprise } = useLicense();
