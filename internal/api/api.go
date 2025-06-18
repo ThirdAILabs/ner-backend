@@ -142,12 +142,24 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 	if req.Name == "" {
 		return nil, CodedErrorf(http.StatusUnprocessableEntity, "the following fields are required: Name")
 	}
+	if err := validateName(req.Name); err != nil {
+		return nil, err
+	}
 
 	ctx := r.Context()
 
 	var model database.Model
 
 	if err := s.db.WithContext(ctx).Transaction(func(txn *gorm.DB) error {
+		if err := txn.Model(&database.Model{}).Where("name ILIKE ?", req.Name).Limit(1).Find(&model).Error; err != nil {
+			if !errors.Is(err, gorm.ErrRecordNotFound) {
+				slog.Error("error checking for duplicate model name", "error", err, "model_name", req.Name)
+				return CodedErrorf(http.StatusInternalServerError, "error %d: error checking for duplicate model name", ErrCodeDB)
+			}
+		} else if model.Id != uuid.Nil {
+			return CodedErrorf(http.StatusUnprocessableEntity, "model name '%s' already exists", req.Name)
+		}
+
 		var baseModel database.Model
 		if err := txn.Preload("Tags").First(&baseModel, "id = ?", modelId).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -315,7 +327,7 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		}
 	}
 
-	if err := validateReportName(req.ReportName); err != nil {
+	if err := validateName(req.ReportName); err != nil {
 		return nil, err
 	}
 

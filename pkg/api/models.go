@@ -13,6 +13,7 @@ type Model struct {
 	Name         string
 	Status       string
 	CreationTime time.Time
+	Finetunable  bool
 
 	Tags []string `json:"Tags,omitempty"`
 }
@@ -165,6 +166,6 @@ type FileNameToPath struct {
 
 type FeedbackRequest struct {
 	Id     uuid.UUID `json:"id"`
-	Tokens []string `json:"tokens"`
-	Labels []string `json:"labels"`
+	Tokens []string  `json:"tokens"`
+	Labels []string  `json:"labels"`
 }
