@@ -25,6 +25,8 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { useHealth } from '@/contexts/HealthProvider';
 import { alpha } from '@mui/material/styles';
 
+import { useLicense } from '@/hooks/useLicense';
+
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
 function JobStatus({ report }: { report: ReportWithStatus }) {
@@ -400,6 +402,9 @@ export default function Jobs() {
   const { healthStatus } = useHealth();
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  const { license } = useLicense();
+  const [quotaUsedPercentage, setQuotaUsedPercentage] = useState<number | null>(null);
+
   useEffect(() => {
     const fetchReports = async () => {
       try {
@@ -432,6 +437,18 @@ export default function Jobs() {
       }
     };
   }, [healthStatus]);
+
+  useEffect(() => {
+    if (license && license?.LicenseInfo?.LicenseType === 'free') {
+      setQuotaUsedPercentage(
+        (license.LicenseInfo.Usage.UsedBytes / license.LicenseInfo.Usage.MaxBytes) * 100
+      );
+      console.log(
+        'Quota Used Percentage:',
+        (license.LicenseInfo.Usage.UsedBytes / license.LicenseInfo.Usage.MaxBytes) * 100
+      );
+    }
+  }, [reports]);
 
   if (loading) {
     return (
@@ -516,164 +533,182 @@ export default function Jobs() {
   };
 
   return (
-    <Card
-      sx={{
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        bgcolor: 'white',
-        borderRadius: '12px',
-        mx: 'auto',
-        maxWidth: '1400px',
-      }}
-    >
-      <CardContent sx={{ p: 4 }}>
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            mb: 4,
-          }}
+    <>
+      {typeof quotaUsedPercentage === 'number' && quotaUsedPercentage > 50 && (
+        <div
+          className={`
+                      px-4 py-3 rounded mb-6 border 
+                      ${
+                        quotaUsedPercentage > 80
+                          ? 'bg-red-100 border-red-200 text-red-600'
+                          : 'bg-yellow-100 border-yellow-200 text-yellow-600'
+                      }
+                    `}
         >
-          <Box>
-            <Typography
-              variant="h5"
-              sx={{
-                fontWeight: 600,
-                fontSize: '1.5rem',
-                color: '#4a5568',
-              }}
-            >
-              Scans
-            </Typography>
-          </Box>
-          <Link href={`/token-classification/jobs/new`} passHref>
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<Plus size={20} />}
-              sx={{
-                bgcolor: '#2563eb',
-                '&:hover': {
-                  bgcolor: '#1d4ed8',
-                },
-                textTransform: 'none',
-                fontWeight: 500,
-                px: 3,
-                py: 1.5,
-                borderRadius: '8px',
-                boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-              }}
-              disabled={!healthStatus}
-            >
-              New Scan
-            </Button>
-          </Link>
-        </Box>
+          You have used {quotaUsedPercentage?.toFixed(2)}% of your monthly quota. Any report
+          exceeding the quota will not be processed. The quota resets on the 1st of each month.
+        </div>
+      )}
 
-        <TableContainer
-          component={Paper}
-          sx={{
-            boxShadow: 'none',
-            border: '1px solid',
-            borderColor: 'grey.200',
-            borderRadius: '12px',
-            bgcolor: 'white',
-            '& .MuiTableCell-root': {
-              borderBottom: '1px solid',
+      <Card
+        sx={{
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          bgcolor: 'white',
+          borderRadius: '12px',
+          mx: 'auto',
+          maxWidth: '1400px',
+        }}
+      >
+        <CardContent sx={{ p: 4 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              mb: 4,
+            }}
+          >
+            <Box>
+              <Typography
+                variant="h5"
+                sx={{
+                  fontWeight: 600,
+                  fontSize: '1.5rem',
+                  color: '#4a5568',
+                }}
+              >
+                Scans
+              </Typography>
+            </Box>
+            <Link href={`/token-classification/jobs/new`} passHref>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<Plus size={20} />}
+                sx={{
+                  bgcolor: '#2563eb',
+                  '&:hover': {
+                    bgcolor: '#1d4ed8',
+                  },
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  px: 3,
+                  py: 1.5,
+                  borderRadius: '8px',
+                  boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+                }}
+                disabled={!healthStatus}
+              >
+                New Scan
+              </Button>
+            </Link>
+          </Box>
+
+          <TableContainer
+            component={Paper}
+            sx={{
+              boxShadow: 'none',
+              border: '1px solid',
               borderColor: 'grey.200',
-              py: 2.5,
-            },
-          }}
-        >
-          <Table>
-            <TableHead>
-              <TableRow sx={{ bgcolor: '#f8fafc' }}>
-                <TableCell
-                  sx={{
-                    fontWeight: 600,
-                    color: '#475569',
-                    fontSize: '0.875rem',
-                  }}
-                >
-                  Name
-                </TableCell>
-                <TableCell
-                  sx={{
-                    fontWeight: 600,
-                    color: '#475569',
-                    fontSize: '0.875rem',
-                  }}
-                >
-                  Model
-                </TableCell>
-                <TableCell
-                  sx={{
-                    fontWeight: 600,
-                    color: '#475569',
-                    fontSize: '0.875rem',
-                  }}
-                >
-                  Progress
-                </TableCell>
-                <TableCell
-                  sx={{
-                    fontWeight: 600,
-                    color: '#475569',
-                    fontSize: '0.875rem',
-                  }}
-                >
-                  Created At
-                </TableCell>
-                <TableCell
-                  sx={{
-                    fontWeight: 600,
-                    color: '#475569',
-                    fontSize: '0.875rem',
-                    width: '120px',
-                  }}
-                >
-                  Actions
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {reports && reports.length > 0 ? (
-                reports.map((report) => (
-                  <Job key={report.Id} initialReport={report} onDelete={handleDelete} />
-                ))
-              ) : (
-                <TableRow>
+              borderRadius: '12px',
+              bgcolor: 'white',
+              '& .MuiTableCell-root': {
+                borderBottom: '1px solid',
+                borderColor: 'grey.200',
+                py: 2.5,
+              },
+            }}
+          >
+            <Table>
+              <TableHead>
+                <TableRow sx={{ bgcolor: '#f8fafc' }}>
                   <TableCell
-                    colSpan={5}
                     sx={{
-                      py: 8,
-                      textAlign: 'center',
+                      fontWeight: 600,
+                      color: '#475569',
+                      fontSize: '0.875rem',
                     }}
                   >
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: 2,
-                      }}
-                    >
-                      <Typography
-                        sx={{
-                          color: '#475569',
-                          fontSize: '0.875rem',
-                        }}
-                      >
-                        -
-                      </Typography>
-                    </Box>
+                    Name
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      fontWeight: 600,
+                      color: '#475569',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    Model
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      fontWeight: 600,
+                      color: '#475569',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    Progress
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      fontWeight: 600,
+                      color: '#475569',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    Created At
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      fontWeight: 600,
+                      color: '#475569',
+                      fontSize: '0.875rem',
+                      width: '120px',
+                    }}
+                  >
+                    Actions
                   </TableCell>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </CardContent>
-    </Card>
+              </TableHead>
+              <TableBody>
+                {reports && reports.length > 0 ? (
+                  reports.map((report) => (
+                    <Job key={report.Id} initialReport={report} onDelete={handleDelete} />
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={5}
+                      sx={{
+                        py: 8,
+                        textAlign: 'center',
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: 2,
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            color: '#475569',
+                            fontSize: '0.875rem',
+                          }}
+                        >
+                          -
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </CardContent>
+      </Card>
+    </>
   );
 }
