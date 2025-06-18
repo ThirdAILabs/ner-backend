@@ -151,7 +151,7 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 	var model database.Model
 
 	if err := s.db.WithContext(ctx).Transaction(func(txn *gorm.DB) error {
-		if err := s.db.WithContext(ctx).Model(&database.Model{}).Where("name = ?", req.Name).Limit(1).Find(&model).Error; err != nil {
+		if err := txn.Model(&database.Model{}).Where("name = ?", req.Name).Limit(1).Find(&model).Error; err != nil {
 			if !errors.Is(err, gorm.ErrRecordNotFound) {
 				slog.Error("error checking for duplicate model name", "error", err, "model_name", req.Name)
 				return CodedErrorf(http.StatusInternalServerError, "error %d: error checking for duplicate model name", ErrCodeDB)
