@@ -25,9 +25,9 @@ func convertModel(m database.Model) api.Model {
 	switch core.ModelType(m.Type) {
 	case core.Presidio:
 		model.Finetunable = false
-	case core.BoltUdt, core.PythonTransformer, core.PythonCnn:
+	case core.BoltUdt:
 		model.Finetunable = true
-	case core.OnnxCnn:
+	case core.PythonTransformer, core.PythonCnn, core.OnnxCnn:
 		model.Finetunable = python.PythonPluginEnabled()
 	}
 	return model
