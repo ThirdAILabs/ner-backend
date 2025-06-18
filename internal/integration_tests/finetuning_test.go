@@ -118,9 +118,15 @@ func TestFinetuning(t *testing.T) {
 	assert.Contains(t, data, "xyz")
 }
 
-func TestFinetuningAllModels(t *testing.T) {
-	if os.Getenv("PYTHON_EXECUTABLE_PATH") == "" || os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH") == "" {
-		t.Fatalf("PYTHON_EXECUTABLE_PATH and PYTHON_MODEL_PLUGIN_SCRIPT_PATH must be set")
+func finetuningTestHelper(t *testing.T, modelInit func(ctx context.Context, db *gorm.DB, s3p storage.Provider, bucket, name, hostModelDir string) error) {
+	var (
+		modelName    = "test-model"
+		pythonExec   = os.Getenv("PYTHON_EXECUTABLE_PATH")
+		pluginScript = os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH")
+		hostModelDir = os.Getenv("HOST_MODEL_DIR")
+	)
+	if pythonExec == "" || pluginScript == "" || hostModelDir == "" {
+		t.Fatalf("PYTHON_EXECUTABLE_PATH, PYTHON_MODEL_PLUGIN_SCRIPT_PATH, and HOST_MODEL_DIR env vars must be set")
 	}
 
 	ctx, cancel, s3, db, pub, sub, router := setupCommon(t)
@@ -131,63 +137,54 @@ func TestFinetuningAllModels(t *testing.T) {
 	os.Setenv("AWS_ACCESS_KEY_ID", minioUsername)
 	os.Setenv("AWS_SECRET_ACCESS_KEY", minioPassword)
 
-	python.EnablePythonPlugin(
-		os.Getenv("PYTHON_EXECUTABLE_PATH"),
-		os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH"),
-	)
+	python.EnablePythonPlugin(pythonExec, pluginScript)
 
 	stop := startWorker(t, db, s3, pub, sub, modelBucket, core.NewModelLoaders())
 	defer stop()
 
-	models := []string{"bolt_udt", "python_cnn", "python_transformer"}
+	require.NoError(t, modelInit(ctx, db, s3, modelBucket, modelName, hostModelDir))
 
-	for _, modelType := range models {
-		var modelName string
-		if modelType == "bolt_udt" {
-			require.NoError(t, cmd.InitializeBoltUdtModel(ctx, db, s3, modelBucket, "basic", os.Getenv("HOST_MODEL_DIR")))
-			modelName = "basic"
-		} else if modelType == "python_cnn" {
-			require.NoError(t, cmd.InitializePythonCnnModel(ctx, db, s3, modelBucket, "advanced", os.Getenv("HOST_MODEL_DIR")))
-			modelName = "advanced"
-		} else if modelType == "python_transformer" {
-			require.NoError(t, cmd.InitializePythonTransformerModel(ctx, db, s3, modelBucket, "ultra", os.Getenv("HOST_MODEL_DIR")))
-			modelName = "ultra"
-		} else {
-			t.Fatalf("Invalid model type: %s", modelType)
-		}
-		var base database.Model
-		require.NoError(t, db.Where("name = ?", modelName).First(&base).Error)
+	var base database.Model
+	require.NoError(t, db.Where("name = ?", modelName).First(&base).Error)
 
-		ftReq := api.FinetuneRequest{
-			Name:       fmt.Sprintf("finetuned-%s", modelType),
-			TaskPrompt: fmt.Sprintf("%s finetune test", modelType),
-			Tags:       []api.TagInfo{{Name: "xyz"}},
-			Samples: []api.Sample{
-				{
-					Tokens: []string{"I", "started", "working", "at", "ThirdAI", "in", "2022"},
-					Labels: []string{"O", "O", "O", "O", "COMPANY", "O", "DATE"},
-				},
-				{
-					Tokens: []string{"I", "started", "working", "at", "ThirdAI", "in", "2022"},
-					Labels: []string{"O", "O", "O", "O", "COMPANY", "O", "DATE"},
-				},
+	ftReq := api.FinetuneRequest{
+		Name:       fmt.Sprintf("finetuned-%s", modelName),
+		TaskPrompt: fmt.Sprintf("%s finetune test", modelName),
+		Tags:       []api.TagInfo{{Name: "xyz"}},
+		Samples: []api.Sample{
+			{
+				Tokens: []string{"I", "started", "working", "at", "ThirdAI", "in", "2022"},
+				Labels: []string{"O", "O", "O", "O", "COMPANY", "O", "DATE"},
 			},
-		}
-
-		_, model := finetune(
-			t, router,
-			base.Id.String(),
-			ftReq,
-			50, 5*time.Second,
-		)
-		assert.Equal(t, database.ModelTrained, model.Status)
-		assert.Equal(t, fmt.Sprintf("finetuned-%s", modelType), model.Name)
-		require.NotNil(t, model.BaseModelId)
-		assert.Equal(t, base.Id, *model.BaseModelId)
-
-		// To prevent disk full errors
-		require.NoError(t, s3.DeleteObjects(ctx, modelBucket, model.BaseModelId.String()))
+			{
+				Tokens: []string{"I", "started", "working", "at", "ThirdAI", "in", "2022"},
+				Labels: []string{"O", "O", "O", "O", "COMPANY", "O", "DATE"},
+			},
+		},
 	}
+
+	_, model := finetune(
+		t, router,
+		base.Id.String(),
+		ftReq,
+		50, 5*time.Second,
+	)
+	assert.Equal(t, database.ModelTrained, model.Status)
+	assert.Equal(t, fmt.Sprintf("finetuned-%s", modelName), model.Name)
+	require.NotNil(t, model.BaseModelId)
+	assert.Equal(t, base.Id, *model.BaseModelId)
+}
+
+func TestFinetuningUDT(t *testing.T) {
+	finetuningTestHelper(t, cmd.InitializeBoltUdtModel)
+}
+
+func TestFinetuningCNN(t *testing.T) {
+	finetuningTestHelper(t, cmd.InitializePythonCnnModel)
+}
+
+func TestFinetuningTransformer(t *testing.T) {
+	finetuningTestHelper(t, cmd.InitializePythonTransformerModel)
 }
 
 func TestFinetuningOnnxModel(t *testing.T) {
