@@ -123,17 +123,17 @@ func (proc *TaskProcessor) ProcessTask(task messaging.Task) {
 
 	if err != nil {
 		slog.Error("error processing task", "queue", task.Type(), "error", err)
-		if err.Error() == "quota exceeded" {
-			var payload messaging.InferenceTaskPayload
-			if err = json.Unmarshal(task.Payload(), &payload); err != nil {
-				slog.Error("error unmarshalling inference task", "error", err)
-				if err := task.Reject(); err != nil { // Discard malformed message
-					slog.Error("error rejecting message from queue", "error", err)
-				}
-				return
-			}
-			database.DeleteReport(ctx, proc.db, payload.ReportId)
-		}
+		// if err.Error() == "quota exceeded" {
+		// 	var payload messaging.InferenceTaskPayload
+		// 	if err = json.Unmarshal(task.Payload(), &payload); err != nil {
+		// 		slog.Error("error unmarshalling inference task", "error", err)
+		// 		if err := task.Reject(); err != nil { // Discard malformed message
+		// 			slog.Error("error rejecting message from queue", "error", err)
+		// 		}
+		// 		return
+		// 	}
+		// 	database.DeleteReport(ctx, proc.db, payload.ReportId)
+		// }
 
 		if err := task.Nack(); err != nil {
 			slog.Error("error reporting processing failure on message from queue", "error", err)
@@ -215,9 +215,6 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 
 	if _, err := proc.licensing.VerifyLicense(ctx); err != nil {
 		slog.Error("license verification failed", "error", err)
-		if err.Error() == "quota exceeded" {
-			database.DeleteReport(ctx, proc.db, reportId)
-		}
 		database.UpdateInferenceTaskStatus(ctx, proc.db, reportId, payload.TaskId, database.JobFailed) //nolint:errcheck
 		database.SaveReportError(ctx, proc.db, reportId, fmt.Sprintf("license verification failed: %s", err.Error()))
 		return err
@@ -716,9 +713,6 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 
 	if _, err := proc.licensing.VerifyLicense(ctx); err != nil {
 		slog.Error("license verification failed", "error", err)
-		if err.Error() == "quota exceeded" {
-			database.DeleteReport(ctx, proc.db, reportId)
-		}
 		database.UpdateShardDataTaskStatus(ctx, proc.db, reportId, database.JobFailed) //nolint:errcheck
 		database.SaveReportError(ctx, proc.db, reportId, fmt.Sprintf("license verification failed: %s", err.Error()))
 		return err
@@ -802,6 +796,19 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 			return err
 		}
 		taskId++
+	}
+
+	// Delete the report if it exceeds the free-tier quota
+	// Since we have already published the message to process inference tasks,
+	// we will see the 'inference task not found' error in the backend logs.
+	if _, err := proc.licensing.VerifyLicense(ctx); err != nil {
+		if err.Error() == "quota exceeded" {
+			slog.Error("free tier quota exceeded, deleting report", "error", err)
+			if err := database.DeleteReport(ctx, proc.db, reportId); err != nil {
+				slog.Error("error deleting report", "report_id", reportId, "error", err)
+			}
+		}
+		return err
 	}
 
 	if err := proc.db.
