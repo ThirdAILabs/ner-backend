@@ -22,7 +22,7 @@ func convertModel(m database.Model) api.Model {
 		model.Tags = append(model.Tags, tag.Tag)
 	}
 
-	switch core.ModelType(m.Type) {
+	switch core.ParseModelType(m.Type) {
 	case core.Presidio:
 		model.Finetunable = false
 	case core.BoltUdt:
