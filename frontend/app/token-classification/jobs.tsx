@@ -24,7 +24,6 @@ import { IconButton, Tooltip } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useHealth } from '@/contexts/HealthProvider';
 import { alpha } from '@mui/material/styles';
-
 import { useLicense } from '@/hooks/useLicense';
 
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
@@ -400,6 +399,17 @@ export default function Jobs() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { healthStatus } = useHealth();
+  const { license } = useLicense();
+  const [isLicenseValid, setIsLicenseValid] = useState<boolean | null>(true);
+
+  useEffect(() => {
+    setIsLicenseValid(
+      license &&
+        license.LicenseError !== 'expired license' &&
+        license.LicenseError !== 'invalid license'
+    );
+  }, [license]);
+
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const { license } = useLicense();
@@ -533,7 +543,19 @@ export default function Jobs() {
   };
 
   return (
-    <>
+      <>
+      {!isLicenseValid && (
+        <div
+          className={`
+                      px-4 py-3 rounded mb-6 border 
+                      bg-red-100 border-red-200 text-red-600
+                    `}
+        >
+          {license && license.LicenseError === 'expired license'
+            ? 'Your license has expired. Please contact ThirdAI support to renew your license.'
+            : 'Your license is invalid. Please check your license key or contact ThirdAI support.'}
+        </div>
+      )}
       {typeof quotaUsedPercentage === 'number' && quotaUsedPercentage > 75 && (
         <div
           className={`
@@ -545,47 +567,68 @@ export default function Jobs() {
           exceeding the quota will not be processed. The quota resets on the 1st of each month.
         </div>
       )}
-
       <Card
-        sx={{
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-          bgcolor: 'white',
-          borderRadius: '12px',
-          mx: 'auto',
-          maxWidth: '1400px',
-        }}
-      >
-        <CardContent sx={{ p: 4 }}>
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              mb: 4,
-            }}
-          >
-            <Box>
-              <Typography
-                variant="h5"
-                sx={{
-                  fontWeight: 600,
-                  fontSize: '1.5rem',
-                  color: '#4a5568',
-                }}
-              >
-                Scans
-              </Typography>
-            </Box>
-            <Link href={`/token-classification/jobs/new`} passHref>
+          sx={{
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            bgcolor: 'white',
+            borderRadius: '12px',
+            mx: 'auto',
+            maxWidth: '1400px',
+          }}
+        >
+          <CardContent sx={{ p: 4 }}>
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                mb: 4,
+              }}
+            >
+              <Box>
+                <Typography
+                  variant="h5"
+                  sx={{
+                    fontWeight: 600,
+                    fontSize: '1.5rem',
+                    color: '#4a5568',
+                  }}
+                >
+                  Scans
+                </Typography>
+              </Box>
+              {healthStatus && isLicenseValid ? (
+              <Link href={`/token-classification/jobs/new`} passHref legacyBehavior>
+                <a style={{ textDecoration: 'none' }}>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      startIcon={<Plus size={20} />}
+                      sx={{
+                        bgcolor: '#2563eb',
+                        '&:hover': {
+                          bgcolor: '#1d4ed8',
+                        },
+                        textTransform: 'none',
+                        fontWeight: 500,
+                        px: 3,
+                        py: 1.5,
+                        borderRadius: '8px',
+                        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+                      }}
+                      >
+                      New Scan
+                    </Button>
+                  </a>
+              </Link>
+              ) : (
               <Button
                 variant="contained"
                 color="primary"
                 startIcon={<Plus size={20} />}
+                disabled
                 sx={{
                   bgcolor: '#2563eb',
-                  '&:hover': {
-                    bgcolor: '#1d4ed8',
-                  },
                   textTransform: 'none',
                   fontWeight: 500,
                   px: 3,
@@ -593,11 +636,10 @@ export default function Jobs() {
                   borderRadius: '8px',
                   boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
                 }}
-                disabled={!healthStatus}
               >
                 New Scan
               </Button>
-            </Link>
+            )}
           </Box>
 
           <TableContainer

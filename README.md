@@ -76,7 +76,7 @@ Creates a license using the private key at the specified path. The license will 
 ### Validating a license
 
 ```bash
-go run cmd/licensing/main.go create --public-key /path/to/public_key.pem --license "your license string"
+go run cmd/licensing/main.go validate --public-key /path/to/public_key.pem --license "your license string"
 ```
 
 Validates a license and prints out information such as expiration date.
