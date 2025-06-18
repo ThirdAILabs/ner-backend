@@ -412,7 +412,6 @@ export default function Jobs() {
 
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const { license } = useLicense();
   const [quotaUsedPercentage, setQuotaUsedPercentage] = useState<number | null>(null);
 
   useEffect(() => {
@@ -543,7 +542,7 @@ export default function Jobs() {
   };
 
   return (
-      <>
+    <>
       {!isLicenseValid && (
         <div
           className={`
@@ -568,60 +567,60 @@ export default function Jobs() {
         </div>
       )}
       <Card
-          sx={{
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            bgcolor: 'white',
-            borderRadius: '12px',
-            mx: 'auto',
-            maxWidth: '1400px',
-          }}
-        >
-          <CardContent sx={{ p: 4 }}>
-            <Box
-              sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                mb: 4,
-              }}
-            >
-              <Box>
-                <Typography
-                  variant="h5"
-                  sx={{
-                    fontWeight: 600,
-                    fontSize: '1.5rem',
-                    color: '#4a5568',
-                  }}
-                >
-                  Scans
-                </Typography>
-              </Box>
-              {healthStatus && isLicenseValid ? (
+        sx={{
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          bgcolor: 'white',
+          borderRadius: '12px',
+          mx: 'auto',
+          maxWidth: '1400px',
+        }}
+      >
+        <CardContent sx={{ p: 4 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              mb: 4,
+            }}
+          >
+            <Box>
+              <Typography
+                variant="h5"
+                sx={{
+                  fontWeight: 600,
+                  fontSize: '1.5rem',
+                  color: '#4a5568',
+                }}
+              >
+                Scans
+              </Typography>
+            </Box>
+            {healthStatus && isLicenseValid ? (
               <Link href={`/token-classification/jobs/new`} passHref legacyBehavior>
                 <a style={{ textDecoration: 'none' }}>
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      startIcon={<Plus size={20} />}
-                      sx={{
-                        bgcolor: '#2563eb',
-                        '&:hover': {
-                          bgcolor: '#1d4ed8',
-                        },
-                        textTransform: 'none',
-                        fontWeight: 500,
-                        px: 3,
-                        py: 1.5,
-                        borderRadius: '8px',
-                        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-                      }}
-                      >
-                      New Scan
-                    </Button>
-                  </a>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<Plus size={20} />}
+                    sx={{
+                      bgcolor: '#2563eb',
+                      '&:hover': {
+                        bgcolor: '#1d4ed8',
+                      },
+                      textTransform: 'none',
+                      fontWeight: 500,
+                      px: 3,
+                      py: 1.5,
+                      borderRadius: '8px',
+                      boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+                    }}
+                  >
+                    New Scan
+                  </Button>
+                </a>
               </Link>
-              ) : (
+            ) : (
               <Button
                 variant="contained"
                 color="primary"
