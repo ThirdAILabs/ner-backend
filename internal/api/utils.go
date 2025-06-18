@@ -51,11 +51,11 @@ func ParseRequestQueryParams[T any](r *http.Request) (T, error) {
 	}
 
 	err := schema.NewDecoder().Decode(&data, r.Form)
-	 if err != nil {
+	if err != nil {
 		slog.Error("error decoding query params", "error", err)
 		return data, CodedErrorf(http.StatusBadRequest, "unable to parse request query params")
 	}
-   
+
 	return data, nil
 }
 
@@ -88,9 +88,9 @@ func RestHandler(handler func(r *http.Request) (any, error)) http.HandlerFunc {
 type StreamResponse func(yield func(any, error) bool)
 
 type StreamMessage struct {
-	Data    interface{}
-	Error   string
-	Code    int
+	Data  interface{}
+	Error string
+	Code  int
 }
 
 func RestStreamHandler(handler func(r *http.Request) (StreamResponse, error)) http.HandlerFunc {
@@ -151,7 +151,7 @@ func RestStreamHandler(handler func(r *http.Request) (StreamResponse, error)) ht
 				slog.Error("error writing json response", "error", writeErr)
 				return
 			}
-			
+
 			flusher.Flush()
 		}
 	}
@@ -182,7 +182,7 @@ func URLParamUUID(r *http.Request, key string) (uuid.UUID, error) {
 	return id, nil
 }
 
-func validateReportName(name string) error {
+func validateName(name string) error {
 	// Allow only alphanumeric characters, underscores, and hyphens
 	matched, err := regexp.MatchString("^[\\w-]+$", name)
 	if err != nil {

@@ -142,6 +142,9 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 	if req.Name == "" {
 		return nil, CodedErrorf(http.StatusUnprocessableEntity, "the following fields are required: Name")
 	}
+	if err := validateName(req.Name); err != nil {
+		return nil, err
+	}
 
 	ctx := r.Context()
 
@@ -324,7 +327,7 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		}
 	}
 
-	if err := validateReportName(req.ReportName); err != nil {
+	if err := validateName(req.ReportName); err != nil {
 		return nil, err
 	}
 
