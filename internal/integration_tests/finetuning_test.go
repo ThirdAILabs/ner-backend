@@ -19,6 +19,7 @@ import (
 	"ner-backend/pkg/api"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	ort "github.com/yalue/onnxruntime_go"
@@ -160,18 +161,19 @@ func TestFinetuningAllModels(t *testing.T) {
 		var base database.Model
 		require.NoError(t, db.Where("name = ?", modelName).First(&base).Error)
 
-		samples := []api.Sample{
+		feedbacks := []api.FeedbackRequest{
 			{
+				Id:     uuid.New(),
 				Tokens: []string{"I", "started", "working", "at", "ThirdAI", "in", "2022"},
 				Labels: []string{"O", "O", "O", "O", "COMPANY", "O", "DATE"},
 			},
 			{
+				Id:     uuid.New(),
 				Tokens: []string{"I", "started", "working", "at", "ThirdAI", "in", "2022"},
 				Labels: []string{"O", "O", "O", "O", "COMPANY", "O", "DATE"},
 			},
 		}
-		for _, sample := range samples {
-			feedbackReq := api.FeedbackRequest(sample)
+		for _, feedbackReq := range feedbacks {
 			require.NoError(t, httpRequest(
 				router,
 				"POST",
@@ -190,10 +192,12 @@ func TestFinetuningAllModels(t *testing.T) {
 			&saved,
 		))
 		require.Len(t, saved, 2)
-		assert.Equal(t, samples[0].Tokens, saved[0].Tokens)
-		assert.Equal(t, samples[0].Labels, saved[0].Labels)
-		assert.Equal(t, samples[1].Tokens, saved[1].Tokens)
-		assert.Equal(t, samples[1].Labels, saved[1].Labels)
+		assert.Equal(t, feedbacks[0].Id, saved[0].Id)
+		assert.Equal(t, feedbacks[0].Tokens, saved[0].Tokens)
+		assert.Equal(t, feedbacks[0].Labels, saved[0].Labels)
+		assert.Equal(t, feedbacks[1].Id, saved[1].Id)
+		assert.Equal(t, feedbacks[1].Tokens, saved[1].Tokens)
+		assert.Equal(t, feedbacks[1].Labels, saved[1].Labels)
 
 		tp := fmt.Sprintf("%s finetune test", modelType)
 
