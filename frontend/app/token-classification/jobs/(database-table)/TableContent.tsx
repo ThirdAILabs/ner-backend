@@ -101,7 +101,7 @@ export function TableContent({
               return (
                 <TableRow key={index}>
                   <TableCell className="w-3/5">
-                    <TokenHighlighter tokens={tokens} availableTags={tags.map((tag) => tag.type)} />
+                    <TokenHighlighter tokens={tokens} availableTags={tags.map((tag) => tag.type)} tagFilters={tagFilters} />
                   </TableCell>
                   <TableCell className="w-1/5 px-4">
                     <div className="relative group">
@@ -177,13 +177,10 @@ export function TableContent({
           const { fullPath, openFile } = handleFullPath(fileIdentifier);
           const tokens = record.taggedTokens.flatMap((token) => {
             const [text, tag] = token;
-            console.log('Text..', text);
-            let transformedTag = '';
-            if (tagFilters[tag]) transformedTag = tag;
             return text
               .split(/\s+/)
               .filter((word) => word.trim() !== '')
-              .map((word) => ({ text: word, tag: transformedTag }));
+              .map((word) => ({ text: word, tag }));
           });
 
           const onTagAssign = (startIndex: number, endIndex: number, newTag: string) => {
@@ -213,7 +210,6 @@ export function TableContent({
               tokens.map((token) => token.tag)
             );
           };
-          console.log('Tokens...', tokens);
           return (
             <details
               key={index}
@@ -271,6 +267,7 @@ export function TableContent({
                   availableTags={tags.map((tag) => tag.type)}
                   onTagAssign={onTagAssign}
                   objectId={fileIdentifier}
+                  tagFilters={tagFilters} 
                 />
                 ...
                 <br />

@@ -12,8 +12,8 @@ interface FeedbackPanelProps {
   feedbacks: {
     id: string;
     tokens: Token[];
-    spotlightStartIndex: number;
-    spotlightEndIndex: number;
+    spotlightStartIndex?: number;
+    spotlightEndIndex?: number;
   }[];
   availableTags: string[];
   onDelete: (id: string) => void;
@@ -25,8 +25,8 @@ interface FeedbackRowProps {
   id: string;
   tokens: Token[];
   availableTags: string[];
-  spotlightStartIndex: number;
-  spotlightEndIndex: number;
+  spotlightStartIndex?: number;
+  spotlightEndIndex?: number;
   onDelete: (id: string) => void;
 }
 

@@ -158,8 +158,8 @@ const useFeedbackState = (modelId: string, reportId: string) => {
   const displayedFeedback: {
     id: string;
     tokens: DisplayedToken[];
-    spotlightStartIndex: number;
-    spotlightEndIndex: number;
+    spotlightStartIndex?: number;
+    spotlightEndIndex?: number;
   }[] = feedback.map((f) => {
     const toWords = (text: string) => {
       return text.split(/\s+/).filter((word) => word.trim() !== '');
@@ -167,14 +167,16 @@ const useFeedbackState = (modelId: string, reportId: string) => {
     const leftContextWords = toWords(f.body.leftContext);
     const highlightedWords = toWords(f.body.highlightedText);
     const rightContextWords = toWords(f.body.rightContext);
-    const spotlightStartIndex = leftContextWords.length;
-    const spotlightEndIndex = spotlightStartIndex + highlightedWords.length - 1;
     const tokens = [
       ...leftContextWords.map((word) => ({ text: word, tag: 'O' })),
       ...highlightedWords.map((word) => ({ text: word, tag: f.body.tag })),
       ...rightContextWords.map((word) => ({ text: word, tag: 'O' })),
     ];
-    return { id: f.id, tokens, spotlightStartIndex, spotlightEndIndex };
+    const spotlightFields = f.body.tag !== 'O' ? {} : {
+      spotlightStartIndex: leftContextWords.length,
+      spotlightEndIndex: leftContextWords.length + highlightedWords.length - 1,
+    };
+    return { id: f.id, tokens, ...spotlightFields };
   });
 
   return {
