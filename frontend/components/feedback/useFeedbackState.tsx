@@ -2,6 +2,8 @@ import { Feedback } from '@/lib/backend';
 import { useEffect, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { nerService } from '@/lib/backend';
+import toast from 'react-hot-toast';
+import { CircleAlert } from 'lucide-react';
 
 export interface DisplayedToken {
   text: string;
@@ -45,7 +47,10 @@ const useFeedbackState = (modelId: string, reportId: string) => {
   ) => {
     const { tag: _, ...feedbackWithoutTag } = newFeedback;
 
-    // Check for duplicate feedback and remove existing entries
+    // Track overlapping feedback entries
+    const overlappingFeedback: FeedbackMetadata[] = [];
+
+    // Check for duplicate and overlapping feedback
     const updatedFeedback = feedback.filter((existingFeedback) => {
       const { tag: __, ...existingFeedbackWithoutTag } = existingFeedback.body;
 
@@ -55,11 +60,63 @@ const useFeedbackState = (modelId: string, reportId: string) => {
         feedbackWithoutTag.startIndex === existingFeedbackWithoutTag.startIndex &&
         feedbackWithoutTag.endIndex === existingFeedbackWithoutTag.endIndex;
 
+      const isOverlapped =
+        feedbackWithoutTag.objectId === existingFeedbackWithoutTag.objectId &&
+        !(
+          feedbackWithoutTag.startIndex > existingFeedbackWithoutTag.endIndex ||
+          feedbackWithoutTag.endIndex < existingFeedbackWithoutTag.startIndex
+        );
+
+      if (isOverlapped && !isDuplicate) {
+        overlappingFeedback.push(existingFeedback.body);
+      }
+
       return !isDuplicate;
     });
 
+    if (overlappingFeedback.length > 0) {
+      toast.custom(
+        (t) => (
+          <div className="bg-white rounded-lg shadow-lg border border-red-100 p-4">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <CircleAlert color="#FF0000" />
+                <p className="font-bold">Cannot Add Overlapping Feedback</p>
+              </div>
+              <p className="text-sm">Your selection overlaps with:</p>
+              <ul className="space-y-2 list-none">
+                {overlappingFeedback.map((fb, index) => (
+                  <li
+                    key={index}
+                    className="text-sm bg-red-50 p-2 rounded-md border border-red-100"
+                  >
+                    <div className="flex flex-col gap-1">
+                      <span className="font-medium">"{fb.highlightedText}"</span>
+                      <div className="flex items-center gap-2 text-xs text-gray-600">
+                        <span className="bg-red-100 px-2 py-0.5 rounded">Tag: {fb.tag}</span>
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-sm text-gray-600 italic">
+                Please remove existing feedback or select a different range
+              </p>
+            </div>
+          </div>
+        ),
+        {
+          duration: 6000,
+          position: 'top-right',
+        }
+      );
+      return; // Don't add new feedback if there are overlaps
+    }
+
+    // Add new feedback if no overlaps found
     setFeedback([...updatedFeedback, { id: uuidv4(), body: newFeedback }]);
 
+    // Update objects if needed
     if (!objects[newFeedback.objectId]) {
       setObjects({
         ...objects,

@@ -156,15 +156,14 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
     localStorage.getItem(FEEDBACK_STORAGE_KEY) || '[]'
   );
 
-  function isFeedbackGiven(start: number, end: number, text: string, objectId: string) {
+  function isFeedbackGiven(tokenIndex: number, objectId: string) {
     for (let index = 0; index < initialFeedback.length; index++) {
       const feedback = initialFeedback[index];
 
       const isTokenMatched =
         feedback.body.objectId === objectId &&
-        feedback.body.startIndex === start &&
-        feedback.body.endIndex === end &&
-        feedback.body.highlightedText === text;
+        feedback.body.startIndex <= tokenIndex &&
+        feedback.body.endIndex >= tokenIndex;
 
       if (isTokenMatched) {
         return true;
@@ -210,14 +209,14 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
               <span
                 style={{
                   textDecoration:
-                    objectId && isFeedbackGiven(index, index, token.text, objectId)
+                    objectId && isFeedbackGiven(index, objectId)
                       ? 'underline'
                       : 'none',
                   textDecorationColor:
-                    objectId && isFeedbackGiven(index, index, token.text, objectId)
+                    objectId && isFeedbackGiven(index, objectId)
                       ? '#0000EE'
                       : 'none',
-                  textDecorationThickness: '2px',
+                  textDecorationThickness: '1px',
                 }}
               >
                 {token.text}
