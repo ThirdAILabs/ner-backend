@@ -9,6 +9,7 @@ interface Model {
   Status: string;
   BaseModelId?: string;
   Tags?: string[];
+  Finetunable: boolean;
 }
 
 interface Group {
