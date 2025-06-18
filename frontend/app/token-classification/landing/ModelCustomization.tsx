@@ -20,6 +20,7 @@ import { Toaster, toast } from 'react-hot-toast';
 import { nerService } from '@/lib/backend';
 import { useHealth } from '@/contexts/HealthProvider';
 import { TokenHighlighter } from '@/components/feedback/TokenHighlighter';
+import useTelemetry from '@/hooks/useTelemetry';
 
 export interface UserFeedbackSectionProps {
   feedbackData: any[];
@@ -198,6 +199,15 @@ export function UserFeedbackSection({
 }
 
 const ModelCustomization: React.FC = () => {
+  const recordEvent = useTelemetry();
+  useEffect(() => {
+    recordEvent({
+      UserAction: 'view',
+      UIComponent: 'Model Customization Page',
+      UI: 'Token Classification Page',
+    });
+  }, []);
+
   const { healthStatus } = useHealth();
   const [models, setModels] = useState<Model[]>([]);
   const [selectedModel, setSelectedModel] = useState<Model | null>(null);

@@ -26,6 +26,7 @@ import { useHealth } from '@/contexts/HealthProvider';
 import { alpha } from '@mui/material/styles';
 
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import useTelemetry from '@/hooks/useTelemetry';
 
 function JobStatus({ report }: { report: ReportWithStatus }) {
   if (report.isLoadingStatus) {
@@ -394,6 +395,15 @@ function Job({ initialReport, onDelete }: JobProps) {
 }
 
 export default function Jobs() {
+  const recordEvent = useTelemetry();
+  useEffect(() => {
+    recordEvent({
+      UserAction: 'view',
+      UIComponent: 'Scans Dashboard Page',
+      UI: 'Token Classification Page',
+    });
+  }, []);
+  
   const [reports, setReports] = useState<ReportWithStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
