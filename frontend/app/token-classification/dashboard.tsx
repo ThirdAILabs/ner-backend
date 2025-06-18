@@ -30,7 +30,7 @@ const Dashboard = () => {
     });
   }, []);
   const { healthStatus } = useHealth();
-  const { license } = useLicense();
+  const { license, isEnterprise } = useLicense();
   const [error, setError] = useState<string | null>(null);
 
   // Don't make API calls if health check hasn't passed
@@ -310,7 +310,7 @@ const Dashboard = () => {
         </CardContent>
       </Card>
 
-      {license && license?.LicenseInfo?.LicenseType === 'free' && (
+      {!isEnterprise && (
         <div className=" mt-[-60px]">
           <Box
             sx={{
@@ -345,8 +345,8 @@ const Dashboard = () => {
                   mb: 2,
                 }}
               >
-                {`${formatFileSize(license?.LicenseInfo?.Usage.UsedBytes)} / ${formatFileSize(
-                  license?.LicenseInfo?.Usage.MaxBytes
+                {`${formatFileSize(license?.LicenseInfo?.Usage.UsedBytes || 0)} / ${formatFileSize(
+                  license?.LicenseInfo?.Usage.MaxBytes || 0
                 )} monthly quota used`}
               </Typography>
 
@@ -361,7 +361,7 @@ const Dashboard = () => {
               >
                 <Box
                   sx={{
-                    width: `${(license?.LicenseInfo?.Usage.UsedBytes / license?.LicenseInfo?.Usage.MaxBytes) * 100}%`,
+                    width: `${license ? (license?.LicenseInfo?.Usage.UsedBytes / license?.LicenseInfo?.Usage.MaxBytes) * 100 : 0}%`,
                     height: '100%',
                     bgcolor: '#60a5fa',
                     borderRadius: 4,
