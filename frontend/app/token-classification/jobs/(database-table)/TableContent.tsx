@@ -317,14 +317,18 @@ export function TableContent({
       ) : (
         filteredRecords.map((record, index) => {
           const fileIdentifier = record.sourceObject;
-          console.log('File identifier...', fileIdentifier);
+
           const { fullPath, openFile } = handleFullPath(fileIdentifier);
           const tokens = record.taggedTokens.flatMap((token) => {
             const [text, tag] = token;
+            console.log("Text..", text);
+            let transformedTag = "";
+            if (tagFilters[tag])
+              transformedTag = tag;
             return text
               .split(/\s+/)
               .filter((word) => word.trim() !== '')
-              .map((word) => ({ text: word, tag }));
+              .map((word) => ({ text: word, tag: transformedTag }));
           });
 
           const onTagAssign = (startIndex: number, endIndex: number, newTag: string) => {
@@ -354,7 +358,7 @@ export function TableContent({
               tokens.map((token) => token.tag)
             );
           };
-
+          console.log("Tokens...", tokens);
           return (
             <details
               key={index}
