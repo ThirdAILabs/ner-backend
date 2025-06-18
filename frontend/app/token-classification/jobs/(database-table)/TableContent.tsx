@@ -33,7 +33,7 @@ export function TableContent({
   addFeedback,
 }: TableContentProps) {
   const { isEnterprise } = useLicense();
-  
+
   const tagColors = useMemo(() => {
     const colors: Record<string, HighlightColor> = {};
     tags

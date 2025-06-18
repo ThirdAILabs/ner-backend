@@ -208,7 +208,7 @@ const NewTagDialog: React.FC<{
 
 function JobDetail() {
   const { isEnterprise } = useLicense();
-  
+
   const searchParams = useSearchParams();
   const reportId: string = searchParams.get('jobId') as string;
   const [tabValue, setTabValue] = useState('analytics');
@@ -519,19 +519,17 @@ function JobDetail() {
             addFeedback={addFeedback}
             initialSelectedTag={selectedTag}
           />
-          {
-            isEnterprise && (    
-              <div className="fixed bottom-[30px] right-[30px] z-50 w-[300px] flex flex-col">
-                <FeedbackPanel
-                  feedbacks={displayedFeedback}
-                  availableTags={availableTags}
-                  onDelete={removeFeedback}
-                  onSubmit={submitFeedback}
-                  style={{ height: '500px' }}
-                />
-              </div>
-            )
-          }
+          {isEnterprise && (
+            <div className="fixed bottom-[30px] right-[30px] z-50 w-[300px] flex flex-col">
+              <FeedbackPanel
+                feedbacks={displayedFeedback}
+                availableTags={availableTags}
+                onDelete={removeFeedback}
+                onSubmit={submitFeedback}
+                style={{ height: '500px' }}
+              />
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>

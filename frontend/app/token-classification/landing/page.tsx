@@ -138,11 +138,7 @@ function PageContents() {
           >
             <Tab label="Scans Dashboard" value="jobs" />
             <Tab label="Usage Stats" value="monitoring" />
-            {
-              isEnterprise && (
-                <Tab label="Model Customization" value="customization" />
-              )
-            }
+            {isEnterprise && <Tab label="Model Customization" value="customization" />}
           </Tabs>
         </Box>
 
