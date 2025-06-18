@@ -412,6 +412,8 @@ export default function Jobs() {
 
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  const [quotaUsedPercentage, setQuotaUsedPercentage] = useState<number | null>(null);
+
   useEffect(() => {
     const fetchReports = async () => {
       try {
@@ -444,6 +446,14 @@ export default function Jobs() {
       }
     };
   }, [healthStatus]);
+
+  useEffect(() => {
+    if (license && license?.LicenseInfo?.LicenseType === 'free') {
+      setQuotaUsedPercentage(
+        (license.LicenseInfo.Usage.UsedBytes / license.LicenseInfo.Usage.MaxBytes) * 100
+      );
+    }
+  }, [reports]);
 
   if (loading) {
     return (
@@ -539,6 +549,17 @@ export default function Jobs() {
           {license && license.LicenseError === 'expired license'
             ? 'Your license has expired. Please contact ThirdAI support to renew your license.'
             : 'Your license is invalid. Please check your license key or contact ThirdAI support.'}
+        </div>
+      )}
+      {typeof quotaUsedPercentage === 'number' && quotaUsedPercentage > 75 && (
+        <div
+          className={`
+                      px-4 py-3 rounded mb-6 border 
+                      bg-yellow-100 border-yellow-200 text-yellow-600
+                    `}
+        >
+          You have used {quotaUsedPercentage?.toFixed(2)}% of your monthly quota. Any report
+          exceeding the quota will not be processed. The quota resets on the 1st of each month.
         </div>
       )}
       <Card
