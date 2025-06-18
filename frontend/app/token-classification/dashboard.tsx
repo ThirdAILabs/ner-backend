@@ -25,6 +25,7 @@ import { formatFileSize } from '@/lib/utils';
 
 import Tooltip from '@mui/material/Tooltip';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import Image from 'next/image';
 
 const Dashboard = () => {
   const recordEvent = useTelemetry();
@@ -236,9 +237,9 @@ const Dashboard = () => {
                       ? 'All Models'
                       : models.find((m) => m.Id === val)?.Name
                         ? models
-                            .find((m) => m.Id === val)!
-                            .Name.charAt(0)
-                            .toUpperCase() + models.find((m) => m.Id === val)!.Name.slice(1)
+                          .find((m) => m.Id === val)!
+                          .Name.charAt(0)
+                          .toUpperCase() + models.find((m) => m.Id === val)!.Name.slice(1)
                         : val
                   }
                   sx={{
@@ -312,77 +313,87 @@ const Dashboard = () => {
           )}
 
           {/* Metrics Viewer */}
-          <Box
-            sx={{
-              bgcolor: 'white',
-              borderRadius: '12px',
-              border: '1px solid',
-              borderColor: 'grey.200',
-              overflow: 'hidden',
-            }}
-          >
+          <div className='mt-[-20px] p-0'>
             <MetricsDataViewer modelId={selectedModel?.Id || undefined} days={days} />
-          </Box>
+          </div>
         </CardContent>
       </Card>
 
       {license && license?.LicenseInfo?.LicenseType === 'free' && (
-        <Card
-          sx={{
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            bgcolor: 'white',
-            borderRadius: '12px',
-            mx: 'auto',
-            mt: 4,
-            maxWidth: '1400px',
-          }}
+        <div className=' mt-[-60px]'
         >
-          <CardContent sx={{ p: 4 }}>
-            <Box
-              sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                mb: 4,
-              }}
-            >
+          <Box sx={{
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center'
+          }}>
+            <Box sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 2,
+              flex: '0 0 50%'
+            }}>
               <Typography
-                variant="h5"
+                variant="h4"
                 sx={{
                   fontWeight: 600,
+                  color: 'rgb(102,102,102)',
                   fontSize: '1.5rem',
-                  color: '#4a5568',
                 }}
               >
                 Free Tier Quota
               </Typography>
+
+              <Typography
+                variant="body1"
+                sx={{
+                  color: '#64748b',
+                  mb: 2,
+                }}
+              >
+                {`${formatFileSize(license?.LicenseInfo?.Usage.UsedBytes)} / ${formatFileSize(
+                  license?.LicenseInfo?.Usage.MaxBytes
+                )} monthly quota used`}
+              </Typography>
+
+              <Box
+                sx={{
+                  width: '100%',
+                  height: 8,
+                  bgcolor: '#e2e8f0',
+                  borderRadius: 4,
+                  overflow: 'hidden',
+                }}
+              >
+                <Box
+                  sx={{
+                    width: `${(license?.LicenseInfo?.Usage.UsedBytes / license?.LicenseInfo?.Usage.MaxBytes) * 100}%`,
+                    height: '100%',
+                    bgcolor: '#60a5fa',
+                    borderRadius: 4,
+                    transition: 'width 0.5s ease-in-out',
+                  }}
+                />
+              </Box>
             </Box>
 
-            <Box
-              sx={{
-                bgcolor: 'white',
-                borderRadius: '12px',
-                border: '1px solid',
-                borderColor: 'grey.200',
-                overflow: 'hidden',
-              }}
-            >
-              <div style={{ padding: '16px' }}>
-                <MetricsDataViewerCard
-                  value={`${formatFileSize(license?.LicenseInfo?.Usage.UsedBytes)} / ${formatFileSize(license?.LicenseInfo?.Usage.MaxBytes)}`}
-                  label={
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      Quota Used
-                      <Tooltip title="Resets on the 1st of each month.">
-                        <InfoOutlinedIcon fontSize="inherit" sx={{ cursor: 'pointer' }} />
-                      </Tooltip>
-                    </Box>
-                  }
-                />
-              </div>
+            <Box sx={{
+              flex: '0 0 50%',
+              display: 'flex',
+              justifyContent: 'flex-end'
+            }}>
+              <Image
+                src="/image.png"
+                alt="Background pattern"
+                width={400}
+                height={256}
+                style={{
+                  objectFit: 'contain',
+                }}
+              />
             </Box>
-          </CardContent>
-        </Card>
+          </Box>
+        </div>
       )}
     </>
   );

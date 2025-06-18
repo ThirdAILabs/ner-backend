@@ -211,7 +211,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
   }
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ py: 2, px: 0 }}>
       <Box
         sx={{
           display: 'grid',
