@@ -75,7 +75,8 @@ const GroupCard: React.FC<GroupProps> = ({ name, definition }) => (
 );
 
 interface CustomTag {
-  [key: string]: string;
+  name: string;
+  pattern: string;
 }
 
 function JobDetail() {
@@ -309,7 +310,7 @@ function JobDetail() {
 
           {/* Custom Tags */}
           <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3, marginTop: 3 }}>
-            <h2 className="text-2xl font-medium mb-4">Tags</h2>
+            <h2 className="text-2xl font-medium mb-4">Custom Tags</h2>
             <div className="flex justify-between items-center mb-4">
               {isLoading ? (
                 <div className="flex justify-center py-4">
@@ -387,6 +388,7 @@ function JobDetail() {
           <DatabaseTable
             groups={reportData?.Groups?.map((g) => g.Name) || []}
             tags={availableTagsCount}
+            customTagNames={customTags.map(t => t.name)}
             uploadId={reportData?.IsUpload ? reportData?.SourceS3Prefix : ''}
             addFeedback={addFeedback}
             initialSelectedTag={selectedTag}

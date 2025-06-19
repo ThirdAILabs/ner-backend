@@ -16,6 +16,7 @@ import type {
 export function DatabaseTable({
   groups: groupsProp,
   tags,
+  customTagNames,
   uploadId,
   addFeedback,
   initialSelectedTag,
@@ -379,6 +380,7 @@ export function DatabaseTable({
                   tokenRecords={tokenRecords}
                   groupFilters={groupFilters}
                   tagFilters={tagFilters}
+                  customTagNames={customTagNames}
                   isLoadingObjectRecords={isLoadingObjectRecords}
                   isLoadingTokenRecords={isLoadingTokenRecords}
                   tags={tags}

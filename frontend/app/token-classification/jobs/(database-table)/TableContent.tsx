@@ -25,6 +25,7 @@ export function TableContent({
   isLoadingObjectRecords,
   isLoadingTokenRecords,
   tags,
+  customTagNames,
   hasMoreTokens = false,
   hasMoreObjects = false,
   onLoadMore,
@@ -211,7 +212,9 @@ export function TableContent({
                 objectId: fileIdentifier,
               },
               tokens.map((token) => token.text),
-              tokens.map((token) => token.tag)
+              // Backend expects samples to only include tags that are supported by the AI model.
+              // That excludes custom tags.
+              tokens.map((token) => customTagNames.includes(token.tag) ? 'O' : token.tag)
             );
           };
           return (
