@@ -48,47 +48,6 @@ const pathToFile = async (filePath) => {
   };
 };
 
-// export const openFileChooser = async (supportedTypes) => {
-//   const result = {
-//     directlySelected: [],
-//     allFiles: [],
-//     allFilePaths: [],
-//   }
-
-//   const dialogResult = await dialog.showOpenDialog({
-//     filters: [
-//       {
-//         name: 'Supported Files',
-//         extensions: supportedTypes
-//       },
-//     ],
-//     properties: [
-//       // Note: we cannot both have openFile and openDirectory on Windows.
-//       'openFile',
-//       'openDirectory',
-//       'multiSelections',
-//     ]
-//   });
-
-//   if (dialogResult.canceled) {
-//     return result;
-//   }
-
-//   let allFilePaths = await gatherFilesRecursively(dialogResult.filePaths, supportedTypes);
-  
-//   // Deduplicate allFiles and sort alphabetically
-//   allFilePaths = [...new Set(allFilePaths)].sort();
-
-//   const allFiles = await Promise.all(
-//     allFilePaths.map(pathToFile)
-//   );
-
-//   result.directlySelected = dialogResult.filePaths;
-//   result.allFiles = allFiles;
-//   result.allFilePaths = allFilePaths;
-
-//   return result;
-// } 
 export const openFileChooser = async (supportedTypes) => {
   const result = {
     directlySelected: [],
