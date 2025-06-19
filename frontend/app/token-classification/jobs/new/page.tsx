@@ -794,9 +794,20 @@ export default function NewJobPage() {
       }, 2000);
       setSelectedFilesMeta([]);
       // Optionally redirect or show a message
-    } catch (err: any) {
-      setError('Failed to create report. Please try again.');
-      console.error(err);
+    } catch (err: unknown) {
+      let errorMessage = 'An unexpected error occurred';
+
+      if (
+        typeof err === 'object' &&
+        err !== null &&
+        'response' in err &&
+        typeof (err as any).response?.data === 'string'
+      ) {
+        const data = (err as any).response.data;
+        errorMessage = (data.charAt(0).toUpperCase() + data.slice(1)).trim();
+      }
+
+      setError(`Failed to create report. ${errorMessage}. Please try again.`);
     } finally {
       setIsSubmitting(false);
     }
