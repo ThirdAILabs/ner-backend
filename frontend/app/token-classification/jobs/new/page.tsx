@@ -622,7 +622,6 @@ export default function NewJobPage() {
     return { allFilesMeta: results.allFilesMeta };
   };
 
-  // Handler for selecting files/folders
   const handleSelectFiles = async () => {
     setIsLoadingFiles(true);
     setError(null);
