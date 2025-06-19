@@ -561,54 +561,6 @@ export default function NewJobPage() {
     setIsCustomTagDialogOpen(false);
   };
 
-  // const addFiles = (files: [File, string][]) => {
-  //   const newSelectedFiles = [...selectedFiles];
-
-  //   files.forEach(([newFile, newFullPath]) => {
-  //     const existingIndex = newSelectedFiles.findIndex((existingFile) => {
-  //       // In practice, either both are empty or both are not empty
-  //       // If both are not empty, it means we are using electron to choose files
-  //       // Otherwise, we are using the file input to choose files
-  //       if (existingFile[1] !== '' && newFullPath !== '') {
-  //         return existingFile[1] === newFullPath;
-  //       }
-  //       return existingFile[0].name === newFile.name;
-  //     });
-
-  //     if (existingIndex !== -1) {
-  //       // Duplicate file so, replace the existing file with the new one
-  //       newSelectedFiles[existingIndex] = [newFile, newFullPath];
-  //     } else {
-  //       // Add the new file
-  //       newSelectedFiles.push([newFile, newFullPath]);
-  //     }
-  //   });
-
-  //   // This is to handle the case where there are multiple files with the same name
-  //   // but different full paths.
-  //   const newFileNames = uniqueFileNames(newSelectedFiles.map((file) => file[0].name));
-
-  //   setSelectedFiles(
-  //     newSelectedFiles.map(([file, fullPath], index) => {
-  //       const newFile = new File([file], newFileNames[index], {
-  //         type: file.type,
-  //         lastModified: file.lastModified,
-  //       });
-  //       return [newFile, fullPath];
-  //     })
-  //   );
-  // };
-
-  // // Update file handling to use file/directory input
-  // const handleLocalFiles = (files: [File, string][], isUploaded: boolean) => {
-  //   const supportedFiles = files.filter((file) => isFileSupported(file[0].name));
-
-  //   if (supportedFiles.length > 0) {
-  //     addFiles(supportedFiles);
-  //   } else {
-  //     if (isUploaded) setIsConfirmDialogOpen(true);
-  //   }
-  // };
 
   const getFilesFromElectron = async (supportedTypes: string[]) => {
     // @ts-ignore
