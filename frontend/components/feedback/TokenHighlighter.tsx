@@ -57,10 +57,16 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const dropdownQueryRef = useRef<HTMLInputElement>(null);
 
+  // Modify the nonTrivialTagColors calculation to include all non-O tags from both availableTags and tokens
   const nonTrivialTagColors = useMemo(() => {
     const colors: Record<string, HighlightColor> = {};
-    availableTags
-      .filter((tag) => tag !== 'O')
+    const allTags = new Set([
+      ...availableTags,
+      ...tokens.map(token => token.tag)
+    ]);
+
+    Array.from(allTags)
+      .filter(tag => tag !== 'O')
       .forEach((tag, index) => {
         colors[tag] = {
           text: PASTELS[index % PASTELS.length],
@@ -68,7 +74,7 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
         };
       });
     return colors;
-  }, [availableTags]);
+  }, [availableTags, tokens]);
 
   const handleMouseDown = (index: number) => {
     if (!editable) return;
@@ -189,18 +195,18 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
             spotlightEndIndex &&
             index >= spotlightStartIndex &&
             index <= spotlightEndIndex;
-          
+
           // Explicitly check if tagFilters[token.tag] is false instead of using !tagFilters[token.tag]
           // because tagFilters[token.tag] could be undefined for trivial and new tags.
           const isFilteredOut = tagFilters && tagFilters[token.tag] === false;
-          
+
           // Default values for trivial tags.
           let textBackgroundColor = 'transparent';
           let textBorder = 'none';
           let showTag = false;
           let tagBackgroundColor = NEUTRAL_TAG_COLOR;
           let tagTextColor = 'white';
-          
+
           // This is equivalent to token.tag !== 'O' && nonTrivialTagColors[token.tag]
           if (nonTrivialTagColors[token.tag]) {
             textBackgroundColor = nonTrivialTagColors[token.tag].text;
@@ -222,11 +228,11 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
           if (isSelected) {
             textBackgroundColor = SELECTING_COLOR;
           }
-          
+
           if (hoveredIndex === index && editable) {
             textBackgroundColor = HOVERING_COLOR;
           }
-          
+
           return (
             <span
               key={index}
@@ -283,7 +289,7 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
           onKeyDown={(e) => {
             // Keystrokes are relayed to the input field except for navigation keys.
             // This creates a smoother user experience.
-            if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || 
+            if (e.key === 'ArrowUp' || e.key === 'ArrowDown' ||
               e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Enter') {
               return;
             }
@@ -303,32 +309,32 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
             },
           }}
         >
-            <input
-              type="text"
-              value={query}
-              onChange={handleInputChange}
-              onKeyDown={(e) => {
-                // Except for navigation keys, don't propagate the keystroke to the menu component
-                // so the selector does not jump around, creating a smooth user experience.
-                if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || 
-                    e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-                  return;
-                }
-                e.stopPropagation();
-              }}
-              className="w-full p-2 border border-gray-300 rounded mb-1 bg-white text-base"
-              placeholder="Search Tags..."
-              autoFocus
-              ref={dropdownQueryRef}
-              style={{
-                padding: '10px 15px',
-                border: 'none',
-                outline: 'none',
-                boxShadow: 'none',
-                backgroundColor: 'transparent',
-              }}
-            />
-          
+          <input
+            type="text"
+            value={query}
+            onChange={handleInputChange}
+            onKeyDown={(e) => {
+              // Except for navigation keys, don't propagate the keystroke to the menu component
+              // so the selector does not jump around, creating a smooth user experience.
+              if (e.key === 'ArrowUp' || e.key === 'ArrowDown' ||
+                e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                return;
+              }
+              e.stopPropagation();
+            }}
+            className="w-full p-2 border border-gray-300 rounded mb-1 bg-white text-base"
+            placeholder="Search Tags..."
+            autoFocus
+            ref={dropdownQueryRef}
+            style={{
+              padding: '10px 15px',
+              border: 'none',
+              outline: 'none',
+              boxShadow: 'none',
+              backgroundColor: 'transparent',
+            }}
+          />
+
           {query && !queryMatchesTag && (
             <MenuItem
               onClick={() => handleTagSelect(query)}
