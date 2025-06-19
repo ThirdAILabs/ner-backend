@@ -29,12 +29,14 @@ export const formatFileSize = (bytes: number, space: boolean = false): string =>
 
 // Returns [file, fullPath] pairs
 export const getFilesFromElectron = async (
-  supportedTypes: string[]
+  supportedTypes: string[],
+  isDirectoryMode: boolean = false
 ): Promise<{ files: [File, string][]; isUploaded: boolean }> => {
   // @ts-ignore
   const results = await window.electron.openFileChooser(
     // Electron API does not expect '.' in the file extension
-    supportedTypes.map((t) => t.replace('.', ''))
+    supportedTypes.map((t) => t.replace('.', '')),
+    isDirectoryMode
   );
 
   const isUploaded = !!results?.directlySelected?.length;

@@ -170,7 +170,7 @@ autoUpdater.on('download-progress', (progress) => {
 
 ipcMain.handle('telemetry', async (_, data) => await insertTelemetryEvent(data));
 ipcMain.handle('get-user-id', async () => getCurrentUserId());
-ipcMain.handle('open-file-chooser', async (_, types) => openFileChooser(types));
+ipcMain.handle('open-file-chooser', async (_, types, isDirectoryMode) => openFileChooser(types, isDirectoryMode));
 ipcMain.handle('open-file', async (_, filePath) => openFile(filePath));
 
 app.whenReady().then(async () => {
