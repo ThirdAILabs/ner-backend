@@ -99,7 +99,6 @@ allFilesMeta = allFilesMeta.filter(file => {
 });
   
   const totalSize = allFilesMeta.reduce((sum, file) => sum + file.size, 0);
-  console.log(`Total selected files size: ${totalSize} bytes, ${totalSize / (1024 * 1024 * 1024)} GB`);
 
   result.directlySelected = dialogResult.filePaths;
   result.allFilePaths = allFilePaths;
