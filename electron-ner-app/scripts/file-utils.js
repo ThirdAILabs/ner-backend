@@ -60,7 +60,12 @@ export const openFileChooser = async (supportedTypes) => {
     filters: [
       { name: 'Supported Files', extensions: supportedTypes },
     ],
-    properties: ['openFile', 'openDirectory', 'multiSelections'],
+    properties: [
+      // Note: we cannot both have openFile and openDirectory on Windows.
+      'openFile', 
+      'openDirectory', 
+      'multiSelections',
+    ]
   });
 
   if (dialogResult.canceled) return result;
