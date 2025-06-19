@@ -789,6 +789,9 @@ export default function NewJobPage() {
       });
 
       setSuccess(true);
+      setTimeout(() => {
+        router.push(`/token-classification/landing?tab=jobs`);
+      }, 2000);
       setSelectedFilesMeta([]);
       // Optionally redirect or show a message
     } catch (err: any) {
