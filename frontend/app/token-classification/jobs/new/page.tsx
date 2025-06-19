@@ -643,30 +643,6 @@ export default function NewJobPage() {
   };
 
   // Handler for uploading files (calls main process IPC)
-  const handleUpload = async () => {
-    // setIsUploading(true);
-    setError(null);
-    setSuccess(false);
-    try {
-      const filePaths = selectedFilesMeta.map((f) => f.fullPath);
-      const uploadUrl = 'https://your-backend/upload'; // Replace with your backend endpoint
-      // @ts-ignore
-      const result = await window.electron.invoke('upload-files', {
-        filePaths,
-        uploadUrl,
-      });
-      if (result.success) {
-        setSuccess(true);
-        setSelectedFilesMeta([]);
-      } else {
-        setError(result.error || 'Upload failed');
-      }
-    } catch (err: any) {
-      setError('Upload failed.');
-    } finally {
-      // setIsUploading(false);
-    }
-  };
 
   const validateS3Bucket = async () => {
     if (!sourceS3Bucket || !sourceS3Region) {
