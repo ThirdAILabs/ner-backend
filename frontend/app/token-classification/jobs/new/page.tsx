@@ -10,6 +10,8 @@ import { nerService } from '@/lib/backend';
 import { NO_GROUP, uniqueFileNames, getFilesFromElectron } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 
+import { nerBaseUrl } from '@/lib/axios.config';
+
 const SUPPORTED_TYPES = ['.pdf', '.txt', '.csv', '.html', '.json', '.xml'];
 
 // Tag chip component - reused from the detail page but with interactive mode
@@ -145,6 +147,7 @@ interface FileSourcesProps {
   handleLocalFiles: (files: [File, string][], isUploaded: boolean) => void;
   isLoadingFiles: boolean;
   setIsLoadingFiles: (loading: boolean) => void;
+  setSelectedFilesMeta: React.Dispatch<React.SetStateAction<any[]>>;
 }
 
 const FileSources: React.FC<FileSourcesProps> = ({
@@ -152,6 +155,7 @@ const FileSources: React.FC<FileSourcesProps> = ({
   handleLocalFiles,
   isLoadingFiles,
   setIsLoadingFiles,
+  setSelectedFilesMeta,
 }) => {
   const s3 = (
     <SourceOption
@@ -189,8 +193,15 @@ const FileSources: React.FC<FileSourcesProps> = ({
             selectSource('files');
             setIsLoadingFiles(true);
             try {
-              const { files, isUploaded } = await getFilesFromElectron(SUPPORTED_TYPES);
-              handleLocalFiles(files, isUploaded);
+              const { allFilesMeta, totalSize, error } =
+                await getFilesFromElectron(SUPPORTED_TYPES);
+              if (error) {
+                // setError(error);
+                setSelectedFilesMeta([]);
+              } else {
+                setSelectedFilesMeta(allFilesMeta || []);
+                console.log('Total size of selected files:', totalSize / (1024 * 1024), 'MB');
+              }
             } finally {
               setIsLoadingFiles(false);
             }
@@ -304,7 +315,8 @@ export default function NewJobPage() {
   const [sourceS3Bucket, setSourceS3Bucket] = useState('');
   const [sourceS3Prefix, setSourceS3Prefix] = useState('');
   // [File object, full path] pairs. Full path may be empty if electron is not available.
-  const [selectedFiles, setSelectedFiles] = useState<[File, string][]>([]);
+  const [selectedFilesMeta, setSelectedFilesMeta] = useState<any[]>([]);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
   const [existingReportName, setExistingReportName] = useState<string[]>([]);
@@ -550,52 +562,109 @@ export default function NewJobPage() {
     setIsCustomTagDialogOpen(false);
   };
 
-  const addFiles = (files: [File, string][]) => {
-    const newSelectedFiles = [...selectedFiles];
+  // const addFiles = (files: [File, string][]) => {
+  //   const newSelectedFiles = [...selectedFiles];
 
-    files.forEach(([newFile, newFullPath]) => {
-      const existingIndex = newSelectedFiles.findIndex((existingFile) => {
-        // In practice, either both are empty or both are not empty
-        // If both are not empty, it means we are using electron to choose files
-        // Otherwise, we are using the file input to choose files
-        if (existingFile[1] !== '' && newFullPath !== '') {
-          return existingFile[1] === newFullPath;
-        }
-        return existingFile[0].name === newFile.name;
-      });
+  //   files.forEach(([newFile, newFullPath]) => {
+  //     const existingIndex = newSelectedFiles.findIndex((existingFile) => {
+  //       // In practice, either both are empty or both are not empty
+  //       // If both are not empty, it means we are using electron to choose files
+  //       // Otherwise, we are using the file input to choose files
+  //       if (existingFile[1] !== '' && newFullPath !== '') {
+  //         return existingFile[1] === newFullPath;
+  //       }
+  //       return existingFile[0].name === newFile.name;
+  //     });
 
-      if (existingIndex !== -1) {
-        // Duplicate file so, replace the existing file with the new one
-        newSelectedFiles[existingIndex] = [newFile, newFullPath];
-      } else {
-        // Add the new file
-        newSelectedFiles.push([newFile, newFullPath]);
-      }
-    });
+  //     if (existingIndex !== -1) {
+  //       // Duplicate file so, replace the existing file with the new one
+  //       newSelectedFiles[existingIndex] = [newFile, newFullPath];
+  //     } else {
+  //       // Add the new file
+  //       newSelectedFiles.push([newFile, newFullPath]);
+  //     }
+  //   });
 
-    // This is to handle the case where there are multiple files with the same name
-    // but different full paths.
-    const newFileNames = uniqueFileNames(newSelectedFiles.map((file) => file[0].name));
+  //   // This is to handle the case where there are multiple files with the same name
+  //   // but different full paths.
+  //   const newFileNames = uniqueFileNames(newSelectedFiles.map((file) => file[0].name));
 
-    setSelectedFiles(
-      newSelectedFiles.map(([file, fullPath], index) => {
-        const newFile = new File([file], newFileNames[index], {
-          type: file.type,
-          lastModified: file.lastModified,
-        });
-        return [newFile, fullPath];
-      })
+  //   setSelectedFiles(
+  //     newSelectedFiles.map(([file, fullPath], index) => {
+  //       const newFile = new File([file], newFileNames[index], {
+  //         type: file.type,
+  //         lastModified: file.lastModified,
+  //       });
+  //       return [newFile, fullPath];
+  //     })
+  //   );
+  // };
+
+  // // Update file handling to use file/directory input
+  // const handleLocalFiles = (files: [File, string][], isUploaded: boolean) => {
+  //   const supportedFiles = files.filter((file) => isFileSupported(file[0].name));
+
+  //   if (supportedFiles.length > 0) {
+  //     addFiles(supportedFiles);
+  //   } else {
+  //     if (isUploaded) setIsConfirmDialogOpen(true);
+  //   }
+  // };
+
+  const getFilesFromElectron = async (supportedTypes: string[]) => {
+    // @ts-ignore
+    const results = await window.electron.openFileChooser(
+      supportedTypes.map((t) => t.replace('.', ''))
     );
+    if (results.error) {
+      return { allFilesMeta: [], error: results.error };
+    }
+    return { allFilesMeta: results.allFilesMeta };
   };
 
-  // Update file handling to use file/directory input
-  const handleLocalFiles = (files: [File, string][], isUploaded: boolean) => {
-    const supportedFiles = files.filter((file) => isFileSupported(file[0].name));
+  // Handler for selecting files/folders
+  const handleSelectFiles = async () => {
+    setIsLoadingFiles(true);
+    setError(null);
+    try {
+      const result = await getFilesFromElectron(SUPPORTED_TYPES);
+      if (result.error) {
+        setError(result.error);
+        setSelectedFilesMeta([]);
+      } else {
+        setSelectedFilesMeta(result.allFilesMeta);
+      }
+    } catch (err: any) {
+      setError('Failed to select files.');
+      setSelectedFilesMeta([]);
+    } finally {
+      setIsLoadingFiles(false);
+    }
+  };
 
-    if (supportedFiles.length > 0) {
-      addFiles(supportedFiles);
-    } else {
-      if (isUploaded) setIsConfirmDialogOpen(true);
+  // Handler for uploading files (calls main process IPC)
+  const handleUpload = async () => {
+    // setIsUploading(true);
+    setError(null);
+    setSuccess(false);
+    try {
+      const filePaths = selectedFilesMeta.map((f) => f.fullPath);
+      const uploadUrl = 'https://your-backend/upload'; // Replace with your backend endpoint
+      // @ts-ignore
+      const result = await window.electron.invoke('upload-files', {
+        filePaths,
+        uploadUrl,
+      });
+      if (result.success) {
+        setSuccess(true);
+        setSelectedFilesMeta([]);
+      } else {
+        setError(result.error || 'Upload failed');
+      }
+    } catch (err: any) {
+      setError('Upload failed.');
+    } finally {
+      // setIsUploading(false);
     }
   };
 
@@ -618,7 +687,7 @@ export default function NewJobPage() {
   };
 
   const removeFile = (index: number) => {
-    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+    setSelectedFilesMeta((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleCloseDialog = () => {
@@ -674,7 +743,7 @@ export default function NewJobPage() {
 
     if (
       (selectedSource === 'files' || selectedSource === 'directory') &&
-      selectedFiles.length === 0
+      selectedFilesMeta.length === 0
     ) {
       setError('Please select at least one file');
       return;
@@ -689,34 +758,42 @@ export default function NewJobPage() {
     setIsSubmitting(true);
 
     try {
-      let uploadId: string | undefined;
+      setIsSubmitting(true);
+      setError(null);
+      setSuccess(false);
 
-      // Handle file/directory uploads if needed
-      if (selectedSource === 'files' || selectedSource === 'directory') {
-        const uploadResponse = await nerService.uploadFiles(selectedFiles.map(([file, _]) => file));
-        uploadId = uploadResponse.Id;
+      // 1. Upload files via Electron main process
+      const filePaths = selectedFilesMeta.map((f) => f.fullPath);
+      const uploadUrl = `${nerBaseUrl}/uploads`;
 
-        // Store file path mappings for local uploads if full path is available
-        const mapping: { [filename: string]: string } = {};
-        selectedFiles.forEach(([file, fullPath]) => {
-          if (fullPath) {
-            mapping[file.name] = fullPath;
-          }
-        });
-        if (Object.keys(mapping).length > 0) {
-          await nerService.storeFileNameToPath(uploadId, mapping);
-          console.log('stored upload paths', mapping);
-        }
+      // @ts-ignore
+      const result = await window.electron.invoke('upload-files', { filePaths, uploadUrl });
+
+      if (!result.success || !result.uploadId) {
+        setError(result.error || 'Upload failed');
+        setIsSubmitting(false);
+        return;
       }
 
-      // Create custom tags object for API
+      console.log('Upload result:', result);
+
+      // 2. Store file path mappings if needed
+      const mapping: { [filename: string]: string } = {};
+      selectedFilesMeta.forEach((fileMeta) => {
+        if (fileMeta.fullPath) {
+          mapping[fileMeta.name] = fileMeta.fullPath;
+        }
+      });
+      if (Object.keys(mapping).length > 0) {
+        await nerService.storeFileNameToPath(result.uploadId, mapping);
+        console.log('stored upload paths', mapping);
+      }
       const customTagsObj: Record<string, string> = {};
       customTags.forEach((tag) => {
         customTagsObj[tag.name] = tag.pattern;
       });
 
-      // Create the report
-      console.log('Job Name: ', jobName);
+      // 3. Create the report
       const response = await nerService.createReport({
         ModelId: selectedModelId,
         Tags: selectedTags,
@@ -729,36 +806,106 @@ export default function NewJobPage() {
               SourceS3Prefix: sourceS3Prefix || undefined,
             }
           : {
-              UploadId: uploadId,
+              UploadId: result.uploadId,
             }),
         Groups: groups,
         report_name: jobName,
       });
 
       setSuccess(true);
-
-      // Redirect after success
-      setTimeout(() => {
-        router.push(`/token-classification/landing?tab=jobs`);
-      }, 2000);
-    } catch (err: unknown) {
-      let errorMessage = 'An unexpected error occurred';
-
-      if (
-        typeof err === 'object' &&
-        err !== null &&
-        'response' in err &&
-        typeof (err as any).response?.data === 'string'
-      ) {
-        const data = (err as any).response.data;
-        errorMessage = (data.charAt(0).toUpperCase() + data.slice(1)).trim();
-      }
-
-      setError(`Failed to create report. ${errorMessage}. Please try again.`);
+      setSelectedFilesMeta([]);
+      // Optionally redirect or show a message
+    } catch (err: any) {
+      setError('Failed to create report. Please try again.');
       console.error(err);
     } finally {
       setIsSubmitting(false);
     }
+
+    // try {
+    //   const filePaths = selectedFilesMeta.map((f) => f.fullPath);
+    //   const uploadUrl = `${nerBaseUrl}/uploads`;
+
+    //   // @ts-ignore
+    //   const result = await window.electron.invoke('upload-files', { filePaths, uploadUrl });
+    //   if (result.success) {
+    //     setSuccess(true);
+    //     setSelectedFilesMeta([]);
+    //   } else {
+    //     setError(result.error || 'Upload failed');
+    //   }
+    //   // let uploadId: string | undefined;
+
+    //   // // Handle file/directory uploads if needed
+    //   // if (selectedSource === 'files' || selectedSource === 'directory') {
+    //   //   const uploadResponse = await nerService.uploadFiles(
+    //   //     selectedFilesMeta.map((file) => file)
+    //   //   );
+    //   //   uploadId = uploadResponse.Id;
+
+    //   //   // Store file path mappings for local uploads if full path is available
+    //   //   const mapping: { [filename: string]: string } = {};
+    //   //   selectedFilesMeta.forEach((fileMeta) => {
+    //   //     if (fileMeta.fullPath) {
+    //   //       mapping[fileMeta.name] = fileMeta.fullPath;
+    //   //     }
+    //   //   });
+    //   //   if (Object.keys(mapping).length > 0) {
+    //   //     await nerService.storeFileNameToPath(uploadId, mapping);
+    //   //     console.log('stored upload paths', mapping);
+    //   //   }
+    //   // }
+
+    //   // Create custom tags object for API
+    //   const customTagsObj: Record<string, string> = {};
+    //   customTags.forEach((tag) => {
+    //     customTagsObj[tag.name] = tag.pattern;
+    //   });
+
+    //   // Create the report
+    //   console.log('Job Name: ', jobName);
+    //   const response = await nerService.createReport({
+    //     ModelId: selectedModelId,
+    //     Tags: selectedTags,
+    //     CustomTags: customTagsObj,
+    //     ...(selectedSource === 's3'
+    //       ? {
+    //           S3Endpoint: sourceS3Endpoint,
+    //           S3Region: sourceS3Region,
+    //           SourceS3Bucket: sourceS3Bucket,
+    //           SourceS3Prefix: sourceS3Prefix || undefined,
+    //         }
+    //       : {
+    //           UploadId: result.uploadId,
+    //         }),
+    //     Groups: groups,
+    //     report_name: jobName,
+    //   });
+
+    //   setSuccess(true);
+
+    //   // Redirect after success
+    //   setTimeout(() => {
+    //     router.push(`/token-classification/landing?tab=jobs`);
+    //   }, 2000);
+    // } catch (err: unknown) {
+    //   let errorMessage = 'An unexpected error occurred';
+
+    //   if (
+    //     typeof err === 'object' &&
+    //     err !== null &&
+    //     'response' in err &&
+    //     typeof (err as any).response?.data === 'string'
+    //   ) {
+    //     const data = (err as any).response.data;
+    //     errorMessage = (data.charAt(0).toUpperCase() + data.slice(1)).trim();
+    //   }
+
+    //   setError(`Failed to create report. ${errorMessage}. Please try again.`);
+    //   console.error(err);
+    // } finally {
+    //   setIsSubmitting(false);
+    // }
   };
   const [isPressedSubmit, setIsPressedSubmit] = useState<boolean>(false);
   const [nameError, setNameError] = useState<string | null>(null);
@@ -889,9 +1036,10 @@ export default function NewJobPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <FileSources
                   selectSource={setSelectedSource}
-                  handleLocalFiles={handleLocalFiles}
+                  handleLocalFiles={handleSelectFiles}
                   isLoadingFiles={isLoadingFiles}
                   setIsLoadingFiles={setIsLoadingFiles}
+                  setSelectedFilesMeta={setSelectedFilesMeta}
                 />
               </div>
 
@@ -906,32 +1054,32 @@ export default function NewJobPage() {
               )}
             </div>
 
-            {selectedFiles.length > 0 && (
+            {selectedFilesMeta.length > 0 && (
               <div className="mt-6">
                 <div className="flex justify-between items-center mb-2">
                   <h3 className="text-sm font-medium text-gray-700">
-                    Selected Files ({selectedFiles.length})
+                    Selected Files ({selectedFilesMeta.length})
                   </h3>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setSelectedFiles([])}
+                    onClick={() => setSelectedFilesMeta([])}
                     className="text-red-500"
                   >
                     Clear all
                   </Button>
                 </div>
                 <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-md">
-                  {selectedFiles.map(([file, fullPath], index) => (
+                  {selectedFilesMeta.map((fileMeta, index) => (
                     <div
-                      key={`${file.name}-${fullPath}-${index}`}
+                      key={fileMeta.fullPath || index}
                       className="flex items-center justify-between px-4 py-2 border-b last:border-b-0 hover:bg-gray-50"
                     >
                       <div className="flex items-center">
                         <div className="text-sm text-gray-600">
-                          {fullPath || file.name}
+                          {fileMeta.fullPath || fileMeta.name}
                           <span className="text-xs text-gray-400 ml-2">
-                            ({(file.size / 1024).toFixed(1)} KB)
+                            ({(fileMeta.size / 1024).toFixed(1)} KB)
                           </span>
                         </div>
                       </div>

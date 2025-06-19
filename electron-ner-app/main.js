@@ -7,6 +7,9 @@ import { startBackend } from './scripts/start-backend.js';
 import { openFileChooser, openFile } from './scripts/file-utils.js';
 import { initTelemetry, insertTelemetryEvent, closeTelemetry } from './telemetry.js';
 import { initializeUserId, getCurrentUserId } from './userIdManager.js';
+import axios from 'axios';
+import FormData from 'form-data';
+
 import log from 'electron-log';
 import electronUpdater from 'electron-updater';
 
@@ -172,6 +175,25 @@ ipcMain.handle('telemetry', async (_, data) => await insertTelemetryEvent(data))
 ipcMain.handle('get-user-id', async () => getCurrentUserId());
 ipcMain.handle('open-file-chooser', async (_, types) => openFileChooser(types));
 ipcMain.handle('open-file', async (_, filePath) => openFile(filePath));
+ipcMain.handle('upload-files', async (event, { filePaths, uploadUrl }) => {
+    // This function handle the actual file upload to the backend.
+    // For the UI, we only get the file metadata.
+    // When the user submits the report, we upload the files to the backend.
+  const form = new FormData();
+
+  for (const filePath of filePaths) {
+    form.append('files', fs.createReadStream(filePath), {
+      filename: path.basename(filePath)
+    });
+  }
+
+  const response = await axios.post(uploadUrl, form, {
+    headers: form.getHeaders()
+  });
+
+  return { success: true, uploadId: response.data.Id };
+});
+
 
 app.whenReady().then(async () => {
     await initializeUserId();

@@ -48,47 +48,90 @@ const pathToFile = async (filePath) => {
   };
 };
 
+// export const openFileChooser = async (supportedTypes) => {
+//   const result = {
+//     directlySelected: [],
+//     allFiles: [],
+//     allFilePaths: [],
+//   }
+
+//   const dialogResult = await dialog.showOpenDialog({
+//     filters: [
+//       {
+//         name: 'Supported Files',
+//         extensions: supportedTypes
+//       },
+//     ],
+//     properties: [
+//       // Note: we cannot both have openFile and openDirectory on Windows.
+//       'openFile',
+//       'openDirectory',
+//       'multiSelections',
+//     ]
+//   });
+
+//   if (dialogResult.canceled) {
+//     return result;
+//   }
+
+//   let allFilePaths = await gatherFilesRecursively(dialogResult.filePaths, supportedTypes);
+  
+//   // Deduplicate allFiles and sort alphabetically
+//   allFilePaths = [...new Set(allFilePaths)].sort();
+
+//   const allFiles = await Promise.all(
+//     allFilePaths.map(pathToFile)
+//   );
+
+//   result.directlySelected = dialogResult.filePaths;
+//   result.allFiles = allFiles;
+//   result.allFilePaths = allFilePaths;
+
+//   return result;
+// } 
 export const openFileChooser = async (supportedTypes) => {
   const result = {
     directlySelected: [],
-    allFiles: [],
     allFilePaths: [],
+    allFilesMeta: [],
+    totalSize: 0,
   }
 
   const dialogResult = await dialog.showOpenDialog({
     filters: [
-      {
-        name: 'Supported Files',
-        extensions: supportedTypes
-      },
+      { name: 'Supported Files', extensions: supportedTypes },
     ],
-    properties: [
-      // Note: we cannot both have openFile and openDirectory on Windows.
-      'openFile',
-      'openDirectory',
-      'multiSelections',
-    ]
+    properties: ['openFile', 'openDirectory', 'multiSelections'],
   });
 
-  if (dialogResult.canceled) {
-    return result;
-  }
+  if (dialogResult.canceled) return result;
 
   let allFilePaths = await gatherFilesRecursively(dialogResult.filePaths, supportedTypes);
-  
-  // Deduplicate allFiles and sort alphabetically
   allFilePaths = [...new Set(allFilePaths)].sort();
 
-  const allFiles = await Promise.all(
-    allFilePaths.map(pathToFile)
+  // Only send metadata, not contents
+  const allFilesMeta = await Promise.all(
+    allFilePaths.map(async (filePath) => {
+      const stats = await fs.promises.stat(filePath);
+      return {
+        name: path.basename(filePath),
+        size: stats.size,
+        type: 'application/octet-stream',
+        lastModified: stats.mtimeMs,
+        fullPath: filePath,
+      };
+    })
   );
+  
+  const totalSize = allFilesMeta.reduce((sum, file) => sum + file.size, 0);
+  console.log(`Total selected files size: ${totalSize} bytes, ${totalSize / (1024 * 1024 * 1024)} GB`);
 
   result.directlySelected = dialogResult.filePaths;
-  result.allFiles = allFiles;
   result.allFilePaths = allFilePaths;
-
+  result.allFilesMeta = allFilesMeta;
+  result.totalSize = totalSize;
   return result;
-} 
+}
 
 export const openFile = async (filePath) => {
   const error = await shell.openPath(filePath);
