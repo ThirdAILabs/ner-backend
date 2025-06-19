@@ -82,7 +82,11 @@ function getBinPath() {
 
 function getBackendPath() {
   const binPath = getBinPath();
-  return binPath ? path.join(binPath, 'main.exe') : null;
+  if (!binPath) return null;
+  
+  // Platform-specific executable name
+  const executableName = process.platform === 'win32' ? 'main.exe' : 'main';
+  return path.join(binPath, executableName);
 }
 
 function getModelConfigPath() {
@@ -113,7 +117,18 @@ export async function startBackend() {
   }
 
   try {
-    fs.accessSync(backendPath, fs.constants.X_OK);
+    // Platform-specific executable permission check
+    if (process.platform === 'win32') {
+      // On Windows, just check if file exists
+      fs.accessSync(backendPath, fs.constants.F_OK);
+    } else {
+      // On Unix-like systems, check execute permission
+      const stats = fs.statSync(backendPath);
+      if (!(stats.mode & parseInt('111', 8))) {
+        log.error(`Backend executable is not executable: ${backendPath}`);
+        return null;
+      }
+    }
   } catch (error) {
     log.error(`Cannot check backend executable permissions: ${error.message}`);
     return null;
@@ -162,7 +177,9 @@ export async function startBackend() {
         MODEL_TYPE: modelType,
         PLUGIN_SERVER: pluginPath,
         APP_DATA_DIR: appDataDir,
-        ONNX_RUNTIME_DYLIB: path.join(getBinPath(), 'onnxruntime.dll'),
+        ONNX_RUNTIME_DYLIB: process.platform === 'win32' 
+          ? path.join(getBinPath(), 'onnxruntime.dll')
+          : (frameworksDir ? path.join(frameworksDir, 'libonnxruntime.dylib') : ''),
       },
       stdio: ['pipe', 'pipe', 'pipe']
     }

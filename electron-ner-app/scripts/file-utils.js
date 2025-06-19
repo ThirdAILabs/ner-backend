@@ -55,21 +55,38 @@ export const openFileChooser = async (supportedTypes, isDirectoryMode = false) =
     allFilePaths: [],
   }
 
-  // Separate dialogs for file vs directory selection
   let dialogProperties;
   let dialogResult;
 
-  if (isDirectoryMode) {
-    // Directory selection mode
-    dialogProperties = ['openDirectory'];
-    dialogResult = await dialog.showOpenDialog({
-      properties: dialogProperties,
-      buttonLabel: 'Select Folder',
-      title: 'Select a folder to scan'
-    });
+  // Platform-specific dialog configuration
+  if (process.platform === 'win32') {
+    // Windows: Separate dialogs for file vs directory selection
+    if (isDirectoryMode) {
+      // Directory selection mode
+      dialogProperties = ['openDirectory'];
+      dialogResult = await dialog.showOpenDialog({
+        properties: dialogProperties,
+        buttonLabel: 'Select Folder',
+        title: 'Select a folder to scan'
+      });
+    } else {
+      // File selection mode
+      dialogProperties = ['openFile', 'multiSelections'];
+      dialogResult = await dialog.showOpenDialog({
+        filters: [
+          {
+            name: 'Supported Files',
+            extensions: supportedTypes
+          },
+        ],
+        properties: dialogProperties,
+        buttonLabel: 'Select Files',
+        title: 'Select files to scan'
+      });
+    }
   } else {
-    // File selection mode
-    dialogProperties = ['openFile', 'multiSelections'];
+    // macOS/Linux: Can combine file and directory selection
+    dialogProperties = ['openFile', 'openDirectory', 'multiSelections'];
     dialogResult = await dialog.showOpenDialog({
       filters: [
         {
@@ -78,8 +95,8 @@ export const openFileChooser = async (supportedTypes, isDirectoryMode = false) =
         },
       ],
       properties: dialogProperties,
-      buttonLabel: 'Select Files',
-      title: 'Select files to scan'
+      buttonLabel: 'Select Files or Folders',
+      title: 'Select files or folders to scan'
     });
   }
 

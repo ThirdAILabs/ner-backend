@@ -169,42 +169,67 @@ const FileSources: React.FC<FileSourcesProps> = ({ selectSource, handleLocalFile
 
   // @ts-ignore
   if (window && window.electron) {
-    return (
-      <>
-        <SourceOption
-          onClick={() => {
-            getFilesFromElectron(SUPPORTED_TYPES, false).then(({ files, isUploaded }) => {
-              handleLocalFiles(files, isUploaded);
-            });
-            selectSource('files');
-          }}
-          icon={
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          }
-          title="Local Files"
-          description="Select individual files from your computer"
-          disclaimer={`Supported: ${SUPPORTED_TYPES.join(', ')}`}
-        />
-        <SourceOption
-          onClick={() => {
-            getFilesFromElectron(SUPPORTED_TYPES, true).then(({ files, isUploaded }) => {
-              handleLocalFiles(files, isUploaded);
-            });
-            selectSource('directory');
-          }}
-          icon={folderIcon}
-          title="Local Directory"
-          description="Select an entire folder to scan"
-          disclaimer={`Supported: ${SUPPORTED_TYPES.join(', ')}`}
-        />
-        {s3}
-      </>
-    );
+    // @ts-ignore
+    const isWindows = window.electron.platform === 'win32';
+    
+    if (isWindows) {
+      // Windows: Show separate buttons for files and folders
+      return (
+        <>
+          <SourceOption
+            onClick={() => {
+              getFilesFromElectron(SUPPORTED_TYPES, false).then(({ files, isUploaded }) => {
+                handleLocalFiles(files, isUploaded);
+              });
+              selectSource('files');
+            }}
+            icon={
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            }
+            title="Local Files"
+            description="Select individual files from your computer"
+            disclaimer={`Supported: ${SUPPORTED_TYPES.join(', ')}`}
+          />
+          <SourceOption
+            onClick={() => {
+              getFilesFromElectron(SUPPORTED_TYPES, true).then(({ files, isUploaded }) => {
+                handleLocalFiles(files, isUploaded);
+              });
+              selectSource('directory');
+            }}
+            icon={folderIcon}
+            title="Local Directory"
+            description="Select an entire folder to scan"
+            disclaimer={`Supported: ${SUPPORTED_TYPES.join(', ')}`}
+          />
+          {s3}
+        </>
+      );
+    } else {
+      // macOS/Linux: Show single button that allows both files and folders
+      return (
+        <>
+          <SourceOption
+            onClick={() => {
+              getFilesFromElectron(SUPPORTED_TYPES).then(({ files, isUploaded }) => {
+                handleLocalFiles(files, isUploaded);
+              });
+              selectSource('files');
+            }}
+            icon={folderIcon}
+            title="Local Files"
+            description="Scan files from your computer"
+            disclaimer={`Supported: ${SUPPORTED_TYPES.join(', ')}`}
+          />
+          {s3}
+        </>
+      );
+    }
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

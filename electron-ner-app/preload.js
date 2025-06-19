@@ -19,4 +19,5 @@ contextBridge.exposeInMainWorld('electron', {
   openFileChooser: (supportedTypes, isDirectoryMode) => ipcRenderer.invoke('open-file-chooser', supportedTypes, isDirectoryMode),
   openFile: (filePath) => ipcRenderer.invoke('open-file', filePath),
   openLinkExternally: (url) => ipcRenderer.invoke('open-external-link', url),
+  platform: process.platform,
 }); 

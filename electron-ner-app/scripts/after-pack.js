@@ -17,7 +17,9 @@ const __dirname = path.dirname(__filename);
 export async function afterPack(context) {
   const { appOutDir, packager, electronPlatformName } = context;
   const appDir = packager.info._appDir;
-  const sourceBackend = path.join(appDir, '..', 'main.exe');
+  const isWindows = electronPlatformName === 'win32';
+  const executableName = isWindows ? 'main.exe' : 'main';
+  const sourceBackend = path.join(appDir, '..', executableName);
   let targetResourcesPath;
   
   console.log('After pack hook running...');
@@ -56,13 +58,40 @@ export async function afterPack(context) {
   }
   
   // Copy backend binary to the bin directory
-  const targetBackendPath = path.join(targetBinDir, 'main');
+  const targetBackendPath = path.join(targetBinDir, executableName);
   console.log(`Copying backend from ${sourceBackend} to ${targetBackendPath}`);
   
   try {
     fs.copyFileSync(sourceBackend, targetBackendPath);
-    fs.chmodSync(targetBackendPath, '755'); // Make executable
+    
+    // Make executable (Unix-like systems only)
+    if (!isWindows) {
+      fs.chmodSync(targetBackendPath, '755');
+    }
+    
     console.log('✅ Backend binary successfully copied to:', targetBackendPath);
+    
+    // Copy Windows-specific DLLs if on Windows
+    if (isWindows) {
+      const windowsDLLs = [
+        'libgcc_s_seh-1.dll',
+        'libstdc++-6.dll', 
+        'libwinpthread-1.dll',
+        'onnxruntime.dll'
+      ];
+      
+      for (const dll of windowsDLLs) {
+        const sourceDLL = path.join(appDir, '..', dll);
+        const targetDLL = path.join(targetBinDir, dll);
+        
+        if (fs.existsSync(sourceDLL)) {
+          console.log(`Copying ${dll}...`);
+          fs.copyFileSync(sourceDLL, targetDLL);
+        } else {
+          console.warn(`Warning: ${dll} not found at ${sourceDLL}, skipping...`);
+        }
+      }
+    }
     
     // Verify the file exists and has the correct permissions
     const stats = fs.statSync(targetBackendPath);

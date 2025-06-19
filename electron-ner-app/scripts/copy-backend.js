@@ -11,17 +11,20 @@ const __dirname = path.dirname(__filename);
 const projectRoot = path.join(__dirname, '..');
 const binDir = path.join(projectRoot, 'bin');
 const goProjectDir = path.join(projectRoot, '..');
-const backendExecutable = path.join(goProjectDir, 'main.exe');
-const targetExecutable = path.join(binDir, 'main.exe');
 
-const backendLibGcc = path.join(goProjectDir, 'libgcc_s_seh-1.dll');
-const targetLibGcc = path.join(binDir, 'libgcc_s_seh-1.dll');
-const backendsStdc = path.join(goProjectDir, 'libstdc++-6.dll');
-const targetsStdc = path.join(binDir, 'libstdc++-6.dll');
-const backendWinPThread = path.join(goProjectDir, 'libwinpthread-1.dll');
-const targetWinPThread = path.join(binDir, 'libwinpthread-1.dll');
-const backendOnnxRuntime = path.join(goProjectDir, 'onnxruntime.dll');
-const targetOnnxRuntime = path.join(binDir, 'onnxruntime.dll');
+// Platform-specific executable names
+const isWindows = process.platform === 'win32';
+const executableName = isWindows ? 'main.exe' : 'main';
+const backendExecutable = path.join(goProjectDir, executableName);
+const targetExecutable = path.join(binDir, executableName);
+
+// Windows-specific DLLs
+const windowsDLLs = isWindows ? [
+  { source: path.join(goProjectDir, 'libgcc_s_seh-1.dll'), target: path.join(binDir, 'libgcc_s_seh-1.dll') },
+  { source: path.join(goProjectDir, 'libstdc++-6.dll'), target: path.join(binDir, 'libstdc++-6.dll') },
+  { source: path.join(goProjectDir, 'libwinpthread-1.dll'), target: path.join(binDir, 'libwinpthread-1.dll') },
+  { source: path.join(goProjectDir, 'onnxruntime.dll'), target: path.join(binDir, 'onnxruntime.dll') }
+] : [];
 
 // Plugin paths
 const pluginDir = path.join(projectRoot, '..', 'plugin/plugin-python/dist/plugin');
@@ -52,13 +55,23 @@ if (!fs.existsSync(backendExecutable)) {
 try {
   console.log(`Copying backend from ${backendExecutable} to ${targetExecutable}`);
   fs.copyFileSync(backendExecutable, targetExecutable);
-  fs.copyFileSync(backendLibGcc, targetLibGcc);
-  fs.copyFileSync(backendsStdc, targetsStdc);
-  fs.copyFileSync(backendWinPThread, targetWinPThread);
-  fs.copyFileSync(backendOnnxRuntime, targetOnnxRuntime);
   
-  // Make it executable
-  fs.chmodSync(targetExecutable, '755');
+  // Copy Windows-specific DLLs if on Windows
+  if (isWindows) {
+    for (const dll of windowsDLLs) {
+      if (fs.existsSync(dll.source)) {
+        console.log(`Copying ${path.basename(dll.source)}...`);
+        fs.copyFileSync(dll.source, dll.target);
+      } else {
+        console.warn(`Warning: ${path.basename(dll.source)} not found, skipping...`);
+      }
+    }
+  }
+  
+  // Make it executable (Unix-like systems only)
+  if (!isWindows) {
+    fs.chmodSync(targetExecutable, '755');
+  }
   
   console.log('Backend copied successfully!');
 } catch (error) {
