@@ -99,6 +99,7 @@ interface SourceOptionProps {
   title: string;
   description: string;
   disclaimer: string;
+  disabled?: boolean;
 }
 
 const SourceOption: React.FC<SourceOptionProps> = ({
@@ -108,10 +109,15 @@ const SourceOption: React.FC<SourceOptionProps> = ({
   title,
   description,
   disclaimer,
+  disabled = false,
 }) => (
   <div
-    className="relative p-6 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 transition-colors cursor-pointer"
-    onClick={onClick}
+    className={`relative p-6 border-2 border-dashed rounded-lg transition-colors ${
+      disabled
+        ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
+        : 'border-gray-300 hover:border-blue-400 cursor-pointer'
+    }`}
+    onClick={disabled ? () => {} : onClick}
   >
     {input && input}
     <div className="flex flex-col items-center justify-center space-y-4">
@@ -137,9 +143,16 @@ const SourceOption: React.FC<SourceOptionProps> = ({
 interface FileSourcesProps {
   selectSource: (source: 's3' | 'files' | 'directory') => void;
   handleLocalFiles: (files: [File, string][], isUploaded: boolean) => void;
+  isLoadingFiles: boolean;
+  setIsLoadingFiles: (loading: boolean) => void;
 }
 
-const FileSources: React.FC<FileSourcesProps> = ({ selectSource, handleLocalFiles }) => {
+const FileSources: React.FC<FileSourcesProps> = ({
+  selectSource,
+  handleLocalFiles,
+  isLoadingFiles,
+  setIsLoadingFiles,
+}) => {
   const s3 = (
     <SourceOption
       onClick={() => selectSource('s3')}
@@ -154,6 +167,7 @@ const FileSources: React.FC<FileSourcesProps> = ({ selectSource, handleLocalFile
       title="S3 Bucket"
       description="Scan files from an S3 bucket"
       disclaimer="Public buckets only without enterprise subscription."
+      disabled={isLoadingFiles}
     />
   );
 
@@ -171,30 +185,42 @@ const FileSources: React.FC<FileSourcesProps> = ({ selectSource, handleLocalFile
     return (
       <>
         <SourceOption
-          onClick={() => {
-            getFilesFromElectron(SUPPORTED_TYPES).then(({ files, isUploaded }) => {
-              handleLocalFiles(files, isUploaded);
-            });
+          onClick={async () => {
             selectSource('files');
+            setIsLoadingFiles(true);
+            try {
+              const { files, isUploaded } = await getFilesFromElectron(SUPPORTED_TYPES);
+              handleLocalFiles(files, isUploaded);
+            } finally {
+              setIsLoadingFiles(false);
+            }
           }}
-          icon={folderIcon}
+          icon={isLoadingFiles ? <RefreshCw className="w-8 h-8 animate-spin" /> : folderIcon}
           title="Local Files"
-          description="Scan files from your computer"
+          description={isLoadingFiles ? 'Loading files...' : 'Scan files from your computer'}
           disclaimer={`Supported: ${SUPPORTED_TYPES.join(', ')}`}
+          disabled={isLoadingFiles}
         />
         {s3}
       </>
     );
   }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      handleLocalFiles(
-        Array.from(files).map((file) => [file, '']),
-        true
-      );
-      e.target.value = '';
+      setIsLoadingFiles(true);
+      try {
+        // Add a small delay to show loading state for quick file selections
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        handleLocalFiles(
+          Array.from(files).map((file) => [file, '']),
+          true
+        );
+      } finally {
+        setIsLoadingFiles(false);
+        e.target.value = '';
+      }
     }
   };
 
@@ -229,16 +255,21 @@ const FileSources: React.FC<FileSourcesProps> = ({ selectSource, handleLocalFile
         }}
         input={fileInput}
         icon={
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-          />
+          isLoadingFiles ? (
+            <RefreshCw className="w-8 h-8 animate-spin" />
+          ) : (
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+          )
         }
         title="Local Files"
-        description="Scan files from your computer"
+        description={isLoadingFiles ? 'Loading files...' : 'Scan files from your computer'}
         disclaimer={`Supported: ${SUPPORTED_TYPES.join(', ')}`}
+        disabled={isLoadingFiles}
       />
       <SourceOption
         onClick={() => {
@@ -246,10 +277,11 @@ const FileSources: React.FC<FileSourcesProps> = ({ selectSource, handleLocalFile
           selectSource('directory');
         }}
         input={directoryInput}
-        icon={folderIcon}
+        icon={isLoadingFiles ? <RefreshCw className="w-8 h-8 animate-spin" /> : folderIcon}
         title="Local Directory"
-        description="Scan an entire directory"
+        description={isLoadingFiles ? 'Loading files...' : 'Scan an entire directory'}
         disclaimer={`Supported: ${SUPPORTED_TYPES.join(', ')}`}
+        disabled={isLoadingFiles}
       />
       {s3}
     </>
@@ -274,6 +306,7 @@ export default function NewJobPage() {
   // [File object, full path] pairs. Full path may be empty if electron is not available.
   const [selectedFiles, setSelectedFiles] = useState<[File, string][]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingFiles, setIsLoadingFiles] = useState(false);
   const [existingReportName, setExistingReportName] = useState<string[]>([]);
   //Job Name
   const [jobName, setJobName] = useState('');
@@ -852,8 +885,25 @@ export default function NewJobPage() {
 
           <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
             <h2 className="text-2xl font-medium mb-4">Source</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              <FileSources selectSource={setSelectedSource} handleLocalFiles={handleLocalFiles} />
+            <div className="relative">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <FileSources
+                  selectSource={setSelectedSource}
+                  handleLocalFiles={handleLocalFiles}
+                  isLoadingFiles={isLoadingFiles}
+                  setIsLoadingFiles={setIsLoadingFiles}
+                />
+              </div>
+
+              {/* Loading Overlay */}
+              {isLoadingFiles && (
+                <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center rounded-lg z-10">
+                  <div className="flex flex-col items-center space-y-3">
+                    <RefreshCw className="h-8 w-8 animate-spin text-blue-500" />
+                    <p className="text-sm font-medium text-gray-700">Loading files...</p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {selectedFiles.length > 0 && (
