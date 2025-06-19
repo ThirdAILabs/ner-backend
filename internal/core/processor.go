@@ -453,6 +453,7 @@ func (proc *TaskProcessor) createObjectPreview(
 	object string,
 	previewText string,
 	model Model,
+	customTags map[string]*regexp.Regexp,
 ) error {
 	if proc.db == nil {
 		return nil
@@ -463,6 +464,20 @@ func (proc *TaskProcessor) createObjectPreview(
 		return fmt.Errorf("preview inference error: %w", err)
 	}
 	spans = FilterEntities(previewText, spans)
+
+	for tag, re := range customTags {
+		for _, idx := range re.FindAllStringIndex(previewText, -1) {
+			start, end := idx[0], idx[1]
+			spans = append(spans, types.Entity{
+				Label:    tag,
+				Text:     previewText[start:end],
+				Start:    start,
+				End:      end,
+				LContext: strings.ToValidUTF8(previewText[max(0, start-20):start], ""),
+				RContext: strings.ToValidUTF8(previewText[end:min(len(previewText), end+20)], ""),
+			})
+		}
+	}
 
 	// converting spans to a map for coalescing
 	spanEntityMap := make(map[string][]types.Entity)
@@ -640,7 +655,7 @@ func (proc *TaskProcessor) runInferenceOnObject(
 	}
 
 	previewText := strings.Join(previewTokens, " ")
-	if err := proc.createObjectPreview(reportId, object, previewText, model); err != nil {
+	if err := proc.createObjectPreview(reportId, object, previewText, model, customTags); err != nil {
 		slog.Error("saving ObjectPreview failed", "object", object, "err", err)
 	}
 
