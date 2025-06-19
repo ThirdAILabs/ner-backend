@@ -53,6 +53,25 @@ let isUpdateInstall = false;
 
 ipcMain.handle('open-external-link', async (_, url) => await shell.openExternal(url));
 
+// Window control handlers
+ipcMain.handle('minimize-window', () => {
+    if (mainWindow) mainWindow.minimize();
+});
+
+ipcMain.handle('maximize-window', () => {
+    if (mainWindow) {
+        if (mainWindow.isMaximized()) {
+            mainWindow.unmaximize();
+        } else {
+            mainWindow.maximize();
+        }
+    }
+});
+
+ipcMain.handle('close-window', () => {
+    if (mainWindow) mainWindow.close();
+});
+
 function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1200,
