@@ -71,6 +71,8 @@ export const openFileChooser = async (supportedTypes) => {
   if (dialogResult.canceled) return result;
 
   let allFilePaths = await gatherFilesRecursively(dialogResult.filePaths, supportedTypes);
+  // Deduplicate allFiles and sort alphabetically
+  // Only deduplicates by the file path
   allFilePaths = [...new Set(allFilePaths)].sort();
 
 
