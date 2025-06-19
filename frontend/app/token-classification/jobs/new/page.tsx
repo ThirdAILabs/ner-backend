@@ -753,7 +753,7 @@ export default function NewJobPage() {
 
       console.log('Upload result:', result);
 
-      // 2. Store file path mappings if needed
+      // 2. Store file path mappings
       const mapping: { [filename: string]: string } = {};
       selectedFilesMeta.forEach((fileMeta) => {
         if (fileMeta.fullPath) {
