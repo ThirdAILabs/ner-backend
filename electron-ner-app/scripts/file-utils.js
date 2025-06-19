@@ -78,6 +78,28 @@ export const openFileChooser = async (supportedTypes) => {
   
   // Deduplicate allFiles and sort alphabetically
   allFilePaths = [...new Set(allFilePaths)].sort();
+  
+  // Use number of files limit to prevent overloading the app
+  // const MAX_FILES = 100;
+  // if (allFilePaths.length > MAX_FILES) {
+  //   result.error = `You can only select up to ${MAX_FILES} files at a time.`;
+  //   return result;
+  // }
+
+  // Use total size limit to prevent overloading the app
+  // Calculate total size before reading files
+  const MAX_TOTAL_SIZE = 500 * 1024 * 1024; // 500 MB
+  let totalSize = 0;
+  for (const filePath of allFilePaths) {
+    const stats = await fs.promises.stat(filePath);
+    totalSize += stats.size;
+    if (totalSize > MAX_TOTAL_SIZE) {
+      result.error = `Each scan can include up to ${MAX_TOTAL_SIZE / (1024 * 1024)} MB of files. Please select fewer or smaller files.`;
+      return result;
+    }
+  }
+
+
 
   const allFiles = await Promise.all(
     allFilePaths.map(pathToFile)

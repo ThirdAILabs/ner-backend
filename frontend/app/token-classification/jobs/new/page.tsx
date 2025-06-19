@@ -10,6 +10,8 @@ import { nerService } from '@/lib/backend';
 import { NO_GROUP, uniqueFileNames, getFilesFromElectron } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 
+import { toast, Toaster } from 'react-hot-toast';
+
 const SUPPORTED_TYPES = ['.pdf', '.txt', '.csv', '.html', '.json', '.xml'];
 
 // Tag chip component - reused from the detail page but with interactive mode
@@ -189,8 +191,21 @@ const FileSources: React.FC<FileSourcesProps> = ({
             selectSource('files');
             setIsLoadingFiles(true);
             try {
-              const { files, isUploaded } = await getFilesFromElectron(SUPPORTED_TYPES);
-              handleLocalFiles(files, isUploaded);
+              const result = await getFilesFromElectron(SUPPORTED_TYPES);
+              if (result.error) {
+                toast.error(`Error: ${result.error}`, {
+                  duration: 3000,
+                  style: {
+                    background: '#f44336', // red for error
+                    color: '#fff',
+                    padding: '10px',
+                    borderRadius: '8px',
+                  },
+                  icon: '⚠️',
+                });
+              } else {
+                handleLocalFiles(result.files, result.isUploaded);
+              }
             } finally {
               setIsLoadingFiles(false);
             }
@@ -1557,6 +1572,7 @@ export default function NewJobPage() {
           </div>
         </div>
       )}
+      <Toaster position="top-right" />
     </div>
   );
 }
