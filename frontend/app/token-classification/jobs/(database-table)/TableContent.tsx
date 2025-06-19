@@ -7,6 +7,7 @@ import { TokenHighlighter } from '@/components/feedback/TokenHighlighter';
 import * as _ from 'lodash';
 import type { TableContentProps } from '@/types/analyticsTypes';
 import { useLicense } from '@/hooks/useLicense';
+import { environment } from '@/lib/environment';
 
 const PASTELS = ['#E5A49C', '#F6C886', '#FBE7AA', '#99E3B5', '#A6E6E7', '#A5A1E1', '#D8A4E2'];
 const DARKERS = ['#D34F3E', '#F09336', '#F7CF5F', '#5CC96E', '#65CFD0', '#597CE2', '#B64DC8'];
@@ -212,9 +213,11 @@ export function TableContent({
                 objectId: fileIdentifier,
               },
               tokens.map((token) => token.text),
-              // Backend expects samples to only include tags that are supported by the AI model.
-              // That excludes custom tags.
-              tokens.map((token) => customTagNames.includes(token.tag) ? 'O' : token.tag)
+              tokens.map((token) =>
+                !environment.allowCustomTagsInFeedback && customTagNames.includes(token.tag)
+                  ? 'O'
+                  : token.tag
+              )
             );
           };
           return (
@@ -272,6 +275,7 @@ export function TableContent({
                   tokens={tokens}
                   editable={isEnterprise}
                   availableTags={tags.map((tag) => tag.type)}
+                  unassignableTags={!environment.allowCustomTagsInFeedback ? customTagNames : []}
                   onTagAssign={onTagAssign}
                   objectId={fileIdentifier}
                   tagFilters={tagFilters}

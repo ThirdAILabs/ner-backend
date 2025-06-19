@@ -6,6 +6,7 @@ import React, { useState, useRef, useMemo } from 'react';
 import { Menu, MenuItem } from '@mui/material';
 import { DisplayedToken } from '@/components/feedback/useFeedbackState';
 import { FeedbackMetadata } from '@/components/feedback/useFeedbackState';
+import { environment } from '@/lib/environment';
 
 interface HighlightColor {
   text: string;
@@ -15,6 +16,7 @@ interface HighlightColor {
 interface TokenHighlighterProps {
   tokens: DisplayedToken[];
   availableTags: string[];
+  unassignableTags?: string[];
   spotlightStartIndex?: number;
   spotlightEndIndex?: number;
   editable?: boolean;
@@ -41,6 +43,7 @@ const NEW_TAG_COLOR = {
 export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
   tokens,
   availableTags,
+  unassignableTags = [],
   spotlightStartIndex,
   spotlightEndIndex,
   editable = false,
@@ -58,8 +61,10 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
   } | null>(null);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [query, setQuery] = useState('');
+  const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const dropdownQueryRef = useRef<HTMLInputElement>(null);
+  const [justOpenedDropdown, setJustOpenedDropdown] = useState(false);
 
   const nonTrivialTagColors = useMemo(() => {
     const colors: Record<string, HighlightColor> = {};
@@ -118,6 +123,7 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
         y: event.clientY,
       });
       setShowDropdown(true);
+      setJustOpenedDropdown(true);
       setIsSelecting(false);
     }
   };
@@ -307,6 +313,14 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
             }
             dropdownQueryRef.current?.focus();
           }}
+          onFocus={() => {
+            // Immediately shows caret in the input field and makes up and down arrows
+            // work immediately upon opening the dropdown.
+            if (justOpenedDropdown) {
+              setJustOpenedDropdown(false);
+              dropdownQueryRef.current?.focus();
+            }
+          }}
           onClose={() => {
             setShowDropdown(false);
             setSelectionStart(null);
@@ -351,20 +365,48 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
             }}
           />
 
-          {query && !queryMatchesTag && (
-            <MenuItem
-              onClick={() => handleTagSelect(query)}
-              className="flex items-center justify-between font-bold text-black bg-white rounded-md mx-2 my-0.5 px-3 py-2 transition-colors hover:bg-gray-100"
-            >
-              <span>{query}</span>
-              <span className="ml-3 bg-gray-200 text-gray-700 rounded-full text-xs font-medium px-3 py-0.5">
-                new
-              </span>
-            </MenuItem>
-          )}
+          {query &&
+            !queryMatchesTag &&
+            (environment.allowNewTagsInFeedback ? (
+              <MenuItem
+                onClick={() => handleTagSelect(query)}
+                className="flex items-center justify-between font-bold text-black bg-white rounded-md mx-2 my-0.5 px-3 py-2 transition-colors hover:bg-gray-100"
+              >
+                <span>{query}</span>
+                <span className="ml-3 bg-gray-200 text-gray-700 rounded-full text-xs font-medium px-3 py-0.5">
+                  new
+                </span>
+              </MenuItem>
+            ) : (
+              <div className="text-gray-500 text-sm px-4 pb-2">No matches found</div>
+            ))}
 
           {filteredTags.map((tag) => (
-            <MenuItem key={tag} value={tag} onClick={() => handleTagSelect(tag)}>
+            <MenuItem
+              key={tag}
+              value={tag}
+              onClick={(e) => {
+                if (unassignableTags.includes(tag)) {
+                  e.stopPropagation();
+                  return;
+                }
+                handleTagSelect(tag);
+              }}
+              onMouseOver={(e) => {
+                if (unassignableTags.includes(tag)) {
+                  setTooltip({
+                    text: `${tag} cannot be selected because it is a custom tag`,
+                    x: e.clientX,
+                    y: e.clientY
+                  });
+                }
+              }}
+              onMouseLeave={() => {
+                if (unassignableTags.includes(tag)) {
+                  setTooltip(null);
+                }
+              }}
+            >
               <span style={{ display: 'flex', alignItems: 'center' }}>
                 {tag === REMOVE_TAG_NAME ? (
                   <svg
@@ -396,11 +438,40 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
                     }}
                   />
                 )}
-                <span>{tag}</span>
+                <span style={{ color: unassignableTags.includes(tag) ? 'grey' : 'black' }}>
+                  {tag}
+                </span>
               </span>
+              {unassignableTags.includes(tag) && (
+                <span
+                  className="flex items-center ml-2 text-xs text-gray-500"
+                >
+                  <svg
+                    width="12"
+                    height="12"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                    className="cursor-help"
+                  >
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
+                  </svg>
+                </span>
+              )}
             </MenuItem>
           ))}
         </Menu>
+      )}
+
+      {tooltip && (
+        <div
+          className="fixed z-[1400] px-2 py-1 text-xs bg-white rounded shadow-lg pointer-events-none"
+          style={{
+            left: tooltip.x + 10,
+            top: tooltip.y - 30,
+          }}
+        >
+          {tooltip.text}
+        </div>
       )}
     </div>
   );
