@@ -172,10 +172,13 @@ const useFeedbackState = (modelId: string, reportId: string) => {
       ...highlightedWords.map((word) => ({ text: word, tag: f.body.tag })),
       ...rightContextWords.map((word) => ({ text: word, tag: 'O' })),
     ];
-    const spotlightFields = f.body.tag !== 'O' ? {} : {
-      spotlightStartIndex: leftContextWords.length,
-      spotlightEndIndex: leftContextWords.length + highlightedWords.length - 1,
-    };
+    const spotlightFields =
+      f.body.tag !== 'O'
+        ? {}
+        : {
+            spotlightStartIndex: leftContextWords.length,
+            spotlightEndIndex: leftContextWords.length + highlightedWords.length - 1,
+          };
     return { id: f.id, tokens, ...spotlightFields };
   });
 

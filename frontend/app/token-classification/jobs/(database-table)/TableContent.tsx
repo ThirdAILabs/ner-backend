@@ -101,7 +101,11 @@ export function TableContent({
               return (
                 <TableRow key={index}>
                   <TableCell className="w-3/5">
-                    <TokenHighlighter tokens={tokens} availableTags={tags.map((tag) => tag.type)} tagFilters={tagFilters} />
+                    <TokenHighlighter
+                      tokens={tokens}
+                      availableTags={tags.map((tag) => tag.type)}
+                      tagFilters={tagFilters}
+                    />
                   </TableCell>
                   <TableCell className="w-1/5 px-4">
                     <div className="relative group">
@@ -267,7 +271,7 @@ export function TableContent({
                   availableTags={tags.map((tag) => tag.type)}
                   onTagAssign={onTagAssign}
                   objectId={fileIdentifier}
-                  tagFilters={tagFilters} 
+                  tagFilters={tagFilters}
                 />
                 ...
                 <br />

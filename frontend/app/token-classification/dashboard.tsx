@@ -236,9 +236,9 @@ const Dashboard = () => {
                       ? 'All Models'
                       : models.find((m) => m.Id === val)?.Name
                         ? models
-                          .find((m) => m.Id === val)!
-                          .Name.charAt(0)
-                          .toUpperCase() + models.find((m) => m.Id === val)!.Name.slice(1)
+                            .find((m) => m.Id === val)!
+                            .Name.charAt(0)
+                            .toUpperCase() + models.find((m) => m.Id === val)!.Name.slice(1)
                         : val
                   }
                   sx={{

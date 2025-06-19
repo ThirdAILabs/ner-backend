@@ -35,7 +35,7 @@ const DARKERS = ['#D34F3E', '#F09336', '#F7CF5F', '#5CC96E', '#65CFD0', '#597CE2
 const REMOVE_TAG_NAME = 'Remove Tag';
 const NEW_TAG_COLOR = {
   text: '#F1F5F9',
-  tag: '#64748B'
+  tag: '#64748B',
 };
 
 export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
@@ -65,7 +65,7 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
     const colors: Record<string, HighlightColor> = {};
 
     availableTags
-      .filter(tag => tag !== 'O')
+      .filter((tag) => tag !== 'O')
       .forEach((tag, index) => {
         colors[tag] = {
           text: PASTELS[index % PASTELS.length],
@@ -73,7 +73,7 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
         };
       });
 
-    tokens.forEach(token => {
+    tokens.forEach((token) => {
       if (token.tag !== 'O' && !colors[token.tag]) {
         colors[token.tag] = NEW_TAG_COLOR;
       }
@@ -142,7 +142,9 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
 
   // Display the 'Remove Tag' option only if there are tags to remove;
   // it doesn't make sense to remove tags when the whole span consists of "O" tags.
-  const hasTagsToRemove = selectionStart !== null && selectionEnd !== null &&
+  const hasTagsToRemove =
+    selectionStart !== null &&
+    selectionEnd !== null &&
     tokens
       .slice(Math.min(selectionStart, selectionEnd), Math.max(selectionStart, selectionEnd) + 1)
       .some((token) => token.tag !== 'O');
@@ -266,19 +268,18 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
                 {token.text}
               </span>
 
-              {showTag &&
-                (index === tokens.length - 1 || tokens[index + 1]?.tag !== token.tag) && (
-                  <span
-                    className="ml-1 rounded-sm px-1.5 py-0.5 text-xs font-bold"
-                    style={{
-                      backgroundColor: tagBackgroundColor,
-                      color: tagTextColor,
-                      textDecoration: 'none',
-                    }}
-                  >
-                    {token.tag}
-                  </span>
-                )}
+              {showTag && (index === tokens.length - 1 || tokens[index + 1]?.tag !== token.tag) && (
+                <span
+                  className="ml-1 rounded-sm px-1.5 py-0.5 text-xs font-bold"
+                  style={{
+                    backgroundColor: tagBackgroundColor,
+                    color: tagTextColor,
+                    textDecoration: 'none',
+                  }}
+                >
+                  {token.tag}
+                </span>
+              )}
             </span>
           );
         })}
@@ -295,8 +296,13 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
           onKeyDown={(e) => {
             // Keystrokes are relayed to the input field except for navigation keys.
             // This creates a smoother user experience.
-            if (e.key === 'ArrowUp' || e.key === 'ArrowDown' ||
-              e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Enter') {
+            if (
+              e.key === 'ArrowUp' ||
+              e.key === 'ArrowDown' ||
+              e.key === 'ArrowLeft' ||
+              e.key === 'ArrowRight' ||
+              e.key === 'Enter'
+            ) {
               return;
             }
             dropdownQueryRef.current?.focus();
@@ -322,8 +328,12 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
             onKeyDown={(e) => {
               // Except for navigation keys, don't propagate the keystroke to the menu component
               // so the selector does not jump around, creating a smooth user experience.
-              if (e.key === 'ArrowUp' || e.key === 'ArrowDown' ||
-                e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+              if (
+                e.key === 'ArrowUp' ||
+                e.key === 'ArrowDown' ||
+                e.key === 'ArrowLeft' ||
+                e.key === 'ArrowRight'
+              ) {
                 return;
               }
               e.stopPropagation();
