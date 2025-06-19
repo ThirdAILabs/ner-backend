@@ -17,13 +17,13 @@ import {
   Button,
 } from '@mui/material';
 import { Toaster, toast } from 'react-hot-toast';
-import { nerService } from '@/lib/backend';
+import { nerService, SavedFeedback } from '@/lib/backend';
 import { useHealth } from '@/contexts/HealthProvider';
 import { TokenHighlighter } from '@/components/feedback/TokenHighlighter';
 import useTelemetry from '@/hooks/useTelemetry';
 
 export interface UserFeedbackSectionProps {
-  feedbackData: any[];
+  feedbackData: SavedFeedback[];
   loadingFeedback: boolean;
   handleDeleteFeedback: (id: string) => void;
   handleFinetuneClick: () => void;
@@ -103,10 +103,10 @@ export function UserFeedbackSection({
             </thead>
             <tbody>
               {feedbackData.map((feedback, index) => {
-                const tokens = feedback.tokens.map((token: string, tokenIndex: number) => {
+                const tokens = feedback.Tokens.map((token: string, tokenIndex: number) => {
                   return {
                     text: token,
-                    tag: feedback.labels[tokenIndex],
+                    tag: feedback.Labels[tokenIndex],
                   };
                 });
                 return (
@@ -121,7 +121,7 @@ export function UserFeedbackSection({
                     <td style={{ textAlign: 'right', padding: '8px' }}>
                       <button
                         className="text-gray-700 hover:text-gray-700 transition-colors"
-                        onClick={() => handleDeleteFeedback(feedback.id)}
+                        onClick={() => handleDeleteFeedback(feedback.Id)}
                         title="Delete feedback"
                       >
                         ✕
@@ -211,7 +211,7 @@ const ModelCustomization: React.FC = () => {
   const { healthStatus } = useHealth();
   const [models, setModels] = useState<Model[]>([]);
   const [selectedModel, setSelectedModel] = useState<Model | null>(null);
-  const [feedbackData, setFeedbackData] = useState<any[]>([]);
+  const [feedbackData, setFeedbackData] = useState<SavedFeedback[]>([]);
   const [loadingFeedback, setLoadingFeedback] = useState(false);
 
   useEffect(() => {
@@ -262,7 +262,7 @@ const ModelCustomization: React.FC = () => {
     if (!selectedModel) return;
     try {
       await nerService.deleteModelFeedback(selectedModel.Id, id);
-      setFeedbackData(feedbackData.filter((feedback) => feedback.id !== id));
+      setFeedbackData(feedbackData.filter((feedback) => feedback.Id !== id));
     } catch (error) {
       console.error('Failed to delete feedback:', error);
     }
@@ -406,7 +406,7 @@ const ModelCustomization: React.FC = () => {
               finetuning={finetuning}
               handleFinetuneSubmit={handleFinetuneSubmit}
               handleFinetuneCancel={handleFinetuneCancel}
-              availableTags={feedbackData.map((f) => f.labels).flat()}
+              availableTags={feedbackData.map((f) => f.Labels).flat()}
             />
           )}
         </CardContent>
