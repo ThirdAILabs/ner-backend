@@ -3,7 +3,7 @@
 import { useState, Suspense, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ChevronLeft, ChevronRight, House, FilePlus, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, House, FilePlus } from 'lucide-react';
 import { Box, CircularProgress } from '@mui/material';
 import { Typography } from '@mui/material';
 import { useHealth } from '@/contexts/HealthProvider';
@@ -220,17 +220,8 @@ function SafeGPTContent() {
         </div>
         <div className="flex-1 flex justify-center items-center mt-[-16px]">
           <ChatTitle title={title} setTitle={handleUpdateTitle} />
-          <div className="absolute right-[20px] flex items-center gap-2">
+          <div className="absolute right-[20px]">
             <Toggle checked={showRedaction} onChange={handleToggleRedaction} />
-            <Link href="/" className="ml-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="rounded-full hover:bg-gray-100 transition-colors"
-              >
-                <X className="h-5 w-5 text-gray-600" />
-              </Button>
-            </Link>
           </div>
         </div>
       </div>
