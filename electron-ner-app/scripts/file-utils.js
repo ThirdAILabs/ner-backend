@@ -98,7 +98,6 @@ allFilesMeta = allFilesMeta.filter(file => {
   return true;
 });
   
-  const totalSize = allFilesMeta.reduce((sum, file) => sum + file.size, 0);
 
   result.directlySelected = dialogResult.filePaths;
   result.allFilePaths = allFilePaths;
