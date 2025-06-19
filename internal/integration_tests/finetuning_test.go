@@ -100,6 +100,18 @@ func TestFinetuning(t *testing.T) {
 	})
 	defer stop()
 
+	sample := api.FeedbackRequest{
+		Tokens: []string{"foo"},
+		Labels: []string{"xyz"},
+	}
+	require.NoError(t, httpRequest(
+		router,
+		"POST",
+		fmt.Sprintf("/models/%s/feedback", baseID.String()),
+		sample,
+		nil,
+	))
+
 	tp := "Finetuning test"
 
 	// No in-body samples; just do a normal finetune request
@@ -158,6 +170,7 @@ func TestFinetuningAllModels(t *testing.T) {
 			modelName = "ultra"
 		}
 
+<<<<<<< HEAD
 		var base database.Model
 		require.NoError(t, db.Where("name = ?", modelName).First(&base).Error)
 
@@ -240,6 +253,49 @@ func TestFinetuningWithGenerateData(t *testing.T) {
 		TaskPrompt:   &tp,
 		Tags:         []api.TagInfo{{Name: "xyz"}},
 		GenerateData: true,
+=======
+	samples := []api.Sample{
+		{
+			Tokens: []string{"I", "started", "working", "at", "ThirdAI", "in", "2022"},
+			Labels: []string{"O", "O", "O", "O", "COMPANY", "O", "DATE"},
+		},
+		{
+			Tokens: []string{"I", "started", "working", "at", "ThirdAI", "in", "2022"},
+			Labels: []string{"O", "O", "O", "O", "COMPANY", "O", "DATE"},
+		},
+	}
+	for _, sample := range samples {
+		feedbackReq := api.FeedbackRequest(sample)
+		require.NoError(t, httpRequest(
+			router,
+			"POST",
+			fmt.Sprintf("/models/%s/feedback", base.Id.String()),
+			feedbackReq,
+			nil,
+		))
+	}
+
+	var saved []api.FeedbackRequest
+	require.NoError(t, httpRequest(
+		router,
+		"GET",
+		fmt.Sprintf("/models/%s/feedback", base.Id.String()),
+		nil,
+		&saved,
+	))
+	require.Len(t, saved, 2)
+	assert.Equal(t, samples[0].Tokens, saved[0].Tokens)
+	assert.Equal(t, samples[0].Labels, saved[0].Labels)
+	assert.Equal(t, samples[1].Tokens, saved[1].Tokens)
+	assert.Equal(t, samples[1].Labels, saved[1].Labels)
+
+	tp := fmt.Sprintf("%s finetune test", modelName)
+
+	ftReq := api.FinetuneRequest{
+		Name:       fmt.Sprintf("finetuned-%s", modelName),
+		TaskPrompt: &tp,
+		Tags:       []api.TagInfo{{Name: "xyz"}},
+>>>>>>> 16d23491577541eeedecc4cf7cb1364afb5d4e1d
 	}
 
 	_, model := finetune(t, router, baseID.String(), ftReq, 10, 100*time.Millisecond)
@@ -254,6 +310,45 @@ func TestFinetuningWithGenerateData(t *testing.T) {
 	var data map[string]string
 	require.NoError(t, json.NewDecoder(stream).Decode(&data))
 	assert.Contains(t, data, "xyz")
+}
+
+func TestFinetuningWithGenerateData(t *testing.T) {
+	_, cancel, s3, db, pub, sub, router := setupCommon(t)
+	defer cancel()
+
+	baseName, baseLoader, baseID := createModel(t, s3, db, modelBucket)
+
+	stop := startWorker(t, db, s3, pub, sub, modelBucket, map[core.ModelType]core.ModelLoader{
+		core.ParseModelType(baseName): baseLoader,
+	})
+	defer stop()
+
+	sample := api.FeedbackRequest{
+		Tokens: []string{"foo"},
+		Labels: []string{"xyz"},
+	}
+	require.NoError(t, httpRequest(
+		router,
+		"POST",
+		fmt.Sprintf("/models/%s/feedback", baseID.String()),
+		sample,
+		nil,
+	))
+
+	tp := "Finetuning with data generation"
+	ftReq := api.FinetuneRequest{
+		Name:         "finetuned-with-gen",
+		TaskPrompt:   &tp,
+		Tags:         []api.TagInfo{{Name: "xyz"}},
+		GenerateData: true,
+	}
+
+	_, model := finetune(t, router, baseID.String(), ftReq, 10, 100*time.Millisecond)
+
+	assert.Equal(t, database.ModelTraining, model.Status)
+	assert.Equal(t, "finetuned-with-gen", model.Name)
+	require.NotNil(t, model.BaseModelId)
+	assert.Equal(t, baseID, *model.BaseModelId)
 }
 
 func TestFinetuningOnnxModel(t *testing.T) {

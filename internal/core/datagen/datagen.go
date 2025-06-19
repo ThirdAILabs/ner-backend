@@ -28,36 +28,39 @@ type DatagenOpts struct {
 	TestSplit float32
 }
 
+func extractTemplateAndExamples(s api.Sample) (string, map[string][]string) {
+	template := make([]string, 0, len(s.Tokens))
+	examples := make(map[string][]string)
+
+	for i, tok := range s.Tokens {
+		lbl := s.Labels[i]
+		if lbl != "O" {
+			if i > 0 && lbl == s.Labels[i-1] {
+				lastIdx := len(examples[lbl]) - 1
+				examples[lbl][lastIdx] += " " + tok
+			} else {
+				template = append(template, fmt.Sprintf("[%s]", lbl))
+				examples[lbl] = append(examples[lbl], tok)
+			}
+		} else {
+			template = append(template, tok)
+		}
+	}
+
+	return strings.Join(template, " "), examples
+}
+
 func templatizeSamples(tagsName []string, sample []api.Sample) ([]string, map[string][]string) {
 	tagExamples := make(map[string][]string)
 
 	// We should generate values for all tags, even if they are not present in any sample.
-	for _, Name := range tagsName {
-		tagExamples[Name] = make([]string, 0)
-	}
-
-	templatizeSingleSample := func(sample api.Sample) (string, map[string][]string) {
-		template := make([]string, 0, len(sample.Tokens))
-		sampleTagExamples := make(map[string][]string)
-
-		for i, token := range sample.Tokens {
-			if sample.Labels[i] != "O" {
-				if i > 0 && sample.Labels[i] == sample.Labels[i-1] {
-					sampleTagExamples[sample.Labels[i]][len(sampleTagExamples[sample.Labels[i]])-1] += " " + token
-				} else {
-					template = append(template, fmt.Sprintf("[%s]", sample.Labels[i]))
-					sampleTagExamples[sample.Labels[i]] = append(sampleTagExamples[sample.Labels[i]], token)
-				}
-			} else {
-				template = append(template, token)
-			}
-		}
-		return strings.Join(template, " "), sampleTagExamples
+	for _, name := range tagsName {
+		tagExamples[name] = make([]string, 0)
 	}
 
 	templates := make([]string, 0, len(sample))
 	for _, s := range sample {
-		template, tagExamplesInSample := templatizeSingleSample(s)
+		template, tagExamplesInSample := extractTemplateAndExamples(s)
 		templates = append(templates, template)
 
 		for tag, values := range tagExamplesInSample {

@@ -11,7 +11,6 @@ import (
 	"mime"
 	"mime/multipart"
 	"ner-backend/internal/core"
-	"ner-backend/internal/core/datagen"
 	"ner-backend/internal/database"
 	"ner-backend/internal/licensing"
 	"ner-backend/internal/messaging"
@@ -210,7 +209,7 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 	samples := make([]api.Sample, 0, len(req.Samples))
 	samples = append(samples, req.Samples...)
 
-	_, tokensList, labelsList, err := database.GetFeedbackSamples(ctx, s.db, modelId)
+	tokensList, labelsList, err := database.GetFeedbackSamples(ctx, s.db, modelId)
 	if err != nil {
 		slog.Error("failed to load feedback samples", "model_id", modelId, "error", err)
 		return nil, CodedErrorf(http.StatusInternalServerError, "could not load feedback samples: %v", err)
@@ -228,31 +227,16 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 		return nil, CodedErrorf(http.StatusUnprocessableEntity, "no feedback samples found for model %s", modelId)
 	}
 
-	if req.GenerateData {
-		opts := datagen.DatagenOpts{
-			Tags:    tagNames,
-			Samples: samples,
-			// have to adjust these values
-			NumValuesPerTag:    30,
-			RecordsToGenerate:  200,
-			RecordsPerTemplate: 3,
-			TestSplit:          0.2,
-		}
-
-		trainSamples, testSamples, err := datagen.GenerateData(opts)
-		if err != nil {
-			slog.Error("error generating synthetic data", "error", err)
-			return nil, CodedErrorf(http.StatusInternalServerError, "error generating samples: %v", err)
-		}
-		samples = append(samples, trainSamples...)
-		samples = append(samples, testSamples...)
-	}
-
 	payload := messaging.FinetuneTaskPayload{
-		ModelId:     model.Id,
-		BaseModelId: model.BaseModelId.UUID,
-		Tags:        req.Tags,
-		Samples:     samples,
+		ModelId:            model.Id,
+		BaseModelId:        model.BaseModelId.UUID,
+		Tags:               req.Tags,
+		Samples:            samples,
+		GenerateData:       req.GenerateData,
+		NumValuesPerTag:    30,
+		RecordsToGenerate:  200,
+		RecordsPerTemplate: 3,
+		TestSplit:          0.2,
 	}
 	if req.TaskPrompt != nil {
 		payload.TaskPrompt = *req.TaskPrompt
@@ -1153,9 +1137,9 @@ func (s *BackendService) StoreModelFeedback(r *http.Request) (any, error) {
 		return nil, CodedErrorf(http.StatusInternalServerError, "error %d: could not retrieve model", ErrCodeDB)
 	}
 
-	var req api.FeedbackRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return nil, CodedErrorf(http.StatusBadRequest, "invalid request payload: %v", err)
+	req, err := ParseRequest[api.FeedbackRequest](r)
+	if err != nil {
+		return nil, err
 	}
 	if len(req.Tokens) == 0 || len(req.Labels) == 0 || len(req.Tokens) != len(req.Labels) {
 		return nil, CodedErrorf(http.StatusUnprocessableEntity, "tokens and labels must both be non‐empty and of equal length")
@@ -1213,7 +1197,7 @@ func (s *BackendService) ListModelFeedback(r *http.Request) (any, error) {
 		return nil, CodedErrorf(http.StatusInternalServerError, "error %d: could not retrieve model", ErrCodeDB)
 	}
 
-	ids, tokensList, labelsList, err := database.GetFeedbackSamples(ctx, s.db, modelId)
+	tokensList, labelsList, err := database.GetFeedbackSamples(ctx, s.db, modelId)
 	if err != nil {
 		return nil, CodedErrorf(http.StatusInternalServerError, "could not fetch feedback: %v", err)
 	}
@@ -1221,7 +1205,6 @@ func (s *BackendService) ListModelFeedback(r *http.Request) (any, error) {
 	out := make([]api.FeedbackRequest, len(tokensList))
 	for i := range tokensList {
 		out[i] = api.FeedbackRequest{
-			Id:     ids[i],
 			Tokens: tokensList[i],
 			Labels: labelsList[i],
 		}
