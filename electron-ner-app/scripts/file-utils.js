@@ -103,7 +103,7 @@ allFilesMeta = allFilesMeta.filter(file => {
   result.directlySelected = dialogResult.filePaths;
   result.allFilePaths = allFilePaths;
   result.allFilesMeta = allFilesMeta;
-  result.totalSize = totalSize;
+  result.totalSize = allFilesMeta.reduce((sum, file) => sum + file.size, 0);
   return result;
 }
 
