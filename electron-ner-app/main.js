@@ -176,8 +176,8 @@ ipcMain.handle('get-user-id', async () => getCurrentUserId());
 ipcMain.handle('open-file-chooser', async (_, types) => openFileChooser(types));
 ipcMain.handle('open-file', async (_, filePath) => openFile(filePath));
 ipcMain.handle('upload-files', async (event, { filePaths, uploadUrl }) => {
-    // This function handle the actual file upload to the backend.
-    // For the UI, we only get the file metadata.
+    // This function handles the actual uploading of files to the backend.
+    // For the UI, we only store the file metadata in the memory to display to the users.
     // When the user submits the report, we upload the files to the backend.
   const form = new FormData();
 
