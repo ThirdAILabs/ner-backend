@@ -12,13 +12,19 @@ import {
   Card,
   CardContent,
 } from '@mui/material';
+import { useSearchParams } from 'next/navigation';
 import { nerService } from '@/lib/backend';
 import MetricsDataViewer from './metrics/MetricsDataViewer';
 import { useHealth } from '@/contexts/HealthProvider';
 import useTelemetry from '@/hooks/useTelemetry';
+
 import { useLicense } from '@/hooks/useLicense';
+
+import MetricsDataViewerCard from '@/components/ui/MetricsDataViewerCard';
 import { formatFileSize } from '@/lib/utils';
-import Image from 'next/image';
+
+import Tooltip from '@mui/material/Tooltip';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
 const Dashboard = () => {
   const recordEvent = useTelemetry();
@@ -30,7 +36,10 @@ const Dashboard = () => {
     });
   }, []);
   const { healthStatus } = useHealth();
-  const { license, isEnterprise } = useLicense();
+  const { license } = useLicense();
+  const searchParams = useSearchParams();
+  const deploymentId = searchParams.get('deploymentId');
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Don't make API calls if health check hasn't passed
@@ -74,7 +83,6 @@ const Dashboard = () => {
         .then((ms) => setModels(ms))
         .catch((err) => {
           console.error('Failed to load models:', err);
-          setError('Failed to load models: ' + err);
         });
     };
 
@@ -228,9 +236,9 @@ const Dashboard = () => {
                       ? 'All Models'
                       : models.find((m) => m.Id === val)?.Name
                         ? models
-                            .find((m) => m.Id === val)!
-                            .Name.charAt(0)
-                            .toUpperCase() + models.find((m) => m.Id === val)!.Name.slice(1)
+                          .find((m) => m.Id === val)!
+                          .Name.charAt(0)
+                          .toUpperCase() + models.find((m) => m.Id === val)!.Name.slice(1)
                         : val
                   }
                   sx={{
@@ -304,92 +312,77 @@ const Dashboard = () => {
           )}
 
           {/* Metrics Viewer */}
-          <div className="mt-[-20px] p-0">
+          <Box
+            sx={{
+              bgcolor: 'white',
+              borderRadius: '12px',
+              border: '1px solid',
+              borderColor: 'grey.200',
+              overflow: 'hidden',
+            }}
+          >
             <MetricsDataViewer modelId={selectedModel?.Id || undefined} days={days} />
-          </div>
+          </Box>
         </CardContent>
       </Card>
 
-      {!isEnterprise && (
-        <div className=" mt-[-60px]">
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'row',
-              alignItems: 'center',
-            }}
-          >
+      {license && license?.LicenseInfo?.LicenseType === 'free' && (
+        <Card
+          sx={{
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            bgcolor: 'white',
+            borderRadius: '12px',
+            mx: 'auto',
+            mt: 4,
+            maxWidth: '1400px',
+          }}
+        >
+          <CardContent sx={{ p: 4 }}>
             <Box
               sx={{
                 display: 'flex',
-                flexDirection: 'column',
-                gap: 2,
-                flex: '0 0 50%',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                mb: 4,
               }}
             >
               <Typography
-                variant="h4"
+                variant="h5"
                 sx={{
                   fontWeight: 600,
-                  color: 'rgb(102,102,102)',
                   fontSize: '1.5rem',
+                  color: '#4a5568',
                 }}
               >
                 Free Tier Quota
               </Typography>
-
-              <Typography
-                variant="body1"
-                sx={{
-                  color: '#64748b',
-                  mb: 2,
-                }}
-              >
-                {`${formatFileSize(license?.LicenseInfo?.Usage.UsedBytes || 0)} / ${formatFileSize(
-                  license?.LicenseInfo?.Usage.MaxBytes || 0
-                )} monthly quota used`}
-              </Typography>
-
-              <Box
-                sx={{
-                  width: '100%',
-                  height: 8,
-                  bgcolor: '#e2e8f0',
-                  borderRadius: 4,
-                  overflow: 'hidden',
-                }}
-              >
-                <Box
-                  sx={{
-                    width: `${license ? (license?.LicenseInfo?.Usage.UsedBytes / license?.LicenseInfo?.Usage.MaxBytes) * 100 : 0}%`,
-                    height: '100%',
-                    bgcolor: '#60a5fa',
-                    borderRadius: 4,
-                    transition: 'width 0.5s ease-in-out',
-                  }}
-                />
-              </Box>
             </Box>
 
             <Box
               sx={{
-                flex: '0 0 50%',
-                display: 'flex',
-                justifyContent: 'flex-end',
+                bgcolor: 'white',
+                borderRadius: '12px',
+                border: '1px solid',
+                borderColor: 'grey.200',
+                overflow: 'hidden',
               }}
             >
-              <Image
-                src="/image.png"
-                alt="Background pattern"
-                width={400}
-                height={256}
-                style={{
-                  objectFit: 'contain',
-                }}
-              />
+              <div style={{ padding: '16px' }}>
+                <MetricsDataViewerCard
+                  value={`${formatFileSize(license?.LicenseInfo?.Usage.UsedBytes)} / ${formatFileSize(license?.LicenseInfo?.Usage.MaxBytes)}`}
+                  label={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      Quota Used
+                      <Tooltip title="Resets on the 1st of each month.">
+                        <InfoOutlinedIcon fontSize="inherit" sx={{ cursor: 'pointer' }} />
+                      </Tooltip>
+                    </Box>
+                  }
+                />
+              </div>
             </Box>
-          </Box>
-        </div>
+          </CardContent>
+        </Card>
       )}
     </>
   );
