@@ -3,10 +3,9 @@
  */
 
 import React, { useState, useRef, useMemo } from 'react';
-import { Menu, MenuItem } from '@mui/material';
 import { DisplayedToken } from '@/components/feedback/useFeedbackState';
 import { FeedbackMetadata } from '@/components/feedback/useFeedbackState';
-import { environment } from '@/lib/environment';
+import { TagDropdown } from './TagDropdown';
 
 interface HighlightColor {
   text: string;
@@ -24,6 +23,7 @@ interface TokenHighlighterProps {
   objectId?: string;
   tagFilters?: Record<string, boolean>;
 }
+
 interface Feedback {
   id: string;
   body: FeedbackMetadata;
@@ -34,7 +34,6 @@ const SELECTING_COLOR = '#EFEFEF';
 const NEUTRAL_TAG_COLOR = '#666';
 const PASTELS = ['#E5A49C', '#F6C886', '#FBE7AA', '#99E3B5', '#A6E6E7', '#A5A1E1', '#D8A4E2'];
 const DARKERS = ['#D34F3E', '#F09336', '#F7CF5F', '#5CC96E', '#65CFD0', '#597CE2', '#B64DC8'];
-const REMOVE_TAG_NAME = 'Remove Tag';
 const NEW_TAG_COLOR = {
   text: '#F1F5F9',
   tag: '#64748B',
@@ -54,17 +53,12 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
   const [selectionStart, setSelectionStart] = useState<number | null>(null);
   const [selectionEnd, setSelectionEnd] = useState<number | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState<{
     x: number;
     y: number;
   } | null>(null);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const [query, setQuery] = useState('');
-  const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const dropdownQueryRef = useRef<HTMLInputElement>(null);
-  const [justOpenedDropdown, setJustOpenedDropdown] = useState(false);
 
   const nonTrivialTagColors = useMemo(() => {
     const colors: Record<string, HighlightColor> = {};
@@ -122,8 +116,6 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
         x: event.clientX,
         y: event.clientY,
       });
-      setShowDropdown(true);
-      setJustOpenedDropdown(true);
       setIsSelecting(false);
     }
   };
@@ -131,43 +123,24 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
   const handleTagSelect = (tag: string) => {
     if (!editable) return;
     if (selectionStart === null || selectionEnd === null) return;
-    if (tag === REMOVE_TAG_NAME) {
-      tag = 'O';
-    }
     const start = Math.min(selectionStart, selectionEnd);
     const end = Math.max(selectionStart, selectionEnd);
-    setQuery('');
     if (onTagAssign) {
       onTagAssign(start, end, tag);
     }
-    setShowDropdown(false);
+    setDropdownPosition(null);
     setSelectionStart(null);
     setSelectionEnd(null);
-    setDropdownPosition(null);
   };
 
   // Display the 'Remove Tag' option only if there are tags to remove;
   // it doesn't make sense to remove tags when the whole span consists of "O" tags.
-  const hasTagsToRemove =
+  const canRemoveTagFromSelection =
     selectionStart !== null &&
     selectionEnd !== null &&
     tokens
       .slice(Math.min(selectionStart, selectionEnd), Math.max(selectionStart, selectionEnd) + 1)
-      .some((token) => token.tag !== 'O');
-
-  const filteredTags = [
-    ...(hasTagsToRemove ? [REMOVE_TAG_NAME] : []),
-    ...(query
-      ? availableTags.filter((tag) => tag.toLowerCase().includes(query.toLowerCase()))
-      : availableTags),
-  ];
-
-  const queryMatchesTag =
-    query && availableTags.some((tag) => tag.toLowerCase() === query.toLowerCase());
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setQuery(e.target.value);
-  };
+      .some((token) => token.tag !== 'O' && !unassignableTags.includes(token.tag));
 
   const getReportId = () => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -291,186 +264,20 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
         })}
       </div>
 
-      {showDropdown && dropdownPosition && (
-        <Menu
-          open={showDropdown && dropdownPosition !== null}
-          anchorReference="anchorPosition"
-          anchorPosition={{
-            top: dropdownPosition.y,
-            left: dropdownPosition.x,
-          }}
-          onKeyDown={(e) => {
-            // Keystrokes are relayed to the input field except for navigation keys.
-            // This creates a smoother user experience.
-            if (
-              e.key === 'ArrowUp' ||
-              e.key === 'ArrowDown' ||
-              e.key === 'ArrowLeft' ||
-              e.key === 'ArrowRight' ||
-              e.key === 'Enter'
-            ) {
-              return;
-            }
-            dropdownQueryRef.current?.focus();
-          }}
-          onFocus={() => {
-            // Immediately shows caret in the input field and makes up and down arrows
-            // work immediately upon opening the dropdown.
-            if (justOpenedDropdown) {
-              setJustOpenedDropdown(false);
-              dropdownQueryRef.current?.focus();
-            }
-          }}
-          onClose={() => {
-            setShowDropdown(false);
-            setSelectionStart(null);
-            setSelectionEnd(null);
-            setDropdownPosition(null);
-            setQuery('');
-          }}
-          PaperProps={{
-            sx: {
-              borderRadius: '8px',
-              overflow: 'hidden',
-            },
-          }}
-        >
-          <input
-            type="text"
-            value={query}
-            onChange={handleInputChange}
-            onKeyDown={(e) => {
-              // Except for navigation keys, don't propagate the keystroke to the menu component
-              // so the selector does not jump around, creating a smooth user experience.
-              if (
-                e.key === 'ArrowUp' ||
-                e.key === 'ArrowDown' ||
-                e.key === 'ArrowLeft' ||
-                e.key === 'ArrowRight'
-              ) {
-                return;
-              }
-              e.stopPropagation();
-            }}
-            className="w-full p-2 border border-gray-300 rounded mb-1 bg-white text-base"
-            placeholder="Search Tags..."
-            autoFocus
-            ref={dropdownQueryRef}
-            style={{
-              padding: '10px 15px',
-              border: 'none',
-              outline: 'none',
-              boxShadow: 'none',
-              backgroundColor: 'transparent',
-            }}
-          />
-
-          {query &&
-            !queryMatchesTag &&
-            (environment.allowNewTagsInFeedback ? (
-              <MenuItem
-                onClick={() => handleTagSelect(query)}
-                className="flex items-center justify-between font-bold text-black bg-white rounded-md mx-2 my-0.5 px-3 py-2 transition-colors hover:bg-gray-100"
-              >
-                <span>{query}</span>
-                <span className="ml-3 bg-gray-200 text-gray-700 rounded-full text-xs font-medium px-3 py-0.5">
-                  new
-                </span>
-              </MenuItem>
-            ) : (
-              <div className="text-gray-500 text-sm px-4 pb-2">No matches found</div>
-            ))}
-
-          {filteredTags.map((tag) => (
-            <MenuItem
-              key={tag}
-              value={tag}
-              onClick={(e) => {
-                if (unassignableTags.includes(tag)) {
-                  e.stopPropagation();
-                  return;
-                }
-                handleTagSelect(tag);
-              }}
-              onMouseOver={(e) => {
-                if (unassignableTags.includes(tag)) {
-                  setTooltip({
-                    text: `${tag} cannot be selected because it is a custom tag`,
-                    x: e.clientX,
-                    y: e.clientY,
-                  });
-                }
-              }}
-              onMouseLeave={() => {
-                if (unassignableTags.includes(tag)) {
-                  setTooltip(null);
-                }
-              }}
-            >
-              <span style={{ display: 'flex', alignItems: 'center' }}>
-                {tag === REMOVE_TAG_NAME ? (
-                  <svg
-                    width="16"
-                    height="16"
-                    fill="none"
-                    stroke="#ef4444"
-                    strokeWidth="2"
-                    viewBox="0 0 24 24"
-                    style={{
-                      marginRight: 8,
-                      display: 'inline-block',
-                      verticalAlign: 'middle',
-                    }}
-                  >
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                ) : (
-                  <span
-                    style={{
-                      display: 'inline-block',
-                      width: 12,
-                      height: 12,
-                      borderRadius: '50%',
-                      background: nonTrivialTagColors[tag]?.text || NEUTRAL_TAG_COLOR,
-                      marginRight: 8,
-                      verticalAlign: 'middle',
-                    }}
-                  />
-                )}
-                <span style={{ color: unassignableTags.includes(tag) ? 'grey' : 'black' }}>
-                  {tag}
-                </span>
-              </span>
-              {unassignableTags.includes(tag) && (
-                <span className="flex items-center ml-2 text-xs text-gray-500">
-                  <svg
-                    width="12"
-                    height="12"
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
-                    className="cursor-help"
-                  >
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
-                  </svg>
-                </span>
-              )}
-            </MenuItem>
-          ))}
-        </Menu>
-      )}
-
-      {tooltip && (
-        <div
-          className="fixed z-[1400] px-2 py-1 text-xs bg-white rounded shadow-lg pointer-events-none"
-          style={{
-            left: tooltip.x + 10,
-            top: tooltip.y - 30,
-          }}
-        >
-          {tooltip.text}
-        </div>
-      )}
+      <TagDropdown
+        position={dropdownPosition}
+        tagColors={Object.fromEntries(
+          Object.entries(nonTrivialTagColors).map(([tag, color]) => [tag, color.text])
+        )}
+        unassignableTags={unassignableTags}
+        showRemoveTag={canRemoveTagFromSelection}
+        onClose={() => {
+          setDropdownPosition(null);
+          setSelectionStart(null);
+          setSelectionEnd(null);
+        }}
+        onTagSelect={handleTagSelect}
+      />
     </div>
   );
 };
