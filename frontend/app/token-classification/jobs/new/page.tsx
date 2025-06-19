@@ -200,7 +200,6 @@ const FileSources: React.FC<FileSourcesProps> = ({
                 setSelectedFilesMeta([]);
               } else {
                 setSelectedFilesMeta(allFilesMeta || []);
-                console.log('Total size of selected files:', totalSize / (1024 * 1024), 'MB');
               }
             } finally {
               setIsLoadingFiles(false);
