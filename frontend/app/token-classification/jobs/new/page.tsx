@@ -117,7 +117,7 @@ const SourceOption: React.FC<SourceOptionProps> = ({
         ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
         : 'border-gray-300 hover:border-blue-400 cursor-pointer'
     }`}
-    onClick={disabled ? undefined : onClick}
+    onClick={disabled ? () => {} : onClick}
   >
     {input && input}
     <div className="flex flex-col items-center justify-center space-y-4">
