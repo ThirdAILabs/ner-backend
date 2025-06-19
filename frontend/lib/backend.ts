@@ -10,14 +10,14 @@ export interface ChatResponse {
 }
 
 export interface Feedback {
-  tokens: string[];
-  labels: string[];
+  Tokens: string[];
+  Labels: string[];
 }
 
 export interface SavedFeedback {
-  id: string;
-  tokens: string[];
-  labels: string[];
+  Id: string;
+  Tokens: string[];
+  Labels: string[];
 }
 
 export interface TagInfo {
@@ -27,10 +27,10 @@ export interface TagInfo {
 }
 
 export interface FinetuneRequest {
-  name: string;
-  task_prompt?: string;
-  tags?: TagInfo[];
-  samples?: Feedback[];
+  Name: string;
+  TaskPrompt?: string;
+  Tags?: TagInfo[];
+  Samples?: Feedback[];
 }
 
 export interface FinetuneResponse {

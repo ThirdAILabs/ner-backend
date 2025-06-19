@@ -120,7 +120,7 @@ const useFeedbackState = (modelId: string, reportId: string) => {
     if (!objects[newFeedback.objectId]) {
       setObjects({
         ...objects,
-        [newFeedback.objectId]: { tokens: objectTokens, labels: objectTags },
+        [newFeedback.objectId]: { Tokens: objectTokens, Labels: objectTags },
       });
     }
   };
@@ -132,7 +132,7 @@ const useFeedbackState = (modelId: string, reportId: string) => {
         finetuningSamples[feedback.body.objectId] = objects[feedback.body.objectId];
       }
       for (let i = feedback.body.startIndex; i <= feedback.body.endIndex; i++) {
-        finetuningSamples[feedback.body.objectId].labels[i] = feedback.body.tag;
+        finetuningSamples[feedback.body.objectId].Labels[i] = feedback.body.tag;
       }
     });
 

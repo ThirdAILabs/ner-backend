@@ -281,9 +281,9 @@ const ModelCustomization: React.FC = () => {
     setFinetuning(true);
     try {
       const request = {
-        name: finetuneModelName.trim(),
-        task_prompt: finetuneTaskPrompt.trim() || undefined,
-        samples: feedbackData.length > 0 ? feedbackData : undefined,
+        Name: finetuneModelName.trim(),
+        TaskPrompt: finetuneTaskPrompt.trim() || undefined,
+        Samples: feedbackData.length > 0 ? feedbackData : undefined,
       };
       const response = await nerService.finetuneModel(selectedModel.Id, request);
       setShowFinetuneDialog(false);

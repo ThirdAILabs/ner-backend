@@ -184,7 +184,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
     if (!modelId) return;
     try {
       await nerService.deleteModelFeedback(modelId, id);
-      setFeedbackData(feedbackData.filter((feedback) => feedback.id !== id));
+      setFeedbackData(feedbackData.filter((feedback) => feedback.Id !== id));
     } catch (error) {
       console.error('Failed to delete feedback:', error);
     }
