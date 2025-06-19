@@ -109,19 +109,28 @@ export const openFileChooser = async (supportedTypes) => {
   let allFilePaths = await gatherFilesRecursively(dialogResult.filePaths, supportedTypes);
   allFilePaths = [...new Set(allFilePaths)].sort();
 
-  // Only send metadata, not contents
-  const allFilesMeta = await Promise.all(
-    allFilePaths.map(async (filePath) => {
-      const stats = await fs.promises.stat(filePath);
-      return {
-        name: path.basename(filePath),
-        size: stats.size,
-        type: 'application/octet-stream',
-        lastModified: stats.mtimeMs,
-        fullPath: filePath,
-      };
-    })
-  );
+
+  let allFilesMeta = await Promise.all(
+  allFilePaths.map(async (filePath) => {
+    const stats = await fs.promises.stat(filePath);
+    return {
+      name: path.basename(filePath),
+      size: stats.size,
+      type: 'application/octet-stream',
+      lastModified: stats.mtimeMs,
+      fullPath: filePath,
+    };
+  })
+);
+
+// Deduplicate by name and size
+const seen = new Set();
+allFilesMeta = allFilesMeta.filter(file => {
+  const key = `${file.name}:${file.size}`;
+  if (seen.has(key)) return false;
+  seen.add(key);
+  return true;
+});
   
   const totalSize = allFilesMeta.reduce((sum, file) => sum + file.size, 0);
   console.log(`Total selected files size: ${totalSize} bytes, ${totalSize / (1024 * 1024 * 1024)} GB`);
