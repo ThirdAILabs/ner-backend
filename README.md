@@ -18,6 +18,10 @@ A distributed system in Go for processing asynchronous Machine Learning tasks (t
 1. Prerequisites: Install Go (1.21+), Docker, and Docker Compose (v2+).
 2. Clone: `git clone <repository-url>` then `cd ner-backend`
 
+## Platform-Specific Build Instructions
+
+For Windows build instructions and platform differences, see [BUILD_WINDOWS.md](BUILD_WINDOWS.md).
+
 
 
 ## Running with Docker Compose
