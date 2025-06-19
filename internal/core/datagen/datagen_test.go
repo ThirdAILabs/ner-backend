@@ -22,10 +22,8 @@ func TestDatagen(t *testing.T) {
 			Labels: []string{"O", "O", "O", "O", "phone_number"},
 		}},
 		NumValuesPerTag:    10,
-		SamplesToGenerate:  10,
-		SamplesPerTemplate: 2,
-		GenerateAtOnce:     2,
-		TemplatesPerSample: 3,
+		RecordsToGenerate:  10,
+		RecordsPerTemplate: 2,
 		TestSplit:          0.3,
 	})
 	require.NoError(t, err)

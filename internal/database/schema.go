@@ -173,3 +173,11 @@ type FileNameToPath struct {
 	ID      uuid.UUID      `gorm:"type:uuid;primaryKey"`
 	Mapping datatypes.JSON `gorm:"type:jsonb"`
 }
+
+type FeedbackSample struct {
+	ID           uuid.UUID      `gorm:"type:uuid;primaryKey"`
+	ModelId      uuid.UUID      `gorm:"type:uuid;index;not null"`
+	Tokens       datatypes.JSON `gorm:"type:jsonb;not null"` // JSON‐encoded []string
+	Labels       datatypes.JSON `gorm:"type:jsonb;not null"` // JSON‐encoded []string
+	CreationTime time.Time      `gorm:"autoCreateTime"`
+}
