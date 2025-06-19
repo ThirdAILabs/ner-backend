@@ -397,7 +397,7 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
                   setTooltip({
                     text: `${tag} cannot be selected because it is a custom tag`,
                     x: e.clientX,
-                    y: e.clientY
+                    y: e.clientY,
                   });
                 }
               }}
@@ -443,9 +443,7 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
                 </span>
               </span>
               {unassignableTags.includes(tag) && (
-                <span
-                  className="flex items-center ml-2 text-xs text-gray-500"
-                >
+                <span className="flex items-center ml-2 text-xs text-gray-500">
                   <svg
                     width="12"
                     height="12"

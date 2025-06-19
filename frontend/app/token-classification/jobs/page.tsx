@@ -388,7 +388,7 @@ function JobDetail() {
           <DatabaseTable
             groups={reportData?.Groups?.map((g) => g.Name) || []}
             tags={availableTagsCount}
-            customTagNames={customTags.map(t => t.name)}
+            customTagNames={customTags.map((t) => t.name)}
             uploadId={reportData?.IsUpload ? reportData?.SourceS3Prefix : ''}
             addFeedback={addFeedback}
             initialSelectedTag={selectedTag}
