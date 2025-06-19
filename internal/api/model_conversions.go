@@ -7,9 +7,10 @@ import (
 
 func convertModel(m database.Model) api.Model {
 	model := api.Model{
-		Id:     m.Id,
-		Name:   m.Name,
-		Status: m.Status,
+		Id:           m.Id,
+		Name:         m.Name,
+		Status:       m.Status,
+		CreationTime: m.CreationTime,
 	}
 	if m.BaseModelId.Valid {
 		model.BaseModelId = &m.BaseModelId.UUID
@@ -58,6 +59,8 @@ func convertReport(r database.Report) api.Report {
 		ReportName:         r.ReportName,
 		SourceS3Bucket:     r.SourceS3Bucket,
 		SourceS3Prefix:     r.SourceS3Prefix.String,
+		S3Endpoint:         r.S3Endpoint.String,
+		S3Region:           r.S3Region.String,
 		IsUpload:           r.IsUpload,
 		Stopped:            r.Stopped,
 		CreationTime:       r.CreationTime,

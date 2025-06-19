@@ -57,7 +57,7 @@ def export_to_onnx(
     torch.onnx.export(
         wrapper,
         dummy,
-        os.path.join(onnx_out, "model.onnx.enc"),
+        os.path.join(onnx_out, "model.onnx"),
         input_names=["input_ids"],
         output_names=["emissions"],
         dynamic_axes={

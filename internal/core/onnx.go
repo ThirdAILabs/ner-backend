@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"ner-backend/internal/core/python"
 	"ner-backend/internal/core/types"
 	"ner-backend/pkg/api"
 
@@ -147,9 +148,13 @@ type OnnxModel struct {
 	session   *ort.DynamicAdvancedSession
 	tokenizer *tokenizers.Tokenizer
 	crf       CRF
+
+	modelDir string
 }
 
-func decryptModel(encPath, keyB64 string) ([]byte, error) {
+func decryptModel(encPath string) ([]byte, error) {
+	keyB64 := "UuTl+ZEVxcUCJoXIDkePg49vS/GYjHa+Fd96kp8vG5E="
+
 	key, err := base64.StdEncoding.DecodeString(keyB64)
 	if err != nil {
 		return nil, fmt.Errorf("invalid MODEL_KEY: %w", err)
@@ -183,14 +188,13 @@ func decryptModel(encPath, keyB64 string) ([]byte, error) {
 }
 
 func LoadOnnxModel(modelDir string) (Model, error) {
-	encPath := filepath.Join(modelDir, "model.onnx.enc")
+	encPath := filepath.Join(modelDir, "model.onnx")
 	crfPath := filepath.Join(modelDir, "transitions.json")
+	tokenizerPath := filepath.Join(modelDir, "qwen_tokenizer/tokenizer.json")
 
-	// decrypt the onnx bytes into memory
-	keyB64 := "UuTl+ZEVxcUCJoXIDkePg49vS/GYjHa+Fd96kp8vG5E="
-	onnxBytes, err := decryptModel(encPath, keyB64)
+	onnxBytes, err := os.ReadFile(encPath)
 	if err != nil {
-		return nil, fmt.Errorf("decrypt model: %w", err)
+		return nil, fmt.Errorf("error reading model data: %w", err)
 	}
 
 	crf, err := loadCRF(crfPath)
@@ -198,9 +202,18 @@ func LoadOnnxModel(modelDir string) (Model, error) {
 		return nil, fmt.Errorf("CRF load error: %w", err)
 	}
 
-	tk, err := tokenizers.FromPretrained("Qwen/Qwen2.5-0.5B")
-	if err != nil {
-		return nil, fmt.Errorf("tokenizer load: %w", err)
+	var tk *tokenizers.Tokenizer
+
+	if _, err := os.Stat(tokenizerPath); err == nil {
+		tk, err = tokenizers.FromFile(tokenizerPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load tokenizer from local dir: %w", err)
+		}
+	} else {
+		tk, err = tokenizers.FromPretrained("Qwen/Qwen2.5-0.5B")
+		if err != nil {
+			return nil, fmt.Errorf("tokenizer load: %w", err)
+		}
 	}
 
 	session, err := ort.NewDynamicAdvancedSessionWithONNXData(
@@ -217,6 +230,7 @@ func LoadOnnxModel(modelDir string) (Model, error) {
 		session:   session,
 		tokenizer: tk,
 		crf:       crf,
+		modelDir:  modelDir,
 	}, nil
 }
 
@@ -288,12 +302,17 @@ func (m *OnnxModel) Predict(text string) ([]types.Entity, error) {
 	return ents, nil
 }
 
-func (m *OnnxModel) Finetune(_ string, _ []api.TagInfo, _ []api.Sample) error {
-	return fmt.Errorf("finetune not supported for ONNX")
-}
+func (m *OnnxModel) FinetuneAndSave(taskPrompt string, tags []api.TagInfo, samples []api.Sample, savePath string) error {
+	pythonModel, err := python.LoadCnnModel(m.modelDir)
+	if err != nil {
+		return fmt.Errorf("failed to load Python model for finetuning: %w", err)
+	}
 
-func (m *OnnxModel) Save(path string) error {
-	return fmt.Errorf("save not supported for ONNX")
+	if err := pythonModel.FinetuneAndSave(taskPrompt, tags, samples, savePath); err != nil {
+		return fmt.Errorf("error finetuning model: %w", err)
+	}
+
+	return nil
 }
 
 func (m *OnnxModel) Release() {

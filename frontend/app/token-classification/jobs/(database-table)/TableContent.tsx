@@ -331,9 +331,7 @@ export function TableContent({
   }
 
   const filteredRecords = objectRecords.filter((record) =>
-    filterRecords(record.groups, [
-      ...new Set(record.taggedTokens.map((token) => token[1]).filter((tag) => tag !== 'O')),
-    ])
+    filterRecords(record.groups, [...new Set(record.taggedTokens.map((token) => token[1]))])
   );
 
   return (
@@ -398,6 +396,8 @@ export function TableContent({
                   );
                 })}
                 ...
+                <br />
+                <br />
                 <p className="text-gray-500 text-xs">
                   Truncated File View. Please open the original file for the entire content.
                 </p>

@@ -39,9 +39,7 @@ var statelessModelTypes = map[ModelType]struct{}{
 type Model interface {
 	Predict(text string) ([]types.Entity, error)
 
-	Finetune(taskPrompt string, tags []api.TagInfo, samples []api.Sample) error
-
-	Save(path string) error
+	FinetuneAndSave(taskPrompt string, tags []api.TagInfo, samples []api.Sample, savePath string) error
 
 	Release()
 }
@@ -53,28 +51,17 @@ func IsStatelessModel(modelType ModelType) bool {
 	return exists
 }
 
-func NewModelLoaders(pythonExec, pluginScript string) map[ModelType]ModelLoader {
+func NewModelLoaders() map[ModelType]ModelLoader {
 	return map[ModelType]ModelLoader{
 		// BoltUdt: func(modelDir string) (Model, error) {
 		// 	return bolt.LoadNER(filepath.Join(modelDir, "model.bin"))
 		// },
 		PythonTransformer: func(modelDir string) (Model, error) {
 			cfgJSON := fmt.Sprintf(`{"model_path":"%s","threshold":0.5}`, modelDir)
-			return python.LoadPythonModel(
-				pythonExec,
-				pluginScript,
-				"python_combined_ner_model",
-				cfgJSON,
-			)
+			return python.LoadPythonModel("python_combined_ner_model", cfgJSON)
 		},
 		PythonCnn: func(modelDir string) (Model, error) {
-			cfgJSON := fmt.Sprintf(`{"model_path":"%s/cnn_model.pth", "tokenizer_path":"%s/qwen_tokenizer"}`, modelDir, modelDir)
-			return python.LoadPythonModel(
-				pythonExec,
-				pluginScript,
-				"python_cnn_ner_model",
-				cfgJSON,
-			)
+			return python.LoadCnnModel(modelDir)
 		},
 		Presidio: func(_ string) (Model, error) {
 			return NewPresidioModel()
