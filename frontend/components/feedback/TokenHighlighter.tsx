@@ -33,6 +33,10 @@ const NEUTRAL_TAG_COLOR = '#666';
 const PASTELS = ['#E5A49C', '#F6C886', '#FBE7AA', '#99E3B5', '#A6E6E7', '#A5A1E1', '#D8A4E2'];
 const DARKERS = ['#D34F3E', '#F09336', '#F7CF5F', '#5CC96E', '#65CFD0', '#597CE2', '#B64DC8'];
 const REMOVE_TAG_NAME = 'Remove Tag';
+const NEW_TAG_COLOR = {
+  text: '#F1F5F9',
+  tag: '#64748B'
+};
 
 export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
   tokens,
@@ -57,15 +61,10 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const dropdownQueryRef = useRef<HTMLInputElement>(null);
 
-  // Modify the nonTrivialTagColors calculation to include all non-O tags from both availableTags and tokens
   const nonTrivialTagColors = useMemo(() => {
     const colors: Record<string, HighlightColor> = {};
-    const allTags = new Set([
-      ...availableTags,
-      ...tokens.map(token => token.tag)
-    ]);
 
-    Array.from(allTags)
+    availableTags
       .filter(tag => tag !== 'O')
       .forEach((tag, index) => {
         colors[tag] = {
@@ -73,6 +72,13 @@ export const TokenHighlighter: React.FC<TokenHighlighterProps> = ({
           tag: DARKERS[index % DARKERS.length],
         };
       });
+
+    tokens.forEach(token => {
+      if (token.tag !== 'O' && !colors[token.tag]) {
+        colors[token.tag] = NEW_TAG_COLOR;
+      }
+    });
+
     return colors;
   }, [availableTags, tokens]);
 
