@@ -35,6 +35,12 @@ type FinetuneTaskPayload struct {
 	TaskPrompt string
 	Tags       []api.TagInfo
 	Samples    []api.Sample
+
+	GenerateData       bool
+	NumValuesPerTag    int
+	RecordsToGenerate  int
+	RecordsPerTemplate int
+	TestSplit          float32
 }
 
 type ShardDataPayload struct {

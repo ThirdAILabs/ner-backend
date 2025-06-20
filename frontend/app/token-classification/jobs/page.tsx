@@ -411,11 +411,24 @@ function JobDetail() {
                   }}
                 >
                   <h3 className="text-lg font-medium mb-1">S3 Bucket</h3>
+                  {reportData.S3Endpoint && (
+                    <p className="text-sm text-gray-600">
+                      <b>Endpoint:</b> {reportData.S3Endpoint}
+                    </p>
+                  )}
+                  {reportData.S3Region && (
+                    <p className="text-sm text-gray-600">
+                      <b>Region:</b> {reportData.S3Region}
+                    </p>
+                  )}
                   <p className="text-sm text-gray-600">
-                    {reportData.SourceS3Bucket === 'uploads'
-                      ? ''
-                      : `${reportData.SourceS3Bucket}/${reportData?.SourceS3Prefix || ''}`}
+                    <b>Bucket:</b> {reportData.SourceS3Bucket}
                   </p>
+                  {reportData.SourceS3Prefix && (
+                    <p className="text-sm text-gray-600">
+                      <b>Prefix:</b> {reportData.SourceS3Prefix}
+                    </p>
+                  )}
                 </Box>
               )}
 

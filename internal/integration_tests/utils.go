@@ -137,7 +137,7 @@ func createModel(t *testing.T, storage storage.Provider, db *gorm.DB, modelBucke
 		Type:         "regex",
 		Status:       database.ModelTrained,
 		CreationTime: time.Now().UTC(),
-		Tags:         []database.ModelTag{{ModelId: modelId, Tag: "phone"}, {ModelId: modelId, Tag: "email"}},
+		Tags:         []database.ModelTag{{ModelId: modelId, Tag: "phone"}, {ModelId: modelId, Tag: "email"}, {ModelId: modelId, Tag: "xyz"}},
 	}
 
 	require.NoError(t, db.Create(&model).Error)

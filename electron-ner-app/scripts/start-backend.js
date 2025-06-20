@@ -173,12 +173,14 @@ export async function startBackend() {
     {
       cwd: backendDir,
       env: {
+        ...process.env,
         PORT:       FIXED_PORT.toString(),
         MODEL_DIR: getBinPath(),
         MODEL_TYPE: modelType,
         PLUGIN_SERVER: pluginPath,
         APP_DATA_DIR: appDataDir,
         ONNX_RUNTIME_DYLIB: onnxRuntimePath,
+        LICENSE_KEY: process.env.LICENSE_KEY || ''
       },
       stdio: ['pipe', 'pipe', 'pipe']
     }

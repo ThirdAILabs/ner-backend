@@ -8,10 +8,11 @@ import (
 )
 
 type Model struct {
-	Id          uuid.UUID
-	BaseModelId *uuid.UUID
-	Name        string
-	Status      string
+	Id           uuid.UUID
+	BaseModelId  *uuid.UUID
+	Name         string
+	Status       string
+	CreationTime time.Time
 
 	Tags []string `json:"Tags,omitempty"`
 }
@@ -103,11 +104,11 @@ type Sample struct {
 }
 
 type FinetuneRequest struct {
-	Name string
-
-	TaskPrompt string
-	Tags       []TagInfo
-	Samples    []Sample
+	Name         string    `json:"Name"`
+	TaskPrompt   *string   `json:"TaskPrompt"`
+	GenerateData bool      `json:"GenerateData"`
+	Tags         []TagInfo `json:"Tags"`
+	Samples      []Sample  `json:"samples,omitempty"`
 }
 
 type FinetuneResponse struct {
@@ -160,4 +161,9 @@ type ValidateS3BucketRequest struct {
 
 type FileNameToPath struct {
 	Mapping map[string]string
+}
+
+type FeedbackRequest struct {
+	Tokens []string `json:"tokens"`
+	Labels []string `json:"labels"`
 }

@@ -6,11 +6,13 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"ner-backend/internal/core/datagen"
 	"ner-backend/internal/core/types"
 	"ner-backend/internal/database"
 	"ner-backend/internal/licensing"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/storage"
+	"ner-backend/pkg/api"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -470,6 +472,7 @@ func (proc *TaskProcessor) createObjectPreview(
 	object string,
 	previewText string,
 	model Model,
+	customTags map[string]*regexp.Regexp,
 ) error {
 	if proc.db == nil {
 		return nil
@@ -480,6 +483,20 @@ func (proc *TaskProcessor) createObjectPreview(
 		return fmt.Errorf("preview inference error: %w", err)
 	}
 	spans = FilterEntities(previewText, spans)
+
+	for tag, re := range customTags {
+		for _, idx := range re.FindAllStringIndex(previewText, -1) {
+			start, end := idx[0], idx[1]
+			spans = append(spans, types.Entity{
+				Label:    tag,
+				Text:     previewText[start:end],
+				Start:    start,
+				End:      end,
+				LContext: strings.ToValidUTF8(previewText[max(0, start-20):start], ""),
+				RContext: strings.ToValidUTF8(previewText[end:min(len(previewText), end+20)], ""),
+			})
+		}
+	}
 
 	// converting spans to a map for coalescing
 	spanEntityMap := make(map[string][]types.Entity)
@@ -657,7 +674,7 @@ func (proc *TaskProcessor) runInferenceOnObject(
 	}
 
 	previewText := strings.Join(previewTokens, " ")
-	if err := proc.createObjectPreview(reportId, object, previewText, model); err != nil {
+	if err := proc.createObjectPreview(reportId, object, previewText, model, customTags); err != nil {
 		slog.Error("saving ObjectPreview failed", "object", object, "err", err)
 	}
 
@@ -835,6 +852,14 @@ func (proc *TaskProcessor) getModel(ctx context.Context, modelId uuid.UUID) (dat
 	return model, nil
 }
 
+func extractTagNames(infos []api.TagInfo) []string {
+	out := make([]string, len(infos))
+	for i, t := range infos {
+		out[i] = t.Name
+	}
+	return out
+}
+
 func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload messaging.FinetuneTaskPayload) error {
 	database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelTraining) //nolint:errcheck
 
@@ -864,7 +889,26 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 		return fmt.Errorf("error creating local model directory: %w", err)
 	}
 
-	if err := model.FinetuneAndSave(payload.TaskPrompt, payload.Tags, payload.Samples, localDir); err != nil {
+	allSamples := payload.Samples
+	if payload.GenerateData {
+		opts := datagen.DatagenOpts{
+			Tags:               extractTagNames(payload.Tags),
+			Samples:            payload.Samples,
+			NumValuesPerTag:    payload.NumValuesPerTag,
+			RecordsToGenerate:  payload.RecordsToGenerate,
+			RecordsPerTemplate: payload.RecordsPerTemplate,
+			TestSplit:          payload.TestSplit,
+		}
+		train, test, err := datagen.GenerateData(opts)
+		if err != nil {
+			database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint
+			return fmt.Errorf("datagen error: %w", err)
+		}
+		allSamples = append(allSamples, train...)
+		allSamples = append(allSamples, test...)
+	}
+
+	if err := model.FinetuneAndSave(payload.TaskPrompt, payload.Tags, allSamples, localDir); err != nil {
 		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint:errcheck
 		slog.Error("error finetuning model", "base_model_id", payload.BaseModelId, "model_id", payload.ModelId, "error", err)
 		return fmt.Errorf("error finetuning model: %w", err)

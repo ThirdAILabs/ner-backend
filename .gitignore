@@ -19,6 +19,8 @@ cmd/worker/worker
 /bin/
 /build/
 /dist/
+plugin/plugin-python/dist/
+plugin/plugin-python/build/
 
 # Dependency directory (if using vendor) - Less common with Go modules
 /vendor/
@@ -59,3 +61,6 @@ __pycache__/
 
 main
 .cursor/
+
+plugin/.cache
+plugin/plugin-python/.cache
