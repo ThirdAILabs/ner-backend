@@ -657,6 +657,21 @@ export default function NewJobPage() {
     validateCustomTagName(value);
   };
 
+  async function uploadFilesBrowser(filesMeta: any[], uploadUrl: string) {
+    const formData = new FormData();
+    filesMeta.forEach((meta) => {
+      formData.append('files', meta.file, meta.uniqueName || meta.name);
+    });
+    const response = await fetch(uploadUrl, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!response.ok) {
+      return { success: false, error: 'Upload failed' };
+    }
+    return await response.json();
+  }
+
   // Submit the new job
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -697,36 +712,59 @@ export default function NewJobPage() {
       setError(null);
       setSuccess(false);
 
+      const uploadUrl = `${nerBaseUrl}/uploads`;
       let uploadId: string | undefined = undefined;
-      // 1. Upload files via Electron main process (only for files/directories)
+
+      // 1. Upload files via Electron main process or browser
       if (selectedSource === 'files' || selectedSource === 'directory') {
         // @ts-ignore
-        const result = await window.electron.invoke('upload-files', {
-          filePaths: selectedFilesMeta.map((f) => f.fullPath),
-          uploadUrl: `${nerBaseUrl}/uploads`,
-          uniqueNames: selectedFilesMeta.map((f) => f.uniqueName),
-          originalNames: selectedFilesMeta.map((f) => f.name),
-        });
+        if (typeof window !== 'undefined' && !window.electron) {
+          // Browser context: upload using File objects
+          const result = await uploadFilesBrowser(selectedFilesMeta, uploadUrl);
 
-        if (!result.success || !result.uploadId) {
-          setError(result.error || 'Upload failed');
-          setIsSubmitting(false);
-          return;
-        }
-        uploadId = result.uploadId;
-
-        // 2. Store file path mappings (use uniqueName as key)
-        const mapping: { [filename: string]: string } = {};
-        selectedFilesMeta.forEach((fileMeta) => {
-          if (fileMeta.fullPath) {
-            mapping[fileMeta.uniqueName] = fileMeta.fullPath;
+          if (!result.Id) {
+            setError(result.error || 'Upload failed');
+            setIsSubmitting(false);
+            return;
           }
-        });
-        if (Object.keys(mapping).length > 0) {
+          uploadId = result.Id;
+
+          // Note: file path mapping is not possible in browsers due to security reasons.
           if (typeof uploadId === 'string') {
-            await nerService.storeFileNameToPath(uploadId, mapping);
+            await nerService.storeFileNameToPath(uploadId, {});
           } else {
             throw new Error('uploadId is undefined when storing file name to path mapping');
+          }
+        } else {
+          // Electron context: use main process
+          // @ts-ignore
+          const result = await window.electron.invoke('upload-files', {
+            filePaths: selectedFilesMeta.map((f) => f.fullPath),
+            uploadUrl: uploadUrl,
+            uniqueNames: selectedFilesMeta.map((f) => f.uniqueName),
+            originalNames: selectedFilesMeta.map((f) => f.name),
+          });
+
+          if (!result.success || !result.uploadId) {
+            setError(result.error || 'Upload failed');
+            setIsSubmitting(false);
+            return;
+          }
+          uploadId = result.uploadId;
+
+          // 2. Store file path mappings (use uniqueName as key)
+          const mapping: { [filename: string]: string } = {};
+          selectedFilesMeta.forEach((fileMeta) => {
+            if (fileMeta.fullPath) {
+              mapping[fileMeta.uniqueName] = fileMeta.fullPath;
+            }
+          });
+          if (Object.keys(mapping).length > 0) {
+            if (typeof uploadId === 'string') {
+              await nerService.storeFileNameToPath(uploadId, mapping);
+            } else {
+              throw new Error('uploadId is undefined when storing file name to path mapping');
+            }
           }
         }
       }
