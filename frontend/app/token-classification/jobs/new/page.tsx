@@ -141,7 +141,7 @@ const SourceOption: React.FC<SourceOptionProps> = ({
 );
 
 interface FileSourcesProps {
-  selectSource: (source: 's3' | 'files' | 'directory') => void;
+  selectSource: (source: 's3' | 'files' | 'directory' | 'bigtable') => void;
   handleLocalFiles: (files: [File, string][], isUploaded: boolean) => void;
   isLoadingFiles: boolean;
   setIsLoadingFiles: (loading: boolean) => void;
@@ -168,6 +168,23 @@ const FileSources: React.FC<FileSourcesProps> = ({
       description="Scan files from an S3 bucket"
       disclaimer="Public buckets only without enterprise subscription."
       disabled={isLoadingFiles}
+    />
+  );
+
+  const bigTable = (
+    <SourceOption
+      onClick={() => selectSource('bigtable')}
+      icon={
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
+        />
+      }
+      title="Big Table"
+      description="Scan rows from a Big Table"
+      disclaimer="Public tables only without enterprise subscription."
     />
   );
 
@@ -202,6 +219,7 @@ const FileSources: React.FC<FileSourcesProps> = ({
           disabled={isLoadingFiles}
         />
         {s3}
+        {bigTable}
       </>
     );
   }
@@ -284,6 +302,7 @@ const FileSources: React.FC<FileSourcesProps> = ({
         disabled={isLoadingFiles}
       />
       {s3}
+      {bigTable}
     </>
   );
 };
@@ -298,11 +317,17 @@ export default function NewJobPage() {
   const router = useRouter();
 
   // Essential state
-  const [selectedSource, setSelectedSource] = useState<'s3' | 'files' | 'directory' | ''>('files');
+  const [selectedSource, setSelectedSource] = useState<'s3' | 'files' | 'directory' | 'bigtable'>('files');
   const [sourceS3Endpoint, setSourceS3Endpoint] = useState('');
   const [sourceS3Region, setSourceS3Region] = useState('');
   const [sourceS3Bucket, setSourceS3Bucket] = useState('');
   const [sourceS3Prefix, setSourceS3Prefix] = useState('');
+  // BigTable states
+  const [bigTableProject, setBigTableProject] = useState('');
+  const [bigTableInstance, setBigTableInstance] = useState('');
+  const [bigTableName, setBigTableName] = useState('');
+  const [bigTableColumnFamily, setBigTableColumnFamily] = useState('');
+  const [bigTableColumn, setBigTableColumn] = useState('');
   // [File object, full path] pairs. Full path may be empty if electron is not available.
   const [selectedFiles, setSelectedFiles] = useState<[File, string][]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -344,6 +369,7 @@ export default function NewJobPage() {
   // Error/Success messages
   const [error, setError] = useState<string | null>(null);
   const [s3Error, setS3Error] = useState<string | null>(null);
+  const [bigTableError, setBigTableError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   const [patternType, setPatternType] = useState('string');
@@ -728,7 +754,10 @@ export default function NewJobPage() {
               SourceS3Bucket: sourceS3Bucket,
               SourceS3Prefix: sourceS3Prefix || undefined,
             }
-          : {
+          : selectedSource === 'bigtable' ? {
+            SourceS3Bucket: `bigtable://${bigTableProject}:${bigTableInstance}:${bigTableName}`,
+            SourceS3Prefix: `${bigTableColumnFamily}:${bigTableColumn}`,
+          } : {
               UploadId: uploadId,
             }),
         Groups: groups,
@@ -1038,6 +1067,76 @@ export default function NewJobPage() {
                     onChange={(e) => setSourceS3Prefix(e.target.value)}
                     className="w-full p-2 border border-gray-300 rounded"
                     placeholder="folder/path/"
+                  />
+                </div>
+              </div>
+            )}
+            
+            {selectedSource === 'bigtable' && (
+              <div className="space-y-4">
+                <div>
+                  {bigTableError && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded">
+                      {bigTableError}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Big Table Project
+                  </label>
+                  <input
+                    type="text"
+                    value={bigTableProject}
+                    onChange={(e) => setBigTableProject(e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded"
+                    placeholder="your-project-id"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Big Table Instance</label>
+                  <input
+                    type="text"
+                    value={bigTableInstance}
+                    onChange={(e) => setBigTableInstance(e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded"
+                    placeholder="your-instance-id"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Big Table Name
+                  </label>
+                  <input
+                    type="text"
+                    value={bigTableName}
+                    onChange={(e) => setBigTableName(e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded"
+                    placeholder="my-table"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Big Table Column Family
+                  </label>
+                  <input
+                    type="text"
+                    value={bigTableColumnFamily}
+                    onChange={(e) => setBigTableColumnFamily(e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded"
+                    placeholder="my-column-family"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Big Table Column
+                  </label>
+                  <input
+                    type="text"
+                    value={bigTableColumn}
+                    onChange={(e) => setBigTableColumn(e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded"
+                    placeholder="my-column"
                   />
                 </div>
               </div>

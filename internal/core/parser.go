@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"ner-backend/internal/storage"
 	"path/filepath"
 	"strings"
 
@@ -38,6 +39,9 @@ func (parser *DefaultParser) Parse(object string, data io.Reader) chan ParsedChu
 	output := make(chan ParsedChunk, queueBufferSize)
 
 	ext := filepath.Ext(object)
+	if strings.HasPrefix(object, storage.BigTablePrefix) {
+		ext = ".bigtable"
+	}
 
 	go func() {
 		defer close(output)
@@ -45,7 +49,7 @@ func (parser *DefaultParser) Parse(object string, data io.Reader) chan ParsedChu
 		switch ext {
 		case ".pdf":
 			parser.parsePdf(object, data, output)
-		case ".txt", ".csv", ".html", ".json", ".xml":
+		case ".txt", ".csv", ".html", ".json", ".xml", ".bigtable":
 			parser.parsePlaintext(object, data, output)
 		default:
 			slog.Warn("unsupported file type", "object", object)

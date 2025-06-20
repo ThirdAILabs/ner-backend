@@ -212,7 +212,7 @@ function JobDetail() {
   const searchParams = useSearchParams();
   const reportId: string = searchParams.get('jobId') as string;
   const [tabValue, setTabValue] = useState('analytics');
-  const [selectedSource, setSelectedSource] = useState<'s3' | 'local'>('s3');
+  const [selectedSource, setSelectedSource] = useState<'s3' | 'local' | 'bigtable'>('s3');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
   // Remove selectedTags state, just keep availableTags
@@ -254,6 +254,8 @@ function JobDetail() {
       // Set selectedSource based on IsUpload field
       if (report.IsUpload) {
         setSelectedSource('local');
+      } else if (report.SourceS3Prefix?.includes(":")) {
+        setSelectedSource('bigtable');
       } else {
         setSelectedSource('s3');
       }
@@ -372,6 +374,33 @@ function JobDetail() {
           <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3 }}>
             <h2 className="text-2xl font-medium mb-4">Source</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {selectedSource === 'bigtable' && reportData?.SourceS3Bucket && (
+                <Box
+                  sx={{
+                    p: 2,
+                    bgcolor: 'grey.50',
+                    borderRadius: 2,
+                    boxShadow: 1,
+                  }}
+                >
+                  <h3 className="text-lg font-medium mb-1">BigTable</h3>
+                  {
+                    reportData.SourceS3Bucket.substring("bigtable://".length).split(":").map((part, index) => (
+                      <p className="text-sm text-gray-600">
+                        <b>{["Project", "Instance", "Table"][index]}:</b> {part}
+                      </p>
+                    ))
+                  }
+                  {
+                    reportData.SourceS3Prefix?.split(":").map((part, index) => (
+                      <p className="text-sm text-gray-600">
+                        <b>{["Column Family", "Column"][index]}:</b> {part}
+                      </p>
+                    ))
+                  }
+                </Box>
+              )}
+              
               {selectedSource === 's3' && reportData?.SourceS3Bucket && (
                 <Box
                   sx={{
