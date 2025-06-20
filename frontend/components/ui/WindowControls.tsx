@@ -5,20 +5,20 @@ import { Minus, Square, X } from 'lucide-react';
 
 export function WindowControls() {
   const handleMinimize = () => {
-    if (window.electron?.minimizeWindow) {
-      window.electron.minimizeWindow();
+    if (typeof window !== 'undefined' && (window as any).electron?.minimizeWindow) {
+      (window as any).electron.minimizeWindow();
     }
   };
 
   const handleMaximize = () => {
-    if (window.electron?.maximizeWindow) {
-      window.electron.maximizeWindow();
+    if (typeof window !== 'undefined' && (window as any).electron?.maximizeWindow) {
+      (window as any).electron.maximizeWindow();
     }
   };
 
   const handleClose = () => {
-    if (window.electron?.closeWindow) {
-      window.electron.closeWindow();
+    if (typeof window !== 'undefined' && (window as any).electron?.closeWindow) {
+      (window as any).electron.closeWindow();
     }
   };
 
