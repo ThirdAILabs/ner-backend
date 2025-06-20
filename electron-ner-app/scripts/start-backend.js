@@ -146,19 +146,35 @@ export async function startBackend() {
   // Get the plugin executable path
   const pluginPath = path.join(backendDir, 'plugin', 'plugin');
 
-  // Determine the correct path for libonnxruntime.dylib based on environment
+  // Determine the correct path for ONNX Runtime library based on platform and environment
   let onnxRuntimePath;
   const isProduction = process.env.NODE_ENV === 'production' || (process.execPath && process.execPath.includes('Applications'));
   
-  if (isProduction) {
-    // In production, the library is in the Frameworks directory
-    const frameworksDir = process.platform === 'darwin' 
-      ? path.join(path.dirname(process.execPath), '..', 'Frameworks')
-      : path.join(path.dirname(process.execPath), '..', 'resources');
-    onnxRuntimePath = path.join(frameworksDir, 'libonnxruntime.dylib');
+  log.debug('Platform detection:', process.platform);
+  log.debug('Is production:', isProduction);
+  log.debug('Platform is win32?', process.platform === 'win32');
+  log.debug('Platform is darwin?', process.platform === 'darwin');
+  
+  if (process.platform === 'win32') {
+    // On Windows, use onnxruntime.dll
+    log.debug('Setting Windows ONNX path');
+    onnxRuntimePath = path.join(getBinPath(), 'onnxruntime.dll');
+  } else if (process.platform === 'darwin') {
+    // On macOS, use libonnxruntime.dylib
+    log.debug('Setting macOS ONNX path');
+    if (isProduction) {
+      // In production, the library is in the Frameworks directory
+      const frameworksDir = path.join(path.dirname(process.execPath), '..', 'Frameworks');
+      onnxRuntimePath = path.join(frameworksDir, 'libonnxruntime.dylib');
+    } else {
+      // In development, the library is in the resources directory
+      log.debug('Setting macOS development ONNX path');
+      onnxRuntimePath = path.join(__dirname, '..', 'resources', 'libonnxruntime.dylib');
+    }
   } else {
-    // In development, the library is in the resources directory
-    onnxRuntimePath = path.join(__dirname, '..', 'resources', 'libonnxruntime.dylib');
+    // On Linux, use libonnxruntime.so
+    log.debug('Setting Linux ONNX path');
+    onnxRuntimePath = path.join(getBinPath(), 'libonnxruntime.so');
   }
   
   log.debug('ONNX Runtime library path:', onnxRuntimePath);
