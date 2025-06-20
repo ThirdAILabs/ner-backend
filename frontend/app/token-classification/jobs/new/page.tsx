@@ -700,17 +700,12 @@ export default function NewJobPage() {
       let uploadId: string | undefined = undefined;
       // 1. Upload files via Electron main process (only for files/directories)
       if (selectedSource === 'files' || selectedSource === 'directory') {
-        const filePaths = selectedFilesMeta.map((f) => f.fullPath);
-        const uniqueNames = selectedFilesMeta.map((f) => f.uniqueName);
-        const originalNames = selectedFilesMeta.map((f) => f.name);
-        const uploadUrl = `${nerBaseUrl}/uploads`;
-
         // @ts-ignore
         const result = await window.electron.invoke('upload-files', {
-          filePaths,
-          uploadUrl,
-          uniqueNames,
-          originalNames,
+          filePaths: selectedFilesMeta.map((f) => f.fullPath),
+          uploadUrl: `${nerBaseUrl}/uploads`,
+          uniqueNames: selectedFilesMeta.map((f) => f.uniqueName),
+          originalNames: selectedFilesMeta.map((f) => f.name),
         });
 
         if (!result.success || !result.uploadId) {
