@@ -144,7 +144,6 @@ const SourceOption: React.FC<SourceOptionProps> = ({
 
 interface FileSourcesProps {
   selectSource: (source: 's3' | 'files' | 'directory') => void;
-  handleLocalFiles: (files: [File, string][], isUploaded: boolean) => void;
   isLoadingFiles: boolean;
   setIsLoadingFiles: (loading: boolean) => void;
   addFilesMeta: (filesMeta: any[]) => void;
@@ -152,7 +151,6 @@ interface FileSourcesProps {
 
 const FileSources: React.FC<FileSourcesProps> = ({
   selectSource,
-  handleLocalFiles,
   isLoadingFiles,
   setIsLoadingFiles,
   addFilesMeta,
@@ -196,7 +194,6 @@ const FileSources: React.FC<FileSourcesProps> = ({
               const { allFilesMeta, totalSize, error } =
                 await getFilesFromElectron(SUPPORTED_TYPES);
               if (error) {
-                // setError(error);
                 addFilesMeta([]);
               } else {
                 addFilesMeta(allFilesMeta || []);
@@ -720,8 +717,6 @@ export default function NewJobPage() {
         return;
       }
 
-      console.log('Upload result:', result);
-
       // 2. Store file path mappings (use uniqueName as key)
       const mapping: { [filename: string]: string } = {};
       selectedFilesMeta.forEach((fileMeta) => {
@@ -731,14 +726,13 @@ export default function NewJobPage() {
       });
       if (Object.keys(mapping).length > 0) {
         await nerService.storeFileNameToPath(result.uploadId, mapping);
-        console.log('stored upload paths', mapping);
       }
       const customTagsObj: Record<string, string> = {};
       customTags.forEach((tag) => {
         customTagsObj[tag.name] = tag.pattern;
       });
 
-      // 3. Create the report
+      // 3. Create the report, now that the files have been uploaded
       const response = await nerService.createReport({
         ModelId: selectedModelId,
         Tags: selectedTags,
@@ -762,7 +756,6 @@ export default function NewJobPage() {
         router.push(`/token-classification/landing?tab=jobs`);
       }, 2000);
       setSelectedFilesMeta([]);
-      // Optionally redirect or show a message
     } catch (err: unknown) {
       let errorMessage = 'An unexpected error occurred';
 
@@ -910,7 +903,6 @@ export default function NewJobPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <FileSources
                   selectSource={setSelectedSource}
-                  handleLocalFiles={handleSelectFiles}
                   isLoadingFiles={isLoadingFiles}
                   setIsLoadingFiles={setIsLoadingFiles}
                   addFilesMeta={addFilesMeta}
