@@ -88,16 +88,6 @@ export const openFileChooser = async (supportedTypes) => {
     })
   );
 
-  // Deduplicate by name and size
-  const seen = new Set();
-  allFilesMeta = allFilesMeta.filter(file => {
-    const key = `${file.name}:${file.size}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-
-
   result.directlySelected = dialogResult.filePaths;
   result.allFilePaths = allFilePaths;
   result.allFilesMeta = allFilesMeta;
