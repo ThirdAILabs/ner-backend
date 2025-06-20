@@ -223,7 +223,14 @@ const FileSources: React.FC<FileSourcesProps> = ({
       try {
         // Add a small delay to show loading state for quick file selections
         await new Promise((resolve) => setTimeout(resolve, 100));
-        addFilesMeta(Array.from(files).map((file) => ({ name: file.name, size: file.size, fullPath: '', file })));
+        addFilesMeta(
+          Array.from(files).map((file) => ({
+            name: file.name,
+            size: file.size,
+            fullPath: '',
+            file,
+          }))
+        );
       } finally {
         setIsLoadingFiles(false);
         e.target.value = '';
@@ -700,7 +707,12 @@ export default function NewJobPage() {
       const uploadUrl = `${nerBaseUrl}/uploads`;
 
       // @ts-ignore
-      const result = await window.electron.invoke('upload-files', { filePaths, uploadUrl, uniqueNames, originalNames });
+      const result = await window.electron.invoke('upload-files', {
+        filePaths,
+        uploadUrl,
+        uniqueNames,
+        originalNames,
+      });
 
       if (!result.success || !result.uploadId) {
         setError(result.error || 'Upload failed');
