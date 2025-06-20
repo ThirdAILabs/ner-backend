@@ -697,42 +697,50 @@ export default function NewJobPage() {
       setError(null);
       setSuccess(false);
 
-      // 1. Upload files via Electron main process
-      const filePaths = selectedFilesMeta.map((f) => f.fullPath);
-      const uniqueNames = selectedFilesMeta.map((f) => f.uniqueName);
-      const originalNames = selectedFilesMeta.map((f) => f.name);
-      const uploadUrl = `${nerBaseUrl}/uploads`;
+      let uploadId: string | undefined = undefined;
+      // 1. Upload files via Electron main process (only for files/directories)
+      if (selectedSource === 'files' || selectedSource === 'directory') {
+        const filePaths = selectedFilesMeta.map((f) => f.fullPath);
+        const uniqueNames = selectedFilesMeta.map((f) => f.uniqueName);
+        const originalNames = selectedFilesMeta.map((f) => f.name);
+        const uploadUrl = `${nerBaseUrl}/uploads`;
 
-      // @ts-ignore
-      const result = await window.electron.invoke('upload-files', {
-        filePaths,
-        uploadUrl,
-        uniqueNames,
-        originalNames,
-      });
+        // @ts-ignore
+        const result = await window.electron.invoke('upload-files', {
+          filePaths,
+          uploadUrl,
+          uniqueNames,
+          originalNames,
+        });
 
-      if (!result.success || !result.uploadId) {
-        setError(result.error || 'Upload failed');
-        setIsSubmitting(false);
-        return;
-      }
-
-      // 2. Store file path mappings (use uniqueName as key)
-      const mapping: { [filename: string]: string } = {};
-      selectedFilesMeta.forEach((fileMeta) => {
-        if (fileMeta.fullPath) {
-          mapping[fileMeta.uniqueName] = fileMeta.fullPath;
+        if (!result.success || !result.uploadId) {
+          setError(result.error || 'Upload failed');
+          setIsSubmitting(false);
+          return;
         }
-      });
-      if (Object.keys(mapping).length > 0) {
-        await nerService.storeFileNameToPath(result.uploadId, mapping);
+        uploadId = result.uploadId;
+
+        // 2. Store file path mappings (use uniqueName as key)
+        const mapping: { [filename: string]: string } = {};
+        selectedFilesMeta.forEach((fileMeta) => {
+          if (fileMeta.fullPath) {
+            mapping[fileMeta.uniqueName] = fileMeta.fullPath;
+          }
+        });
+        if (Object.keys(mapping).length > 0) {
+          if (typeof uploadId === 'string') {
+            await nerService.storeFileNameToPath(uploadId, mapping);
+          } else {
+            throw new Error('uploadId is undefined when storing file name to path mapping');
+          }
+        }
       }
       const customTagsObj: Record<string, string> = {};
       customTags.forEach((tag) => {
         customTagsObj[tag.name] = tag.pattern;
       });
 
-      // 3. Create the report, now that the files have been uploaded
+      // 3. Create the report, now that the files have been uploaded (or for S3, directly)
       const response = await nerService.createReport({
         ModelId: selectedModelId,
         Tags: selectedTags,
@@ -745,7 +753,7 @@ export default function NewJobPage() {
               SourceS3Prefix: sourceS3Prefix || undefined,
             }
           : {
-              UploadId: result.uploadId,
+              UploadId: uploadId as string,
             }),
         Groups: groups,
         report_name: jobName,

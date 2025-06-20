@@ -32,7 +32,7 @@ export const getFilesFromElectron = async (
 ): Promise<{ allFilesMeta: any[]; totalSize: number; error?: string }> => {
   // @ts-ignore
   const results = await window.electron.openFileChooser(
-     // Electron API does not expect '.' in the file extension
+    // Electron API does not expect '.' in the file extension
     supportedTypes.map((t) => t.replace('.', ''))
   );
   if (results.error) {
