@@ -147,7 +147,7 @@ interface FileSourcesProps {
   handleLocalFiles: (files: [File, string][], isUploaded: boolean) => void;
   isLoadingFiles: boolean;
   setIsLoadingFiles: (loading: boolean) => void;
-  setSelectedFilesMeta: React.Dispatch<React.SetStateAction<any[]>>;
+  addFilesMeta: (filesMeta: any[]) => void;
 }
 
 const FileSources: React.FC<FileSourcesProps> = ({
@@ -155,7 +155,7 @@ const FileSources: React.FC<FileSourcesProps> = ({
   handleLocalFiles,
   isLoadingFiles,
   setIsLoadingFiles,
-  setSelectedFilesMeta,
+  addFilesMeta,
 }) => {
   const s3 = (
     <SourceOption
@@ -197,9 +197,9 @@ const FileSources: React.FC<FileSourcesProps> = ({
                 await getFilesFromElectron(SUPPORTED_TYPES);
               if (error) {
                 // setError(error);
-                setSelectedFilesMeta([]);
+                addFilesMeta([]);
               } else {
-                setSelectedFilesMeta(allFilesMeta || []);
+                addFilesMeta(allFilesMeta || []);
               }
             } finally {
               setIsLoadingFiles(false);
@@ -223,10 +223,7 @@ const FileSources: React.FC<FileSourcesProps> = ({
       try {
         // Add a small delay to show loading state for quick file selections
         await new Promise((resolve) => setTimeout(resolve, 100));
-        handleLocalFiles(
-          Array.from(files).map((file) => [file, '']),
-          true
-        );
+        addFilesMeta(Array.from(files).map((file) => ({ name: file.name, size: file.size, fullPath: '', file })));
       } finally {
         setIsLoadingFiles(false);
         e.target.value = '';
@@ -315,6 +312,26 @@ export default function NewJobPage() {
   const [sourceS3Prefix, setSourceS3Prefix] = useState('');
   // [File object, full path] pairs. Full path may be empty if electron is not available.
   const [selectedFilesMeta, setSelectedFilesMeta] = useState<any[]>([]);
+
+  // Helper to assign unique names to selectedFilesMeta
+  const assignUniqueNames = (filesMeta: any[]) => {
+    const names = filesMeta.map((f) => f.name);
+    const uniqueNames = uniqueFileNames(names);
+    return filesMeta.map((f, i) => ({ ...f, uniqueName: uniqueNames[i] }));
+  };
+
+  // Add files, deduplicate by fullPath, and assign unique names
+  const addFilesMeta = (newFilesMeta: any[]) => {
+    const allFiles = [...selectedFilesMeta, ...newFilesMeta];
+    const seen = new Set<string>();
+    const deduped = allFiles.filter((f) => {
+      if (!f.fullPath) return true;
+      if (seen.has(f.fullPath)) return false;
+      seen.add(f.fullPath);
+      return true;
+    });
+    setSelectedFilesMeta(assignUniqueNames(deduped));
+  };
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
@@ -561,18 +578,6 @@ export default function NewJobPage() {
     setIsCustomTagDialogOpen(false);
   };
 
-
-  const getFilesFromElectron = async (supportedTypes: string[]) => {
-    // @ts-ignore
-    const results = await window.electron.openFileChooser(
-      supportedTypes.map((t) => t.replace('.', ''))
-    );
-    if (results.error) {
-      return { allFilesMeta: [], error: results.error };
-    }
-    return { allFilesMeta: results.allFilesMeta };
-  };
-
   const handleSelectFiles = async () => {
     setIsLoadingFiles(true);
     setError(null);
@@ -582,7 +587,7 @@ export default function NewJobPage() {
         setError(result.error);
         setSelectedFilesMeta([]);
       } else {
-        setSelectedFilesMeta(result.allFilesMeta);
+        addFilesMeta(result.allFilesMeta);
       }
     } catch (err: any) {
       setError('Failed to select files.');
@@ -690,10 +695,12 @@ export default function NewJobPage() {
 
       // 1. Upload files via Electron main process
       const filePaths = selectedFilesMeta.map((f) => f.fullPath);
+      const uniqueNames = selectedFilesMeta.map((f) => f.uniqueName);
+      const originalNames = selectedFilesMeta.map((f) => f.name);
       const uploadUrl = `${nerBaseUrl}/uploads`;
 
       // @ts-ignore
-      const result = await window.electron.invoke('upload-files', { filePaths, uploadUrl });
+      const result = await window.electron.invoke('upload-files', { filePaths, uploadUrl, uniqueNames, originalNames });
 
       if (!result.success || !result.uploadId) {
         setError(result.error || 'Upload failed');
@@ -703,11 +710,11 @@ export default function NewJobPage() {
 
       console.log('Upload result:', result);
 
-      // 2. Store file path mappings
+      // 2. Store file path mappings (use uniqueName as key)
       const mapping: { [filename: string]: string } = {};
       selectedFilesMeta.forEach((fileMeta) => {
         if (fileMeta.fullPath) {
-          mapping[fileMeta.name] = fileMeta.fullPath;
+          mapping[fileMeta.uniqueName] = fileMeta.fullPath;
         }
       });
       if (Object.keys(mapping).length > 0) {
@@ -894,7 +901,7 @@ export default function NewJobPage() {
                   handleLocalFiles={handleSelectFiles}
                   isLoadingFiles={isLoadingFiles}
                   setIsLoadingFiles={setIsLoadingFiles}
-                  setSelectedFilesMeta={setSelectedFilesMeta}
+                  addFilesMeta={addFilesMeta}
                 />
               </div>
 

@@ -175,16 +175,21 @@ ipcMain.handle('telemetry', async (_, data) => await insertTelemetryEvent(data))
 ipcMain.handle('get-user-id', async () => getCurrentUserId());
 ipcMain.handle('open-file-chooser', async (_, types) => openFileChooser(types));
 ipcMain.handle('open-file', async (_, filePath) => openFile(filePath));
-ipcMain.handle('upload-files', async (event, { filePaths, uploadUrl }) => {
-    // This function handles the actual uploading of files to the backend.
-    // For the UI, we only store the file metadata in the memory to display to the users.
-    // When the user submits the report, we upload the files to the backend.
+ipcMain.handle('upload-files', async (event, { filePaths, uploadUrl, uniqueNames, originalNames }) => {
+  // This function handles the actual uploading of files to the backend.
+  // For the UI, we only store the file metadata in the memory to display to the users.
+  // When the user submits the report, we upload the files to the backend.
   const form = new FormData();
 
-  for (const filePath of filePaths) {
-    form.append('files', fs.createReadStream(filePath), {
-      filename: path.basename(filePath)
-    });
+  for (let i = 0; i < filePaths.length; i++) {
+    const filePath = filePaths[i];
+    // Use the unique name for upload, but store the original name as a field
+    const filename = uniqueNames && uniqueNames[i] ? uniqueNames[i] : path.basename(filePath);
+    form.append('files', fs.createReadStream(filePath), { filename });
+    if (originalNames && originalNames[i] && originalNames[i] !== filename) {
+      // Attach a mapping field for backend reference (optional, for traceability)
+      form.append(`originalName_${i}`, originalNames[i]);
+    }
   }
 
   const response = await axios.post(uploadUrl, form, {
