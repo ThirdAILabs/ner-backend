@@ -176,27 +176,23 @@ ipcMain.handle('get-user-id', async () => getCurrentUserId());
 ipcMain.handle('open-file-chooser', async (_, types) => openFileChooser(types));
 ipcMain.handle('open-file', async (_, filePath) => openFile(filePath));
 ipcMain.handle('upload-files', async (event, { filePaths, uploadUrl, uniqueNames, originalNames }) => {
-  // This function handles the actual uploading of files to the backend.
-  // For the UI, we only store the file metadata in the memory to display to the users.
-  // When the user submits the report, we upload the files to the backend.
-  const form = new FormData();
+    // This function handles the actual uploading of files to the backend.
+    // For the UI, we only store the file metadata in the memory to display to the users.
+    // When the user submits the report, we upload the files to the backend.
+    const form = new FormData();
 
-  for (let i = 0; i < filePaths.length; i++) {
-    const filePath = filePaths[i];
-    // Use the unique name for upload, but store the original name as a field
-    const filename = uniqueNames && uniqueNames[i] ? uniqueNames[i] : path.basename(filePath);
-    form.append('files', fs.createReadStream(filePath), { filename });
-    if (originalNames && originalNames[i] && originalNames[i] !== filename) {
-      // Attach a mapping field for backend reference (optional, for traceability)
-      form.append(`originalName_${i}`, originalNames[i]);
+    for (let i = 0; i < filePaths.length; i++) {
+        const filePath = filePaths[i];
+        // Use the unique name for upload
+        const filename = uniqueNames && uniqueNames[i] ? uniqueNames[i] : path.basename(filePath);
+        form.append('files', fs.createReadStream(filePath), { filename });
     }
-  }
 
-  const response = await axios.post(uploadUrl, form, {
-    headers: form.getHeaders()
-  });
+    const response = await axios.post(uploadUrl, form, {
+        headers: form.getHeaders()
+    });
 
-  return { success: true, uploadId: response.data.Id };
+    return { success: true, uploadId: response.data.Id };
 });
 
 
@@ -216,7 +212,7 @@ app.whenReady().then(async () => {
                 updateHandled = true;
             }
         } catch (e) {
-            try { fs.unlinkSync(installedUpdateFile); } catch (_) {}
+            try { fs.unlinkSync(installedUpdateFile); } catch (_) { }
         }
     }
 
@@ -242,7 +238,7 @@ app.whenReady().then(async () => {
         } catch (e) {
             console.error('Error reading pending-update file:', e);
         } finally {
-            try { fs.unlinkSync(pendingUpdateFile); } catch (_) {}
+            try { fs.unlinkSync(pendingUpdateFile); } catch (_) { }
         }
     }
 

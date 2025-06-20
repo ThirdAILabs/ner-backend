@@ -37,7 +37,7 @@ const gatherFilesRecursively = async (filePaths, supportedTypes) => {
 const pathToFile = async (filePath) => {
   const stats = await fs.promises.stat(filePath);
   const buffer = await fs.promises.readFile(filePath);
-  
+
   return {
     name: path.basename(filePath),
     size: stats.size,
@@ -62,8 +62,8 @@ export const openFileChooser = async (supportedTypes) => {
     ],
     properties: [
       // Note: we cannot both have openFile and openDirectory on Windows.
-      'openFile', 
-      'openDirectory', 
+      'openFile',
+      'openDirectory',
       'multiSelections',
     ]
   });
@@ -75,29 +75,28 @@ export const openFileChooser = async (supportedTypes) => {
   // Only deduplicates by the file path
   allFilePaths = [...new Set(allFilePaths)].sort();
 
-
   let allFilesMeta = await Promise.all(
-  allFilePaths.map(async (filePath) => {
-    const stats = await fs.promises.stat(filePath);
-    return {
-      name: path.basename(filePath),
-      size: stats.size,
-      type: 'application/octet-stream',
-      lastModified: stats.mtimeMs,
-      fullPath: filePath,
-    };
-  })
-);
+    allFilePaths.map(async (filePath) => {
+      const stats = await fs.promises.stat(filePath);
+      return {
+        name: path.basename(filePath),
+        size: stats.size,
+        type: 'application/octet-stream',
+        lastModified: stats.mtimeMs,
+        fullPath: filePath,
+      };
+    })
+  );
 
-// Deduplicate by name and size
-const seen = new Set();
-allFilesMeta = allFilesMeta.filter(file => {
-  const key = `${file.name}:${file.size}`;
-  if (seen.has(key)) return false;
-  seen.add(key);
-  return true;
-});
-  
+  // Deduplicate by name and size
+  const seen = new Set();
+  allFilesMeta = allFilesMeta.filter(file => {
+    const key = `${file.name}:${file.size}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
 
   result.directlySelected = dialogResult.filePaths;
   result.allFilePaths = allFilePaths;
