@@ -1,9 +1,8 @@
 import React, { useMemo } from 'react';
 import { TableHead, TableRow, TableHeader, TableBody, TableCell } from '@/components/ui/table';
-import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NO_GROUP } from '@/lib/utils';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, File, Loader2 } from 'lucide-react';
 
 const PASTELS = ['#E5A49C', '#F6C886', '#FBE7AA', '#99E3B5', '#A6E6E7', '#A5A1E1', '#D8A4E2'];
 const DARKERS = ['#D34F3E', '#F09336', '#F7CF5F', '#5CC96E', '#65CFD0', '#597CE2', '#B64DC8'];
@@ -347,23 +346,12 @@ export function TableContent({
               key={index}
               className="group text-sm leading-relaxed bg-white rounded border border-gray-100 shadow-sm mb-4"
             >
-              <summary className="p-3 cursor-pointer bg-gray-100 flex items-center">
+              <summary className="p-3 cursor-pointer bg-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <ChevronRight className="w-4 h-4 transition-transform group-open:rotate-90" />
                   {/* @ts-ignore */}
                   {fullPath && typeof window !== 'undefined' && window.electron ? (
-                    <span
-                      className="font-semibold"
-                      style={{
-                        textDecoration: 'underline',
-                        color: 'inherit',
-                        cursor: 'pointer',
-                        userSelect: 'none',
-                      }}
-                      onClick={openFile}
-                    >
-                      {truncateFilePath(fullPath)}
-                    </span>
+                    <span className="font-semibold">{truncateFilePath(fullPath)}</span>
                   ) : (
                     <span
                       className="font-semibold"
@@ -373,7 +361,36 @@ export function TableContent({
                     </span>
                   )}
                 </div>
+
+                {/* @ts-ignore */}
+                {fullPath && typeof window !== 'undefined' && window.electron && (
+                  <span
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      openFile();
+                    }}
+                    className="cursor-pointer user-select-none text-inherit hover:text-blue-500 transition-colors"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="lucide lucide-file-icon lucide-file"
+                    >
+                      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+                      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+                    </svg>
+                  </span>
+                )}
               </summary>
+
               <div className="p-4">
                 {record.taggedTokens.map((token, tokenIndex) => {
                   const isLastToken = tokenIndex === record.taggedTokens.length - 1;
