@@ -53,11 +53,8 @@ type Report struct {
 	Deleted bool `gorm:"default:false"`
 	Stopped bool `gorm:"default:false"`
 
-	S3Endpoint     sql.NullString
-	S3Region       sql.NullString
-	SourceS3Bucket string
-	SourceS3Prefix sql.NullString
-	IsUpload       bool
+	SourceType     string `gorm:"size:20;not null"`
+	SourceParams   datatypes.JSON `gorm:"type:jsonb;not null"`
 
 	CreationTime       time.Time
 	SucceededFileCount int `gorm:"default:0"`
@@ -109,7 +106,8 @@ type InferenceTask struct {
 	StartTime      sql.NullTime
 	CompletionTime sql.NullTime
 
-	SourceS3Keys  string
+	SourceParams datatypes.JSON `gorm:"type:jsonb;not null"`
+
 	TotalSize     int64
 	CompletedSize int64 `gorm:"default:0"`
 	TokenCount    int64 `gorm:"not null;default:0"`
