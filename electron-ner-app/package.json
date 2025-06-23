@@ -1,5 +1,5 @@
 {
-  "name": "electron-ner-app",
+  "name": "pocket-shield",
   "productName": "PocketShield",
   "version": "1.7.0",
   "description": "Electron app for Named Entity Recognition",
@@ -61,7 +61,7 @@
     "wait-on": "^8.0.3"
   },
   "build": {
-    "appId": "com.electron.ner-app",
+    "appId": "com.thirdai.pocketshield",
     "productName": "PocketShield",
     "directories": {
       "output": "dist",
