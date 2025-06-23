@@ -738,7 +738,7 @@ export default function NewJobPage() {
         } else {
           // Electron context: use main process
           // @ts-ignore
-          const result = await window.electron.invoke('upload-files', {
+          const result = await window.electron.uploadFiles({
             filePaths: selectedFilesMeta.map((f) => f.fullPath),
             uploadUrl: uploadUrl,
             uniqueNames: selectedFilesMeta.map((f) => f.uniqueName),

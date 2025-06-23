@@ -19,5 +19,5 @@ contextBridge.exposeInMainWorld('electron', {
   openFileChooser: (supportedTypes) => ipcRenderer.invoke('open-file-chooser', supportedTypes),
   openFile: (filePath) => ipcRenderer.invoke('open-file', filePath),
   openLinkExternally: (url) => ipcRenderer.invoke('open-external-link', url),
-  invoke: (channel, data) => ipcRenderer.invoke(channel, data),
+  uploadFiles: (files) => ipcRenderer.invoke('upload-files', files),
 }); 
