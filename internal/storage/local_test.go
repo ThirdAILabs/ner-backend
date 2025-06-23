@@ -12,22 +12,24 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func setupTestProvider(t *testing.T) (*LocalProvider, string) {
+func setupTestProvider(t *testing.T) (*LocalProvider, *LocalObjectStore, string) {
 	t.Helper()
 	dir := t.TempDir()
 	provider, err := NewLocalProvider(dir)
 	require.NoError(t, err)
-	return provider, dir
+	objectStore, err := NewLocalObjectStore(dir)
+	require.NoError(t, err)
+	return provider, objectStore, dir
 }
 
 func TestProvider_GetObject(t *testing.T) {
-	provider, _ := setupTestProvider(t)
+	provider, objectStore, _ := setupTestProvider(t)
 
 	bucket := "test-bucket"
 	key := "test-file.txt"
 	content := []byte("Hello, World!")
 
-	err := provider.PutObject(context.Background(), bucket, key, bytes.NewReader(content))
+	err := objectStore.PutObject(context.Background(), bucket, key, bytes.NewReader(content))
 	require.NoError(t, err)
 
 	data, err := provider.GetObject(context.Background(), bucket, key)
@@ -36,13 +38,13 @@ func TestProvider_GetObject(t *testing.T) {
 }
 
 func TestProvider_GetObjectStream(t *testing.T) {
-	provider, _ := setupTestProvider(t)
+	provider, objectStore, _ := setupTestProvider(t)
 
 	bucket := "test-bucket"
 	key := "test-file.txt"
 	content := []byte("Stream content")
 
-	err := provider.PutObject(context.Background(), bucket, key, bytes.NewReader(content))
+	err := objectStore.PutObject(context.Background(), bucket, key, bytes.NewReader(content))
 	require.NoError(t, err)
 
 	stream, err := provider.GetObjectStream(bucket, key)
@@ -54,13 +56,13 @@ func TestProvider_GetObjectStream(t *testing.T) {
 }
 
 func TestProvider_PutObject(t *testing.T) {
-	provider, baseDir := setupTestProvider(t)
+	_, objectStore, baseDir := setupTestProvider(t)
 
 	bucket := "test-bucket"
 	key := "test-file.txt"
 	content := []byte("Test content")
 
-	err := provider.PutObject(context.Background(), bucket, key, bytes.NewReader(content))
+	err := objectStore.PutObject(context.Background(), bucket, key, bytes.NewReader(content))
 	require.NoError(t, err)
 
 	filePath := filepath.Join(baseDir, bucket, key)
@@ -70,12 +72,12 @@ func TestProvider_PutObject(t *testing.T) {
 }
 
 func TestProvider_ListObjects(t *testing.T) {
-	provider, _ := setupTestProvider(t)
+	provider, objectStore, _ := setupTestProvider(t)
 
 	bucket := "test-bucket"
 	files := []string{"file1.txt", "file2.txt", "file3.txt"}
 	for _, file := range files {
-		err := provider.PutObject(context.Background(), bucket, file, bytes.NewReader([]byte("content")))
+		err := objectStore.PutObject(context.Background(), bucket, file, bytes.NewReader([]byte("content")))
 		require.NoError(t, err)
 	}
 
@@ -90,12 +92,12 @@ func TestProvider_ListObjects(t *testing.T) {
 }
 
 func TestProvider_IterObjects(t *testing.T) {
-	provider, _ := setupTestProvider(t)
+	provider, objectStore, _ := setupTestProvider(t)
 
 	bucket := "test-bucket"
 	files := []string{"dir1/file1.txt", "dir1/file2.txt", "dir2/file3.txt"}
 	for _, file := range files {
-		err := provider.PutObject(context.Background(), bucket, file, bytes.NewReader([]byte("content")))
+		err := objectStore.PutObject(context.Background(), bucket, file, bytes.NewReader([]byte("content")))
 		require.NoError(t, err)
 	}
 
@@ -112,7 +114,7 @@ func TestProvider_IterObjects(t *testing.T) {
 }
 
 func TestProvider_UploadDir(t *testing.T) {
-	provider, baseDir := setupTestProvider(t)
+	_, objectStore, baseDir := setupTestProvider(t)
 
 	bucket := "test-bucket"
 	prefix := "uploaded"
@@ -126,7 +128,7 @@ func TestProvider_UploadDir(t *testing.T) {
 		require.NoError(t, os.WriteFile(filePath, []byte("content"), os.ModePerm))
 	}
 
-	err := provider.UploadDir(context.Background(), bucket, prefix, srcDir)
+	err := objectStore.UploadDir(context.Background(), bucket, prefix, srcDir)
 	require.NoError(t, err)
 
 	// Verify files were uploaded
@@ -139,7 +141,7 @@ func TestProvider_UploadDir(t *testing.T) {
 }
 
 func TestProvider_DownloadDir(t *testing.T) {
-	provider, baseDir := setupTestProvider(t)
+	_, objectStore, baseDir := setupTestProvider(t)
 
 	bucket := "test-bucket"
 	prefix := "to-download"
@@ -153,7 +155,7 @@ func TestProvider_DownloadDir(t *testing.T) {
 		require.NoError(t, os.WriteFile(filePath, []byte("content"), os.ModePerm))
 	}
 
-	err := provider.DownloadDir(context.Background(), bucket, prefix, destDir, false)
+	err := objectStore.DownloadDir(context.Background(), bucket, prefix, destDir, false)
 	require.NoError(t, err)
 
 	// Verify files were downloaded
@@ -166,7 +168,7 @@ func TestProvider_DownloadDir(t *testing.T) {
 }
 
 func TestProvider_DownloadDir_Overwrite(t *testing.T) {
-	provider, baseDir := setupTestProvider(t)
+	_, objectStore, baseDir := setupTestProvider(t)
 
 	bucket := "test-bucket"
 	prefix := "to-download"
@@ -185,14 +187,14 @@ func TestProvider_DownloadDir_Overwrite(t *testing.T) {
 	}
 
 	// Try without overwrite first
-	err := provider.DownloadDir(context.Background(), bucket, prefix, destDir, false)
+	err := objectStore.DownloadDir(context.Background(), bucket, prefix, destDir, false)
 	require.Error(t, err)
 	data, err := os.ReadFile(destFile)
 	require.NoError(t, err)
 	assert.Equal(t, "original", string(data), "File should not be overwritten when overwrite=false")
 
 	// Now try with overwrite
-	err = provider.DownloadDir(context.Background(), bucket, prefix, destDir, true)
+	err = objectStore.DownloadDir(context.Background(), bucket, prefix, destDir, true)
 	require.NoError(t, err)
 	data, err = os.ReadFile(destFile)
 	require.NoError(t, err)

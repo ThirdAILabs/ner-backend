@@ -51,28 +51,32 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	s3Cfg := storage.S3ProviderConfig{
+	s3Cfg := storage.S3ObjectStoreConfig{
 		S3EndpointURL:     cfg.S3EndpointURL,
 		S3AccessKeyID:     cfg.S3AccessKeyID,
 		S3SecretAccessKey: cfg.S3SecretAccessKey,
 	}
-	s3Client, err := storage.NewS3Provider(s3Cfg)
+	s3ObjectStore, err := storage.NewS3ObjectStore(s3Cfg)
+	if err != nil {
+		log.Fatalf("Failed to create S3 object store: %v", err)
+	}
+
 	if err != nil {
 		log.Fatalf("Worker: Failed to create S3 client: %v", err)
 	}
 
-	if err := s3Client.CreateBucket(context.Background(), cfg.ModelBucketName); err != nil {
+	if err := s3ObjectStore.CreateBucket(context.Background(), cfg.ModelBucketName); err != nil {
 		slog.Error("error creating model bucket", "error", err)
 		panic("failed to create model bucket")
 	}
 
 	cmd.InitializePresidioModel(db)
 
-	if err := cmd.InitializePythonCnnModel(context.Background(), db, s3Client, cfg.ModelBucketName, "advanced", cfg.HostModelDir); err != nil {
+	if err := cmd.InitializePythonCnnModel(context.Background(), db, s3ObjectStore, cfg.ModelBucketName, "advanced", cfg.HostModelDir); err != nil {
 		log.Fatalf("Failed to init & upload python CNN model: %v", err)
 	}
 
-	if err := cmd.InitializePythonTransformerModel(context.Background(), db, s3Client, cfg.ModelBucketName, "ultra", cfg.HostModelDir); err != nil {
+	if err := cmd.InitializePythonTransformerModel(context.Background(), db, s3ObjectStore, cfg.ModelBucketName, "ultra", cfg.HostModelDir); err != nil {
 		log.Fatalf("Failed to init & upload python transformer model: %v", err)
 	}
 
@@ -110,7 +114,7 @@ func main() {
 		log.Fatalf("License verification failed - Info: %v, Error: %v", licenseInfo, err)
 	}
 
-	apiHandler := api.NewBackendService(db, s3Client, publisher, cfg.ChunkTargetBytes, licensing)
+	apiHandler := api.NewBackendService(db, s3ObjectStore, publisher, cfg.ChunkTargetBytes, licensing)
 
 	// Your existing API routes should be prefixed with /api to avoid conflicts
 	r.Route("/api/v1", func(r chi.Router) {

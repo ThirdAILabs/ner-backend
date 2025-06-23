@@ -2,20 +2,15 @@ package storage
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"log/slog"
-	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	aws_config "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
 type S3Provider struct {
@@ -93,26 +88,6 @@ func NewS3Provider(cfg S3ProviderConfig) (*S3Provider, error) {
 	}, nil
 }
 
-func (s *S3Provider) CreateBucket(ctx context.Context, bucket string) error {
-	_, err := s.client.CreateBucket(ctx, &s3.CreateBucketInput{
-		Bucket: aws.String(bucket),
-	})
-	if err != nil {
-		var existErr *types.BucketAlreadyExists
-		var ownedErr *types.BucketAlreadyOwnedByYou
-		if errors.As(err, &existErr) || errors.As(err, &ownedErr) {
-			slog.Info("Bucket already exists", "bucket", bucket)
-			return nil
-		}
-
-		return fmt.Errorf("failed to create bucket %s: %w", bucket, err)
-	}
-
-	slog.Info("Bucket created successfully", "bucket", bucket)
-
-	return nil
-}
-
 func (s *S3Provider) GetObject(ctx context.Context, bucket, key string) ([]byte, error) {
 	// get object size using client
 	headObj, err := s.client.HeadObject(ctx, &s3.HeadObjectInput{
@@ -170,111 +145,6 @@ func (s *s3ObjectStream) Read(p []byte) (int, error) {
 
 func (s *S3Provider) GetObjectStream(bucket, key string) (io.Reader, error) {
 	return &s3ObjectStream{client: s.client, bucket: bucket, key: key, offset: 0}, nil
-}
-
-func (s *S3Provider) PutObject(ctx context.Context, bucket, key string, data io.Reader) error {
-	_, err := s.uploader.Upload(ctx, &s3.PutObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
-		Body:   data,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to upload object %s to s3://%s/%s: %w", key, bucket, key, err)
-	}
-	slog.Info("Object uploaded successfully", "bucket", bucket, "key", key)
-
-	return nil
-}
-
-func (s *S3Provider) DownloadDir(ctx context.Context, bucket, prefix, dest string, overwrite bool) error {
-	if _, err := os.Stat(dest); err == nil {
-		if !overwrite {
-			return fmt.Errorf("destination %s already exists and overwrite is false", dest)
-		}
-		if err := os.RemoveAll(dest); err != nil {
-			return fmt.Errorf("failed to remove existing destination: %w", err)
-		}
-	}
-
-	if err := os.MkdirAll(dest, os.ModePerm); err != nil {
-		return fmt.Errorf("failed to create directory %s: %w", dest, err)
-	}
-
-	if !strings.HasSuffix(prefix, "/") {
-		prefix += "/"
-	}
-
-	objects, err := s.ListObjects(ctx, bucket, prefix)
-	if err != nil {
-		return fmt.Errorf("error downloading directory %s/%s to %s: %w", bucket, prefix, dest, err)
-	}
-
-	for _, obj := range objects {
-		localPath := filepath.Join(dest, strings.TrimPrefix(obj.Name, prefix))
-
-		if err := s.DownloadObject(ctx, bucket, obj.Name, localPath); err != nil {
-			return fmt.Errorf("error downloading directory %s/%s to %s: %w", bucket, prefix, dest, err)
-		}
-	}
-
-	return nil
-}
-
-func (s *S3Provider) DownloadObject(ctx context.Context, bucket, key, filename string) error {
-	if err := os.MkdirAll(filepath.Dir(filename), os.ModePerm); err != nil {
-		return fmt.Errorf("failed to create directory for download %s: %w", filepath.Dir(filename), err)
-	}
-	file, err := os.Create(filename)
-	if err != nil {
-		return fmt.Errorf("failed to create file %s: %w", filename, err)
-	}
-	defer file.Close()
-
-	_, err = s.downloader.Download(ctx, file, &s3.GetObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
-	})
-	if err != nil {
-		return fmt.Errorf("failed to download object %s from s3://%s/%s: %w", filename, bucket, key, err)
-	}
-	slog.Info("Object downloaded successfully", "bucket", bucket, "key", key)
-
-	return nil
-}
-
-func (s *S3Provider) UploadDir(ctx context.Context, bucket, prefix, src string) error {
-	if !strings.HasSuffix(prefix, "/") {
-		prefix += "/"
-	}
-
-	err := filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return fmt.Errorf("failed to walk directory %s: %w", src, err)
-		}
-
-		if info.IsDir() {
-			return nil
-		}
-
-		key := filepath.Join(prefix, strings.TrimPrefix(path, src))
-
-		file, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-
-		if err := s.PutObject(ctx, bucket, key, file); err != nil {
-			return err
-		}
-
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("error uploading directory %s to %s/%s: %w", src, bucket, prefix, err)
-	}
-
-	return nil
 }
 
 func (s *S3Provider) ListObjects(ctx context.Context, bucket, prefix string) ([]Object, error) {

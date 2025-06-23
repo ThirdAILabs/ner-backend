@@ -33,7 +33,7 @@ import (
 
 type BackendService struct {
 	db               *gorm.DB
-	storage          storage.Provider
+	storage          storage.ObjectStore
 	publisher        messaging.Publisher
 	chunkTargetBytes int64
 	licensing        licensing.LicenseVerifier
@@ -44,7 +44,7 @@ const (
 	ErrCodeDB    = 1001 // Custom internal code for DB errors
 )
 
-func NewBackendService(db *gorm.DB, storage storage.Provider, pub messaging.Publisher, chunkTargetBytes int64, licenseVerifier licensing.LicenseVerifier) *BackendService {
+func NewBackendService(db *gorm.DB, storage storage.ObjectStore, pub messaging.Publisher, chunkTargetBytes int64, licenseVerifier licensing.LicenseVerifier) *BackendService {
 	if err := storage.CreateBucket(context.Background(), uploadBucket); err != nil {
 		slog.Error("error creating upload bucket", "error", err)
 		panic("failed to create upload bucket")

@@ -27,7 +27,8 @@ import (
 
 type TaskProcessor struct {
 	db        *gorm.DB
-	storage   storage.Provider
+	provider  storage.Provider
+	storage   storage.ObjectStore
 	publisher messaging.Publisher
 	reciever  messaging.Reciever
 
@@ -47,9 +48,10 @@ var ExcludedTags = map[string]struct{}{
 	"SERVICE_CODE":       {},
 }
 
-func NewTaskProcessor(db *gorm.DB, storage storage.Provider, publisher messaging.Publisher, reciever messaging.Reciever, licenseVerifier licensing.LicenseVerifier, localModelDir string, modelBucket string, modelLoaders map[ModelType]ModelLoader) *TaskProcessor {
+func NewTaskProcessor(db *gorm.DB, provider storage.Provider, storage storage.ObjectStore, publisher messaging.Publisher, reciever messaging.Reciever, licenseVerifier licensing.LicenseVerifier, localModelDir string, modelBucket string, modelLoaders map[ModelType]ModelLoader) *TaskProcessor {
 	return &TaskProcessor{
 		db:            db,
+		provider:      provider,
 		storage:       storage,
 		publisher:     publisher,
 		reciever:      reciever,
@@ -158,7 +160,7 @@ func (proc *TaskProcessor) updateFileCount(reportId uuid.UUID, success bool) err
 
 func (proc *TaskProcessor) getStorageClient(report *database.Report) (storage.Provider, error) {
 	if report.IsUpload {
-		return proc.storage, nil
+		return proc.provider, nil
 	}
 
 	// If we are not using the internal storage provider, then we assume allow the client

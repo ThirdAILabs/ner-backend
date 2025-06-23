@@ -50,66 +50,6 @@ func (p *LocalProvider) GetObjectStream(bucket, key string) (io.Reader, error) {
 	return bytes.NewReader(data), nil
 }
 
-func (p *LocalProvider) PutObject(ctx context.Context, bucket, key string, data io.Reader) error {
-	path := p.fullpath(bucket, key)
-	if err := os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
-		return fmt.Errorf("failed to create directory for %s/%s: %w", bucket, key, err)
-	}
-
-	dst, err := os.Create(path)
-	if err != nil {
-		return fmt.Errorf("failed to create file %s/%s: %w", bucket, key, err)
-	}
-	defer dst.Close()
-
-	if _, err := io.Copy(dst, data); err != nil {
-		return fmt.Errorf("failed to write file %s/%s: %w", bucket, key, err)
-	}
-
-	return nil
-}
-
-func (p *LocalProvider) DownloadDir(ctx context.Context, bucket, prefix, dest string, overwrite bool) error {
-	sourcePath := p.fullpath(bucket, prefix)
-
-	if _, err := os.Stat(dest); err == nil {
-		if !overwrite {
-			return fmt.Errorf("destination %s already exists and overwrite is false", dest)
-		}
-		if err := os.RemoveAll(dest); err != nil {
-			return fmt.Errorf("failed to remove existing destination: %w", err)
-		}
-	}
-
-	if err := os.MkdirAll(filepath.Dir(dest), os.ModePerm); err != nil {
-		return fmt.Errorf("failed to create parent directory for destination: %w", err)
-	}
-
-	if err := os.Symlink(sourcePath, dest); err != nil {
-		return fmt.Errorf("failed to create symlink from %s/%s to %s: %w", bucket, prefix, dest, err)
-	}
-	return nil
-}
-
-func (p *LocalProvider) UploadDir(ctx context.Context, bucket, prefix, src string) error {
-	destPath := p.fullpath(bucket, prefix)
-
-	if _, err := os.Stat(destPath); err == nil {
-		if err := os.RemoveAll(destPath); err != nil {
-			return fmt.Errorf("failed to remove existing destination: %w", err)
-		}
-	}
-
-	if err := os.MkdirAll(filepath.Dir(destPath), os.ModePerm); err != nil {
-		return fmt.Errorf("failed to create parent directory for %s/%s: %w", bucket, prefix, err)
-	}
-
-	if err := os.Symlink(src, destPath); err != nil {
-		return fmt.Errorf("failed to create symlink from %s to %s/%s: %w", src, bucket, prefix, err)
-	}
-	return nil
-}
-
 func (p *LocalProvider) ListObjects(ctx context.Context, bucket, dir string) ([]Object, error) {
 	files, err := os.ReadDir(p.fullpath(bucket, dir))
 	if err != nil {

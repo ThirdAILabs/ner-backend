@@ -105,7 +105,7 @@ func filterExcludedTags(tags []string) []string {
 func initializeModel(
 	ctx context.Context,
 	db *gorm.DB,
-	s3p storage.Provider,
+	s3p storage.ObjectStore,
 	bucket,
 	name,
 	modelType,
@@ -189,7 +189,7 @@ func initializeModel(
 	return nil
 }
 
-func InitializePythonCnnModel(ctx context.Context, db *gorm.DB, s3p storage.Provider, bucket, name, hostModelDir string) error {
+func InitializePythonCnnModel(ctx context.Context, db *gorm.DB, s3p storage.ObjectStore, bucket, name, hostModelDir string) error {
 	slog.Info("initializing python CNN model", "model_name", "python_cnn", "local_model_path", filepath.Join(hostModelDir, "python_cnn"))
 	return initializeModel(ctx, db, s3p, bucket,
 		name, "python_cnn", filepath.Join(hostModelDir, "python_cnn"),
@@ -197,14 +197,14 @@ func InitializePythonCnnModel(ctx context.Context, db *gorm.DB, s3p storage.Prov
 	)
 }
 
-func InitializePythonTransformerModel(ctx context.Context, db *gorm.DB, s3p storage.Provider, bucket, name, hostModelDir string) error {
+func InitializePythonTransformerModel(ctx context.Context, db *gorm.DB, s3p storage.ObjectStore, bucket, name, hostModelDir string) error {
 	return initializeModel(ctx, db, s3p, bucket,
 		name, "python_transformer", filepath.Join(hostModelDir, "python_transformer"),
 		commonModelTags,
 	)
 }
 
-func InitializeBoltUdtModel(ctx context.Context, db *gorm.DB, s3p storage.Provider, bucket, name, hostModelDir string) error {
+func InitializeBoltUdtModel(ctx context.Context, db *gorm.DB, s3p storage.ObjectStore, bucket, name, hostModelDir string) error {
 	return initializeModel(ctx, db, s3p, bucket,
 		name, "bolt_udt", filepath.Join(hostModelDir, "bolt_udt"),
 		commonModelTags,
@@ -214,7 +214,7 @@ func InitializeBoltUdtModel(ctx context.Context, db *gorm.DB, s3p storage.Provid
 func InitializeOnnxCnnModel(
 	ctx context.Context,
 	db *gorm.DB,
-	s3p storage.Provider,
+	s3p storage.ObjectStore,
 	bucket, name, hostModelDir string,
 ) error {
 	return initializeModel(

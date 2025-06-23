@@ -40,7 +40,7 @@ func createDB(t *testing.T, create ...any) *gorm.DB {
 }
 
 type mockStorage struct {
-	storage.Provider
+	storage.ObjectStore
 }
 
 func (m *mockStorage) CreateBucket(ctx context.Context, bucket string) error {

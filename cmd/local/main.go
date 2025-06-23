@@ -97,7 +97,7 @@ func createQueue(db *gorm.DB) *messaging.InMemoryQueue {
 	return queue
 }
 
-func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publisher, port int, modelDir string, modelType core.ModelType, licensing licensing.LicenseVerifier) *http.Server {
+func createServer(db *gorm.DB, storage storage.ObjectStore, queue messaging.Publisher, port int, modelDir string, modelType core.ModelType, licensing licensing.LicenseVerifier) *http.Server {
 	r := chi.NewRouter()
 
 	// Middleware
@@ -194,7 +194,12 @@ func main() {
 		log.Fatalf("failed to abort stale inference tasks: %v", err)
 	}
 
-	storage, err := storage.NewLocalProvider(filepath.Join(cfg.Root, "storage"))
+	provider, err := storage.NewLocalProvider(filepath.Join(cfg.Root, "storage"))
+	if err != nil {
+		log.Fatalf("Worker: Failed to create storage client: %v", err)
+	}
+	
+	storage, err := storage.NewLocalObjectStore(filepath.Join(cfg.Root, "storage"))
 	if err != nil {
 		log.Fatalf("Worker: Failed to create storage client: %v", err)
 	}
@@ -228,7 +233,7 @@ func main() {
 
 	licensing := cmd.CreateLicenseVerifier(db, cfg.License)
 
-	worker := core.NewTaskProcessor(db, storage, queue, queue, licensing, filepath.Join(cfg.Root, "models"), modelBucket, core.NewModelLoaders())
+	worker := core.NewTaskProcessor(db, provider, storage, queue, queue, licensing, filepath.Join(cfg.Root, "models"), modelBucket, core.NewModelLoaders())
 
 	var basicModel database.Model
 	if err := db.Where("name = ?", "basic").First(&basicModel).Error; err != nil {

@@ -78,7 +78,7 @@ var expected = []string{
 	"123",
 }
 
-func createData(t *testing.T, storage storage.Provider) {
+func createData(t *testing.T, storage storage.ObjectStore) {
 	require.NoError(t, storage.CreateBucket(context.Background(), dataBucket))
 
 	for i := 0; i < 10; i++ {
@@ -155,6 +155,13 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	s3ObjectStore, err := storage.NewS3ObjectStore(storage.S3ObjectStoreConfig{
+		S3EndpointURL:     minioUrl,
+		S3AccessKeyID:     minioUsername,
+		S3SecretAccessKey: minioPassword,
+	})
+	require.NoError(t, err)
+
 	os.Setenv("AWS_ACCESS_KEY_ID", minioUsername)
 	os.Setenv("AWS_SECRET_ACCESS_KEY", minioPassword)
 
@@ -162,20 +169,20 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 
 	publisher, reciever := setupRabbitMQContainer(t, ctx)
 
-	backend := backend.NewBackendService(db, s3, publisher, 120, &DummyLicenseVerifier{})
+	backend := backend.NewBackendService(db, s3ObjectStore, publisher, 120, &DummyLicenseVerifier{})
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
-	modelName, modelLoader, modelId := createModel(t, s3, db, modelBucket)
+	modelName, modelLoader, modelId := createModel(t, s3ObjectStore, db, modelBucket)
 
-	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket, map[core.ModelType]core.ModelLoader{
+	worker := core.NewTaskProcessor(db, s3, s3ObjectStore, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket, map[core.ModelType]core.ModelLoader{
 		core.ParseModelType(modelName): modelLoader,
 	})
 
 	go worker.Start()
 	defer worker.Stop()
 
-	createData(t, s3)
+	createData(t, s3ObjectStore)
 
 	reportId := createReport(t, router, api.CreateReportRequest{
 		ReportName:     "test-report",
@@ -261,17 +268,24 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	s3ObjectStore, err := storage.NewS3ObjectStore(storage.S3ObjectStoreConfig{
+		S3EndpointURL:     minioUrl,
+		S3AccessKeyID:     minioUsername,
+		S3SecretAccessKey: minioPassword,
+	})
+	require.NoError(t, err)
+
 	db := createDB(t)
 
 	publisher, reciever := setupRabbitMQContainer(t, ctx)
 
-	backend := backend.NewBackendService(db, s3, publisher, 120, &DummyLicenseVerifier{})
+	backend := backend.NewBackendService(db, s3ObjectStore, publisher, 120, &DummyLicenseVerifier{})
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
-	modelName, modelLoader, modelId := createModel(t, s3, db, modelBucket)
+	modelName, modelLoader, modelId := createModel(t, s3ObjectStore, db, modelBucket)
 
-	worker := core.NewTaskProcessor(db, s3, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket, map[core.ModelType]core.ModelLoader{
+	worker := core.NewTaskProcessor(db, s3, s3ObjectStore, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket, map[core.ModelType]core.ModelLoader{
 		core.ParseModelType(modelName): modelLoader,
 	})
 
@@ -313,13 +327,21 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 		S3SecretAccessKey: minioPassword,
 	})
 	require.NoError(t, err)
-	require.NoError(t, s3.CreateBucket(ctx, modelBucket))
+
+	s3ObjectStore, err := storage.NewS3ObjectStore(storage.S3ObjectStoreConfig{
+		S3EndpointURL:     minioURL,
+		S3AccessKeyID:     minioUsername,
+		S3SecretAccessKey: minioPassword,
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, s3ObjectStore.CreateBucket(ctx, modelBucket))
 
 	db := createDB(t)
 
 	publisher, receiver := setupRabbitMQContainer(t, ctx)
 
-	backendSvc := backend.NewBackendService(db, s3, publisher, 120, &DummyLicenseVerifier{})
+	backendSvc := backend.NewBackendService(db, s3ObjectStore, publisher, 120, &DummyLicenseVerifier{})
 	router := chi.NewRouter()
 	backendSvc.AddRoutes(router)
 
@@ -329,7 +351,7 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 	)
 
 	tempDir := t.TempDir()
-	worker := core.NewTaskProcessor(db, s3, publisher, receiver, &DummyLicenseVerifier{}, tempDir, modelBucket, core.NewModelLoaders())
+	worker := core.NewTaskProcessor(db, s3, s3ObjectStore, publisher, receiver, &DummyLicenseVerifier{}, tempDir, modelBucket, core.NewModelLoaders())
 	go worker.Start()
 	t.Cleanup(worker.Stop)
 
@@ -341,13 +363,13 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 	models := []struct {
 		label      string
 		tag        string
-		initFn     func(context.Context, *gorm.DB, *storage.S3Provider, string) error
+		initFn     func(context.Context, *gorm.DB, *storage.S3ObjectStore, string) error
 		expectedDB string
 	}{
 		{
 			label: "CNN Model",
 			tag:   "cnn",
-			initFn: func(c context.Context, db *gorm.DB, s3 *storage.S3Provider, bucket string) error {
+			initFn: func(c context.Context, db *gorm.DB, s3 *storage.S3ObjectStore, bucket string) error {
 				return cmd.InitializePythonCnnModel(c, db, s3, bucket, "advanced", os.Getenv("HOST_MODEL_DIR"))
 			},
 			expectedDB: "advanced",
@@ -355,7 +377,7 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 		{
 			label: "Transformer Model",
 			tag:   "transformer",
-			initFn: func(c context.Context, db *gorm.DB, s3 *storage.S3Provider, bucket string) error {
+			initFn: func(c context.Context, db *gorm.DB, s3 *storage.S3ObjectStore, bucket string) error {
 				return cmd.InitializePythonTransformerModel(c, db, s3, bucket, "ultra", os.Getenv("HOST_MODEL_DIR"))
 			},
 			expectedDB: "ultra",
@@ -365,7 +387,7 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 	for _, m := range models {
 		m := m // capture range variable
 		t.Run(m.label, func(t *testing.T) {
-			require.NoError(t, m.initFn(ctx, db, s3, modelBucket))
+			require.NoError(t, m.initFn(ctx, db, s3ObjectStore, modelBucket))
 
 			var model database.Model
 			require.NoError(t, db.Where("name = ?", m.expectedDB).First(&model).Error)
