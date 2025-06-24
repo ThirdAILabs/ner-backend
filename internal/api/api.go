@@ -333,8 +333,6 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		CreationTime:   time.Now().UTC(),
 	}
 
-	slog.Info("creating report", "report_id", report.Id, "report_name", report.ReportName, "model_id", report.ModelId, "storage_type", report.StorageType, "storage_params", string(report.StorageParams))
-
 	for _, tag := range req.Tags {
 		report.Tags = append(report.Tags, database.ReportTag{
 			ReportId: report.Id,

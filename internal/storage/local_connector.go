@@ -79,19 +79,18 @@ func (c *LocalConnector) CreateInferenceTasks(ctx context.Context, targetBytes i
 			return nil, 0, fmt.Errorf("error iterating over local objects: %w", err)
 		}
 
-		totalObjects++
-
 		if currentChunkSize+obj.Size > targetBytes && len(currentChunkKeys) > 0 {
 			if err := addTask(currentChunkKeys, currentChunkSize); err != nil {
 				return nil, 0, err
 			}
-
+			
 			currentChunkKeys = []string{}
 			currentChunkSize = 0
 		}
-
+		
 		currentChunkKeys = append(currentChunkKeys, obj.Name)
 		currentChunkSize += obj.Size
+		totalObjects++
 	}
 
 	if len(currentChunkKeys) > 0 {
@@ -99,6 +98,7 @@ func (c *LocalConnector) CreateInferenceTasks(ctx context.Context, targetBytes i
 			return nil, 0, err
 		}
 	}
+
 	return tasks, int64(totalObjects), nil
 }
 

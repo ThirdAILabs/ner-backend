@@ -75,7 +75,10 @@ export const nerService = {
   listReports: async (): Promise<Report[]> => {
     try {
       const response = await axiosInstance.get('/reports');
-      return response.data;
+      return response.data.map((report: Report) => ({
+        ...report,
+        StorageParams: report.StorageParams ? JSON.parse(atob(report.StorageParams as string)) : {},
+      }));
     } catch (error) {
       return handleApiError(error, 'Failed to load reports');
     }
@@ -93,7 +96,10 @@ export const nerService = {
   getReport: async (reportId: string): Promise<Report> => {
     try {
       const response = await axiosInstance.get(`/reports/${reportId}`);
-      return response.data;
+      return {
+        ...response.data,
+        StorageParams: response.data.StorageParams ? JSON.parse(atob(response.data.StorageParams as string)) : {},
+      };
     } catch (error) {
       return handleApiError(error, `Failed to load report ${reportId}`);
     }

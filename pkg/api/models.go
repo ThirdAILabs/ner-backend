@@ -42,9 +42,9 @@ type Report struct {
 
 	Stopped            bool
 	CreationTime       time.Time
-	TotalFileCount     int `json:"FileCount"`
-	SucceededFileCount int `json:"SucceededFileCount"`
-	FailedFileCount    int `json:"FailedFileCount"`
+	TotalFileCount     int
+	SucceededFileCount int
+	FailedFileCount    int
 
 	Tags       []string          `json:"Tags,omitempty"`
 	CustomTags map[string]string `json:"CustomTags,omitempty"`
@@ -77,7 +77,7 @@ type UploadStorageParams struct {
 type CreateReportRequest struct {
 	ModelId uuid.UUID
 
-	ReportName     string `json:"report_name"`
+	ReportName     string
 	StorageType     string
 	StorageParams   []byte
 

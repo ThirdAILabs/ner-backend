@@ -179,15 +179,12 @@ func transformInferenceTasks(db *gorm.DB) error {
 		var params []byte
 		var err error
 
-		if task.IsUpload {
-			params, err = json.Marshal(storage.LocalConnectorTaskParams{
-				ChunkKeys: strings.Split(task.SourceS3Keys, ";"),
-			})
-		} else {
-			params, err = json.Marshal(storage.S3ConnectorTaskParams{
-				ChunkKeys: strings.Split(task.SourceS3Keys, ";"),
-			})
-		}
+		// We default to S3 connector because there is no way to tell if
+		// the old system used local or s3 storage; even if isUpload is true,
+		// files could have been uploaded to s3.
+		params, err = json.Marshal(storage.S3ConnectorTaskParams{
+			ChunkKeys: strings.Split(task.SourceS3Keys, ";"),
+		})
 		if err != nil {
 			return fmt.Errorf("error marshaling params for task %d in report %s: %w", task.TaskId, task.ReportId, err)
 		}

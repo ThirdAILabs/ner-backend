@@ -724,18 +724,18 @@ export default function NewJobPage() {
         ...(selectedSource === 's3'
           ? {
               StorageType: 's3',
-              StorageParams: JSON.stringify({
+              StorageParams: btoa(JSON.stringify({
                 Endpoint: sourceS3Endpoint,
                 Region: sourceS3Region,
                 Bucket: sourceS3Bucket,
                 Prefix: sourceS3Prefix,
-              }),
+              })),
             }
           : {
               StorageType: 'upload',
-              StorageParams: JSON.stringify({
+              StorageParams: btoa(JSON.stringify({
                 UploadId: uploadId,
-              }),
+              })),
             }),
         Groups: groups,
         ReportName: jobName,
