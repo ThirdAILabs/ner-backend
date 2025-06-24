@@ -7,9 +7,15 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	aws_config "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
-	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
+
+type S3ClientConfig struct {
+	Endpoint string
+	Region string
+	AccessKeyID string
+	SecretAccessKey string
+}
 
 func createS3Config(s3Endpoint, s3Region string, creds aws.CredentialsProvider) (aws.Config, error) {
 	opts := []func(*aws_config.LoadOptions) error{}
@@ -38,7 +44,7 @@ func createS3Config(s3Endpoint, s3Region string, creds aws.CredentialsProvider) 
 	return aws_config.LoadDefaultConfig(context.Background(), opts...)
 }
 
-func initializeS3Client(cfg S3ObjectStoreConfig) (*s3.Client, *manager.Downloader, *manager.Uploader, error) {
+func initializeS3Client(cfg S3ClientConfig) (*s3.Client, error) {
 	var creds aws.CredentialsProvider = nil
 	if cfg.AccessKeyID != "" && cfg.SecretAccessKey != "" {
 		creds = credentials.NewStaticCredentialsProvider(cfg.AccessKeyID, cfg.SecretAccessKey, "")
@@ -46,7 +52,7 @@ func initializeS3Client(cfg S3ObjectStoreConfig) (*s3.Client, *manager.Downloade
 
 	awsCfg, err := createS3Config(cfg.Endpoint, cfg.Region, creds)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to create aws config: %w", err)
+		return nil, fmt.Errorf("failed to create aws config: %w", err)
 	}
 
 	// This checks if credentials can be loaded from the environment, for example from
@@ -55,7 +61,7 @@ func initializeS3Client(cfg S3ObjectStoreConfig) (*s3.Client, *manager.Downloade
 	if _, err := awsCfg.Credentials.Retrieve(context.Background()); err != nil {
 		awsCfg, err = createS3Config(cfg.Endpoint, cfg.Region, aws.AnonymousCredentials{})
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to create aws config with anonymous credentials: %w", err)
+			return nil, fmt.Errorf("failed to create aws config with anonymous credentials: %w", err)
 		}
 	}
 
@@ -64,5 +70,5 @@ func initializeS3Client(cfg S3ObjectStoreConfig) (*s3.Client, *manager.Downloade
 		o.UsePathStyle = true // Use path-style addressing (needed for MinIO) - Assuming true based on original, not cfg.S3UsePathStyle
 	})
 
-	return client, manager.NewDownloader(client), manager.NewUploader(client), nil
+	return client, nil
 }

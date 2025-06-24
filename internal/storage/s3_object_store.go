@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
@@ -21,44 +20,17 @@ type S3ObjectStore struct {
 	client     *s3.Client
 	downloader *manager.Downloader
 	uploader   *manager.Uploader
-	cfg        S3ObjectStoreConfig
-}
-
-type S3ObjectStoreConfig struct {
-	Endpoint     string
-	AccessKeyID     string
-	SecretAccessKey string
-	Region          string
+	cfg        S3ClientConfig
 }
 
 var _ ObjectStore = &S3ObjectStore{}
 
 
-func NewS3ObjectStore(cfg S3ObjectStoreConfig) (*S3ObjectStore, error) {
-	var creds aws.CredentialsProvider = nil
-	if cfg.AccessKeyID != "" && cfg.SecretAccessKey != "" {
-		creds = credentials.NewStaticCredentialsProvider(cfg.AccessKeyID, cfg.SecretAccessKey, "")
-	}
-
-	awsCfg, err := createS3Config(cfg.Endpoint, cfg.Region, creds)
+func NewS3ObjectStore(cfg S3ClientConfig) (*S3ObjectStore, error) {
+	client, err := initializeS3Client(cfg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create aws config: %w", err)
+		return nil, fmt.Errorf("failed to initialize s3 client: %w", err)
 	}
-
-	// This checks if credentials can be loaded from the environment, for example from
-	// env variables or ~/.aws/credentials. If no credentials are found, then we fallback
-	// to anonymous credentials, this is needed to be able to access public s3 buckets.
-	if _, err := awsCfg.Credentials.Retrieve(context.Background()); err != nil {
-		awsCfg, err = createS3Config(cfg.Endpoint, cfg.Region, aws.AnonymousCredentials{})
-		if err != nil {
-			return nil, fmt.Errorf("failed to create aws config with anonymous credentials: %w", err)
-		}
-	}
-
-	client := s3.NewFromConfig(awsCfg, func(o *s3.Options) {
-		// Needed for MinIO which doesn't enforce bucket naming rules always
-		o.UsePathStyle = true // Use path-style addressing (needed for MinIO) - Assuming true based on original, not cfg.S3UsePathStyle
-	})
 
 	return &S3ObjectStore{
 		client:     client,

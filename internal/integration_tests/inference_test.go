@@ -148,7 +148,7 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 
 	minioUrl := setupMinioContainer(t, ctx)
 
-	s3ObjectStore, err := storage.NewS3ObjectStore(storage.S3ObjectStoreConfig{
+	s3ObjectStore, err := storage.NewS3ObjectStore(storage.S3ClientConfig{
 		Endpoint:     minioUrl,
 		AccessKeyID:     minioUsername,
 		SecretAccessKey: minioPassword,
@@ -261,7 +261,7 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 
 	minioUrl := setupMinioContainer(t, ctx)
 
-	s3ObjectStore, err := storage.NewS3ObjectStore(storage.S3ObjectStoreConfig{
+	s3ObjectStore, err := storage.NewS3ObjectStore(storage.S3ClientConfig{
 		Endpoint:     minioUrl,
 		AccessKeyID:     minioUsername,
 		SecretAccessKey: minioPassword,
@@ -320,7 +320,7 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 
 	minioURL := setupMinioContainer(t, ctx)
 
-	s3ObjectStore, err := storage.NewS3ObjectStore(storage.S3ObjectStoreConfig{
+	s3ObjectStore, err := storage.NewS3ObjectStore(storage.S3ClientConfig{
 		Endpoint:     minioURL,
 		AccessKeyID:     minioUsername,
 		SecretAccessKey: minioPassword,

@@ -44,7 +44,7 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	s3ObjectStoreCfg := storage.S3ObjectStoreConfig{
+	s3ObjectStoreCfg := storage.S3ClientConfig{
 		Endpoint:     cfg.Endpoint,
 		AccessKeyID:     cfg.AccessKeyID,
 		SecretAccessKey: cfg.SecretAccessKey,

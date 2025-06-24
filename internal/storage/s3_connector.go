@@ -7,18 +7,16 @@ import (
 	"io"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/credentials"
-	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 type S3ConnectorParams struct {
 	Endpoint string
 	Region string
-	Bucket string
-	Prefix string
 	AccessKeyID string
 	SecretAccessKey string
+	Bucket string
+	Prefix string
 }
 
 type S3ConnectorTaskParams struct {
@@ -27,41 +25,22 @@ type S3ConnectorTaskParams struct {
 
 type S3Connector struct {
 	client     *s3.Client
-	downloader *manager.Downloader
-	uploader   *manager.Uploader
 	params S3ConnectorParams
 }
 
 func NewS3Connector(params S3ConnectorParams) (*S3Connector, error) {
-	var creds aws.CredentialsProvider = nil
-	if params.AccessKeyID != "" && params.SecretAccessKey != "" {
-		creds = credentials.NewStaticCredentialsProvider(params.AccessKeyID, params.SecretAccessKey, "")
-	}
-
-	awsCfg, err := createS3Config(params.Endpoint, params.Region, creds)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create aws config: %w", err)
-	}
-
-	// This checks if credentials can be loaded from the environment, for example from
-	// env variables or ~/.aws/credentials. If no credentials are found, then we fallback
-	// to anonymous credentials, this is needed to be able to access public s3 buckets.
-	if _, err := awsCfg.Credentials.Retrieve(context.Background()); err != nil {
-		awsCfg, err = createS3Config(params.Endpoint, params.Region, aws.AnonymousCredentials{})
-		if err != nil {
-			return nil, fmt.Errorf("failed to create aws config with anonymous credentials: %w", err)
-		}
-	}
-
-	client := s3.NewFromConfig(awsCfg, func(o *s3.Options) {
-		// Needed for MinIO which doesn't enforce bucket naming rules always
-		o.UsePathStyle = true // Use path-style addressing (needed for MinIO) - Assuming true based on original, not cfg.S3UsePathStyle
+	client, err := initializeS3Client(S3ClientConfig{
+		Endpoint: params.Endpoint,
+		Region: params.Region,
+		AccessKeyID: params.AccessKeyID,
+		SecretAccessKey: params.SecretAccessKey,
 	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize s3 client: %w", err)
+	}
 
 	return &S3Connector{
 		client:     client,
-		downloader: manager.NewDownloader(client),
-		uploader:   manager.NewUploader(client),
 		params:     params,
 	}, nil
 }

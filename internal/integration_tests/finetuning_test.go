@@ -39,7 +39,7 @@ func setupCommon(t *testing.T) (
 
 	minioURL := setupMinioContainer(t, ctx)
 	
-	s3ObjectStore, err := storage.NewS3ObjectStore(storage.S3ObjectStoreConfig{
+	s3ObjectStore, err := storage.NewS3ObjectStore(storage.S3ClientConfig{
 		Endpoint:     minioURL,
 		AccessKeyID:     minioUsername,
 		SecretAccessKey: minioPassword,
