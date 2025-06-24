@@ -106,7 +106,7 @@ function SafeGPTContent() {
     recordEvent({
       UserAction: 'View SafeGPT Page',
       UIComponent: 'SafeGPT Page',
-      UI: 'SafeGPT New Chat',
+      Page: 'SafeGPT',
     });
   }, []);
 
@@ -138,7 +138,7 @@ function SafeGPTContent() {
     recordEvent({
       UserAction: 'Create new chat',
       UIComponent: 'SafeGPT New Chat',
-      UI: 'SafeGPT New Chat',
+      Page: 'SafeGPT',
     });
   };
 
@@ -151,7 +151,7 @@ function SafeGPTContent() {
     recordEvent({
       UserAction: 'Send message to SafeGPT',
       UIComponent: 'SafeGPT Chat',
-      UI: 'SafeGPT New Chat',
+      Page: 'SafeGPT New Chat',
     });
   };
 
