@@ -256,12 +256,6 @@ func (proc *TaskProcessor) updateInferenceTagCount(reportId uuid.UUID, tagCount 
 	return nil
 }
 
-type objectChunkStream struct {
-	object string
-	chunks <-chan ParsedChunk
-	err    error
-}
-
 func (proc *TaskProcessor) runInferenceOnBucket(
 	ctx context.Context,
 	taskId int,
