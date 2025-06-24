@@ -36,11 +36,8 @@ type Report struct {
 
 	Model          Model
 	ReportName     string
-	SourceS3Bucket string
-	SourceS3Prefix string
-	S3Endpoint     string
-	S3Region       string
-	IsUpload       bool
+	SourceType     string
+	SourceParams   []byte
 
 	Stopped            bool
 	CreationTime       time.Time
@@ -76,11 +73,8 @@ type CreateReportRequest struct {
 	ModelId uuid.UUID
 
 	ReportName     string `json:"report_name"`
-	UploadId       uuid.UUID
-	S3Endpoint     string
-	S3Region       string
-	SourceS3Bucket string
-	SourceS3Prefix string
+	SourceType     string
+	SourceParams   []byte
 
 	Tags       []string
 	CustomTags map[string]string

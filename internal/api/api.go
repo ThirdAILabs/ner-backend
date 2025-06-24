@@ -272,30 +272,9 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		}
 	}
 
-	var (
-		s3Endpoint     = req.S3Endpoint
-		s3Region       = req.S3Region
-		sourceS3Bucket = req.SourceS3Bucket
-		s3Prefix       = req.SourceS3Prefix
-		isUpload       = false
-	)
-
-	if req.UploadId != uuid.Nil {
-		s3Endpoint = ""
-		s3Region = ""
-		sourceS3Bucket = uploadBucket
-		s3Prefix = req.UploadId.String()
-		isUpload = true
-	}
-
-	if sourceS3Bucket == "" {
-		return nil, CodedErrorf(http.StatusUnprocessableEntity, "the following fields are required: SourceS3Bucket or UploadId")
-	}
-
-	if req.UploadId == uuid.Nil {
-		if err := validateS3Access(s3Endpoint, s3Region, sourceS3Bucket, s3Prefix); err != nil {
-			return nil, err
-		}
+	connector := storage.NewConnector(req.SourceType)
+	if err := connector.ValidateParams(r.Context(), req.SourceParams); err != nil {
+		return nil, err
 	}
 
 	if err := validateReportName(req.ReportName); err != nil {
@@ -323,11 +302,8 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		Id:             uuid.New(),
 		ReportName:     req.ReportName,
 		ModelId:        req.ModelId,
-		S3Endpoint:     sql.NullString{String: s3Endpoint, Valid: s3Endpoint != ""},
-		S3Region:       sql.NullString{String: s3Region, Valid: s3Region != ""},
-		SourceS3Bucket: sourceS3Bucket,
-		SourceS3Prefix: sql.NullString{String: s3Prefix, Valid: s3Prefix != ""},
-		IsUpload:       isUpload,
+		SourceType:     req.SourceType,
+		SourceParams:   req.SourceParams,
 		CreationTime:   time.Now().UTC(),
 	}
 

@@ -169,12 +169,13 @@ func TestCreateReport(t *testing.T) {
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
+	sourceParams, _ := json.Marshal(storage.S3ConnectorParams{Region: "us-east-2", Bucket: "thirdai-corp-public", Prefix: "sample-pdfs/MACH.pdf"})
+
 	payload := api.CreateReportRequest{
 		ReportName:     "test-report",
 		ModelId:        modelId,
-		S3Region:       "us-east-2",
-		SourceS3Bucket: "thirdai-corp-public",
-		SourceS3Prefix: "sample-pdfs/MACH.pdf",
+		SourceType:     storage.S3ConnectorType,
+		SourceParams:   datatypes.JSON(sourceParams),
 		Tags:           []string{"name", "phone"},
 		CustomTags:     map[string]string{"tag1": "pattern1", "tag2": "pattern2"},
 		Groups: map[string]string{
@@ -213,8 +214,8 @@ func TestCreateReport(t *testing.T) {
 		Name:   "Model1",
 		Status: database.ModelTrained,
 	}, report.Model)
-	assert.Equal(t, "thirdai-corp-public", report.SourceS3Bucket)
-	assert.Equal(t, "sample-pdfs/MACH.pdf", report.SourceS3Prefix)
+	assert.Equal(t, "s3", report.SourceType)
+	assert.Equal(t, sourceParams, report.SourceParams)
 	assert.ElementsMatch(t, []string{"name", "phone"}, report.Tags)
 	assert.Equal(t, map[string]string{"tag1": "pattern1", "tag2": "pattern2"}, report.CustomTags)
 	assert.Equal(t, 2, len(report.Groups))
@@ -234,11 +235,13 @@ func TestCreateReport_InvalidS3(t *testing.T) {
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
+	sourceParams, _ := json.Marshal(storage.S3ConnectorParams{Bucket: "test-bucket", Prefix: "test-prefix"})
+
 	payload := api.CreateReportRequest{
 		ReportName:     "test-report",
 		ModelId:        modelId,
-		SourceS3Bucket: "test-bucket",
-		SourceS3Prefix: "test-prefix",
+		SourceType:     storage.S3ConnectorType,
+		SourceParams:   datatypes.JSON(sourceParams),
 		Tags:           []string{"name", "phone"},
 		CustomTags:     map[string]string{"tag1": "pattern1", "tag2": "pattern2"},
 		Groups: map[string]string{
@@ -263,6 +266,8 @@ func TestCreateReport_InvalidS3(t *testing.T) {
 func TestGetReport(t *testing.T) {
 	modelId, reportId, group1, group2 := uuid.New(), uuid.New(), uuid.New(), uuid.New()
 
+	sourceParams, _ := json.Marshal(storage.S3ConnectorParams{Bucket: "test-bucket", Prefix: "test-prefix"})
+
 	db := createDB(t,
 		&database.Model{Id: modelId, Name: "Model1", Type: "regex", Status: database.ModelTrained},
 		&database.ModelTag{ModelId: modelId, Tag: "name"},
@@ -271,8 +276,8 @@ func TestGetReport(t *testing.T) {
 		&database.Report{
 			Id:             reportId,
 			ModelId:        modelId,
-			SourceS3Bucket: "test-bucket",
-			SourceS3Prefix: sql.NullString{String: "test-prefix", Valid: true},
+			SourceType:     storage.S3ConnectorType,
+			SourceParams:   datatypes.JSON(sourceParams),
 			Groups: []database.Group{
 				{Id: group1, Name: "group_a", ReportId: reportId, Query: `label1 CONTAINS "xyz"`},
 				{Id: group2, Name: "group_b", ReportId: reportId, Query: `label1 = "xyz"`},
@@ -314,8 +319,8 @@ func TestGetReport(t *testing.T) {
 			Name:   "Model1",
 			Status: database.ModelTrained,
 		}, report.Model)
-		assert.Equal(t, "test-bucket", report.SourceS3Bucket)
-		assert.Equal(t, "test-prefix", report.SourceS3Prefix)
+		assert.Equal(t, "s3", report.SourceType)
+		assert.Equal(t, sourceParams, report.SourceParams)
 		assert.ElementsMatch(t, []string{"name", "phone"}, report.Tags)
 		assert.Equal(t, map[string]string{"tag1": "pattern1"}, report.CustomTags)
 		assert.Equal(t, 2, len(report.Groups))
@@ -471,13 +476,16 @@ func TestStopReport(t *testing.T) {
 
 func TestReportSearch(t *testing.T) {
 	modelId, reportId := uuid.New(), uuid.New()
+
+	sourceParams, _ := json.Marshal(storage.S3ConnectorParams{Bucket: "test-bucket", Prefix: "test-prefix"})
+	
 	db := createDB(t,
 		&database.Model{Id: modelId, Name: "Model1", Type: "regex", Status: database.ModelTrained},
 		&database.Report{
 			Id:             reportId,
 			ModelId:        modelId,
-			SourceS3Bucket: "test-bucket",
-			SourceS3Prefix: sql.NullString{String: "test-prefix", Valid: true},
+			SourceType:     storage.S3ConnectorType,
+			SourceParams:   datatypes.JSON(sourceParams),
 		},
 		&database.ObjectEntity{ReportId: reportId, Object: "object1", Start: 1, End: 2, Label: "label1", Text: "text1"},
 		&database.ObjectEntity{ReportId: reportId, Object: "object2", Start: 1, End: 1, Label: "label2", Text: "text2"},

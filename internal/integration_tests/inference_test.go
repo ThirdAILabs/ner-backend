@@ -184,11 +184,13 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 
 	createData(t, s3ObjectStore)
 
+	sourceParams, _ := json.Marshal(map[string]any{"Endpoint": minioUrl, "Bucket": dataBucket})
+
 	reportId := createReport(t, router, api.CreateReportRequest{
 		ReportName:     "test-report",
 		ModelId:        modelId,
-		S3Endpoint:     minioUrl,
-		SourceS3Bucket: dataBucket,
+		SourceType:     storage.S3ConnectorType,
+		SourceParams:   sourceParams,
 		Tags:           []string{"phone", "email"},
 		CustomTags:     map[string]string{"custom_token": `(\w\d){3}`},
 		Groups: map[string]string{
@@ -197,10 +199,13 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 		},
 	})
 
+	completeSourceParams, _ := json.Marshal(map[string]any{"Endpoint": minioUrl, "Region": "", "Bucket": dataBucket, "Prefix": ""})
+
 	report := waitForReport(t, router, reportId, 10)
 
 	assert.Equal(t, modelId, report.Model.Id)
-	assert.Equal(t, dataBucket, report.SourceS3Bucket)
+	assert.Equal(t, "s3", report.SourceType)
+	assert.Equal(t, completeSourceParams, report.SourceParams)
 	assert.Equal(t, 11, report.InferenceTaskStatuses[database.JobCompleted].TotalTasks)
 	assert.Equal(t, report.InferenceTaskStatuses[database.JobCompleted].TotalSize, report.InferenceTaskStatuses[database.JobCompleted].CompletedSize)
 	assert.Equal(t, 2, len(report.Groups))
@@ -294,18 +299,24 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 
 	uploadId := createUpload(t, router)
 
+	sourceParams, _ := json.Marshal(map[string]any{"UploadId": uploadId})
+
 	reportId := createReport(t, router, api.CreateReportRequest{
-		ReportName: "test-report",
-		ModelId:    modelId,
-		UploadId:   uploadId,
-		Tags:       []string{"phone", "email"},
+		ReportName:   "test-report",
+		ModelId:      modelId,
+		SourceType:   storage.LocalConnectorType,
+		SourceParams: sourceParams,
+		Tags:         []string{"phone", "email"},
 	})
 
 	report := waitForReport(t, router, reportId, 10)
 
+	var params storage.LocalConnectorParams
+	require.NoError(t, json.Unmarshal(report.SourceParams, &params))
+
 	assert.Equal(t, modelId, report.Model.Id)
-	assert.Equal(t, "uploads", report.SourceS3Bucket)
-	assert.Equal(t, uploadId.String(), report.SourceS3Prefix)
+	assert.Equal(t, "uploads", params.Bucket)
+	assert.Equal(t, uploadId.String(), params.UploadId)
 
 	entities := getReportEntities(t, router, reportId)
 	assert.Equal(t, 2, len(entities))
@@ -393,10 +404,14 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 			require.NoError(t, db.Where("name = ?", m.expectedDB).First(&model).Error)
 
 			uploadID := createUpload(t, router)
+
+			sourceParams, _ := json.Marshal(map[string]any{"UploadId": uploadID})
+
 			reportID := createReport(t, router, api.CreateReportRequest{
 				ReportName: fmt.Sprintf("test-report-%s", m.tag),
 				ModelId:    model.Id,
-				UploadId:   uploadID,
+				SourceType: storage.LocalConnectorType,
+				SourceParams: sourceParams,
 				Tags: []string{"ADDRESS", "CARD_NUMBER", "COMPANY", "CREDIT_SCORE", "DATE",
 					"EMAIL", "ID_NUMBER", "LICENSE_PLATE",
 					"LOCATION", "NAME", "PHONENUMBER",
@@ -405,9 +420,12 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 
 			report := waitForReport(t, router, reportID, 180)
 
+			var params storage.LocalConnectorParams
+			require.NoError(t, json.Unmarshal(report.SourceParams, &params))
+
 			assert.Equal(t, model.Id, report.Model.Id)
-			assert.Equal(t, "uploads", report.SourceS3Bucket)
-			assert.Equal(t, uploadID.String(), report.SourceS3Prefix)
+			assert.Equal(t, "uploads", params.Bucket)
+			assert.Equal(t, uploadID.String(), params.UploadId)
 
 			entities := getReportEntities(t, router, reportID)
 
