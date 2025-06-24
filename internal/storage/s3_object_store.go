@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	aws_config "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -32,6 +33,35 @@ type S3ObjectStoreConfig struct {
 }
 
 var _ ObjectStore = &S3ObjectStore{}
+
+func createS3Config(s3Endpoint, s3Region string, creds aws.CredentialsProvider) (aws.Config, error) {
+	opts := []func(*aws_config.LoadOptions) error{}
+
+	if s3Endpoint != "" {
+		resolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) { // nolint:staticcheck
+			return aws.Endpoint{ // nolint:staticcheck
+				PartitionID:       "aws",
+				URL:               s3Endpoint,
+				SigningRegion:     s3Region,
+				HostnameImmutable: true, // Important for MinIO
+			}, nil
+		})
+
+		opts = append(opts, aws_config.WithEndpointResolverWithOptions(resolver)) // nolint:staticcheck
+	}
+
+	if s3Region != "" {
+		opts = append(opts, aws_config.WithRegion(s3Region))
+	}
+
+	if creds != nil {
+		opts = append(opts, aws_config.WithCredentialsProvider(creds))
+	}
+
+	return aws_config.LoadDefaultConfig(context.Background(), opts...)
+}
+
+
 
 func NewS3ObjectStore(cfg S3ObjectStoreConfig) (*S3ObjectStore, error) {
 	var creds aws.CredentialsProvider = nil
@@ -92,7 +122,31 @@ func (s *S3ObjectStore) listObjects(ctx context.Context, bucket, prefix string) 
 	return objects, nil
 }
 
-func (s *S3ObjectStore) downloadObject(ctx context.Context, bucket, key, filename string) error {
+func (s *S3ObjectStore) iterObjects(ctx context.Context, bucket, prefix string) ObjectIterator {
+	return func(yield func(obj Object, err error) bool) {
+		paginator := s3.NewListObjectsV2Paginator(s.client, &s3.ListObjectsV2Input{
+			Bucket: aws.String(bucket),
+			Prefix: aws.String(prefix),
+		})
+
+		for paginator.HasMorePages() {
+			page, err := paginator.NextPage(ctx)
+			if err != nil {
+				if !yield(Object{}, err) {
+					return
+				}
+			}
+
+			for _, obj := range page.Contents {
+				if !yield(Object{Name: *obj.Key, Size: *obj.Size}, nil) {
+					return
+				}
+			}
+		}
+	}
+}
+
+func (s *S3ObjectStore) DownloadObject(ctx context.Context, bucket, key, filename string) error {
 	if err := os.MkdirAll(filepath.Dir(filename), os.ModePerm); err != nil {
 		return fmt.Errorf("failed to create directory for download %s: %w", filepath.Dir(filename), err)
 	}
@@ -148,6 +202,26 @@ func (s *S3ObjectStore) PutObject(ctx context.Context, bucket, key string, data 
 	return nil
 }
 
+func (s *S3ObjectStore) DeleteObjects(ctx context.Context, bucket string, prefix string) error {
+	for obj, err := range s.iterObjects(ctx, bucket, prefix) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate objects in bucket %s with prefix %s: %w", bucket, prefix, err)
+		}
+
+		_, err := s.client.DeleteObject(ctx, &s3.DeleteObjectInput{
+			Bucket: aws.String(bucket),
+			Key:    aws.String(obj.Name),
+		})
+		if err != nil {
+			return fmt.Errorf("failed to delete objects in bucket %s with prefix %s: %w", bucket, prefix, err)
+		}
+	}
+
+	slog.Info("Objects deleted successfully", "bucket", bucket, "prefix", prefix)
+
+	return nil
+}
+
 func (s *S3ObjectStore) DownloadDir(ctx context.Context, bucket, prefix, dest string, overwrite bool) error {
 	if _, err := os.Stat(dest); err == nil {
 		if !overwrite {
@@ -174,7 +248,7 @@ func (s *S3ObjectStore) DownloadDir(ctx context.Context, bucket, prefix, dest st
 	for _, obj := range objects {
 		localPath := filepath.Join(dest, strings.TrimPrefix(obj.Name, prefix))
 
-		if err := s.downloadObject(ctx, bucket, obj.Name, localPath); err != nil {
+		if err := s.DownloadObject(ctx, bucket, obj.Name, localPath); err != nil {
 			return fmt.Errorf("error downloading directory %s/%s to %s: %w", bucket, prefix, dest, err)
 		}
 	}
@@ -215,4 +289,15 @@ func (s *S3ObjectStore) UploadDir(ctx context.Context, bucket, prefix, src strin
 	}
 
 	return nil
+}
+
+func (s *S3ObjectStore) GetConnector(bucket, prefix string) (Connector, error) {
+	return NewS3Connector(S3ConnectorParams{
+		Endpoint: s.cfg.S3EndpointURL,
+		Region: s.cfg.S3Region,
+		Bucket: bucket,
+		Prefix: prefix,
+		AccessKeyID: s.cfg.S3AccessKeyID,
+		SecretAccessKey: s.cfg.S3SecretAccessKey,
+	})
 }

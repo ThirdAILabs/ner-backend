@@ -30,7 +30,7 @@ type InferenceTask struct {
 	SourceS3Keys string
 
 	// New source field. Default value only for migration.
-	SourceParams datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'"`
+	StorageParams datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'"`
 
 	TotalSize    int64
 	TokenCount   int64 `gorm:"not null;default:0"`
@@ -54,8 +54,8 @@ type Report struct {
 	IsUpload       bool
 	
 	// New source fields. Default value only for migration.
-	SourceType     string `gorm:"size:20;not null;default:''"`
-	SourceParams   datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'"`
+	StorageType     string `gorm:"size:20;not null;default:''"`
+	StorageParams   datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'"`
 
 	CreationTime       time.Time
 	SucceededFileCount int `gorm:"default:0"`
@@ -76,15 +76,15 @@ type Report struct {
 func Migration(db *gorm.DB) error {
 	// Add new columns
 	if err := db.Migrator().AddColumn(&Report{}, "source_type"); err != nil {
-		return fmt.Errorf("error adding SourceType column: %w", err)
+		return fmt.Errorf("error adding StorageType column: %w", err)
 	}
 	
 	if err := db.Migrator().AddColumn(&Report{}, "source_params"); err != nil {
-		return fmt.Errorf("error adding SourceParams column: %w", err)
+		return fmt.Errorf("error adding StorageParams column: %w", err)
 	}
 
 	if err := db.Migrator().AddColumn(&InferenceTask{}, "source_params"); err != nil {
-		return fmt.Errorf("error adding SourceParams column: %w", err)
+		return fmt.Errorf("error adding StorageParams column: %w", err)
 	}
 
 	// Perform custom data transformation logic
@@ -131,7 +131,6 @@ func transformReports(db *gorm.DB) error {
 		S3Region        sql.NullString
 		SourceS3Bucket  string
 		SourceS3Prefix  sql.NullString
-		IsUpload        bool
 	}
 
 	if err := db.Table("reports").Select("id, s3_endpoint, s3_region, source_s3_bucket, source_s3_prefix, is_upload").Find(&reports).Error; err != nil {
@@ -139,25 +138,15 @@ func transformReports(db *gorm.DB) error {
 	}
 
 	for _, report := range reports {
-		var sourceType string
-		var sourceParams interface{}
-
-		if report.IsUpload {
-			sourceType = storage.LocalConnectorType
-			params := storage.LocalConnectorParams{
-				Bucket:   report.SourceS3Bucket,
-				UploadId: report.SourceS3Prefix.String,
-			}
-			sourceParams = params
-		} else {
-			sourceType = storage.S3ConnectorType
-			params := storage.S3ConnectorParams{
-				Endpoint: report.S3Endpoint.String,
-				Region:   report.S3Region.String,
-				Bucket:   report.SourceS3Bucket,
-				Prefix:   report.SourceS3Prefix.String,
-			}
-			sourceParams = params
+		// We default to S3 connector because there is no way to tell if
+		// the old system used local or s3 storage; even if isUpload is true,
+		// files could have been uploaded to s3.
+		sourceType := storage.S3ConnectorType
+		sourceParams := storage.S3ConnectorParams{
+			Endpoint: report.S3Endpoint.String,
+			Region:   report.S3Region.String,
+			Bucket:   report.SourceS3Bucket,
+			Prefix:   report.SourceS3Prefix.String,
 		}
 
 		paramsJSON, err := json.Marshal(sourceParams)

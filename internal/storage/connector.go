@@ -1,6 +1,17 @@
 package storage
 
-import "context"
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+)
+
+type Object struct {
+	Name string
+	Size int64
+}
+
+type ObjectIterator func(yield func(obj Object, err error) bool)
 
 type InferenceTask struct {
 	Params    []byte
@@ -21,34 +32,37 @@ type ObjectChunkStream struct {
 }
 
 type Connector interface {
-	ValidateParams(ctx context.Context, params []byte) error
+	Type() string
 
-	CreateInferenceTasks(ctx context.Context, params []byte) ([]InferenceTask, error)
+	GetParams() ([]byte, error)
 
-	IterTaskChunks(ctx context.Context, params []byte) <-chan ObjectChunkStream
+	ValidateParams(ctx context.Context) error
+
+	CreateInferenceTasks(ctx context.Context, targetBytes int64) ([]InferenceTask, int64, error)
+
+	IterTaskChunks(ctx context.Context, params []byte) (<-chan ObjectChunkStream, error)
 }
-
-func NewConnector(name string, params []byte) *Connector { return nil}
 
 const LocalConnectorType = "local"
 const S3ConnectorType = "s3"
 
-type LocalConnectorParams struct {
-	Bucket string
-	UploadId string
-}
-
-type S3ConnectorParams struct {
-	Endpoint string
-	Region string
-	Bucket string
-	Prefix string
-}
-
-type LocalConnectorTaskParams struct {
-	ChunkKeys []string
-}
-
-type S3ConnectorTaskParams struct {
-	ChunkKeys []string
+func NewConnector(name string, params []byte) (Connector, error) {
+	switch name {
+	case LocalConnectorType:
+		var localConnectorParams LocalConnectorParams
+		if err := json.Unmarshal(params, &localConnectorParams); err != nil {
+			return nil, err
+		}
+		return NewLocalConnector(localConnectorParams), nil
+		
+	case S3ConnectorType:
+		var s3ConnectorParams S3ConnectorParams
+		if err := json.Unmarshal(params, &s3ConnectorParams); err != nil {
+			return nil, err
+		}
+		return NewS3Connector(s3ConnectorParams)
+		
+	default:
+		return nil, fmt.Errorf("unknown connector type: %s", name)
+	}
 }

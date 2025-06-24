@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -28,7 +29,6 @@ import (
 func setupCommon(t *testing.T) (
 	ctx context.Context,
 	cancel func(),
-	s3 *storage.S3Provider,
 	s3ObjectStore *storage.S3ObjectStore,
 	db *gorm.DB,
 	pub messaging.Publisher,
@@ -38,14 +38,8 @@ func setupCommon(t *testing.T) (
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
 
 	minioURL := setupMinioContainer(t, ctx)
-	s3Prov, err := storage.NewS3Provider(storage.S3ProviderConfig{
-		S3EndpointURL:     minioURL,
-		S3AccessKeyID:     minioUsername,
-		S3SecretAccessKey: minioPassword,
-	})
-	require.NoError(t, err)
-
-	s3ObjectStore, err = storage.NewS3ObjectStore(storage.S3ObjectStoreConfig{
+	
+	s3ObjectStore, err := storage.NewS3ObjectStore(storage.S3ObjectStoreConfig{
 		S3EndpointURL:     minioURL,
 		S3AccessKeyID:     minioUsername,
 		S3SecretAccessKey: minioPassword,
@@ -60,20 +54,19 @@ func setupCommon(t *testing.T) (
 	r := chi.NewRouter()
 	backendSvc.AddRoutes(r)
 
-	return ctx, cancel, s3Prov, s3ObjectStore, db, pub, sub, r
+	return ctx, cancel, s3ObjectStore, db, pub, sub, r
 }
 
 func startWorker(
 	t *testing.T,
 	db *gorm.DB,
-	s3 *storage.S3Provider,
 	s3ObjectStore *storage.S3ObjectStore,
 	pub messaging.Publisher,
 	sub messaging.Reciever,
 	bucket string,
 	loaders map[core.ModelType]core.ModelLoader,
 ) (stop func()) {
-	worker := core.NewTaskProcessor(db, s3, s3ObjectStore, pub, sub, &DummyLicenseVerifier{}, t.TempDir(), bucket, loaders)
+	worker := core.NewTaskProcessor(db, s3ObjectStore, pub, sub, &DummyLicenseVerifier{}, t.TempDir(), bucket, loaders)
 	go worker.Start()
 	return worker.Stop
 }
@@ -99,12 +92,12 @@ func finetune(
 }
 
 func TestFinetuning(t *testing.T) {
-	_, cancel, s3, s3ObjectStore, db, pub, sub, router := setupCommon(t)
+	_, cancel, s3ObjectStore, db, pub, sub, router := setupCommon(t)
 	defer cancel()
 
 	baseName, baseLoader, baseID := createModel(t, s3ObjectStore, db, modelBucket)
 
-	stop := startWorker(t, db, s3, s3ObjectStore, pub, sub, modelBucket, map[core.ModelType]core.ModelLoader{
+	stop := startWorker(t, db, s3ObjectStore, pub, sub, modelBucket, map[core.ModelType]core.ModelLoader{
 		core.ParseModelType(baseName): baseLoader,
 	})
 	defer stop()
@@ -136,10 +129,17 @@ func TestFinetuning(t *testing.T) {
 	require.NotNil(t, model.BaseModelId)
 	assert.Equal(t, baseID, *model.BaseModelId)
 
-	stream, err := s3.GetObjectStream(modelBucket, fmt.Sprintf("%s/model.json", model.Id))
+	// Download the model.json file to a temporary location, then assert that it contains the expected metadata.
+	tempFile := filepath.Join(t.TempDir(), "model.json")
+	err := s3ObjectStore.DownloadObject(context.Background(), modelBucket, fmt.Sprintf("%s/model.json", model.Id), tempFile)
 	require.NoError(t, err)
+	
+	file, err := os.Open(tempFile)
+	require.NoError(t, err)
+	defer file.Close()
+	
 	var data map[string]string
-	require.NoError(t, json.NewDecoder(stream).Decode(&data))
+	require.NoError(t, json.NewDecoder(file).Decode(&data))
 	assert.Contains(t, data, "xyz")
 }
 
@@ -154,7 +154,7 @@ func finetuningTestHelper(t *testing.T, modelInit func(ctx context.Context, db *
 		t.Fatalf("PYTHON_EXECUTABLE_PATH, PYTHON_MODEL_PLUGIN_SCRIPT_PATH, and HOST_MODEL_DIR env vars must be set")
 	}
 
-	ctx, cancel, s3, s3ObjectStore, db, pub, sub, router := setupCommon(t)
+	ctx, cancel, s3ObjectStore, db, pub, sub, router := setupCommon(t)
 	defer cancel()
 
 	require.NoError(t, s3ObjectStore.CreateBucket(context.Background(), modelBucket))
@@ -164,7 +164,7 @@ func finetuningTestHelper(t *testing.T, modelInit func(ctx context.Context, db *
 
 	python.EnablePythonPlugin(pythonExec, pluginScript)
 
-	stop := startWorker(t, db, s3, s3ObjectStore, pub, sub, modelBucket, core.NewModelLoaders())
+	stop := startWorker(t, db, s3ObjectStore, pub, sub, modelBucket, core.NewModelLoaders())
 	defer stop()
 
 	require.NoError(t, modelInit(ctx, db, s3ObjectStore, modelBucket, modelName, hostModelDir))
@@ -240,12 +240,12 @@ func TestFinetuningTransformer(t *testing.T) {
 }
 
 func TestFinetuningWithGenerateData(t *testing.T) {
-	_, cancel, s3, s3ObjectStore, db, pub, sub, router := setupCommon(t)
+	_, cancel, s3ObjectStore, db, pub, sub, router := setupCommon(t)
 	defer cancel()
 
 	baseName, baseLoader, baseID := createModel(t, s3ObjectStore, db, modelBucket)
 
-	stop := startWorker(t, db, s3, s3ObjectStore, pub, sub, modelBucket, map[core.ModelType]core.ModelLoader{
+	stop := startWorker(t, db, s3ObjectStore, pub, sub, modelBucket, map[core.ModelType]core.ModelLoader{
 		core.ParseModelType(baseName): baseLoader,
 	})
 	defer stop()
@@ -291,7 +291,7 @@ func TestFinetuningOnnxModel(t *testing.T) {
 		t.Fatalf("ONNX_RUNTIME_DYLIB_PATH, PYTHON_EXECUTABLE_PATH, PYTHON_MODEL_PLUGIN_SCRIPT_PATH, and HOST_MODEL_DIR env vars must be set")
 	}
 
-	ctx, cancel, s3, s3ObjectStore, db, pub, sub, router := setupCommon(t)
+	ctx, cancel, s3ObjectStore, db, pub, sub, router := setupCommon(t)
 	defer cancel()
 
 	require.NoError(t, s3ObjectStore.CreateBucket(context.Background(), modelBucket))
@@ -304,7 +304,7 @@ func TestFinetuningOnnxModel(t *testing.T) {
 		os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH"),
 	)
 
-	stop := startWorker(t, db, s3, s3ObjectStore, pub, sub, modelBucket, core.NewModelLoaders())
+	stop := startWorker(t, db, s3ObjectStore, pub, sub, modelBucket, core.NewModelLoaders())
 	defer stop()
 
 	ort.SetSharedLibraryPath(onnxDylib)
@@ -363,8 +363,8 @@ func TestFinetuningOnnxModel(t *testing.T) {
 	reportId := createReport(t, router, api.CreateReportRequest{
 		ReportName:   "test-report",
 		ModelId:      model.Id,
-		SourceType:   storage.LocalConnectorType,
-		SourceParams: sourceParams,
+		StorageType:   storage.LocalConnectorType,
+		StorageParams: sourceParams,
 		Tags:         tags,
 	})
 

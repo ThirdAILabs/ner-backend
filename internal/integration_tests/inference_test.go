@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"mime/multipart"
 	"ner-backend/cmd"
-	backend "ner-backend/internal/api"
+	backendapi "ner-backend/internal/api"
 	"ner-backend/internal/core"
 	"ner-backend/internal/core/python"
 	"ner-backend/internal/database"
@@ -148,13 +148,6 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 
 	minioUrl := setupMinioContainer(t, ctx)
 
-	s3, err := storage.NewS3Provider(storage.S3ProviderConfig{
-		S3EndpointURL:     minioUrl,
-		S3AccessKeyID:     minioUsername,
-		S3SecretAccessKey: minioPassword,
-	})
-	require.NoError(t, err)
-
 	s3ObjectStore, err := storage.NewS3ObjectStore(storage.S3ObjectStoreConfig{
 		S3EndpointURL:     minioUrl,
 		S3AccessKeyID:     minioUsername,
@@ -169,13 +162,13 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 
 	publisher, reciever := setupRabbitMQContainer(t, ctx)
 
-	backend := backend.NewBackendService(db, s3ObjectStore, publisher, 120, &DummyLicenseVerifier{})
+	backend := backendapi.NewBackendService(db, s3ObjectStore, publisher, 120, &DummyLicenseVerifier{})
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
 	modelName, modelLoader, modelId := createModel(t, s3ObjectStore, db, modelBucket)
 
-	worker := core.NewTaskProcessor(db, s3, s3ObjectStore, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket, map[core.ModelType]core.ModelLoader{
+	worker := core.NewTaskProcessor(db, s3ObjectStore, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket, map[core.ModelType]core.ModelLoader{
 		core.ParseModelType(modelName): modelLoader,
 	})
 
@@ -189,8 +182,8 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 	reportId := createReport(t, router, api.CreateReportRequest{
 		ReportName:     "test-report",
 		ModelId:        modelId,
-		SourceType:     storage.S3ConnectorType,
-		SourceParams:   sourceParams,
+		StorageType:     storage.S3ConnectorType,
+		StorageParams:   sourceParams,
 		Tags:           []string{"phone", "email"},
 		CustomTags:     map[string]string{"custom_token": `(\w\d){3}`},
 		Groups: map[string]string{
@@ -199,13 +192,15 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 		},
 	})
 
-	completeSourceParams, _ := json.Marshal(map[string]any{"Endpoint": minioUrl, "Region": "", "Bucket": dataBucket, "Prefix": ""})
-
 	report := waitForReport(t, router, reportId, 10)
 
+	var params storage.S3ConnectorParams
+	require.NoError(t, json.Unmarshal(report.StorageParams, &params))
+
 	assert.Equal(t, modelId, report.Model.Id)
-	assert.Equal(t, "s3", report.SourceType)
-	assert.Equal(t, completeSourceParams, report.SourceParams)
+	assert.Equal(t, "s3", report.StorageType)
+	assert.Equal(t, minioUrl, params.Endpoint)
+	assert.Equal(t, dataBucket, params.Bucket)
 	assert.Equal(t, 11, report.InferenceTaskStatuses[database.JobCompleted].TotalTasks)
 	assert.Equal(t, report.InferenceTaskStatuses[database.JobCompleted].TotalSize, report.InferenceTaskStatuses[database.JobCompleted].CompletedSize)
 	assert.Equal(t, 2, len(report.Groups))
@@ -266,13 +261,6 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 
 	minioUrl := setupMinioContainer(t, ctx)
 
-	s3, err := storage.NewS3Provider(storage.S3ProviderConfig{
-		S3EndpointURL:     minioUrl,
-		S3AccessKeyID:     minioUsername,
-		S3SecretAccessKey: minioPassword,
-	})
-	require.NoError(t, err)
-
 	s3ObjectStore, err := storage.NewS3ObjectStore(storage.S3ObjectStoreConfig{
 		S3EndpointURL:     minioUrl,
 		S3AccessKeyID:     minioUsername,
@@ -284,13 +272,13 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 
 	publisher, reciever := setupRabbitMQContainer(t, ctx)
 
-	backend := backend.NewBackendService(db, s3ObjectStore, publisher, 120, &DummyLicenseVerifier{})
+	backend := backendapi.NewBackendService(db, s3ObjectStore, publisher, 120, &DummyLicenseVerifier{})
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
 	modelName, modelLoader, modelId := createModel(t, s3ObjectStore, db, modelBucket)
 
-	worker := core.NewTaskProcessor(db, s3, s3ObjectStore, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket, map[core.ModelType]core.ModelLoader{
+	worker := core.NewTaskProcessor(db, s3ObjectStore, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket, map[core.ModelType]core.ModelLoader{
 		core.ParseModelType(modelName): modelLoader,
 	})
 
@@ -304,19 +292,19 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 	reportId := createReport(t, router, api.CreateReportRequest{
 		ReportName:   "test-report",
 		ModelId:      modelId,
-		SourceType:   storage.LocalConnectorType,
-		SourceParams: sourceParams,
+		StorageType:   backendapi.UploadStorageType,
+		StorageParams: sourceParams,
 		Tags:         []string{"phone", "email"},
 	})
 
 	report := waitForReport(t, router, reportId, 10)
 
 	var params storage.LocalConnectorParams
-	require.NoError(t, json.Unmarshal(report.SourceParams, &params))
+	require.NoError(t, json.Unmarshal(report.StorageParams, &params))
 
 	assert.Equal(t, modelId, report.Model.Id)
 	assert.Equal(t, "uploads", params.Bucket)
-	assert.Equal(t, uploadId.String(), params.UploadId)
+	assert.Equal(t, uploadId.String(), params.Prefix)
 
 	entities := getReportEntities(t, router, reportId)
 	assert.Equal(t, 2, len(entities))
@@ -332,13 +320,6 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 
 	minioURL := setupMinioContainer(t, ctx)
 
-	s3, err := storage.NewS3Provider(storage.S3ProviderConfig{
-		S3EndpointURL:     minioURL,
-		S3AccessKeyID:     minioUsername,
-		S3SecretAccessKey: minioPassword,
-	})
-	require.NoError(t, err)
-
 	s3ObjectStore, err := storage.NewS3ObjectStore(storage.S3ObjectStoreConfig{
 		S3EndpointURL:     minioURL,
 		S3AccessKeyID:     minioUsername,
@@ -352,7 +333,7 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 
 	publisher, receiver := setupRabbitMQContainer(t, ctx)
 
-	backendSvc := backend.NewBackendService(db, s3ObjectStore, publisher, 120, &DummyLicenseVerifier{})
+	backendSvc := backendapi.NewBackendService(db, s3ObjectStore, publisher, 120, &DummyLicenseVerifier{})
 	router := chi.NewRouter()
 	backendSvc.AddRoutes(router)
 
@@ -362,7 +343,7 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 	)
 
 	tempDir := t.TempDir()
-	worker := core.NewTaskProcessor(db, s3, s3ObjectStore, publisher, receiver, &DummyLicenseVerifier{}, tempDir, modelBucket, core.NewModelLoaders())
+	worker := core.NewTaskProcessor(db, s3ObjectStore, publisher, receiver, &DummyLicenseVerifier{}, tempDir, modelBucket, core.NewModelLoaders())
 	go worker.Start()
 	t.Cleanup(worker.Stop)
 
@@ -410,8 +391,8 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 			reportID := createReport(t, router, api.CreateReportRequest{
 				ReportName: fmt.Sprintf("test-report-%s", m.tag),
 				ModelId:    model.Id,
-				SourceType: storage.LocalConnectorType,
-				SourceParams: sourceParams,
+				StorageType: storage.LocalConnectorType,
+				StorageParams: sourceParams,
 				Tags: []string{"ADDRESS", "CARD_NUMBER", "COMPANY", "CREDIT_SCORE", "DATE",
 					"EMAIL", "ID_NUMBER", "LICENSE_PLATE",
 					"LOCATION", "NAME", "PHONENUMBER",
@@ -421,11 +402,11 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 			report := waitForReport(t, router, reportID, 180)
 
 			var params storage.LocalConnectorParams
-			require.NoError(t, json.Unmarshal(report.SourceParams, &params))
+			require.NoError(t, json.Unmarshal(report.StorageParams, &params))
 
 			assert.Equal(t, model.Id, report.Model.Id)
 			assert.Equal(t, "uploads", params.Bucket)
-			assert.Equal(t, uploadID.String(), params.UploadId)
+			assert.Equal(t, uploadID.String(), params.Prefix)
 
 			entities := getReportEntities(t, router, reportID)
 

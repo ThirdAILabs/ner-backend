@@ -27,7 +27,6 @@ import (
 
 type TaskProcessor struct {
 	db        *gorm.DB
-	provider  storage.Provider
 	storage   storage.ObjectStore
 	publisher messaging.Publisher
 	reciever  messaging.Reciever
@@ -48,10 +47,9 @@ var ExcludedTags = map[string]struct{}{
 	"SERVICE_CODE":       {},
 }
 
-func NewTaskProcessor(db *gorm.DB, provider storage.Provider, storage storage.ObjectStore, publisher messaging.Publisher, reciever messaging.Reciever, licenseVerifier licensing.LicenseVerifier, localModelDir string, modelBucket string, modelLoaders map[ModelType]ModelLoader) *TaskProcessor {
+func NewTaskProcessor(db *gorm.DB, storage storage.ObjectStore, publisher messaging.Publisher, reciever messaging.Reciever, licenseVerifier licensing.LicenseVerifier, localModelDir string, modelBucket string, modelLoaders map[ModelType]ModelLoader) *TaskProcessor {
 	return &TaskProcessor{
 		db:            db,
-		provider:      provider,
 		storage:       storage,
 		publisher:     publisher,
 		reciever:      reciever,
@@ -158,24 +156,6 @@ func (proc *TaskProcessor) updateFileCount(reportId uuid.UUID, success bool) err
 	return nil
 }
 
-func (proc *TaskProcessor) getStorageClient(report *database.Report) (storage.Provider, error) {
-	if report.IsUpload {
-		return proc.provider, nil
-	}
-
-	// If we are not using the internal storage provider, then we assume allow the client
-	// to load credentials from the environment, either environment variables or IAM roles, etc.
-	s3Client, err := storage.NewS3Provider(storage.S3ProviderConfig{
-		S3EndpointURL: report.S3Endpoint.String,
-		S3Region:      report.S3Region.String,
-	})
-	if err != nil {
-		slog.Error("error connecting to S3", "s3_endpoint", report.S3Endpoint.String, "region", report.S3Region.String, "error", err)
-		return nil, fmt.Errorf("error connecting to S3: %w", err)
-	}
-	return s3Client, nil
-}
-
 func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload messaging.InferenceTaskPayload) error {
 
 	reportId := payload.ReportId
@@ -212,8 +192,6 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 		return err
 	}
 
-	s3Objects := strings.Split(task.SourceS3Keys, ";")
-
 	tags := make(map[string]struct{})
 	for _, tag := range task.Report.Tags {
 		tags[tag.Tag] = struct{}{}
@@ -229,12 +207,12 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 		groupToQuery[group.Id] = group.Query
 	}
 
-	storage, err := proc.getStorageClient(task.Report)
+	connector, err := storage.NewConnector(task.Report.StorageType, task.Report.StorageParams)
 	if err != nil {
-		return err
+		return fmt.Errorf("error initializing connector for inference task: %w", err)
 	}
 
-	totalTokens, workerErr := proc.runInferenceOnBucket(ctx, taskId, task.ReportId, storage, task.Report.Model.Id, ParseModelType(task.Report.Model.Type), tags, customTags, groupToQuery, task.Report.SourceS3Bucket, s3Objects)
+	totalTokens, workerErr := proc.runInferenceOnBucket(ctx, taskId, task.ReportId, connector, task.StorageParams, task.Report.Model.Id, ParseModelType(task.Report.Model.Type), tags, customTags, groupToQuery)
 
 	if err := proc.db.
 		Model(&database.InferenceTask{}).
@@ -288,18 +266,15 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 	ctx context.Context,
 	taskId int,
 	reportId uuid.UUID,
-	storage storage.Provider,
+	connector storage.Connector,
+	taskParams []byte,
 	modelId uuid.UUID,
 	modelType ModelType,
 	tags map[string]struct{},
 	customTags map[string]string,
 	groupToQuery map[uuid.UUID]string,
-	bucket string,
-	objects []string,
 ) (int64, error) {
 	var totalTokens int64
-	parser := NewDefaultParser()
-
 	model, err := proc.loadModel(ctx, modelId, modelType)
 	if err != nil {
 		return 0, err
@@ -324,27 +299,26 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 		customTagsRe[tag] = re
 	}
 
-	queue := make(chan objectChunkStream, 1)
+	queue := make(chan storage.ObjectChunkStream, 1)
 
 	go func() {
 		defer close(queue)
-		for _, object := range objects {
-			objectStream, err := storage.GetObjectStream(bucket, object)
-			if err != nil {
-				queue <- objectChunkStream{object: object, chunks: nil, err: err}
-				continue
-			}
-
-			chunks := parser.Parse(object, objectStream)
-			queue <- objectChunkStream{object: object, chunks: chunks, err: nil}
+		chunkStreams, err := connector.IterTaskChunks(ctx, taskParams)
+		if err != nil {
+			slog.Error("error iterating over task chunks", "error", err)
+			return
+		}
+		for chunkStream := range chunkStreams {
+			queue <- chunkStream
 		}
 	}()
 
 	objectErrorCnt := 0
+	totalObjectCnt := 0
 
 	for object := range queue {
-		if object.err != nil {
-			slog.Error("error getting object stream", "bucket", bucket, "object", object.object, "error", err)
+		if object.Error != nil {
+			slog.Error("error getting object stream", "object", object.Name, "error", object.Error, "task_params", string(taskParams))
 			objectErrorCnt++
 			if err := proc.updateFileCount(reportId, false); err != nil {
 				return totalTokens, err
@@ -352,10 +326,10 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 			continue
 		}
 
-		result, err := proc.runInferenceOnObject(reportId, object.chunks, model, tags, customTagsRe, groupToFilter, object.object)
+		result, err := proc.runInferenceOnObject(reportId, object.Chunks, model, tags, customTagsRe, groupToFilter, object.Name)
 
 		if err != nil {
-			slog.Error("error processing object", "object", object.object, "error", err)
+			slog.Error("error processing object", "object", object.Name, "error", err)
 			objectErrorCnt++
 			if err := proc.updateFileCount(reportId, false); err != nil {
 				return totalTokens, err
@@ -364,7 +338,7 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 		}
 
 		if err := proc.db.CreateInBatches(&result.Entities, 100).Error; err != nil {
-			slog.Error("error saving entities to database", "object", object.object, "error", err)
+			slog.Error("error saving entities to database", "object", object.Name, "error", err)
 			objectErrorCnt++
 			if err := proc.updateFileCount(reportId, false); err != nil {
 				return totalTokens, err
@@ -373,7 +347,7 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 		}
 
 		if err := proc.db.CreateInBatches(result.Groups, 100).Error; err != nil {
-			slog.Error("error saving groups to database", "object", object.object, "error", err)
+			slog.Error("error saving groups to database", "object", object.Name, "error", err)
 			objectErrorCnt++
 			if err := proc.updateFileCount(reportId, false); err != nil {
 				return totalTokens, err
@@ -382,7 +356,7 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 		}
 
 		if err := proc.updateInferenceTagCount(reportId, result.TagCount, false); err != nil {
-			slog.Error("error updating tag count", "object", object.object, "error", err)
+			slog.Error("error updating tag count", "object", object.Name, "error", err)
 			objectErrorCnt++
 			if err := proc.updateFileCount(reportId, false); err != nil {
 				return totalTokens, err
@@ -391,7 +365,7 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 		}
 
 		if err := proc.updateInferenceTagCount(reportId, result.CustomTagCount, true); err != nil {
-			slog.Error("error updating custom tag count", "object", object.object, "error", err)
+			slog.Error("error updating custom tag count", "object", object.Name, "error", err)
 			objectErrorCnt++
 			if err := proc.updateFileCount(reportId, false); err != nil {
 				return totalTokens, err
@@ -411,10 +385,12 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 			slog.Error("could not update completed size in InferenceTask", "error", err)
 			return totalTokens, err
 		}
+
+		totalObjectCnt++
 	}
 
 	if objectErrorCnt > 0 {
-		return totalTokens, fmt.Errorf("errors while processing %d/%d objects", objectErrorCnt, len(objects))
+		return totalTokens, fmt.Errorf("errors while processing %d/%d objects", objectErrorCnt, totalObjectCnt)
 	}
 
 	return totalTokens, nil
@@ -564,7 +540,7 @@ type InferenceResult struct {
 
 func (proc *TaskProcessor) runInferenceOnObject(
 	reportId uuid.UUID,
-	chunks <-chan ParsedChunk,
+	chunks <-chan storage.Chunk,
 	model Model,
 	tags map[string]struct{},
 	customTags map[string]*regexp.Regexp,
@@ -710,7 +686,7 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 		return err
 	}
 
-	slog.Info("Handling generate tasks", "jobId", task.ReportId, "sourceBucket", task.Report.SourceS3Bucket, "sourcePrefix", task.Report.SourceS3Prefix)
+	slog.Info("Handling generate tasks", "jobId", task.ReportId, "sourceParams", string(task.Report.StorageParams))
 
 	targetBytes := task.ChunkTargetBytes
 	if targetBytes <= 0 {
@@ -718,16 +694,16 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 		slog.Info("Using default chunk target size", "targetBytes", targetBytes, "jobId", reportId)
 	}
 
-	createInferenceTask := func(ctx context.Context, taskId int, chunkKeys []string, chunkSize int64) error {
-		slog.Info("Creating inference task", "report_id", reportId, "task_id", taskId, "chunk_size", chunkSize)
+	createInferenceTask := func(ctx context.Context, taskId int, taskMetadata storage.InferenceTask) error {
+		slog.Info("Creating inference task", "report_id", reportId, "task_id", taskId, "chunk_size", taskMetadata.TotalSize)
 
 		task := database.InferenceTask{
 			ReportId:     reportId,
 			TaskId:       taskId,
 			Status:       database.JobQueued,
 			CreationTime: time.Now().UTC(),
-			SourceS3Keys: strings.Join(chunkKeys, ";"),
-			TotalSize:    chunkSize,
+			StorageParams: taskMetadata.Params,
+			TotalSize:    taskMetadata.TotalSize,
 		}
 
 		inferencePayload := messaging.InferenceTaskPayload{
@@ -746,45 +722,24 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 			return fmt.Errorf("failed to publish inference task %d: %w", taskId, err)
 		}
 
-		slog.Info("Created inference task", "report_id", reportId, "task_id", taskId, "chunk_size", chunkSize)
+		slog.Info("Created inference task", "report_id", reportId, "task_id", taskId, "chunk_size", taskMetadata.TotalSize)
 
 		return nil
 	}
 
-	storage, err := proc.getStorageClient(task.Report)
+	connector, err := storage.NewConnector(task.Report.StorageType, task.Report.StorageParams)
 	if err != nil {
 		return err
 	}
 
-	var currentChunkKeys []string
-	var currentChunkSize int64 = 0
-	var taskId int = 0
-	var totalFiles int = 0
-
-	for obj, err := range storage.IterObjects(ctx, task.Report.SourceS3Bucket, task.Report.SourceS3Prefix.String) {
-		if err != nil {
-			slog.Error("error iterating over S3 objects", "bucket", task.Report.SourceS3Bucket, "prefix", task.Report.SourceS3Prefix.String, "error", err)
-			database.UpdateShardDataTaskStatus(ctx, proc.db, reportId, database.JobFailed) //nolint:errcheck
-			return fmt.Errorf("error iterating over S3 objects: %w", err)
-		}
-
-		totalFiles++
-
-		if currentChunkSize+obj.Size > targetBytes && len(currentChunkKeys) > 0 {
-			if err := createInferenceTask(ctx, taskId, currentChunkKeys, currentChunkSize); err != nil {
-				return err
-			}
-			currentChunkKeys = []string{}
-			currentChunkSize = 0
-			taskId++
-		}
-
-		currentChunkKeys = append(currentChunkKeys, obj.Name)
-		currentChunkSize += obj.Size
+	inferenceTasks, totalObjects, err := connector.CreateInferenceTasks(ctx, targetBytes)
+	if err != nil {
+		return fmt.Errorf("error creating inference tasks: %w", err)
 	}
 
-	if len(currentChunkKeys) > 0 {
-		if err := createInferenceTask(ctx, taskId, currentChunkKeys, currentChunkSize); err != nil {
+	taskId := 0
+	for _, task := range inferenceTasks {
+		if err := createInferenceTask(ctx, taskId, task); err != nil {
 			return err
 		}
 		taskId++
@@ -793,9 +748,9 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 	if err := proc.db.
 		Model(&database.Report{}).
 		Where("id = ?", reportId).
-		UpdateColumn("total_file_count", totalFiles).
+		UpdateColumn("total_file_count", totalObjects).
 		Error; err != nil {
-		slog.Warn("failed to update total_file_count", "report_id", reportId, "totalFiles", totalFiles, "error", err)
+		slog.Warn("failed to update total_file_count", "report_id", reportId, "totalObjects", totalObjects, "error", err)
 	}
 
 	if err := database.UpdateShardDataTaskStatus(ctx, proc.db, reportId, database.JobCompleted); err != nil {

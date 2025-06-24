@@ -97,17 +97,17 @@ func TestMigration_Reports(t *testing.T) {
 
 	// Verify the transformation
 	var result struct {
-		SourceType   string
-		SourceParams string
+		StorageType   string
+		StorageParams string
 	}
 
 	err = db.Raw("SELECT source_type, source_params FROM reports WHERE id = ?", reportID).Scan(&result).Error
 	require.NoError(t, err)
 
-	assert.Equal(t, storage.S3ConnectorType, result.SourceType)
+	assert.Equal(t, storage.S3ConnectorType, result.StorageType)
 
 	var params storage.S3ConnectorParams
-	err = json.Unmarshal([]byte(result.SourceParams), &params)
+	err = json.Unmarshal([]byte(result.StorageParams), &params)
 	require.NoError(t, err)
 
 	assert.Equal(t, "https://s3.amazonaws.com", params.Endpoint)
@@ -141,21 +141,21 @@ func TestMigration_Reports_LocalUpload(t *testing.T) {
 
 	// Verify the transformation
 	var result struct {
-		SourceType   string
-		SourceParams string
+		StorageType   string
+		StorageParams string
 	}
 
 	err = db.Raw("SELECT source_type, source_params FROM reports WHERE id = ?", reportID).Scan(&result).Error
 	require.NoError(t, err)
 
-	assert.Equal(t, storage.LocalConnectorType, result.SourceType)
+	assert.Equal(t, storage.LocalConnectorType, result.StorageType)
 
 	var params storage.LocalConnectorParams
-	err = json.Unmarshal([]byte(result.SourceParams), &params)
+	err = json.Unmarshal([]byte(result.StorageParams), &params)
 	require.NoError(t, err)
 
 	assert.Equal(t, "local-bucket", params.Bucket)
-	assert.Equal(t, "upload-123", params.UploadId)
+	assert.Equal(t, "upload-123", params.Prefix)
 }
 
 func TestMigration_InferenceTasks(t *testing.T) {
@@ -194,14 +194,14 @@ func TestMigration_InferenceTasks(t *testing.T) {
 
 	// Verify the transformation
 	var result struct {
-		SourceParams string
+		StorageParams string
 	}
 
 	err = db.Raw("SELECT source_params FROM inference_tasks WHERE report_id = ? AND task_id = ?", reportID, 1).Scan(&result).Error
 	require.NoError(t, err)
 
 	var params storage.S3ConnectorTaskParams
-	err = json.Unmarshal([]byte(result.SourceParams), &params)
+	err = json.Unmarshal([]byte(result.StorageParams), &params)
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{"key1", "key2", "key3"}, params.ChunkKeys)
@@ -243,14 +243,14 @@ func TestMigration_InferenceTasks_LocalUpload(t *testing.T) {
 
 	// Verify the transformation
 	var result struct {
-		SourceParams string
+		StorageParams string
 	}
 
 	err = db.Raw("SELECT source_params FROM inference_tasks WHERE report_id = ? AND task_id = ?", reportID, 1).Scan(&result).Error
 	require.NoError(t, err)
 
 	var params storage.LocalConnectorTaskParams
-	err = json.Unmarshal([]byte(result.SourceParams), &params)
+	err = json.Unmarshal([]byte(result.StorageParams), &params)
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{"file1.txt", "file2.txt", "file3.txt"}, params.ChunkKeys)

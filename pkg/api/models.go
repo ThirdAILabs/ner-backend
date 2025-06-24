@@ -36,8 +36,8 @@ type Report struct {
 
 	Model          Model
 	ReportName     string
-	SourceType     string
-	SourceParams   []byte
+	StorageType     string
+	StorageParams   []byte
 
 	Stopped            bool
 	CreationTime       time.Time
@@ -69,12 +69,16 @@ type Entity struct {
 	RContext string
 }
 
+type UploadStorageParams struct {
+	UploadId string
+}
+
 type CreateReportRequest struct {
 	ModelId uuid.UUID
 
 	ReportName     string `json:"report_name"`
-	SourceType     string
-	SourceParams   []byte
+	StorageType     string
+	StorageParams   []byte
 
 	Tags       []string
 	CustomTags map[string]string

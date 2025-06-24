@@ -44,17 +44,11 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	s3Cfg := storage.S3ProviderConfig{
-		S3EndpointURL:     cfg.S3EndpointURL,
-		S3AccessKeyID:     cfg.S3AccessKeyID,
-		S3SecretAccessKey: cfg.S3SecretAccessKey,
-	}
 	s3ObjectStoreCfg := storage.S3ObjectStoreConfig{
 		S3EndpointURL:     cfg.S3EndpointURL,
 		S3AccessKeyID:     cfg.S3AccessKeyID,
 		S3SecretAccessKey: cfg.S3SecretAccessKey,
 	}
-	s3Client, err := storage.NewS3Provider(s3Cfg)
 	s3ObjectStore, err := storage.NewS3ObjectStore(s3ObjectStoreCfg)
 	if err != nil {
 		log.Fatalf("Worker: Failed to create S3 client: %v", err)
@@ -77,7 +71,7 @@ func main() {
 
 	loaders := core.NewModelLoaders()
 
-	worker := core.NewTaskProcessor(db, s3Client, s3ObjectStore, publisher, receiver, licensing, "./tmp_models_TODO", cfg.ModelBucketName, loaders)
+	worker := core.NewTaskProcessor(db, s3ObjectStore, publisher, receiver, licensing, "./tmp_models_TODO", cfg.ModelBucketName, loaders)
 
 	go worker.Start()
 

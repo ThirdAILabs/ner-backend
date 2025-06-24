@@ -174,8 +174,8 @@ func TestCreateReport(t *testing.T) {
 	payload := api.CreateReportRequest{
 		ReportName:     "test-report",
 		ModelId:        modelId,
-		SourceType:     storage.S3ConnectorType,
-		SourceParams:   datatypes.JSON(sourceParams),
+		StorageType:     storage.S3ConnectorType,
+		StorageParams:   datatypes.JSON(sourceParams),
 		Tags:           []string{"name", "phone"},
 		CustomTags:     map[string]string{"tag1": "pattern1", "tag2": "pattern2"},
 		Groups: map[string]string{
@@ -214,8 +214,8 @@ func TestCreateReport(t *testing.T) {
 		Name:   "Model1",
 		Status: database.ModelTrained,
 	}, report.Model)
-	assert.Equal(t, "s3", report.SourceType)
-	assert.Equal(t, sourceParams, report.SourceParams)
+	assert.Equal(t, "s3", report.StorageType)
+	assert.Equal(t, sourceParams, report.StorageParams)
 	assert.ElementsMatch(t, []string{"name", "phone"}, report.Tags)
 	assert.Equal(t, map[string]string{"tag1": "pattern1", "tag2": "pattern2"}, report.CustomTags)
 	assert.Equal(t, 2, len(report.Groups))
@@ -240,8 +240,8 @@ func TestCreateReport_InvalidS3(t *testing.T) {
 	payload := api.CreateReportRequest{
 		ReportName:     "test-report",
 		ModelId:        modelId,
-		SourceType:     storage.S3ConnectorType,
-		SourceParams:   datatypes.JSON(sourceParams),
+		StorageType:     storage.S3ConnectorType,
+		StorageParams:   datatypes.JSON(sourceParams),
 		Tags:           []string{"name", "phone"},
 		CustomTags:     map[string]string{"tag1": "pattern1", "tag2": "pattern2"},
 		Groups: map[string]string{
@@ -276,8 +276,8 @@ func TestGetReport(t *testing.T) {
 		&database.Report{
 			Id:             reportId,
 			ModelId:        modelId,
-			SourceType:     storage.S3ConnectorType,
-			SourceParams:   datatypes.JSON(sourceParams),
+			StorageType:     storage.S3ConnectorType,
+			StorageParams:   datatypes.JSON(sourceParams),
 			Groups: []database.Group{
 				{Id: group1, Name: "group_a", ReportId: reportId, Query: `label1 CONTAINS "xyz"`},
 				{Id: group2, Name: "group_b", ReportId: reportId, Query: `label1 = "xyz"`},
@@ -319,8 +319,8 @@ func TestGetReport(t *testing.T) {
 			Name:   "Model1",
 			Status: database.ModelTrained,
 		}, report.Model)
-		assert.Equal(t, "s3", report.SourceType)
-		assert.Equal(t, sourceParams, report.SourceParams)
+		assert.Equal(t, "s3", report.StorageType)
+		assert.Equal(t, sourceParams, report.StorageParams)
 		assert.ElementsMatch(t, []string{"name", "phone"}, report.Tags)
 		assert.Equal(t, map[string]string{"tag1": "pattern1"}, report.CustomTags)
 		assert.Equal(t, 2, len(report.Groups))
@@ -484,8 +484,8 @@ func TestReportSearch(t *testing.T) {
 		&database.Report{
 			Id:             reportId,
 			ModelId:        modelId,
-			SourceType:     storage.S3ConnectorType,
-			SourceParams:   datatypes.JSON(sourceParams),
+			StorageType:     storage.S3ConnectorType,
+			StorageParams:   datatypes.JSON(sourceParams),
 		},
 		&database.ObjectEntity{ReportId: reportId, Object: "object1", Start: 1, End: 2, Label: "label1", Text: "text1"},
 		&database.ObjectEntity{ReportId: reportId, Object: "object2", Start: 1, End: 1, Label: "label2", Text: "text2"},

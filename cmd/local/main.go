@@ -194,12 +194,7 @@ func main() {
 		log.Fatalf("failed to abort stale inference tasks: %v", err)
 	}
 
-	provider, err := storage.NewLocalProvider(filepath.Join(cfg.Root, "storage"))
-	if err != nil {
-		log.Fatalf("Worker: Failed to create storage client: %v", err)
-	}
-	
-	storage, err := storage.NewLocalObjectStore(filepath.Join(cfg.Root, "storage"))
+	objectStore, err := storage.NewLocalObjectStore(filepath.Join(cfg.Root, "storage"))
 	if err != nil {
 		log.Fatalf("Worker: Failed to create storage client: %v", err)
 	}
@@ -207,15 +202,15 @@ func main() {
 	if cfg.ModelDir != "" {
 		switch core.ParseModelType(cfg.ModelType) {
 		case core.BoltUdt:
-			if err := cmd.InitializeBoltUdtModel(context.Background(), db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
+			if err := cmd.InitializeBoltUdtModel(context.Background(), db, objectStore, modelBucket, "basic", cfg.ModelDir); err != nil {
 				log.Fatalf("Failed to init & upload bolt model: %v", err)
 			}
 		case core.PythonCnn:
-			if err := cmd.InitializePythonCnnModel(context.Background(), db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
+			if err := cmd.InitializePythonCnnModel(context.Background(), db, objectStore, modelBucket, "basic", cfg.ModelDir); err != nil {
 				log.Fatalf("Failed to init & upload python CNN model: %v", err)
 			}
 		case core.OnnxCnn:
-			if err := cmd.InitializeOnnxCnnModel(context.Background(), db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
+			if err := cmd.InitializeOnnxCnnModel(context.Background(), db, objectStore, modelBucket, "basic", cfg.ModelDir); err != nil {
 				log.Fatalf("failed to init ONNX model: %v", err)
 			}
 		default:
@@ -233,7 +228,7 @@ func main() {
 
 	licensing := cmd.CreateLicenseVerifier(db, cfg.License)
 
-	worker := core.NewTaskProcessor(db, provider, storage, queue, queue, licensing, filepath.Join(cfg.Root, "models"), modelBucket, core.NewModelLoaders())
+	worker := core.NewTaskProcessor(db, objectStore, queue, queue, licensing, filepath.Join(cfg.Root, "models"), modelBucket, core.NewModelLoaders())
 
 	var basicModel database.Model
 	if err := db.Where("name = ?", "basic").First(&basicModel).Error; err != nil {
@@ -241,10 +236,10 @@ func main() {
 	}
 
 	basicModelDir := filepath.Join(cfg.Root, "models", basicModel.Id.String())
-	if err := storage.DownloadDir(context.Background(), modelBucket, basicModel.Id.String(), basicModelDir, true); err != nil {
+	if err := objectStore.DownloadDir(context.Background(), modelBucket, basicModel.Id.String(), basicModelDir, true); err != nil {
 		log.Fatalf("failed to download model: %v", err)
 	}
-	server := createServer(db, storage, queue, cfg.Port, basicModelDir, core.ParseModelType(cfg.ModelType), licensing)
+	server := createServer(db, objectStore, queue, cfg.Port, basicModelDir, core.ParseModelType(cfg.ModelType), licensing)
 
 	slog.Info("starting worker")
 	go worker.Start()

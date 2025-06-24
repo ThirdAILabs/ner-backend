@@ -50,6 +50,14 @@ func (s *LocalObjectStore) PutObject(ctx context.Context, bucket, key string, da
 	return nil
 }
 
+func (s *LocalObjectStore) DeleteObjects(ctx context.Context, bucket string, dir string) error {
+	fullPath := s.fullpath(bucket, dir)
+	if err := os.RemoveAll(fullPath); err != nil {
+		return fmt.Errorf("failed to delete objects in %s/%s: %w", bucket, dir, err)
+	}
+	return nil
+}
+
 func (s *LocalObjectStore) DownloadDir(ctx context.Context, bucket, prefix, dest string, overwrite bool) error {
 	sourcePath := s.fullpath(bucket, prefix)
 
@@ -89,4 +97,12 @@ func (s *LocalObjectStore) UploadDir(ctx context.Context, bucket, prefix, src st
 		return fmt.Errorf("failed to create symlink from %s to %s/%s: %w", src, bucket, prefix, err)
 	}
 	return nil
+}
+
+func (s *LocalObjectStore) GetConnector(bucket, prefix string) (Connector, error) {
+	return NewLocalConnector(LocalConnectorParams{
+		BaseDir: s.baseDir,
+		Bucket: bucket,
+		Prefix: prefix,
+	}), nil
 }

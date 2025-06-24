@@ -40,6 +40,7 @@ type BackendService struct {
 }
 
 const (
+	UploadStorageType = "upload"
 	uploadBucket = "uploads"
 	ErrCodeDB    = 1001 // Custom internal code for DB errors
 )
@@ -272,8 +273,30 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		}
 	}
 
-	connector := storage.NewConnector(req.SourceType)
-	if err := connector.ValidateParams(r.Context(), req.SourceParams); err != nil {
+	var connector storage.Connector
+
+	// Custom connector initialization logic for uploads. It is a special case because it has to be consistent with
+	// the storage used by the backend service.
+	if req.StorageType == UploadStorageType {
+		uploadParams := api.UploadStorageParams{}
+		if err := json.Unmarshal(req.StorageParams, &uploadParams); err != nil {
+			return nil, CodedErrorf(http.StatusInternalServerError, "error unmarshalling storage params: %v", err)
+		}	
+		connector, err = s.storage.GetConnector(uploadBucket, uploadParams.UploadId)
+		req.StorageType = connector.Type()
+		req.StorageParams, err = connector.GetParams()
+		if err != nil {
+			return nil, CodedErrorf(http.StatusInternalServerError, "error getting connector params: %v", err)
+		}
+	} else {
+		connector, err = storage.NewConnector(req.StorageType, req.StorageParams)
+	}
+
+	if err != nil {
+		return nil, CodedErrorf(http.StatusInternalServerError, "error getting connector: %v", err)
+	}
+
+	if err := connector.ValidateParams(r.Context()); err != nil {
 		return nil, err
 	}
 
@@ -302,10 +325,12 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		Id:             uuid.New(),
 		ReportName:     req.ReportName,
 		ModelId:        req.ModelId,
-		SourceType:     req.SourceType,
-		SourceParams:   req.SourceParams,
+		StorageType:     req.StorageType,
+		StorageParams:   req.StorageParams,
 		CreationTime:   time.Now().UTC(),
 	}
+
+	slog.Info("creating report", "report_id", report.Id, "report_name", report.ReportName, "model_id", report.ModelId, "storage_type", report.StorageType, "storage_params", string(report.StorageParams))
 
 	for _, tag := range req.Tags {
 		report.Tags = append(report.Tags, database.ReportTag{
@@ -840,7 +865,7 @@ func (s *BackendService) UploadFiles(r *http.Request) (any, error) {
 			newFilepath := filepath.Join(uploadId.String(), part.FileName())
 
 			if err := s.storage.PutObject(r.Context(), uploadBucket, newFilepath, part); err != nil {
-				slog.Error("error uploading file to S3", "error", err)
+				slog.Error("error uploading file to storage", "error", err)
 				return nil, CodedErrorf(http.StatusInternalServerError, "error saving file")
 			}
 		}
@@ -1018,27 +1043,26 @@ func (s *BackendService) GetLicense(r *http.Request) (any, error) {
 	}, nil
 }
 
-func validateS3Access(endpoint string, region string, bucket string, prefix string) error {
-	s3Client, err := storage.NewS3Provider(storage.S3ProviderConfig{
-		S3EndpointURL: endpoint,
-		S3Region:      region,
-	})
-
-	if err != nil {
-		slog.Error("error connecting to S3", "s3_endpoint", endpoint, "region", region, "error", err)
-		return CodedErrorf(http.StatusInternalServerError, "Failed to connect to S3 endpoint. %v", err)
-	}
-
-	ctx := context.Background()
-	return s3Client.ValidateAccess(ctx, bucket, prefix)
-}
-
 func (s *BackendService) ValidateS3Access(r *http.Request) (any, error) {
 	req, err := ParseRequestQueryParams[api.ValidateS3BucketRequest](r)
 	if err != nil {
 		return nil, err
 	}
-	return nil, validateS3Access(req.S3Endpoint, req.S3Region, req.SourceS3Bucket, req.SourceS3Prefix)
+
+	connector, err := storage.NewS3Connector(storage.S3ConnectorParams{
+		Endpoint: req.S3Endpoint,
+		Region: req.S3Region,
+		Bucket: req.SourceS3Bucket,
+		Prefix: req.SourceS3Prefix,
+	})
+	
+	if err != nil {
+		return nil, err
+	}
+
+	err = connector.ValidateParams(r.Context())
+
+	return nil, err
 }
 
 func (s *BackendService) StoreFileNameToPath(r *http.Request) (any, error) {
