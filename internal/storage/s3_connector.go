@@ -7,7 +7,6 @@ import (
 	"io"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	aws_config "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -33,41 +32,13 @@ type S3Connector struct {
 	params S3ConnectorParams
 }
 
-func createS3ConnectorConfig(s3Endpoint, s3Region string, creds aws.CredentialsProvider) (aws.Config, error) {
-	opts := []func(*aws_config.LoadOptions) error{}
-
-	if s3Endpoint != "" {
-		resolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) { // nolint:staticcheck
-			return aws.Endpoint{ // nolint:staticcheck
-				PartitionID:       "aws",
-				URL:               s3Endpoint,
-				SigningRegion:     s3Region,
-				HostnameImmutable: true, // Important for MinIO
-			}, nil
-		})
-
-		opts = append(opts, aws_config.WithEndpointResolverWithOptions(resolver)) // nolint:staticcheck
-	}
-
-	if s3Region != "" {
-		opts = append(opts, aws_config.WithRegion(s3Region))
-	}
-
-	if creds != nil {
-		opts = append(opts, aws_config.WithCredentialsProvider(creds))
-	}
-
-	return aws_config.LoadDefaultConfig(context.Background(), opts...)
-}
-
-
 func NewS3Connector(params S3ConnectorParams) (*S3Connector, error) {
 	var creds aws.CredentialsProvider = nil
 	if params.AccessKeyID != "" && params.SecretAccessKey != "" {
 		creds = credentials.NewStaticCredentialsProvider(params.AccessKeyID, params.SecretAccessKey, "")
 	}
 
-	awsCfg, err := createS3ConnectorConfig(params.Endpoint, params.Region, creds)
+	awsCfg, err := createS3Config(params.Endpoint, params.Region, creds)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create aws config: %w", err)
 	}
@@ -76,7 +47,7 @@ func NewS3Connector(params S3ConnectorParams) (*S3Connector, error) {
 	// env variables or ~/.aws/credentials. If no credentials are found, then we fallback
 	// to anonymous credentials, this is needed to be able to access public s3 buckets.
 	if _, err := awsCfg.Credentials.Retrieve(context.Background()); err != nil {
-		awsCfg, err = createS3ConnectorConfig(params.Endpoint, params.Region, aws.AnonymousCredentials{})
+		awsCfg, err = createS3Config(params.Endpoint, params.Region, aws.AnonymousCredentials{})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create aws config with anonymous credentials: %w", err)
 		}
@@ -132,56 +103,7 @@ func (c *S3Connector) ValidateParams(ctx context.Context) error {
 }
 
 func (c *S3Connector) CreateInferenceTasks(ctx context.Context, targetBytes int64) ([]InferenceTask, int64, error) {
-	var tasks []InferenceTask
-
-	var currentChunkKeys []string
-	var currentChunkSize int64 = 0
-	var totalObjects int = 0
-
-	addTask := func(chunkKeys []string, chunkSize int64) error {
-		taskParams := LocalConnectorTaskParams{
-			ChunkKeys: chunkKeys,
-		}
-		
-		taskParamsBytes, err := json.Marshal(taskParams)
-		if err != nil {
-			return fmt.Errorf("error marshalling task params: %w", err)
-		}
-
-		tasks = append(tasks, InferenceTask{
-			Params: taskParamsBytes,
-			TotalSize: chunkSize,
-		})
-
-		return nil
-	}
-
-	for obj, err := range c.iterObjects(ctx, c.params.Bucket, c.params.Prefix) {
-		if err != nil {
-			return nil, 0, fmt.Errorf("error iterating over local objects: %w", err)
-		}
-
-		totalObjects++
-
-		if currentChunkSize+obj.Size > targetBytes && len(currentChunkKeys) > 0 {
-			if err := addTask(currentChunkKeys, currentChunkSize); err != nil {
-				return nil, 0, err
-			}
-
-			currentChunkKeys = []string{}
-			currentChunkSize = 0
-		}
-
-		currentChunkKeys = append(currentChunkKeys, obj.Name)
-		currentChunkSize += obj.Size
-	}
-
-	if len(currentChunkKeys) > 0 {
-		if err := addTask(currentChunkKeys, currentChunkSize); err != nil {
-			return nil, 0, err
-		}
-	}
-	return tasks, int64(totalObjects), nil
+	return createInferenceTasks(c.iterObjects(ctx, c.params.Bucket, c.params.Prefix), targetBytes)
 }
 
 func (c *S3Connector) IterTaskChunks(ctx context.Context, params []byte) (<-chan ObjectChunkStream, error) {
@@ -190,31 +112,7 @@ func (c *S3Connector) IterTaskChunks(ctx context.Context, params []byte) (<-chan
 		return nil, fmt.Errorf("error unmarshalling params: %w", err)
 	}
 
-	parser := NewDefaultParser()
-
-	chunkStreams := make(chan ObjectChunkStream)
-
-	go func() {
-		defer close(chunkStreams)
-		
-		for _, objectKey := range parsedParams.ChunkKeys {
-			objectStream, err := c.getObjectStream(c.params.Bucket, objectKey)
-			if err != nil {
-				chunkStreams <- ObjectChunkStream{Name: objectKey, Chunks: nil, Error: err}
-				continue
-			}
-
-			parsedChunks := parser.Parse(objectKey, objectStream)
-			
-			chunkStreams <- ObjectChunkStream{
-				Name: objectKey,
-				Chunks: parsedChunks,
-				Error: nil,
-			}
-		}
-	}()
-
-	return chunkStreams, nil
+	return iterTaskChunks(c.params.Bucket, parsedParams.ChunkKeys, c.getObjectStream)
 }
 
 func (c *S3Connector) iterObjects(ctx context.Context, bucket, dir string) ObjectIterator {

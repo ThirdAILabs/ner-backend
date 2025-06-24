@@ -153,7 +153,7 @@ type ValidateGroupDefinitionRequest struct {
 
 type ValidateS3BucketRequest struct {
 	S3Endpoint     string
-	S3Region       string
+	Region       string
 	SourceS3Bucket string
 	SourceS3Prefix string
 }

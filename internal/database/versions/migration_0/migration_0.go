@@ -109,7 +109,7 @@ type Report struct {
 	Stopped bool `gorm:"default:false"`
 
 	S3Endpoint     sql.NullString
-	S3Region       sql.NullString
+	Region       sql.NullString
 	SourceS3Bucket string
 	SourceS3Prefix sql.NullString
 	IsUpload       bool

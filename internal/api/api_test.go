@@ -784,7 +784,7 @@ func TestValidateS3Bucket_PublicBucket(t *testing.T) {
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
-	url := "/validate/s3?S3Endpoint=&S3Region=us-east-2&SourceS3Bucket=thirdai-corp-public&SourceS3Prefix="
+	url := "/validate/s3?S3Endpoint=&Region=us-east-2&SourceS3Bucket=thirdai-corp-public&SourceS3Prefix="
 	req := httptest.NewRequest(http.MethodGet, url, nil)
 	rec := httptest.NewRecorder()
 
@@ -798,7 +798,7 @@ func TestValidateS3Bucket_InvalidBucket(t *testing.T) {
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
-	url := "/validate/s3?S3Endpoint=&S3Region=us-east-1&SourceS3Bucket=test-bucket&SourceS3Prefix="
+	url := "/validate/s3?S3Endpoint=&Region=us-east-1&SourceS3Bucket=test-bucket&SourceS3Prefix="
 	req := httptest.NewRequest(http.MethodGet, url, nil)
 	rec := httptest.NewRecorder()
 

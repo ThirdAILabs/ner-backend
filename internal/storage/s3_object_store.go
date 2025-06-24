@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	aws_config "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -26,50 +25,22 @@ type S3ObjectStore struct {
 }
 
 type S3ObjectStoreConfig struct {
-	S3EndpointURL     string
-	S3AccessKeyID     string
-	S3SecretAccessKey string
-	S3Region          string
+	Endpoint     string
+	AccessKeyID     string
+	SecretAccessKey string
+	Region          string
 }
 
 var _ ObjectStore = &S3ObjectStore{}
 
-func createS3Config(s3Endpoint, s3Region string, creds aws.CredentialsProvider) (aws.Config, error) {
-	opts := []func(*aws_config.LoadOptions) error{}
-
-	if s3Endpoint != "" {
-		resolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) { // nolint:staticcheck
-			return aws.Endpoint{ // nolint:staticcheck
-				PartitionID:       "aws",
-				URL:               s3Endpoint,
-				SigningRegion:     s3Region,
-				HostnameImmutable: true, // Important for MinIO
-			}, nil
-		})
-
-		opts = append(opts, aws_config.WithEndpointResolverWithOptions(resolver)) // nolint:staticcheck
-	}
-
-	if s3Region != "" {
-		opts = append(opts, aws_config.WithRegion(s3Region))
-	}
-
-	if creds != nil {
-		opts = append(opts, aws_config.WithCredentialsProvider(creds))
-	}
-
-	return aws_config.LoadDefaultConfig(context.Background(), opts...)
-}
-
-
 
 func NewS3ObjectStore(cfg S3ObjectStoreConfig) (*S3ObjectStore, error) {
 	var creds aws.CredentialsProvider = nil
-	if cfg.S3AccessKeyID != "" && cfg.S3SecretAccessKey != "" {
-		creds = credentials.NewStaticCredentialsProvider(cfg.S3AccessKeyID, cfg.S3SecretAccessKey, "")
+	if cfg.AccessKeyID != "" && cfg.SecretAccessKey != "" {
+		creds = credentials.NewStaticCredentialsProvider(cfg.AccessKeyID, cfg.SecretAccessKey, "")
 	}
 
-	awsCfg, err := createS3Config(cfg.S3EndpointURL, cfg.S3Region, creds)
+	awsCfg, err := createS3Config(cfg.Endpoint, cfg.Region, creds)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create aws config: %w", err)
 	}
@@ -78,7 +49,7 @@ func NewS3ObjectStore(cfg S3ObjectStoreConfig) (*S3ObjectStore, error) {
 	// env variables or ~/.aws/credentials. If no credentials are found, then we fallback
 	// to anonymous credentials, this is needed to be able to access public s3 buckets.
 	if _, err := awsCfg.Credentials.Retrieve(context.Background()); err != nil {
-		awsCfg, err = createS3Config(cfg.S3EndpointURL, cfg.S3Region, aws.AnonymousCredentials{})
+		awsCfg, err = createS3Config(cfg.Endpoint, cfg.Region, aws.AnonymousCredentials{})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create aws config with anonymous credentials: %w", err)
 		}
@@ -293,11 +264,11 @@ func (s *S3ObjectStore) UploadDir(ctx context.Context, bucket, prefix, src strin
 
 func (s *S3ObjectStore) GetConnector(bucket, prefix string) (Connector, error) {
 	return NewS3Connector(S3ConnectorParams{
-		Endpoint: s.cfg.S3EndpointURL,
-		Region: s.cfg.S3Region,
+		Endpoint: s.cfg.Endpoint,
+		Region: s.cfg.Region,
 		Bucket: bucket,
 		Prefix: prefix,
-		AccessKeyID: s.cfg.S3AccessKeyID,
-		SecretAccessKey: s.cfg.S3SecretAccessKey,
+		AccessKeyID: s.cfg.AccessKeyID,
+		SecretAccessKey: s.cfg.SecretAccessKey,
 	})
 }

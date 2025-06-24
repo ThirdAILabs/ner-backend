@@ -48,7 +48,7 @@ type Report struct {
 
 	// Old source fields
 	S3Endpoint     sql.NullString
-	S3Region       sql.NullString
+	Region       sql.NullString
 	SourceS3Bucket string
 	SourceS3Prefix sql.NullString
 	
@@ -103,7 +103,7 @@ func Migration(db *gorm.DB) error {
 	}
 
 	if err := db.Migrator().DropColumn(&Report{}, "s3_region"); err != nil {
-		return fmt.Errorf("error dropping S3Region column: %w", err)
+		return fmt.Errorf("error dropping Region column: %w", err)
 	}
 	
 	if err := db.Migrator().DropColumn(&Report{}, "source_s3_bucket"); err != nil {
@@ -125,7 +125,7 @@ func transformReports(db *gorm.DB) error {
 	var reports []struct {
 		Id              uuid.UUID
 		S3Endpoint      sql.NullString
-		S3Region        sql.NullString
+		Region        sql.NullString
 		SourceS3Bucket  string
 		SourceS3Prefix  sql.NullString
 	}
@@ -141,7 +141,7 @@ func transformReports(db *gorm.DB) error {
 		storageType := storage.S3ConnectorType
 		storageParams := storage.S3ConnectorParams{
 			Endpoint: report.S3Endpoint.String,
-			Region:   report.S3Region.String,
+			Region:   report.Region.String,
 			Bucket:   report.SourceS3Bucket,
 			Prefix:   report.SourceS3Prefix.String,
 		}

@@ -50,56 +50,7 @@ func (c *LocalConnector) ValidateParams(ctx context.Context) error {
 }
 
 func (c *LocalConnector) CreateInferenceTasks(ctx context.Context, targetBytes int64) ([]InferenceTask, int64, error) {
-	var tasks []InferenceTask
-
-	var currentChunkKeys []string
-	var currentChunkSize int64 = 0
-	var totalObjects int = 0
-
-	addTask := func(chunkKeys []string, chunkSize int64) error {
-		taskParams := LocalConnectorTaskParams{
-			ChunkKeys: chunkKeys,
-		}
-		
-		taskParamsBytes, err := json.Marshal(taskParams)
-		if err != nil {
-			return fmt.Errorf("error marshalling task params: %w", err)
-		}
-
-		tasks = append(tasks, InferenceTask{
-			Params: taskParamsBytes,
-			TotalSize: chunkSize,
-		})
-
-		return nil
-	}
-
-	for obj, err := range c.iterObjects(c.params.Bucket, c.params.Prefix) {
-		if err != nil {
-			return nil, 0, fmt.Errorf("error iterating over local objects: %w", err)
-		}
-
-		if currentChunkSize+obj.Size > targetBytes && len(currentChunkKeys) > 0 {
-			if err := addTask(currentChunkKeys, currentChunkSize); err != nil {
-				return nil, 0, err
-			}
-			
-			currentChunkKeys = []string{}
-			currentChunkSize = 0
-		}
-		
-		currentChunkKeys = append(currentChunkKeys, obj.Name)
-		currentChunkSize += obj.Size
-		totalObjects++
-	}
-
-	if len(currentChunkKeys) > 0 {
-		if err := addTask(currentChunkKeys, currentChunkSize); err != nil {
-			return nil, 0, err
-		}
-	}
-
-	return tasks, int64(totalObjects), nil
+	return createInferenceTasks(c.iterObjects(c.params.Bucket, c.params.Prefix), targetBytes)
 }
 
 func (c *LocalConnector) IterTaskChunks(ctx context.Context, params []byte) (<-chan ObjectChunkStream, error) {
@@ -108,41 +59,12 @@ func (c *LocalConnector) IterTaskChunks(ctx context.Context, params []byte) (<-c
 		return nil, fmt.Errorf("error unmarshalling params: %w", err)
 	}
 
-	parser := NewDefaultParser()
-
-	chunkStreams := make(chan ObjectChunkStream)
-
-	go func() {
-		defer close(chunkStreams)
-		
-		
-		for _, objectKey := range parsedParams.ChunkKeys {
-			objectStream, err := c.getObjectStream(c.params.Bucket, objectKey)
-			if err != nil {
-				chunkStreams <- ObjectChunkStream{Name: objectKey, Chunks: nil, Error: err}
-				continue
-			}
-
-			parsedChunks := parser.Parse(objectKey, objectStream)
-			
-			chunkStreams <- ObjectChunkStream{
-				Name: objectKey,
-				Chunks: parsedChunks,
-				Error: nil,
-			}
-		}
-	}()
-
-	return chunkStreams, nil
-}
-
-func (c *LocalConnector) fullpath(bucket, key string) string {
-	return filepath.Join(c.params.BaseDir, bucket, key)
+	return iterTaskChunks(c.params.Bucket, parsedParams.ChunkKeys, c.getObjectStream)
 }
 
 func (c *LocalConnector) iterObjects(bucket, dir string) ObjectIterator {
 	return func(yield func(obj Object, err error) bool) {
-		err := filepath.WalkDir(c.fullpath(bucket, dir), func(path string, d fs.DirEntry, err error) error {
+		err := filepath.WalkDir(localStorageFullpath(c.params.BaseDir, bucket, dir), func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
@@ -170,7 +92,7 @@ func (c *LocalConnector) iterObjects(bucket, dir string) ObjectIterator {
 
 
 func (c *LocalConnector) getObject(bucket, key string) ([]byte, error) {
-	data, err := os.ReadFile(c.fullpath(bucket, key))
+	data, err := os.ReadFile(localStorageFullpath(c.params.BaseDir, bucket, key))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file %s/%s: %w", bucket, key, err)
 	}

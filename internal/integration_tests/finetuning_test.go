@@ -40,9 +40,9 @@ func setupCommon(t *testing.T) (
 	minioURL := setupMinioContainer(t, ctx)
 	
 	s3ObjectStore, err := storage.NewS3ObjectStore(storage.S3ObjectStoreConfig{
-		S3EndpointURL:     minioURL,
-		S3AccessKeyID:     minioUsername,
-		S3SecretAccessKey: minioPassword,
+		Endpoint:     minioURL,
+		AccessKeyID:     minioUsername,
+		SecretAccessKey: minioPassword,
 	})
 
 	require.NoError(t, err)

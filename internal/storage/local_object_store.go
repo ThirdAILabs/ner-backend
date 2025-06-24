@@ -23,16 +23,12 @@ func NewLocalObjectStore(dir string) (*LocalObjectStore, error) {
 	return &LocalObjectStore{baseDir: baseDir}, nil
 }
 
-func (s *LocalObjectStore) fullpath(bucket, key string) string {
-	return filepath.Join(s.baseDir, bucket, key)
-}
-
 func (s *LocalObjectStore) CreateBucket(ctx context.Context, bucket string) error {
 	return nil
 }
 
 func (s *LocalObjectStore) PutObject(ctx context.Context, bucket, key string, data io.Reader) error {
-	path := s.fullpath(bucket, key)
+	path := localStorageFullpath(s.baseDir, bucket, key)
 	if err := os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
 		return fmt.Errorf("failed to create directory for %s/%s: %w", bucket, key, err)
 	}
@@ -51,7 +47,7 @@ func (s *LocalObjectStore) PutObject(ctx context.Context, bucket, key string, da
 }
 
 func (s *LocalObjectStore) DeleteObjects(ctx context.Context, bucket string, dir string) error {
-	fullPath := s.fullpath(bucket, dir)
+	fullPath := localStorageFullpath(s.baseDir, bucket, dir)
 	if err := os.RemoveAll(fullPath); err != nil {
 		return fmt.Errorf("failed to delete objects in %s/%s: %w", bucket, dir, err)
 	}
@@ -59,7 +55,7 @@ func (s *LocalObjectStore) DeleteObjects(ctx context.Context, bucket string, dir
 }
 
 func (s *LocalObjectStore) DownloadDir(ctx context.Context, bucket, prefix, dest string, overwrite bool) error {
-	sourcePath := s.fullpath(bucket, prefix)
+	sourcePath := localStorageFullpath(s.baseDir, bucket, prefix)
 
 	if _, err := os.Stat(dest); err == nil {
 		if !overwrite {
@@ -81,7 +77,7 @@ func (s *LocalObjectStore) DownloadDir(ctx context.Context, bucket, prefix, dest
 }
 
 func (s *LocalObjectStore) UploadDir(ctx context.Context, bucket, prefix, src string) error {
-	destPath := s.fullpath(bucket, prefix)
+	destPath := localStorageFullpath(s.baseDir, bucket, prefix)
 
 	if _, err := os.Stat(destPath); err == nil {
 		if err := os.RemoveAll(destPath); err != nil {

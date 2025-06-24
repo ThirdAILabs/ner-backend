@@ -24,7 +24,7 @@ type OldReport struct {
 
 	// Old source fields
 	S3Endpoint     sql.NullString
-	S3Region       sql.NullString
+	Region       sql.NullString
 	SourceS3Bucket string
 	SourceS3Prefix sql.NullString
 	IsUpload       bool
@@ -82,7 +82,7 @@ func TestMigration_Reports(t *testing.T) {
 		ReportName:      "test-s3-report",
 		ModelId:         modelID,
 		S3Endpoint:      sql.NullString{String: "https://s3.amazonaws.com", Valid: true},
-		S3Region:        sql.NullString{String: "us-east-1", Valid: true},
+		Region:        sql.NullString{String: "us-east-1", Valid: true},
 		SourceS3Bucket:  "test-bucket",
 		SourceS3Prefix:  sql.NullString{String: "test/prefix", Valid: true},
 		IsUpload:        false,
@@ -177,7 +177,7 @@ func TestMigration_ColumnRemoval(t *testing.T) {
 		ReportName:      "test-report",
 		ModelId:         modelID,
 		S3Endpoint:      sql.NullString{String: "https://s3.amazonaws.com", Valid: true},
-		S3Region:        sql.NullString{String: "us-east-1", Valid: true},
+		Region:        sql.NullString{String: "us-east-1", Valid: true},
 		SourceS3Bucket:  "test-bucket",
 		SourceS3Prefix:  sql.NullString{String: "test/prefix", Valid: true},
 		IsUpload:        false,

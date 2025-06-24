@@ -1052,7 +1052,7 @@ func (s *BackendService) ValidateS3Access(r *http.Request) (any, error) {
 
 	connector, err := storage.NewS3Connector(storage.S3ConnectorParams{
 		Endpoint: req.S3Endpoint,
-		Region: req.S3Region,
+		Region: req.Region,
 		Bucket: req.SourceS3Bucket,
 		Prefix: req.SourceS3Prefix,
 	})
