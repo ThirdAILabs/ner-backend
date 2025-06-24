@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense, useEffect } from 'react';
+import React, { useState, Suspense, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ChevronLeft, ChevronRight, House, FilePlus } from 'lucide-react';
@@ -14,6 +14,7 @@ import ChatTitle from '@/components/chat/Title';
 import Sidebar from '@/components/chat/Sidebar';
 import Toggle from '@/components/chat/Toggle';
 import useSafeGPT, { NEW_CHAT_ID } from '@/hooks/useSafeGPT';
+import useTelemetry from '@/hooks/useTelemetry';
 
 const SIDEBAR_WIDTH = 250;
 
@@ -76,6 +77,8 @@ function SidebarToggle({ collapsed, onClick }: { collapsed: boolean; onClick: ()
 
 function SafeGPTContent() {
   const router = useRouter();
+  const recordEvent = useTelemetry();
+
   const searchParams = useSearchParams();
   const selectedId = searchParams.get('id');
 
@@ -98,6 +101,14 @@ function SafeGPTContent() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
   // Dialog box to show when a user clicks the new chat button when the current chat is new
   const [showNewChatDialog, setShowNewChatDialog] = useState<boolean>(false);
+
+  React.useEffect(() => {
+    recordEvent({
+      UserAction: 'View SafeGPT Page',
+      UIComponent: 'SafeGPT Page',
+      UI: 'SafeGPT New Chat',
+    });
+  }, []);
 
   // Close the new chat dialog after 3 seconds
   useEffect(() => {
@@ -123,6 +134,12 @@ function SafeGPTContent() {
       return;
     }
     router.push(`/safegpt?id=${NEW_CHAT_ID}`);
+
+    recordEvent({
+      UserAction: 'Create new chat',
+      UIComponent: 'SafeGPT New Chat',
+      UI: 'SafeGPT New Chat',
+    });
   };
 
   const handleSendMessage = async (message: string) => {
@@ -130,6 +147,12 @@ function SafeGPTContent() {
     if (newSessionId) {
       router.push(`/safegpt?id=${newSessionId}`);
     }
+
+    recordEvent({
+      UserAction: 'Send message to SafeGPT',
+      UIComponent: 'SafeGPT Chat',
+      UI: 'SafeGPT New Chat',
+    });
   };
 
   const handleUpdateTitle = async (newTitle: string) => {
