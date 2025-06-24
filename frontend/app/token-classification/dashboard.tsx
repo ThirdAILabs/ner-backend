@@ -30,9 +30,9 @@ const Dashboard = () => {
   const recordEvent = useTelemetry();
   useEffect(() => {
     recordEvent({
-      UserAction: 'view',
-      UIComponent: 'Usage Stats Dashboard Page',
-      Page: 'Token Classification Page',
+      UserAction: 'View usage stats dashboard',
+      UIComponent: 'Usage Stats Dashboard',
+      Page: 'Usage Stats Dashboard Page',
     });
   }, []);
   const { healthStatus } = useHealth();
