@@ -38,6 +38,7 @@ type Report struct {
 	ReportName     string
 	StorageType     string
 	StorageParams   []byte
+	IsUpload        bool
 
 	Stopped            bool
 	CreationTime       time.Time

@@ -177,13 +177,13 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 
 	createData(t, s3ObjectStore)
 
-	sourceParams, _ := json.Marshal(map[string]any{"Endpoint": minioUrl, "Bucket": dataBucket})
+	storageParams, _ := json.Marshal(map[string]any{"Endpoint": minioUrl, "Bucket": dataBucket})
 
 	reportId := createReport(t, router, api.CreateReportRequest{
 		ReportName:     "test-report",
 		ModelId:        modelId,
 		StorageType:     storage.S3ConnectorType,
-		StorageParams:   sourceParams,
+		StorageParams:   storageParams,
 		Tags:           []string{"phone", "email"},
 		CustomTags:     map[string]string{"custom_token": `(\w\d){3}`},
 		Groups: map[string]string{
@@ -287,13 +287,13 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 
 	uploadId := createUpload(t, router)
 
-	sourceParams, _ := json.Marshal(map[string]any{"UploadId": uploadId})
+	storageParams, _ := json.Marshal(map[string]any{"UploadId": uploadId})
 
 	reportId := createReport(t, router, api.CreateReportRequest{
 		ReportName:   "test-report",
 		ModelId:      modelId,
 		StorageType:   backendapi.UploadStorageType,
-		StorageParams: sourceParams,
+		StorageParams: storageParams,
 		Tags:         []string{"phone", "email"},
 	})
 
@@ -386,13 +386,13 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 
 			uploadID := createUpload(t, router)
 
-			sourceParams, _ := json.Marshal(map[string]any{"UploadId": uploadID})
+			storageParams, _ := json.Marshal(map[string]any{"UploadId": uploadID})
 
 			reportID := createReport(t, router, api.CreateReportRequest{
 				ReportName: fmt.Sprintf("test-report-%s", m.tag),
 				ModelId:    model.Id,
 				StorageType: storage.LocalConnectorType,
-				StorageParams: sourceParams,
+				StorageParams: storageParams,
 				Tags: []string{"ADDRESS", "CARD_NUMBER", "COMPANY", "CREDIT_SCORE", "DATE",
 					"EMAIL", "ID_NUMBER", "LICENSE_PLATE",
 					"LOCATION", "NAME", "PHONENUMBER",

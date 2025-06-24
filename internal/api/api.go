@@ -274,6 +274,7 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 	}
 
 	var connector storage.Connector
+	var isUpload bool = false
 
 	// Custom connector initialization logic for uploads. It is a special case because it has to be consistent with
 	// the storage used by the backend service.
@@ -288,6 +289,7 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		if err != nil {
 			return nil, CodedErrorf(http.StatusInternalServerError, "error getting connector params: %v", err)
 		}
+		isUpload = true
 	} else {
 		connector, err = storage.NewConnector(req.StorageType, req.StorageParams)
 	}
@@ -327,6 +329,7 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		ModelId:        req.ModelId,
 		StorageType:     req.StorageType,
 		StorageParams:   req.StorageParams,
+		IsUpload:        isUpload,
 		CreationTime:   time.Now().UTC(),
 	}
 

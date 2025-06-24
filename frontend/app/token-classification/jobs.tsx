@@ -101,7 +101,7 @@ function JobStatus({ report }: { report: ReportWithStatus }) {
   const failed = InferenceTaskStatuses?.FAILED?.TotalTasks || 0;
   const aborted = InferenceTaskStatuses?.ABORTED?.TotalTasks || 0;
 
-  const fileCount = report.FileCount || 1;
+  const fileCount = report.TotalFileCount || 1;
   const succeededFileCount = report.SucceededFileCount || 0;
   const failedFileCount = report.FailedFileCount || 0;
 
@@ -236,7 +236,7 @@ function Job({ initialReport, onDelete }: JobProps) {
         Errors: detailedReport.Errors || [],
         SucceededFileCount: detailedReport.SucceededFileCount,
         FailedFileCount: detailedReport.FailedFileCount,
-        FileCount: detailedReport.FileCount,
+        TotalFileCount: detailedReport.TotalFileCount,
         detailedStatus: {
           ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
           InferenceTaskStatuses: detailedReport.InferenceTaskStatuses,
@@ -247,7 +247,7 @@ function Job({ initialReport, onDelete }: JobProps) {
       const seenFileCount = detailedReport.SucceededFileCount + detailedReport.FailedFileCount;
 
       const isCompleted =
-        detailedReport.FileCount !== 0 && seenFileCount === detailedReport.FileCount;
+        detailedReport.TotalFileCount !== 0 && seenFileCount === detailedReport.TotalFileCount;
 
       return isCompleted;
     } catch (err) {

@@ -101,7 +101,7 @@ func TestMigration_Reports(t *testing.T) {
 		StorageParams string
 	}
 
-	err = db.Raw("SELECT source_type, source_params FROM reports WHERE id = ?", reportID).Scan(&result).Error
+	err = db.Raw("SELECT storage_type, storage_params FROM reports WHERE id = ?", reportID).Scan(&result).Error
 	require.NoError(t, err)
 
 	assert.Equal(t, storage.S3ConnectorType, result.StorageType)
@@ -114,48 +114,6 @@ func TestMigration_Reports(t *testing.T) {
 	assert.Equal(t, "us-east-1", params.Region)
 	assert.Equal(t, "test-bucket", params.Bucket)
 	assert.Equal(t, "test/prefix", params.Prefix)
-}
-
-func TestMigration_Reports_LocalUpload(t *testing.T) {
-	db := setupTestDB(t)
-
-	// Create test data for local upload
-	reportID := uuid.New()
-	modelID := uuid.New()
-
-	localReport := OldReport{
-		Id:              reportID,
-		ReportName:      "test-local-report",
-		ModelId:         modelID,
-		SourceS3Bucket:  "local-bucket",
-		SourceS3Prefix:  sql.NullString{String: "upload-123", Valid: true},
-		IsUpload:        true,
-		CreationTime:    time.Now(),
-	}
-
-	err := db.Create(&localReport).Error
-	require.NoError(t, err)
-
-	err = Migration(db)
-	require.NoError(t, err)
-
-	// Verify the transformation
-	var result struct {
-		StorageType   string
-		StorageParams string
-	}
-
-	err = db.Raw("SELECT source_type, source_params FROM reports WHERE id = ?", reportID).Scan(&result).Error
-	require.NoError(t, err)
-
-	assert.Equal(t, storage.LocalConnectorType, result.StorageType)
-
-	var params storage.LocalConnectorParams
-	err = json.Unmarshal([]byte(result.StorageParams), &params)
-	require.NoError(t, err)
-
-	assert.Equal(t, "local-bucket", params.Bucket)
-	assert.Equal(t, "upload-123", params.Prefix)
 }
 
 func TestMigration_InferenceTasks(t *testing.T) {
@@ -197,7 +155,7 @@ func TestMigration_InferenceTasks(t *testing.T) {
 		StorageParams string
 	}
 
-	err = db.Raw("SELECT source_params FROM inference_tasks WHERE report_id = ? AND task_id = ?", reportID, 1).Scan(&result).Error
+	err = db.Raw("SELECT storage_params FROM inference_tasks WHERE report_id = ? AND task_id = ?", reportID, 1).Scan(&result).Error
 	require.NoError(t, err)
 
 	var params storage.S3ConnectorTaskParams
@@ -205,55 +163,6 @@ func TestMigration_InferenceTasks(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{"key1", "key2", "key3"}, params.ChunkKeys)
-}
-
-func TestMigration_InferenceTasks_LocalUpload(t *testing.T) {
-	db := setupTestDB(t)
-
-	// Create test report and inference task for local upload
-	reportID := uuid.New()
-	modelID := uuid.New()
-
-	report := OldReport{
-		Id:              reportID,
-		ReportName:      "test-local-report",
-		ModelId:         modelID,
-		IsUpload:        true, // Local upload case
-		CreationTime:    time.Now(),
-	}
-
-	err := db.Create(&report).Error
-	require.NoError(t, err)
-
-	task := OldInferenceTask{
-		ReportId:     reportID,
-		TaskId:       1,
-		SourceS3Keys: "file1.txt;file2.txt;file3.txt",
-		Status:       "QUEUED",
-		CreationTime: time.Now(),
-		TotalSize:    1000,
-		TokenCount:   100,
-	}
-
-	err = db.Create(&task).Error
-	require.NoError(t, err)
-
-	err = Migration(db)
-	require.NoError(t, err)
-
-	// Verify the transformation
-	var result struct {
-		StorageParams string
-	}
-
-	err = db.Raw("SELECT source_params FROM inference_tasks WHERE report_id = ? AND task_id = ?", reportID, 1).Scan(&result).Error
-	require.NoError(t, err)
-
-	var params storage.LocalConnectorTaskParams
-	err = json.Unmarshal([]byte(result.StorageParams), &params)
-	require.NoError(t, err)
-
-	assert.Equal(t, []string{"file1.txt", "file2.txt", "file3.txt"}, params.ChunkKeys)
 }
 
 func TestMigration_ColumnRemoval(t *testing.T) {
@@ -287,10 +196,6 @@ func TestMigration_ColumnRemoval(t *testing.T) {
 	err = db.Raw("SELECT COUNT(*) > 0 FROM pragma_table_info('reports') WHERE name = 's3_endpoint'").Scan(&columnExists).Error
 	require.NoError(t, err)
 	assert.False(t, columnExists, "s3_endpoint column should be removed")
-
-	err = db.Raw("SELECT COUNT(*) > 0 FROM pragma_table_info('reports') WHERE name = 'is_upload'").Scan(&columnExists).Error
-	require.NoError(t, err)
-	assert.False(t, columnExists, "is_upload column should be removed")
 
 	err = db.Raw("SELECT COUNT(*) > 0 FROM pragma_table_info('inference_tasks') WHERE name = 'source_s3_keys'").Scan(&columnExists).Error
 	require.NoError(t, err)

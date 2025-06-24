@@ -723,16 +723,22 @@ export default function NewJobPage() {
         CustomTags: customTagsObj,
         ...(selectedSource === 's3'
           ? {
-              S3Endpoint: sourceS3Endpoint,
-              S3Region: sourceS3Region,
-              SourceS3Bucket: sourceS3Bucket,
-              SourceS3Prefix: sourceS3Prefix || undefined,
+              StorageType: 's3',
+              StorageParams: JSON.stringify({
+                Endpoint: sourceS3Endpoint,
+                Region: sourceS3Region,
+                Bucket: sourceS3Bucket,
+                Prefix: sourceS3Prefix,
+              }),
             }
           : {
-              UploadId: uploadId,
+              StorageType: 'upload',
+              StorageParams: JSON.stringify({
+                UploadId: uploadId,
+              }),
             }),
         Groups: groups,
-        report_name: jobName,
+        ReportName: jobName,
       });
 
       setSuccess(true);

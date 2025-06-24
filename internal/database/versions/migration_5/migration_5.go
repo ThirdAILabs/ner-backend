@@ -51,12 +51,13 @@ type Report struct {
 	S3Region       sql.NullString
 	SourceS3Bucket string
 	SourceS3Prefix sql.NullString
-	IsUpload       bool
 	
 	// New source fields. Default value only for migration.
 	StorageType     string `gorm:"size:20;not null;default:''"`
 	StorageParams   datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'"`
-
+	
+	IsUpload        bool
+	
 	CreationTime       time.Time
 	SucceededFileCount int `gorm:"default:0"`
 	FailedFileCount    int `gorm:"default:0"`
@@ -75,15 +76,15 @@ type Report struct {
 
 func Migration(db *gorm.DB) error {
 	// Add new columns
-	if err := db.Migrator().AddColumn(&Report{}, "source_type"); err != nil {
+	if err := db.Migrator().AddColumn(&Report{}, "storage_type"); err != nil {
 		return fmt.Errorf("error adding StorageType column: %w", err)
 	}
 	
-	if err := db.Migrator().AddColumn(&Report{}, "source_params"); err != nil {
+	if err := db.Migrator().AddColumn(&Report{}, "storage_params"); err != nil {
 		return fmt.Errorf("error adding StorageParams column: %w", err)
 	}
 
-	if err := db.Migrator().AddColumn(&InferenceTask{}, "source_params"); err != nil {
+	if err := db.Migrator().AddColumn(&InferenceTask{}, "storage_params"); err != nil {
 		return fmt.Errorf("error adding StorageParams column: %w", err)
 	}
 
@@ -113,10 +114,6 @@ func Migration(db *gorm.DB) error {
 		return fmt.Errorf("error dropping SourceS3Prefix column: %w", err)
 	}
 	
-	if err := db.Migrator().DropColumn(&Report{}, "is_upload"); err != nil {
-		return fmt.Errorf("error dropping IsUpload column: %w", err)
-	}
-
 	if err := db.Migrator().DropColumn(&InferenceTask{}, "source_s3_keys"); err != nil {
 		return fmt.Errorf("error dropping SourceS3Keys column: %w", err)
 	}
@@ -141,21 +138,21 @@ func transformReports(db *gorm.DB) error {
 		// We default to S3 connector because there is no way to tell if
 		// the old system used local or s3 storage; even if isUpload is true,
 		// files could have been uploaded to s3.
-		sourceType := storage.S3ConnectorType
-		sourceParams := storage.S3ConnectorParams{
+		storageType := storage.S3ConnectorType
+		storageParams := storage.S3ConnectorParams{
 			Endpoint: report.S3Endpoint.String,
 			Region:   report.S3Region.String,
 			Bucket:   report.SourceS3Bucket,
 			Prefix:   report.SourceS3Prefix.String,
 		}
 
-		paramsJSON, err := json.Marshal(sourceParams)
+		paramsJSON, err := json.Marshal(storageParams)
 		if err != nil {
 			return fmt.Errorf("error marshaling params for report %s: %w", report.Id, err)
 		}
 
-		if err := db.Exec("UPDATE reports SET source_type = ?, source_params = ? WHERE id = ?", 
-			sourceType, string(paramsJSON), report.Id).Error; err != nil {
+		if err := db.Exec("UPDATE reports SET storage_type = ?, storage_params = ? WHERE id = ?", 
+			storageType, string(paramsJSON), report.Id).Error; err != nil {
 			return fmt.Errorf("error updating report %s: %w", report.Id, err)
 		}
 	}
@@ -195,7 +192,7 @@ func transformInferenceTasks(db *gorm.DB) error {
 			return fmt.Errorf("error marshaling params for task %d in report %s: %w", task.TaskId, task.ReportId, err)
 		}
 
-		if err := db.Exec("UPDATE inference_tasks SET source_params = ? WHERE report_id = ? AND task_id = ?", 
+		if err := db.Exec("UPDATE inference_tasks SET storage_params = ? WHERE report_id = ? AND task_id = ?", 
 			string(params), task.ReportId, task.TaskId).Error; err != nil {
 			return fmt.Errorf("error updating inference task %d in report %s: %w", task.TaskId, task.ReportId, err)
 		}

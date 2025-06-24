@@ -358,13 +358,13 @@ func TestFinetuningOnnxModel(t *testing.T) {
 
 	uploadId := createUpload(t, router)
 
-	sourceParams, _ := json.Marshal(map[string]any{"UploadId": uploadId})
+	storageParams, _ := json.Marshal(map[string]any{"UploadId": uploadId})
 
 	reportId := createReport(t, router, api.CreateReportRequest{
 		ReportName:   "test-report",
 		ModelId:      model.Id,
 		StorageType:   storage.LocalConnectorType,
-		StorageParams: sourceParams,
+		StorageParams: storageParams,
 		Tags:         tags,
 	})
 

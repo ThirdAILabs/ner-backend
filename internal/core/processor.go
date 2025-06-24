@@ -686,7 +686,7 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 		return err
 	}
 
-	slog.Info("Handling generate tasks", "jobId", task.ReportId, "sourceParams", string(task.Report.StorageParams))
+	slog.Info("Handling generate tasks", "jobId", task.ReportId, "storageParams", string(task.Report.StorageParams))
 
 	targetBytes := task.ChunkTargetBytes
 	if targetBytes <= 0 {
