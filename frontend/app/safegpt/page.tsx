@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, Suspense, useEffect } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ChevronLeft, ChevronRight, House, FilePlus } from 'lucide-react';
@@ -102,7 +102,7 @@ function SafeGPTContent() {
   // Dialog box to show when a user clicks the new chat button when the current chat is new
   const [showNewChatDialog, setShowNewChatDialog] = useState<boolean>(false);
 
-  React.useEffect(() => {
+  useEffect(() => {
     recordEvent({
       UserAction: 'View SafeGPT Page',
       UIComponent: 'SafeGPT Page',
