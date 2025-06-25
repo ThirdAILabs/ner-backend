@@ -11,6 +11,7 @@ export type TelemetryEventPackage = {
   username: string;
   timestamp: string;
   user_machine: string;
+  pocketshield_version: string | null;
   event: TelemetryEvent;
 };
 
@@ -47,10 +48,18 @@ export default function useTelemetry() {
     const timestamp = new Date().toISOString();
     const userMachine = typeof navigator !== 'undefined' ? navigator.userAgent : 'server';
 
+    // Extract PocketShield version from user agent
+    let pocketShieldVersion: string | null = null;
+    if (userMachine && userMachine.includes('PocketShield/')) {
+      const match = userMachine.match(/PocketShield\/([\d.]+)/);
+      pocketShieldVersion = match ? match[1] : null;
+    }
+
     const telemetryPackage: TelemetryEventPackage = {
       username,
       timestamp,
       user_machine: userMachine,
+      pocketshield_version: pocketShieldVersion,
       event: eventType,
     };
 

@@ -69,13 +69,14 @@ export async function insertTelemetryEvent(data) {
 
   try {
     const query = `
-      INSERT INTO telemetry_events (username, timestamp, user_machine, event)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO telemetry_events (username, timestamp, pocketshield_version, user_machine, event)
+      VALUES ($1, $2, $3, $4, $5)
     `;
     
     await pgClient.query(query, [
       data.username,
       data.timestamp,
+      data.pocketshield_version,
       data.user_machine,
       JSON.stringify(data.event)
     ]);
