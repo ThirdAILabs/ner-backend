@@ -69,8 +69,8 @@ func TestListModels(t *testing.T) {
 	err := json.Unmarshal(rec.Body.Bytes(), &response)
 	assert.NoError(t, err)
 	assert.ElementsMatch(t, []api.Model{
-		{Id: id1, Name: "Model1", Status: database.ModelTrained, CreationTime: fixedTime},
-		{Id: id2, Name: "Model2", Status: database.ModelTraining, CreationTime: fixedTime},
+		{Id: id1, Name: "Model1", Status: database.ModelTrained, CreationTime: fixedTime, Finetunable: false},
+		{Id: id2, Name: "Model2", Status: database.ModelTraining, CreationTime: fixedTime, Finetunable: true},
 	}, response)
 }
 
@@ -96,7 +96,7 @@ func TestGetModel(t *testing.T) {
 	var response api.Model
 	err := json.Unmarshal(rec.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	assert.Equal(t, api.Model{Id: modelId, Name: "Model2", Status: database.ModelTraining, Tags: []string{"name", "phone"}}, response)
+	assert.Equal(t, api.Model{Id: modelId, Name: "Model2", Status: database.ModelTraining, Tags: []string{"name", "phone"}, Finetunable: true}, response)
 }
 
 func TestFinetuneModel(t *testing.T) {
