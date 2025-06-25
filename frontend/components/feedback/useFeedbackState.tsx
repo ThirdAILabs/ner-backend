@@ -126,29 +126,44 @@ const useFeedbackState = (modelId: string, reportId: string) => {
   };
 
   const submitFeedback = async () => {
-    const finetuningSamples: Record<string, Feedback> = {};
-    feedback.forEach((feedback) => {
-      if (!finetuningSamples[feedback.body.objectId]) {
-        finetuningSamples[feedback.body.objectId] = objects[feedback.body.objectId];
-      }
-      for (let i = feedback.body.startIndex; i <= feedback.body.endIndex; i++) {
-        finetuningSamples[feedback.body.objectId].Labels[i] = feedback.body.tag;
-      }
-    });
+    try {
+      const finetuningSamples: Record<string, Feedback> = {};
+      feedback.forEach((feedback) => {
+        if (!finetuningSamples[feedback.body.objectId]) {
+          finetuningSamples[feedback.body.objectId] = objects[feedback.body.objectId];
+        }
+        for (let i = feedback.body.startIndex; i <= feedback.body.endIndex; i++) {
+          finetuningSamples[feedback.body.objectId].Labels[i] = feedback.body.tag;
+        }
+      });
 
-    for (const objectId in finetuningSamples) {
-      try {
+      for (const objectId in finetuningSamples) {
         await nerService.submitFeedback(modelId, finetuningSamples[objectId]);
-      } catch (error) {
-        console.error('Error submitting feedback:', error);
       }
-    }
 
-    // Clear temporary feedback and objects
-    setFeedback([]);
-    setObjects({});
-    localStorage.removeItem(FEEDBACK_STORAGE_KEY);
-    localStorage.removeItem(OBJECTS_STORAGE_KEY);
+      // Clear temporary feedback and objects
+      setFeedback([]);
+      setObjects({});
+      localStorage.removeItem(FEEDBACK_STORAGE_KEY);
+      localStorage.removeItem(OBJECTS_STORAGE_KEY);
+
+      // Show success toast
+      toast.success('Feedback submitted successfully!', {
+        duration: 3000,
+        style: {
+          background: '#4CAF50',
+          color: '#fff',
+          padding: '10px',
+          borderRadius: '8px',
+        },
+        icon: '✓',
+      });
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+      toast.error('Failed to submit feedback. Please try again.', {
+        duration: 3000,
+      });
+    }
   };
 
   const removeFeedback = (id: string) => {
@@ -176,9 +191,9 @@ const useFeedbackState = (modelId: string, reportId: string) => {
       f.body.tag !== 'O'
         ? {}
         : {
-            spotlightStartIndex: leftContextWords.length,
-            spotlightEndIndex: leftContextWords.length + highlightedWords.length - 1,
-          };
+          spotlightStartIndex: leftContextWords.length,
+          spotlightEndIndex: leftContextWords.length + highlightedWords.length - 1,
+        };
     return { id: f.id, tokens, ...spotlightFields };
   });
 

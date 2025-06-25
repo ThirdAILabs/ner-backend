@@ -116,20 +116,6 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
     setDisableSubmitBtn(true);
     try {
       onSubmit();
-      toast.success('Feedback submitted successfully!', {
-        duration: 3000,
-        style: {
-          background: '#4CAF50',
-          color: '#fff',
-          padding: '10px',
-          borderRadius: '8px',
-        },
-        icon: '✓',
-      });
-    } catch (error) {
-      toast.error('Failed to submit feedback. Please try again.', {
-        duration: 3000,
-      });
     } finally {
       setDisableSubmitBtn(false);
       setCollapsed(true);
@@ -215,11 +201,10 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
             {/* Submit button */}
             <div className="px-4 pb-4 flex-shrink-0">
               <button
-                className={`w-full text-white border rounded-md py-2 text-base font-medium transition shadow-md ${
-                  disableSubmitBtn
-                    ? 'bg-blue-400 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700 border-blue-700'
-                }`}
+                className={`w-full text-white border rounded-md py-2 text-base font-medium transition shadow-md ${disableSubmitBtn
+                  ? 'bg-blue-400 cursor-not-allowed'
+                  : 'bg-blue-600 hover:bg-blue-700 border-blue-700'
+                  }`}
                 onClick={handleSubmit}
                 style={{ position: 'relative', zIndex: 10 }}
                 disabled={disableSubmitBtn}
