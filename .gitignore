@@ -61,3 +61,6 @@ __pycache__/
 
 main
 .cursor/
+
+plugin/.cache
+plugin/plugin-python/.cache

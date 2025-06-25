@@ -25,7 +25,6 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { useHealth } from '@/contexts/HealthProvider';
 import { alpha } from '@mui/material/styles';
 import { useLicense } from '@/hooks/useLicense';
-
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import useTelemetry from '@/hooks/useTelemetry';
 
@@ -397,20 +396,20 @@ function Job({ initialReport, onDelete }: JobProps) {
 
 export default function Jobs() {
   const recordEvent = useTelemetry();
-  useEffect(() => {
-    recordEvent({
-      UserAction: 'view',
-      UIComponent: 'Scans Dashboard Page',
-      UI: 'Token Classification Page',
-    });
-  }, []);
-
   const [reports, setReports] = useState<ReportWithStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { healthStatus } = useHealth();
   const { license } = useLicense();
   const [isLicenseValid, setIsLicenseValid] = useState<boolean | null>(true);
+
+  useEffect(() => {
+    recordEvent({
+      UserAction: 'View Reports Dashboard',
+      UIComponent: 'Reports Dashboard',
+      Page: 'Reports Dashboard Page',
+    });
+  }, []);
 
   useEffect(() => {
     setIsLicenseValid(

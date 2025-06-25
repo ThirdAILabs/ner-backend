@@ -104,16 +104,11 @@ export function UserFeedbackSection({
                 };
               });
               return (
-                <details
-                  key={index}
-                  className="group text-sm leading-relaxed bg-white"
-                >
+                <details key={index} className="group text-sm leading-relaxed bg-white">
                   <summary className="p-3 cursor-pointer bg-gray-100 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <ChevronRight className="w-4 h-4 transition-transform group-open:rotate-90" />
-                      <span className="font-medium">
-                        Feedback {index + 1}
-                      </span>
+                      <span className="font-medium">Feedback {index + 1}</span>
                     </div>
                     <button
                       className="text-gray-700 hover:text-gray-700 transition-colors"
@@ -363,9 +358,9 @@ const ModelCustomization: React.FC = () => {
                       : 'Select Model'
                     : models.find((m) => m.Id === val)?.Name
                       ? models
-                        .find((m) => m.Id === val)!
-                        .Name.charAt(0)
-                        .toUpperCase() + models.find((m) => m.Id === val)!.Name.slice(1)
+                          .find((m) => m.Id === val)!
+                          .Name.charAt(0)
+                          .toUpperCase() + models.find((m) => m.Id === val)!.Name.slice(1)
                       : val
                 }
                 sx={{ bgcolor: '#f8fafc', '&:hover': { bgcolor: '#f1f5f9' } }}

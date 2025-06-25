@@ -26,9 +26,9 @@ function PageContents() {
   // Record initial page load
   useEffect(() => {
     recordEvent({
-      UserAction: 'view',
-      UIComponent: 'Page Load',
-      UI: 'Token Classification Page',
+      UserAction: 'View Report Dashboard',
+      UIComponent: 'Report Dashboard',
+      Page: 'Report Dashboard Page',
     });
   }, []);
 
@@ -41,15 +41,15 @@ function PageContents() {
     setTabValue(newValue);
     if (newValue === 'monitoring') {
       recordEvent({
-        UserAction: 'click',
+        UserAction: 'Click on Usage Stats Tab',
         UIComponent: 'Usage Stats Tab',
-        UI: 'Token Classification Page',
+        Page: 'Report Dashboard Page',
       });
     } else if (newValue === 'jobs') {
       recordEvent({
-        UserAction: 'click',
-        UIComponent: 'Scans Dashboard Tab',
-        UI: 'Token Classification Page',
+        UserAction: 'Click on Report Dashboard Tab',
+        UIComponent: 'Reports Dashboard Tab',
+        Page: 'Report Dashboard Page',
       });
     }
   };
@@ -122,7 +122,7 @@ function PageContents() {
           <Tabs
             value={tabValue}
             onChange={handleTabChange}
-            aria-label="token classification tabs"
+            aria-label="scans dashboard tabs"
             sx={{
               '& .MuiTab-root': {
                 textTransform: 'none',

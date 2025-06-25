@@ -201,10 +201,11 @@ export const FeedbackPanel: React.FC<FeedbackPanelProps> = ({
             {/* Submit button */}
             <div className="px-4 pb-4 flex-shrink-0">
               <button
-                className={`w-full text-white border rounded-md py-2 text-base font-medium transition shadow-md ${disableSubmitBtn
-                  ? 'bg-blue-400 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700 border-blue-700'
-                  }`}
+                className={`w-full text-white border rounded-md py-2 text-base font-medium transition shadow-md ${
+                  disableSubmitBtn
+                    ? 'bg-blue-400 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700 border-blue-700'
+                }`}
                 onClick={handleSubmit}
                 style={{ position: 'relative', zIndex: 10 }}
                 disabled={disableSubmitBtn}

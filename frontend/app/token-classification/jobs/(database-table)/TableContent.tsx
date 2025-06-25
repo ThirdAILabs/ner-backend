@@ -1,8 +1,7 @@
 import React, { useMemo } from 'react';
 import { TableHead, TableRow, TableHeader, TableBody, TableCell } from '@/components/ui/table';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ChevronRight } from 'lucide-react';
 import { NO_GROUP } from '@/lib/utils';
-import { ChevronRight, File } from 'lucide-react';
 import { TokenHighlighter } from '@/components/feedback/TokenHighlighter';
 import * as _ from 'lodash';
 import type { TableContentProps } from '@/types/analyticsTypes';

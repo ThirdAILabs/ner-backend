@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Box,
   Typography,
@@ -28,11 +28,11 @@ import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
 const Dashboard = () => {
   const recordEvent = useTelemetry();
-  React.useEffect(() => {
+  useEffect(() => {
     recordEvent({
-      UserAction: 'view',
-      UIComponent: 'Usage Stats Dashboard Page',
-      UI: 'Token Classification Page',
+      UserAction: 'View usage stats dashboard',
+      UIComponent: 'Usage Stats Dashboard',
+      Page: 'Usage Stats Dashboard Page',
     });
   }, []);
   const { healthStatus } = useHealth();
@@ -59,8 +59,8 @@ const Dashboard = () => {
     recordEvent({
       UserAction: 'select',
       UIComponent: 'Days Filter',
-      UI: 'Usage Stats Dashboard Page',
-      data: { days: newDays },
+      Page: 'Usage Stats Dashboard Page',
+      Data: { days: newDays },
     });
   };
   const [models, setModels] = useState<Model[]>([]);
@@ -71,8 +71,8 @@ const Dashboard = () => {
     recordEvent({
       UserAction: 'select',
       UIComponent: 'Model Filter',
-      UI: 'Usage Stats Dashboard Page',
-      data: { model },
+      Page: 'Usage Stats Dashboard Page',
+      Data: { model },
     });
   };
 

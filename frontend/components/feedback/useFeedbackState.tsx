@@ -191,9 +191,9 @@ const useFeedbackState = (modelId: string, reportId: string) => {
       f.body.tag !== 'O'
         ? {}
         : {
-          spotlightStartIndex: leftContextWords.length,
-          spotlightEndIndex: leftContextWords.length + highlightedWords.length - 1,
-        };
+            spotlightStartIndex: leftContextWords.length,
+            spotlightEndIndex: leftContextWords.length + highlightedWords.length - 1,
+          };
     return { id: f.id, tokens, ...spotlightFields };
   });
 
