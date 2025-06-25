@@ -1029,42 +1029,28 @@ export default function NewJobPage() {
                           </span>
                         </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                      <button
+                        type="button"
                         onClick={() => removeFile(index)}
-                        className="text-red-500"
+                        className="text-red-500 hover:text-red-700 p-1"
+                        aria-label="Remove file"
                       >
-                        <div className="flex items-center">
-                          <span className="text-sm text-gray-600">
-                            {fileMeta.name} ({(fileMeta.size / 1024).toFixed(1)} KB)
-                          </span>
-                          {fileMeta.fullPath && (
-                            <span className="ml-2 text-xs text-gray-400">{fileMeta.fullPath}</span>
-                          )}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => removeFile(index)}
-                          className="text-red-500 hover:text-red-700 p-1"
-                          aria-label="Remove file"
+                        <svg
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
                         >
-                          <svg
-                            className="h-4 w-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M6 18L18 6M6 6l12 12"
-                            />
-                          </svg>
-                        </button>
-                      </div>
-                    ))}
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
                   </div>
                 </div>
               )}
