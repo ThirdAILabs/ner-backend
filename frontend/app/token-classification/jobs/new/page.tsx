@@ -9,6 +9,7 @@ import { ArrowLeft, Plus, RefreshCw, Edit } from 'lucide-react';
 import { nerService } from '@/lib/backend';
 import { NO_GROUP, uniqueFileNames, getFilesFromElectron } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
+import useTelemetry from '@/hooks/useTelemetry';
 
 import { nerBaseUrl } from '@/lib/axios.config';
 
@@ -307,6 +308,7 @@ interface CustomTag {
 
 export default function NewJobPage() {
   const router = useRouter();
+  const recordEvent = useTelemetry();
 
   // Essential state
   const [selectedSource, setSelectedSource] = useState<'s3' | 'files' | 'directory' | ''>('files');
@@ -793,6 +795,14 @@ export default function NewJobPage() {
       });
 
       setSuccess(true);
+
+      recordEvent({
+        UserAction: 'Create new report',
+        UIComponent: 'Report Creation Form',
+        Page: 'Report Creation Page',
+      });
+
+      // Redirect after success
       setTimeout(() => {
         router.push(`/token-classification/landing?tab=jobs`);
       }, 2000);
