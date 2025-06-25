@@ -253,7 +253,7 @@ export function AnalyticsDashboard({
                       <g
                         onClick={() => {
                           if (tokenChartData[index].count > 0) {
-                            setTab?.('output');
+                            setTab?.('review');
                             setSelectedTag?.(tokenChartData[index].type);
                           }
                         }}

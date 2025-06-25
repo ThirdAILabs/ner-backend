@@ -23,6 +23,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Suspense } from 'react';
 import { floor } from 'lodash';
+import useTelemetry from '@/hooks/useTelemetry';
 
 // Calculate progress based on InferenceTaskStatuses
 const calculateProgress = (report: Report | null): number => {
@@ -209,9 +210,10 @@ const NewTagDialog: React.FC<{
 };
 
 function JobDetail() {
+  const recordEvent = useTelemetry();
   const searchParams = useSearchParams();
   const reportId: string = searchParams.get('jobId') as string;
-  const [tabValue, setTabValue] = useState('analytics');
+  const [tabValue, setTabValue] = useState('summary');
   const [selectedSource, setSelectedSource] = useState<'s3' | 'local'>('s3');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
@@ -316,13 +318,19 @@ function JobDetail() {
     // 1. By clicking on the tab, in which case we want to have all the filters selected.
     // 2. By clicking on a bar in the graph, in which case we select that label as the selected tag.
     // This code is needed to reset the filters selected when the user clicks on the tab directly.
-    if (tabValue === 'output') {
+    if (tabValue === 'review') {
       if (!tabChangeByGraph.current) {
         setSelectedTag(null);
       } else {
         tabChangeByGraph.current = false;
       }
     }
+
+    recordEvent({
+      UserAction: `Clicked on ${tabValue} Tab`,
+      UIComponent: `${tabValue} Tab`,
+      Page: 'Report Page',
+    });
   }, [tabValue]);
 
   return (
@@ -346,19 +354,19 @@ function JobDetail() {
         <div className="flex items-center justify-between border-b mb-6">
           <TabsList className="border-0 bg-transparent p-0">
             <TabsTrigger
-              value="analytics"
+              value="summary"
               className="data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:shadow-none rounded-none bg-transparent px-4 py-3 data-[state=active]:bg-transparent"
             >
               Summary
             </TabsTrigger>
             <TabsTrigger
-              value="output"
+              value="review"
               className="data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:shadow-none rounded-none bg-transparent px-4 py-3 data-[state=active]:bg-transparent"
             >
               Review
             </TabsTrigger>
             <TabsTrigger
-              value="configuration"
+              value="info"
               className="data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:shadow-none rounded-none bg-transparent px-4 py-3 data-[state=active]:bg-transparent"
             >
               Info
@@ -366,7 +374,7 @@ function JobDetail() {
           </TabsList>
         </div>
 
-        <TabsContent value="configuration" className="mt-0">
+        <TabsContent value="info" className="mt-0">
           {/* STARTS */}
           {/* Source */}
           <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3 }}>
@@ -489,7 +497,7 @@ function JobDetail() {
           {/* ENDS */}
         </TabsContent>
 
-        <TabsContent value="analytics">
+        <TabsContent value="summary">
           <AnalyticsDashboard
             tokensProcessed={getProcessedTokens(reportData)}
             tags={availableTagsCount}
@@ -508,7 +516,7 @@ function JobDetail() {
           />
         </TabsContent>
 
-        <TabsContent value="output">
+        <TabsContent value="review">
           <DatabaseTable
             groups={reportData?.Groups?.map((g) => g.Name) || []}
             tags={availableTagsCount}

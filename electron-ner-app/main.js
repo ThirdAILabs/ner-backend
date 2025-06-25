@@ -7,6 +7,9 @@ import { startBackend } from './scripts/start-backend.js';
 import { openFileChooser, openFile } from './scripts/file-utils.js';
 import { initTelemetry, insertTelemetryEvent, closeTelemetry } from './telemetry.js';
 import { initializeUserId, getCurrentUserId } from './userIdManager.js';
+import axios from 'axios';
+import FormData from 'form-data';
+
 import log from 'electron-log';
 import electronUpdater from 'electron-updater';
 
@@ -191,6 +194,26 @@ ipcMain.handle('telemetry', async (_, data) => await insertTelemetryEvent(data))
 ipcMain.handle('get-user-id', async () => getCurrentUserId());
 ipcMain.handle('open-file-chooser', async (_, types, isDirectoryMode) => openFileChooser(types, isDirectoryMode));
 ipcMain.handle('open-file', async (_, filePath) => openFile(filePath));
+ipcMain.handle('upload-files', async (event, { filePaths, uploadUrl, uniqueNames, originalNames }) => {
+    // This function handles the actual uploading of files to the backend.
+    // For the UI, we only store the file metadata in the memory to display to the users.
+    // When the user submits the report, we upload the files to the backend.
+    const form = new FormData();
+
+    for (let i = 0; i < filePaths.length; i++) {
+        const filePath = filePaths[i];
+        // Use the unique name for upload
+        const filename = uniqueNames && uniqueNames[i] ? uniqueNames[i] : path.basename(filePath);
+        form.append('files', fs.createReadStream(filePath), { filename });
+    }
+
+    const response = await axios.post(uploadUrl, form, {
+        headers: form.getHeaders()
+    });
+
+    return { success: true, uploadId: response.data.Id };
+});
+
 
 app.whenReady().then(async () => {
     await initializeUserId();
@@ -208,7 +231,7 @@ app.whenReady().then(async () => {
                 updateHandled = true;
             }
         } catch (e) {
-            try { fs.unlinkSync(installedUpdateFile); } catch (_) {}
+            try { fs.unlinkSync(installedUpdateFile); } catch (_) { }
         }
     }
 
@@ -234,7 +257,7 @@ app.whenReady().then(async () => {
         } catch (e) {
             console.error('Error reading pending-update file:', e);
         } finally {
-            try { fs.unlinkSync(pendingUpdateFile); } catch (_) {}
+            try { fs.unlinkSync(pendingUpdateFile); } catch (_) { }
         }
     }
 

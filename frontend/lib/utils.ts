@@ -27,44 +27,20 @@ export const formatFileSize = (bytes: number, space: boolean = false): string =>
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + (space ? ' ' : '') + sizes[i];
 };
 
-// Returns [file, fullPath] pairs
 export const getFilesFromElectron = async (
   supportedTypes: string[],
   isDirectoryMode: boolean = false
-): Promise<{ files: [File, string][]; isUploaded: boolean }> => {
+): Promise<{ allFilesMeta: any[]; totalSize: number; error?: string }> => {
   // @ts-ignore
   const results = await window.electron.openFileChooser(
     // Electron API does not expect '.' in the file extension
     supportedTypes.map((t) => t.replace('.', '')),
     isDirectoryMode
   );
-
-  const isUploaded = !!results?.directlySelected?.length;
-
-  // Convert the file data into proper File objects
-  const files = await Promise.all(
-    results.allFiles.map(async (fileData: any, index: number) => {
-      // Convert base64 to ArrayBuffer
-      const binaryString = atob(fileData.data);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-
-      // Create a Blob from the ArrayBuffer
-      const blob = new Blob([bytes], { type: fileData.type });
-
-      // Create a File object from the Blob
-      const file = new File([blob], fileData.name, {
-        type: fileData.type,
-        lastModified: fileData.lastModified,
-      });
-
-      return [file, results.allFilePaths[index]];
-    })
-  );
-
-  return { files, isUploaded };
+  if (results.error) {
+    return { allFilesMeta: [], totalSize: 0, error: results.error };
+  }
+  return { allFilesMeta: results.allFilesMeta, totalSize: results.totalSize };
 };
 
 export const uniqueFileNames = (fileNames: string[]): string[] => {
