@@ -204,7 +204,7 @@ const ModelCustomization: React.FC = () => {
     recordEvent({
       UserAction: 'view',
       UIComponent: 'Model Customization Page',
-      UI: 'Token Classification Page',
+      Page: 'Token Classification Page',
     });
   }, []);
 
