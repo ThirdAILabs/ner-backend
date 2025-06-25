@@ -29,10 +29,10 @@ cd ..
 
 2. Activate a clean python 3.11 environment. Use python venv (`pyhon -m venv <venv_name>`); there had been issues faced when using conda environments.
 
-3. Start the integrated app (see notes about `MODEL_DIR` and `MODEL_TYPE` under the Environment Notes section):
+3. Start the integrated app (see notes about `MODEL_DIR`, `MODEL_TYPE`, `ENABLE_PYTHON`, and `LICENSE_KEY` under the Environment Notes section):
    ```
    cd electron-ner-app
-   MODEL_DIR=/path/to/models MODEL_TYPE=<model_type> npm run dev
+   MODEL_DIR=/path/to/models MODEL_TYPE=<model_type> ENABLE_PYTHON=<boolean / optional> LICENSE_KEY=<license_key_string / optional> npm run dev
    ```
    This will:
    - Copy the Go backend to the `bin` directory
@@ -53,7 +53,7 @@ cd ..
 3. Build the integrated app (see notes about `MODEL_DIR` and `MODEL_TYPE` under the Environment Notes section):
    ```
    cd electron-ner-app
-   MODEL_DIR=/path/to/models MODEL_TYPE=<model_type> npm run build
+   MODEL_DIR=/path/to/models MODEL_TYPE=<model_type> ENABLE_PYTHON=<boolean / optional> LICENSE_KEY=<license_key_string / optional> npm run build
    ```
    This will:
    1. Build the Go backend for macOS
@@ -70,6 +70,10 @@ When installed, the app will automatically find and use the backend without any 
 `MODEL_TYPE` is one of `bolt_udt`, `python_transformer`, `python_cnn`, `presidio`, `onnx_cnn`, or `regex`. We currently use `onnx_cnn` in production.
 
 `MODEL_DIR` is a directory that contains a subdirectory with the same name as the `model_type` of choice. For example, if you want to build the app with `onnx_cnn`, then `/path/to/models` must contain a subdirectory called `onnx_cnn`.
+
+`ENABLE_PYTHON` defaults to false. It needs to be true to enable finetuning, which is a paid-license-only feature.
+
+`LICENSE_KEY` is only required for the paid version, which includes finetuning capabilities. You can exclude the flag to run / build the free version, which does not include finetuning.
 
 #### Where can you obtain these model subdirectories?
 - `onnx_cnn` or `python_cnn`: Download this S3 directory `s3://ner-models/cnn_model_torchscript/` and rename it to `onnx_cnn` or `python_cnn`. (It contains the required files for both models since `python_cnn`'s required files is a subset of `onnx_cnn`).
