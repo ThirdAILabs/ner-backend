@@ -1,3 +1,5 @@
+TO BE UPDATED BY ASHUTOSH -- Please leave a comment if this is not done before merging.
+
 # PostgreSQL Telemetry Configuration
 
 This application has been updated to use PostgreSQL instead of Supabase for telemetry data collection.

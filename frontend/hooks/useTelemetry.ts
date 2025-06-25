@@ -3,8 +3,8 @@ import { useCallback } from 'react';
 export type TelemetryEvent = {
   UserAction: string;
   UIComponent: string;
-  UI: string;
-  data?: any;
+  Page: string;
+  Data?: any;
 };
 
 export type TelemetryEventPackage = {
