@@ -1051,9 +1051,9 @@ export default function NewJobPage() {
                       </button>
                     </div>
                   ))}
-                  </div>
                 </div>
-              )}
+              </div>
+            )}
 
             {selectedSource === 's3' && (
               <div className="space-y-4">
