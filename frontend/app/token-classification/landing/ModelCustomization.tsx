@@ -21,6 +21,7 @@ import { nerService, SavedFeedback } from '@/lib/backend';
 import { useHealth } from '@/contexts/HealthProvider';
 import { TokenHighlighter } from '@/components/feedback/TokenHighlighter';
 import useTelemetry from '@/hooks/useTelemetry';
+import { ChevronRight } from 'lucide-react';
 
 export interface UserFeedbackSectionProps {
   feedbackData: SavedFeedback[];
@@ -94,44 +95,48 @@ export function UserFeedbackSection({
             </Typography>
           </Box>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                <th style={{ textAlign: 'left', padding: '8px' }}>Feedback Text</th>
-                <th style={{ width: '50px' }}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {feedbackData.map((feedback, index) => {
-                const tokens = feedback.Tokens.map((token: string, tokenIndex: number) => {
-                  return {
-                    text: token,
-                    tag: feedback.Labels[tokenIndex],
-                  };
-                });
-                return (
-                  <tr key={index}>
-                    <td style={{ padding: '8px' }}>
-                      <TokenHighlighter
-                        tokens={tokens}
-                        availableTags={availableTags}
-                        editable={false}
-                      />
-                    </td>
-                    <td style={{ textAlign: 'right', padding: '8px' }}>
-                      <button
-                        className="text-gray-700 hover:text-gray-700 transition-colors"
-                        onClick={() => handleDeleteFeedback(feedback.Id)}
-                        title="Delete feedback"
-                      >
-                        ✕
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <div className="divide-y">
+            {feedbackData.map((feedback, index) => {
+              const tokens = feedback.Tokens.map((token: string, tokenIndex: number) => {
+                return {
+                  text: token,
+                  tag: feedback.Labels[tokenIndex],
+                };
+              });
+              return (
+                <details
+                  key={index}
+                  className="group text-sm leading-relaxed bg-white"
+                >
+                  <summary className="p-3 cursor-pointer bg-gray-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <ChevronRight className="w-4 h-4 transition-transform group-open:rotate-90" />
+                      <span className="font-medium">
+                        Feedback {index + 1}
+                      </span>
+                    </div>
+                    <button
+                      className="text-gray-700 hover:text-gray-700 transition-colors"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleDeleteFeedback(feedback.Id);
+                      }}
+                      title="Delete feedback"
+                    >
+                      ✕
+                    </button>
+                  </summary>
+                  <div className="p-4">
+                    <TokenHighlighter
+                      tokens={tokens}
+                      availableTags={availableTags}
+                      editable={false}
+                    />
+                  </div>
+                </details>
+              );
+            })}
+          </div>
         )}
       </div>
       {/* Finetune Dialog */}
@@ -358,9 +363,9 @@ const ModelCustomization: React.FC = () => {
                       : 'Select Model'
                     : models.find((m) => m.Id === val)?.Name
                       ? models
-                          .find((m) => m.Id === val)!
-                          .Name.charAt(0)
-                          .toUpperCase() + models.find((m) => m.Id === val)!.Name.slice(1)
+                        .find((m) => m.Id === val)!
+                        .Name.charAt(0)
+                        .toUpperCase() + models.find((m) => m.Id === val)!.Name.slice(1)
                       : val
                 }
                 sx={{ bgcolor: '#f8fafc', '&:hover': { bgcolor: '#f1f5f9' } }}
