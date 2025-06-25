@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,8 @@ import { ArrowLeft, Plus, RefreshCw, Edit } from 'lucide-react';
 import { nerService } from '@/lib/backend';
 import { NO_GROUP, uniqueFileNames, getFilesFromElectron } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
+import { SearchIcon } from '@heroicons/react/solid';
+import { useLicense } from '@/hooks/useLicense';
 import useTelemetry from '@/hooks/useTelemetry';
 
 import { nerBaseUrl } from '@/lib/axios.config';
@@ -300,7 +302,6 @@ const FileSources: React.FC<FileSourcesProps> = ({
   );
 };
 
-// Custom Tag interface
 interface CustomTag {
   name: string;
   pattern: string;
@@ -309,6 +310,8 @@ interface CustomTag {
 export default function NewJobPage() {
   const router = useRouter();
   const recordEvent = useTelemetry();
+
+  const { isEnterprise } = useLicense();
 
   // Essential state
   const [selectedSource, setSelectedSource] = useState<'s3' | 'files' | 'directory' | ''>('files');
@@ -342,14 +345,38 @@ export default function NewJobPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
   const [existingReportName, setExistingReportName] = useState<string[]>([]);
-  //Job Name
   const [jobName, setJobName] = useState('');
 
-  // Model selection
   const [models, setModels] = useState<any[]>([]);
-  //Bi-default Presidio model is selected.
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState<any>(null);
+  const [modelSearchQuery, setModelSearchQuery] = useState('');
+
+  const filteredCustomModels = useMemo(() => {
+    return models
+      .filter((model) => !['basic', 'advanced'].includes(model.Name.toLowerCase()))
+      .filter((model) => model.Name.toLowerCase().includes(modelSearchQuery.toLowerCase()));
+  }, [models, modelSearchQuery]);
+
+  const defaultModels = useMemo(() => {
+    return [
+      {
+        Id: models.find((model) => model.Name === 'basic')?.Id || 'basic',
+        Name: 'Basic',
+        Disabled: false,
+        Description: !isEnterprise
+          ? 'Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.'
+          : 'Fast and lightweight AI model, does not allow customization of the fields with user feedback, gives basic usage statistics.',
+      },
+      {
+        Id: 'advanced',
+        Name: 'Advanced',
+        Disabled: true,
+        Description:
+          'Our most advanced AI model, available on enterprise platform. Allows users to perpetually customize fields with user feedback, includes advanced monitoring features.',
+      },
+    ];
+  }, [models]);
 
   // Tags handling
   const [availableTags, setAvailableTags] = useState<string[]>([]);
@@ -388,12 +415,10 @@ export default function NewJobPage() {
     return SUPPORTED_TYPES.some((ext) => filename.toLowerCase().endsWith(ext));
   };
 
-  // Fetch models on page load
   useEffect(() => {
     const fetchModels = async () => {
       try {
         const modelData = await nerService.listModels();
-        // Only show trained models that can be used for inference
         const trainedModels = modelData.filter((model) => model.Status === 'TRAINED');
         setModels(trainedModels.reverse());
         setSelectedModelId(trainedModels[0].Id);
@@ -439,7 +464,6 @@ export default function NewJobPage() {
     fetchTags();
   }, [selectedModelId]);
 
-  // Toggle tag selection
   const toggleTag = (tag: string) => {
     if (selectedTags.includes(tag)) {
       setSelectedTags(selectedTags.filter((t) => t !== tag));
@@ -448,7 +472,6 @@ export default function NewJobPage() {
     }
   };
 
-  // Select all tags
   const selectAllTags = () => {
     setSelectedTags([...availableTags]);
   };
@@ -469,8 +492,8 @@ export default function NewJobPage() {
       return;
     }
 
-    if (!editingGroup && groups[groupName]) {
-      setGroupDialogError('Group name must be unique.');
+    if (!editingGroup && groups[groupName.toUpperCase()]) {
+      setGroupDialogError('Group name already exists.');
       return;
     }
 
@@ -529,7 +552,6 @@ export default function NewJobPage() {
     setGroups(newGroups);
   };
 
-  // Add a custom tag
   const handleAddCustomTag = () => {
     setDialogError(null);
 
@@ -556,6 +578,13 @@ export default function NewJobPage() {
         prev.map((tag) => (tag.name === editingTag.name ? newCustomTag : tag))
       );
     } else {
+      for (let index = 0; index < customTags.length; index++) {
+        const thisTag = customTags[index];
+        if (thisTag.name === customTagName.toUpperCase()) {
+          setDialogError('Custom Tag name already exists.');
+          return;
+        }
+      }
       setCustomTags((prev) => [...prev, newCustomTag]);
     }
 
@@ -1000,11 +1029,11 @@ export default function NewJobPage() {
                           </span>
                         </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                      <button
+                        type="button"
                         onClick={() => removeFile(index)}
-                        className="text-red-500"
+                        className="text-red-500 hover:text-red-700 p-1"
+                        aria-label="Remove file"
                       >
                         <svg
                           className="h-4 w-4"
@@ -1019,7 +1048,7 @@ export default function NewJobPage() {
                             d="M6 18L18 6M6 6l12 12"
                           />
                         </svg>
-                      </Button>
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -1111,117 +1140,139 @@ export default function NewJobPage() {
 
           {/* Model Selection */}
           <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3 }}>
-            <div>
-              <h2 className="text-2xl font-medium mb-4">Model</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {models.map((model) => (
-                  <ModelOption
-                    key={model.Id}
-                    title={model.Name[0].toUpperCase() + model.Name.slice(1)}
-                    description={
-                      'Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.'
-                    }
-                    isSelected={selectedModelId === model.Id}
-                    onClick={() => setSelectedModelId(model.Id)}
-                    disabled={model.Name === 'presidio'}
-                  />
-                ))}
-                <ModelOption
-                  key={'Advanced-Model'}
-                  title={'Advanced'}
-                  description={
-                    <>
-                      Our most advanced AI model, available on enterprise platform. Allows users to
-                      perpetually customize fields with user feedback, includes advanced monitoring
-                      features. Reach out to{' '}
-                      <div className="relative inline-block">
-                        <span
-                          className="text-blue-500 underline cursor-pointer hover:text-blue-700"
-                          onClick={() => copyToClipboard('contact@thirdai.com', 'advanced-model')}
-                          title="Click to copy email"
-                        >
-                          contact@thirdai.com
-                        </span>
-                        {showTooltip['advanced-model'] && (
-                          <div className="absolute left-1/2 -translate-x-1/2 mt-1 w-max px-2 py-1 text-xs bg-gray-800 text-white rounded shadow-md z-10">
-                            Email Copied
-                          </div>
-                        )}
-                      </div>{' '}
-                      for an enterprise subscription.
-                    </>
-                  }
-                  isSelected={false}
-                  onClick={() => {}}
-                  disabled={true}
-                />
-              </div>
-            </div>
-
-            {/* Tags Section - Only show if a model is selected */}
-            {selectedModelId && (
+            <h2 className="text-2xl font-medium mb-4">Model</h2>
+            <div className="space-y-6">
               <div>
-                <div className="flex justify-between items-center my-2">
-                  <h2 className="text-lg font-medium">Tags</h2>
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={selectAllTags}
-                      className="text-sm flex items-center"
-                      disabled={isTagsLoading || selectedTags.length === availableTags.length}
-                    >
-                      <span className="mr-1">Select All</span>
+                <h3 className="text-lg font-semibold mb-4">Built-in Models</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {defaultModels.map((model) => (
+                    <ModelOption
+                      key={model.Id}
+                      title={model.Name[0].toUpperCase() + model.Name.slice(1)}
+                      description={model.Description || ''}
+                      isSelected={selectedModelId === model.Id}
+                      onClick={() => {
+                        setSelectedModelId(model.Id);
+                        setSelectedModel(model);
+                      }}
+                      disabled={model.Disabled}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {filteredCustomModels.length > 0 && (
+                <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold">Custom Models</h3>
+                    <div className="relative w-64">
                       <input
-                        type="checkbox"
-                        checked={selectedTags.length === availableTags.length}
-                        onChange={selectAllTags}
-                        className="rounded border-gray-300"
+                        type="text"
+                        placeholder="Search custom models..."
+                        value={modelSearchQuery}
+                        onChange={(e) => setModelSearchQuery(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                       />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedTags([])}
-                      className="text-sm flex items-center"
-                      disabled={isTagsLoading || selectedTags.length === 0}
-                    >
-                      <span className="mr-1">Clear Selection</span>
-                      <input
-                        type="checkbox"
-                        checked={selectedTags.length === 0}
-                        onChange={() => setSelectedTags([])}
-                        className="rounded border-gray-300"
-                      />
-                    </Button>
+                      <SearchIcon className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {filteredCustomModels
+                      .filter((model) => model.Status !== 'TRAINING' && model.Status !== 'QUEUED')
+                      .map((model) => (
+                        <ModelOption
+                          key={model.Id}
+                          title={model.Name}
+                          description={
+                            <div className="space-y-2">
+                              {model.BaseModelId && (
+                                <p className="text-sm text-gray-600">
+                                  Base Model:{' '}
+                                  {models.find((m) => m.Id === model.BaseModelId)?.Name ||
+                                    'Unknown'}
+                                </p>
+                              )}
+                            </div>
+                          }
+                          isSelected={selectedModelId === model.Id}
+                          onClick={() => {
+                            setSelectedModelId(model.Id);
+                            setSelectedModel(model);
+                          }}
+                        />
+                      ))}
                   </div>
                 </div>
+              )}
 
-                {/* Added descriptive note */}
-                <p className="text-sm text-gray-500 mb-4">
-                  Click on any tag to select/unselect it. By default, all tags are selected.
-                </p>
+              {/* Tags Section - Only show if a model is selected */}
+              {selectedModelId && (
+                <div className="mt-8">
+                  <div className="border-t pt-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-semibold">Model Tags</h3>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={selectAllTags}
+                          className="text-sm flex items-center"
+                          disabled={isTagsLoading || selectedTags.length === availableTags.length}
+                        >
+                          <span className="mr-1">Select All</span>
+                          <input
+                            type="checkbox"
+                            checked={selectedTags.length === availableTags.length}
+                            onChange={selectAllTags}
+                            className="rounded border-gray-300"
+                          />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedTags([])}
+                          className="text-sm flex items-center"
+                          disabled={isTagsLoading || selectedTags.length === 0}
+                        >
+                          <span className="mr-1">Clear Selection</span>
+                          <input
+                            type="checkbox"
+                            checked={selectedTags.length === 0}
+                            onChange={() => setSelectedTags([])}
+                            className="rounded border-gray-300"
+                          />
+                        </Button>
+                      </div>
+                    </div>
 
-                {isTagsLoading ? (
-                  <div className="flex justify-center py-4">
-                    <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
+                    {/* Added descriptive note */}
+                    <p className="text-sm text-gray-500 mb-4">
+                      Click on any tag to select/unselect it. By default, all tags are selected.
+                    </p>
+
+                    {isTagsLoading ? (
+                      <div className="flex justify-center py-4">
+                        <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
+                      </div>
+                    ) : availableTags.length === 0 ? (
+                      <div className="text-gray-500 py-2">No tags available for this model</div>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {availableTags.map((tag) => (
+                          <Tag
+                            key={tag}
+                            tag={tag}
+                            selected={selectedTags.includes(tag)}
+                            onClick={() => toggleTag(tag)}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
-                ) : availableTags.length === 0 ? (
-                  <div className="text-gray-500 py-2">No tags available for this model</div>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {availableTags.map((tag) => (
-                      <Tag
-                        key={tag}
-                        tag={tag}
-                        selected={selectedTags.includes(tag)}
-                        onClick={() => toggleTag(tag)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+                </div>
+              )}
+            </div>
           </Box>
 
           {/* Custom Tags Section */}

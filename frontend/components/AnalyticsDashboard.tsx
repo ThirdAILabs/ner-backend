@@ -15,6 +15,7 @@ import _ from 'lodash';
 import { Clock, HardDrive, CheckCircle2 } from 'lucide-react';
 
 import { formatFileSize, formatNumber } from '@/lib/utils';
+import type { Tag } from '@/types/analyticsTypes';
 
 interface AnalyticsDashboardProps {
   tokensProcessed: number; // This is actually bytes processed

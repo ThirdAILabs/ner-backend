@@ -1,11 +1,29 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Box, Card, CardContent, Typography, CircularProgress } from '@mui/material';
+import { Box, Typography, CircularProgress } from '@mui/material';
 import { nerService } from '@/lib/backend';
 import { formatFileSize, formatNumber } from '@/lib/utils';
 import { useHealth } from '@/contexts/HealthProvider';
 import MetricsDataViewerCard from '@/components/ui/MetricsDataViewerCard';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+} from '@mui/material';
+import type { SavedFeedback, FinetuneRequest } from '@/lib/backend';
+import { Toaster, toast } from 'react-hot-toast';
 
 interface MetricsDataViewerProps {
   modelId?: string;
@@ -20,6 +38,10 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
   const [error, setError] = useState<string | null>(null);
   const [throughput, setThroughput] = useState<string | null>('-');
   const { healthStatus } = useHealth();
+
+  // State for feedback data
+  const [feedbackData, setFeedbackData] = useState<SavedFeedback[]>([]);
+  const [loadingFeedback, setLoadingFeedback] = useState(false);
 
   function getFontSize(value: string) {
     if (!value) return '2rem';
@@ -62,19 +84,20 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
           setTpMetrics(null);
         }
 
-        // 3) build inference‐series by calling summary for each day = 1..days
-        // const infPromises = Array.from({ length: days }, (_, i) =>
-        //   nerService.getInferenceMetrics(modelId, i + 1)
-        // );
-        // const infResults = await Promise.all(infPromises);
-        // if (!mounted) return;
-        // setInfSeries(
-        //   infResults.map((res, i) => ({
-        //     day: i + 1,
-        //     dataMB: parseFloat(res.DataProcessedMB.toFixed(2)),
-        //     tokens: res.TokensProcessed
-        //   }))
-        // );
+        // 3) Fetch feedback data if modelId is provided
+        if (modelId) {
+          setLoadingFeedback(true);
+          try {
+            const feedback = await nerService.getFeedbackSamples(modelId);
+            if (!mounted) return;
+            setFeedbackData(feedback);
+          } catch (e: any) {
+            console.error('Failed to load feedback data:', e);
+            // Don't set error for feedback, just log it
+          } finally {
+            if (mounted) setLoadingFeedback(false);
+          }
+        }
       } catch (e: any) {
         if (!mounted) return;
         setError(e.message || 'Failed to load metrics');
@@ -87,6 +110,85 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
       mounted = false;
     };
   }, [modelId, days, healthStatus]);
+
+  // Generate consistent colors for different tag types
+  const getTagColors = (label: string) => {
+    if (label === 'O') {
+      return null; // No highlighting for 'O' tags
+    }
+
+    // Color palette for different tag types
+    const colorPalette = [
+      { text: '#FFE8E8', tag: '#FF6B6B' }, // Red
+      { text: '#E8F4FF', tag: '#4A90E2' }, // Blue
+      { text: '#E8FFE8', tag: '#51C878' }, // Green
+      { text: '#FFF8E8', tag: '#F39C12' }, // Orange
+      { text: '#F0E8FF', tag: '#9B59B6' }, // Purple
+      { text: '#E8FFFF', tag: '#1ABC9C' }, // Teal
+      { text: '#FFE8F8', tag: '#E91E63' }, // Pink
+      { text: '#F8FFE8', tag: '#8BC34A' }, // Light Green
+      { text: '#E8E8FF', tag: '#6366F1' }, // Indigo
+      { text: '#FFF0E8', tag: '#FF8C00' }, // Dark Orange
+    ];
+
+    // Create a simple hash function for consistent color assignment
+    let hash = 0;
+    for (let i = 0; i < label.length; i++) {
+      hash = label.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const colorIndex = Math.abs(hash) % colorPalette.length;
+
+    return colorPalette[colorIndex];
+  };
+
+  const renderHighlightedToken = (token: string, label: string) => {
+    const tagColors = getTagColors(label);
+
+    if (!tagColors) {
+      return token; // Return plain token for 'O' tags
+    }
+
+    return (
+      <span>
+        <span
+          style={{
+            backgroundColor: tagColors.text,
+            padding: '2px 4px',
+            borderRadius: '2px',
+            userSelect: 'none',
+            display: 'inline-flex',
+            alignItems: 'center',
+            wordBreak: 'break-word',
+          }}
+        >
+          {token}
+          <span
+            style={{
+              backgroundColor: tagColors.tag,
+              color: 'white',
+              fontSize: '11px',
+              fontWeight: 'bold',
+              borderRadius: '2px',
+              marginLeft: '4px',
+              padding: '1px 3px',
+            }}
+          >
+            {label}
+          </span>
+        </span>
+      </span>
+    );
+  };
+
+  const handleDeleteFeedback = async (id: string) => {
+    if (!modelId) return;
+    try {
+      await nerService.deleteModelFeedback(modelId, id);
+      setFeedbackData(feedbackData.filter((feedback) => feedback.Id !== id));
+    } catch (error) {
+      console.error('Failed to delete feedback:', error);
+    }
+  };
 
   if (loading) {
     return (

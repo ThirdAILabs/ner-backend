@@ -91,7 +91,7 @@ function copyRecursivePreservingSymlinks(src, dest) {
 }
 
 // Copy the plugin directory
-if (process.env.MODEL_TYPE?.startsWith('python_')) {
+if (process.env.MODEL_TYPE?.startsWith('python_') || process.env.MODEL_TYPE?.startsWith('onnx_')) {
   try {
     console.log(`Copying plugin directory from ${pluginDir} to ${targetPluginDir}`);
     fs.rmSync(targetPluginDir, { recursive: true, force: true }); // Remove existing target directory

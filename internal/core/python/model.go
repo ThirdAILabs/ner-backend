@@ -11,6 +11,7 @@ import (
 	"ner-backend/plugin/shared"
 	"os"
 	"os/exec"
+	"time"
 
 	"github.com/hashicorp/go-plugin"
 )
@@ -56,6 +57,7 @@ func LoadPythonModel(pluginModelName, kwargsJSON string) (*PythonModel, error) {
 		Cmd:             cmd,
 		AllowedProtocols: []plugin.Protocol{
 			plugin.ProtocolNetRPC, plugin.ProtocolGRPC},
+		StartTimeout: 5 * time.Minute,
 	})
 
 	rpcClient, err := client.Client()

@@ -13,6 +13,7 @@ type Model struct {
 	Name         string
 	Status       string
 	CreationTime time.Time
+	Finetunable  bool
 
 	Tags []string `json:"Tags,omitempty"`
 }
@@ -108,7 +109,7 @@ type FinetuneRequest struct {
 	TaskPrompt   *string   `json:"TaskPrompt"`
 	GenerateData bool      `json:"GenerateData"`
 	Tags         []TagInfo `json:"Tags"`
-	Samples      []Sample  `json:"samples,omitempty"`
+	Samples      []Sample  `json:"Samples,omitempty"`
 }
 
 type FinetuneResponse struct {
@@ -164,6 +165,12 @@ type FileNameToPath struct {
 }
 
 type FeedbackRequest struct {
-	Tokens []string `json:"tokens"`
-	Labels []string `json:"labels"`
+	Tokens []string
+	Labels []string
+}
+
+type FeedbackResponse struct {
+	Id     uuid.UUID
+	Tokens []string
+	Labels []string
 }

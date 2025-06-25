@@ -12,8 +12,12 @@ import Link from 'next/link';
 import Dashboard from '../dashboard';
 import Jobs from '../jobs';
 import useTelemetry from '@/hooks/useTelemetry';
+import ModelCustomization from './ModelCustomization';
+import { useLicense } from '@/hooks/useLicense';
 
 function PageContents() {
+  const { isEnterprise } = useLicense();
+
   const searchParams = useSearchParams();
   const defaultTab = searchParams.get('tab') || 'jobs';
   const [tabValue, setTabValue] = useState(defaultTab);
@@ -134,11 +138,13 @@ function PageContents() {
           >
             <Tab label="Scans Dashboard" value="jobs" />
             <Tab label="Usage Stats" value="monitoring" />
+            {isEnterprise && <Tab label="Model Customization" value="customization" />}
           </Tabs>
         </Box>
 
         {tabValue === 'monitoring' && <Dashboard />}
         {tabValue === 'jobs' && <Jobs />}
+        {isEnterprise && tabValue === 'customization' && <ModelCustomization />}
       </main>
     </div>
   );

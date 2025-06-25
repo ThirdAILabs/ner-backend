@@ -3,6 +3,7 @@ interface Model {
   Name: string;
   Status: string;
   BaseModelId?: string;
+  CreationTime?: string;
   Tags?: string[];
 }
 

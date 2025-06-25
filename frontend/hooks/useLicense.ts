@@ -14,5 +14,8 @@ export function useLicense() {
       });
   }, []);
 
-  return { license };
+  return {
+    license,
+    isEnterprise: license?.LicenseInfo.LicenseType !== 'free' || false,
+  };
 }
