@@ -16,8 +16,10 @@ export interface Feedback {
 
 export interface SavedFeedback {
   Id: string;
-  Tokens: string[];
-  Labels: string[];
+  Tokens?: string[];
+  Labels?: string[];
+  tokens?: string[];
+  labels?: string[];
 }
 
 export interface TagInfo {
