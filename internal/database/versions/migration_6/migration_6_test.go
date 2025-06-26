@@ -1,4 +1,4 @@
-package migration_5
+package migration_6
 
 import (
 	"database/sql"
