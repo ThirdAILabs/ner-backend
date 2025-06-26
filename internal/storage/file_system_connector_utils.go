@@ -1,10 +1,13 @@
 package storage
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 )
+
+type ObjectIterator func(yield func(obj Object, err error) bool)
 
 func createInferenceTasks(iterObjects ObjectIterator, targetBytes int64) ([]InferenceTask, int64, error) {
 	var tasks []InferenceTask
@@ -59,17 +62,22 @@ func createInferenceTasks(iterObjects ObjectIterator, targetBytes int64) ([]Infe
 	return tasks, int64(totalObjects), nil
 }
 
-func iterTaskChunks(bucket string, keys []string, getObjectStream func(bucket, key string) (io.Reader, error)) (<-chan ObjectChunkStream, error) {
+type FsConnector interface {
+	GetObjectStream(ctx context.Context, bucket, key string) (io.Reader, error)
+}
+
+func iterTaskChunks(ctx context.Context, bucket string, keys []string, connector FsConnector) (<-chan ObjectChunkStream, error) {
 	parser := NewDefaultParser()
 
-	chunkStreams := make(chan ObjectChunkStream)
+	// Allocate a small buffer so we can preprocess multiple chunks in the background while the inference is running.
+	chunkStreams := make(chan ObjectChunkStream, 10)
 
 	go func() {
 		defer close(chunkStreams)
 		
 		
 		for _, objectKey := range keys {
-			objectStream, err := getObjectStream(bucket, objectKey)
+			objectStream, err := connector.GetObjectStream(ctx, bucket, objectKey)
 			if err != nil {
 				chunkStreams <- ObjectChunkStream{Name: objectKey, Chunks: nil, Error: err}
 				continue

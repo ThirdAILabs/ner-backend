@@ -292,7 +292,7 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 	// Custom connector initialization logic for uploads. It is a special case because it has to be consistent with
 	// the storage used by the backend service.
 	if isUpload {
-		uploadParams := api.UploadStorageParams{}
+		uploadParams := struct{ UploadId string}{}
 		if err := json.Unmarshal(req.StorageParams, &uploadParams); err != nil {
 			return nil, CodedErrorf(http.StatusInternalServerError, "error unmarshalling storage params: %v", err)
 		}
@@ -302,8 +302,7 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		}
 	}
 
-	// Validate connector params
-	_, err = storage.NewConnector(r.Context(), req.StorageType, req.StorageParams)
+	_, err = storage.NewConnector(r.Context(), storage.ConnectorType(req.StorageType), req.StorageParams)
 	if err != nil {
 		return nil, CodedErrorf(http.StatusInternalServerError, "error validating connector params: %v", err)
 	}

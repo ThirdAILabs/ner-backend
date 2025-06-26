@@ -74,7 +74,7 @@ func (c *S3Connector) IterTaskChunks(ctx context.Context, params []byte) (<-chan
 		return nil, fmt.Errorf("error unmarshalling params: %w", err)
 	}
 
-	return iterTaskChunks(c.params.Bucket, parsedParams.ChunkKeys, c.getObjectStream)
+	return iterTaskChunks(ctx, c.params.Bucket, parsedParams.ChunkKeys, c)
 }
 
 func (c *S3Connector) iterObjects(ctx context.Context, bucket, dir string) ObjectIterator {
@@ -132,6 +132,6 @@ func (s *s3ConnectorObjectStream) Read(p []byte) (int, error) {
 	return n, nil
 }
 
-func (c *S3Connector) getObjectStream(bucket, key string) (io.Reader, error) {
+func (c *S3Connector) GetObjectStream(ctx context.Context, bucket, key string) (io.Reader, error) {
 	return &s3ConnectorObjectStream{client: c.client, bucket: bucket, key: key, offset: 0}, nil
 }

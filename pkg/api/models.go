@@ -72,10 +72,6 @@ type Entity struct {
 	RContext string
 }
 
-type UploadStorageParams struct {
-	UploadId string
-}
-
 type CreateReportRequest struct {
 	ModelId uuid.UUID
 

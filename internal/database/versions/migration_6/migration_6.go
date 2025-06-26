@@ -16,6 +16,18 @@ import (
 	"gorm.io/gorm"
 )
 
+var defaultStorageProvider = storage.S3ConnectorType
+
+func SetDefaultStorageProvider(provider string) {
+	defaultStorageProvider = provider
+}
+
+var defaultLocalBaseDir = ""
+
+func SetDefaultLocalBaseDir(dir string) {
+	defaultLocalBaseDir = dir
+}
+
 type InferenceTask struct {
 	ReportId uuid.UUID `gorm:"type:uuid;primaryKey"`
 	TaskId   int       `gorm:"primaryKey"`
@@ -135,18 +147,31 @@ func transformReports(db *gorm.DB) error {
 	}
 
 	for _, report := range reports {
-		// We default to S3 connector because there is no way to tell if
+		// We default to the configured storage provider because there is no way to tell if
 		// the old system used local or s3 storage; even if isUpload is true,
 		// files could have been uploaded to s3.
-		storageType := storage.S3ConnectorType
-		storageParams := storage.S3ConnectorParams{
-			Endpoint: report.S3Endpoint.String,
-			Region:   report.Region.String,
-			Bucket:   report.SourceS3Bucket,
-			Prefix:   report.SourceS3Prefix.String,
+		storageType := defaultStorageProvider
+		
+		var paramsJSON []byte
+		var err error
+		
+		if storageType == storage.LocalConnectorType {
+			storageParams := storage.LocalConnectorParams{
+				BaseDir: defaultLocalBaseDir,
+				Bucket:  report.SourceS3Bucket,
+				Prefix:  report.SourceS3Prefix.String,
+			}
+			paramsJSON, err = json.Marshal(storageParams)
+		} else {
+			storageParams := storage.S3ConnectorParams{
+				Endpoint: report.S3Endpoint.String,
+				Region:   report.Region.String,
+				Bucket:   report.SourceS3Bucket,
+				Prefix:   report.SourceS3Prefix.String,
+			}
+			paramsJSON, err = json.Marshal(storageParams)
 		}
-
-		paramsJSON, err := json.Marshal(storageParams)
+		
 		if err != nil {
 			return fmt.Errorf("error marshaling params for report %s: %w", report.Id, err)
 		}

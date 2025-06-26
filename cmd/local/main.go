@@ -13,6 +13,7 @@ import (
 	"ner-backend/internal/core"
 	"ner-backend/internal/core/python"
 	"ner-backend/internal/database"
+	"ner-backend/internal/database/versions/migration_6"
 	"ner-backend/internal/licensing"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/storage"
@@ -46,7 +47,10 @@ const (
 	chunkTargetBytes = 200 * 1024 * 1024 // 200MB
 )
 
-func createDatabase(root string) *gorm.DB {
+func createDatabase(root string, localBaseDir string) *gorm.DB {
+	migration_6.SetDefaultStorageProvider(storage.LocalConnectorType)
+	migration_6.SetDefaultLocalBaseDir(localBaseDir)
+	
 	path := filepath.Join(root, "db", "pocket-shield.db")
 	if err := os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
 		log.Fatalf("Failed to create database directory: %v", err)
@@ -176,7 +180,9 @@ func main() {
 
 	slog.Info("starting backend", "root", cfg.Root, "port", cfg.Port, "app_data_dir", cfg.AppDataDir, "model_dir", cfg.ModelDir, "model_type", cfg.ModelType)
 
-	db := createDatabase(cfg.AppDataDir)
+	localBaseDir := filepath.Join(cfg.Root, "storage")
+
+	db := createDatabase(cfg.AppDataDir, localBaseDir)
 
 	if err := db.
 		Model(&database.ShardDataTask{}).
@@ -194,7 +200,7 @@ func main() {
 		log.Fatalf("failed to abort stale inference tasks: %v", err)
 	}
 
-	objectStore, err := storage.NewLocalObjectStore(filepath.Join(cfg.Root, "storage"))
+	objectStore, err := storage.NewLocalObjectStore(localBaseDir)
 	if err != nil {
 		log.Fatalf("Worker: Failed to create storage client: %v", err)
 	}

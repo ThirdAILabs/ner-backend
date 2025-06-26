@@ -55,7 +55,7 @@ func (c *LocalConnector) IterTaskChunks(ctx context.Context, params []byte) (<-c
 		return nil, fmt.Errorf("error unmarshalling params: %w", err)
 	}
 
-	return iterTaskChunks(c.params.Bucket, parsedParams.ChunkKeys, c.getObjectStream)
+	return iterTaskChunks(ctx, c.params.Bucket, parsedParams.ChunkKeys, c)
 }
 
 func (c *LocalConnector) iterObjects(bucket, dir string) ObjectIterator {
@@ -88,6 +88,8 @@ func (c *LocalConnector) iterObjects(bucket, dir string) ObjectIterator {
 
 
 func (c *LocalConnector) getObject(bucket, key string) ([]byte, error) {
+	// TODO: This method loads entire files into memory which can cause issues with large files.
+	// Change this method to return io.ReadCloser instead of []byte to stream data
 	data, err := os.ReadFile(localStorageFullpath(c.params.BaseDir, bucket, key))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file %s/%s: %w", bucket, key, err)
@@ -95,7 +97,7 @@ func (c *LocalConnector) getObject(bucket, key string) ([]byte, error) {
 	return data, nil
 }
 
-func (c *LocalConnector) getObjectStream(bucket, key string) (io.Reader, error) {
+func (c *LocalConnector) GetObjectStream(ctx context.Context, bucket, key string) (io.Reader, error) {
 	data, err := c.getObject(bucket, key)
 	if err != nil {
 		return nil, err

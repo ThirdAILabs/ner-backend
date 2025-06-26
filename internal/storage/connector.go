@@ -11,8 +11,6 @@ type Object struct {
 	Size int64
 }
 
-type ObjectIterator func(yield func(obj Object, err error) bool)
-
 type InferenceTask struct {
 	Params    []byte
 	TotalSize int64
@@ -41,11 +39,14 @@ type Connector interface {
 	IterTaskChunks(ctx context.Context, params []byte) (<-chan ObjectChunkStream, error)
 }
 
-const LocalConnectorType = "local"
-const S3ConnectorType = "s3"
+type ConnectorType string
+const (
+	LocalConnectorType = "local"
+	S3ConnectorType = "s3"
+)
 
-func NewConnector(ctx context.Context, name string, params []byte) (Connector, error) {
-	switch name {
+func NewConnector(ctx context.Context, connectorType ConnectorType, params []byte) (Connector, error) {
+	switch connectorType {
 	case LocalConnectorType:
 		var localConnectorParams LocalConnectorParams
 		if err := json.Unmarshal(params, &localConnectorParams); err != nil {
@@ -61,6 +62,6 @@ func NewConnector(ctx context.Context, name string, params []byte) (Connector, e
 		return NewS3Connector(ctx, s3ConnectorParams)
 		
 	default:
-		return nil, fmt.Errorf("unknown connector type: %s", name)
+		return nil, fmt.Errorf("unknown connector type: %s", connectorType)
 	}
 }

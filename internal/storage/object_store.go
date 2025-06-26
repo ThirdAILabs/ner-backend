@@ -16,5 +16,5 @@ type ObjectStore interface {
 
 	UploadDir(ctx context.Context, bucket, prefix, src string) error
 
-	GetUploadLocation(bucket, uploadID string) (string, []byte, error)
+	GetUploadLocation(bucket, uploadId string) (string, []byte, error)
 }
