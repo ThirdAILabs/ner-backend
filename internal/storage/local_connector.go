@@ -45,10 +45,6 @@ func (c *LocalConnector) GetParams() ([]byte, error) {
 	return cfgJson, nil
 }
 
-func (c *LocalConnector) ValidateParams(ctx context.Context) error {
-	return nil
-}
-
 func (c *LocalConnector) CreateInferenceTasks(ctx context.Context, targetBytes int64) ([]InferenceTask, int64, error) {
 	return createInferenceTasks(c.iterObjects(c.params.Bucket, c.params.Prefix), targetBytes)
 }

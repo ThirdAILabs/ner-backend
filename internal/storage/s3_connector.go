@@ -28,7 +28,7 @@ type S3Connector struct {
 	params S3ConnectorParams
 }
 
-func NewS3Connector(params S3ConnectorParams) (*S3Connector, error) {
+func NewS3Connector(ctx context.Context, params S3ConnectorParams) (*S3Connector, error) {
 	client, err := initializeS3Client(S3ClientConfig{
 		Endpoint: params.Endpoint,
 		Region: params.Region,
@@ -37,6 +37,10 @@ func NewS3Connector(params S3ConnectorParams) (*S3Connector, error) {
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize s3 client: %w", err)
+	}
+
+	if err := validateParams(ctx, client, params.Bucket, params.Prefix); err != nil {
+		return nil, fmt.Errorf("failed to validate s3 connector params: %w", err)
 	}
 
 	return &S3Connector{
@@ -58,27 +62,6 @@ func (c *S3Connector) GetParams() ([]byte, error) {
 	}
 
 	return cfgJson, nil
-}
-
-func (c *S3Connector) ValidateParams(ctx context.Context) error {
-	if c.params.Bucket == "" {
-		return fmt.Errorf("bucket is required")
-	}
-	
-	if _, err := c.client.HeadBucket(ctx, &s3.HeadBucketInput{
-		Bucket: aws.String(c.params.Bucket),
-	}); err != nil {
-		return fmt.Errorf("failed to verify access to s3://%s: %w", c.params.Bucket, err)
-	}
-
-	if _, err := c.client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
-		Bucket: aws.String(c.params.Bucket),
-		Prefix: aws.String(c.params.Prefix),
-	}); err != nil {
-		return fmt.Errorf("failed to verify objects in s3://%s/%s: %w", c.params.Bucket, c.params.Prefix, err)
-	}
-
-	return nil
 }
 
 func (c *S3Connector) CreateInferenceTasks(ctx context.Context, targetBytes int64) ([]InferenceTask, int64, error) {

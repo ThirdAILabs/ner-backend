@@ -286,34 +286,23 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		}
 	}
 
-	var connector storage.Connector
-	var isUpload bool = false
+	var isUpload bool = req.StorageType == UploadStorageType
 
 	// Custom connector initialization logic for uploads. It is a special case because it has to be consistent with
 	// the storage used by the backend service.
-	if req.StorageType == UploadStorageType {
+	if isUpload {
 		uploadParams := api.UploadStorageParams{}
 		if err := json.Unmarshal(req.StorageParams, &uploadParams); err != nil {
 			return nil, CodedErrorf(http.StatusInternalServerError, "error unmarshalling storage params: %v", err)
-		}	
-		connector, err = s.storage.GetConnector(uploadBucket, uploadParams.UploadId)
-		req.StorageType = connector.Type()
-		req.StorageParams, err = connector.GetParams()
+		}
+		req.StorageType, req.StorageParams, err = s.storage.GetUploadLocation(uploadBucket, uploadParams.UploadId)
 		if err != nil {
 			return nil, CodedErrorf(http.StatusInternalServerError, "error getting connector params: %v", err)
 		}
-		isUpload = true
-	} else {
-		connector, err = storage.NewConnector(req.StorageType, req.StorageParams)
 	}
 
-	if err != nil {
-		return nil, CodedErrorf(http.StatusInternalServerError, "error getting connector: %v", err)
-	}
-
-	if err := connector.ValidateParams(r.Context()); err != nil {
-		return nil, err
-	}
+	// Validate connector params
+	_, err = storage.NewConnector(r.Context(), req.StorageType, req.StorageParams)
 
 	if err := validateName(req.ReportName); err != nil {
 		return nil, err
@@ -1063,19 +1052,13 @@ func (s *BackendService) ValidateS3Access(r *http.Request) (any, error) {
 		return nil, err
 	}
 
-	connector, err := storage.NewS3Connector(storage.S3ConnectorParams{
+	_, err = storage.NewS3Connector(r.Context(), storage.S3ConnectorParams{
 		Endpoint: req.S3Endpoint,
 		Region: req.Region,
 		Bucket: req.SourceS3Bucket,
 		Prefix: req.SourceS3Prefix,
 	})
 	
-	if err != nil {
-		return nil, err
-	}
-
-	err = connector.ValidateParams(r.Context())
-
 	return nil, err
 }
 

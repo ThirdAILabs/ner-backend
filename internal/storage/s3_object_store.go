@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -234,13 +235,19 @@ func (s *S3ObjectStore) UploadDir(ctx context.Context, bucket, prefix, src strin
 	return nil
 }
 
-func (s *S3ObjectStore) GetConnector(bucket, prefix string) (Connector, error) {
-	return NewS3Connector(S3ConnectorParams{
+func (s *S3ObjectStore) GetUploadLocation(bucket, uploadID string) (string, []byte, error) {
+	params, err := json.Marshal(S3ConnectorParams{
 		Endpoint: s.cfg.Endpoint,
 		Region: s.cfg.Region,
 		Bucket: bucket,
-		Prefix: prefix,
+		Prefix: uploadID,
 		AccessKeyID: s.cfg.AccessKeyID,
 		SecretAccessKey: s.cfg.SecretAccessKey,
 	})
+
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to marshal upload location: %w", err)
+	}
+
+	return S3ConnectorType, params, nil
 }
