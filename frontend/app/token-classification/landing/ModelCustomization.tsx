@@ -96,11 +96,11 @@ export function UserFeedbackSection({
           </Box>
         ) : (
           <div className="divide-y">
-            {feedbackData.map((feedback, index) => {
-              const tokens = feedback.Tokens.map((token: string, tokenIndex: number) => {
+            {feedbackData.map((feedback: any, index) => {
+              const tokens = (feedback.tokens || feedback.Tokens || []).map((token: string, tokenIndex: number) => {
                 return {
                   text: token,
-                  tag: feedback.Labels[tokenIndex],
+                  tag: (feedback.labels || feedback.Labels)?.[tokenIndex] || 'O',
                 };
               });
               return (
@@ -234,7 +234,10 @@ const ModelCustomization: React.FC = () => {
     setLoadingFeedback(true);
     nerService
       .getFeedbackSamples(selectedModel.Id)
-      .then((feedback: any[]) => setFeedbackData(feedback))
+      .then((feedback: any[]) => {
+        console.log('Feedback data received:', feedback);
+        setFeedbackData(feedback);
+      })
       .catch((e: any) => {
         setFeedbackData([]);
         console.error('Failed to load feedback data:', e);
@@ -283,9 +286,12 @@ const ModelCustomization: React.FC = () => {
       const request = {
         Name: finetuneModelName.trim(),
         TaskPrompt: finetuneTaskPrompt.trim() || undefined,
-        Samples: feedbackData.length > 0 ? feedbackData : undefined,
+        Samples: feedbackData.length > 0 ? feedbackData.map(f => ({
+          Tokens: f.tokens || f.Tokens || [],
+          Labels: f.labels || f.Labels || []
+        })) : undefined,
       };
-      const response = await nerService.finetuneModel(selectedModel.Id, request);
+      await nerService.finetuneModel(selectedModel.Id, request);
       setShowFinetuneDialog(false);
       setFinetuneModelName('');
       setFinetuneTaskPrompt('');
@@ -406,7 +412,10 @@ const ModelCustomization: React.FC = () => {
               finetuning={finetuning}
               handleFinetuneSubmit={handleFinetuneSubmit}
               handleFinetuneCancel={handleFinetuneCancel}
-              availableTags={feedbackData.map((f) => f.Labels).flat()}
+              availableTags={feedbackData
+                .map((f) => f.labels || f.Labels || [])
+                .flat()
+                .filter((tag): tag is string => tag !== undefined)}
             />
           )}
         </CardContent>
