@@ -248,8 +248,9 @@ export function TableContent({
                       e.stopPropagation();
                       openFile();
                     }}
-                    className="cursor-pointer user-select-none text-inherit hover:text-blue-500 transition-colors"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-gray-50 text-sm font-medium text-gray-800 hover:bg-gray-100 hover:text-blue-600 border border-transparent hover:border-blue-200 transition-all cursor-pointer"
                   >
+                    <span className="leading-none">OPEN</span>
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="16"
@@ -260,10 +261,11 @@ export function TableContent({
                       strokeWidth="2"
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      className="lucide lucide-file-icon lucide-file"
+                      className="lucide lucide-external-link-icon lucide-external-link"
                     >
-                      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
-                      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+                      <path d="M15 3h6v6" />
+                      <path d="M10 14 21 3" />
+                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
                     </svg>
                   </span>
                 )}
