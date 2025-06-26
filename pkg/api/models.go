@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"ner-backend/internal/licensing"
 	"time"
 
@@ -38,7 +39,7 @@ type Report struct {
 	Model          Model
 	ReportName     string
 	StorageType     string
-	StorageParams   []byte
+	StorageParams   json.RawMessage
 	IsUpload        bool
 
 	Stopped            bool
@@ -80,7 +81,7 @@ type CreateReportRequest struct {
 
 	ReportName     string
 	StorageType     string
-	StorageParams   []byte
+	StorageParams   json.RawMessage
 
 	Tags       []string
 	CustomTags map[string]string

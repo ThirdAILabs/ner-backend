@@ -175,7 +175,7 @@ func TestCreateReport(t *testing.T) {
 		ReportName:     "test-report",
 		ModelId:        modelId,
 		StorageType:     storage.S3ConnectorType,
-		StorageParams:   datatypes.JSON(storageParams),
+		StorageParams:   json.RawMessage(storageParams),
 		Tags:           []string{"name", "phone"},
 		CustomTags:     map[string]string{"tag1": "pattern1", "tag2": "pattern2"},
 		Groups: map[string]string{
@@ -215,7 +215,7 @@ func TestCreateReport(t *testing.T) {
 		Status: database.ModelTrained,
 	}, report.Model)
 	assert.Equal(t, "s3", report.StorageType)
-	assert.Equal(t, storageParams, report.StorageParams)
+	assert.Equal(t, json.RawMessage(storageParams), report.StorageParams)
 	assert.ElementsMatch(t, []string{"name", "phone"}, report.Tags)
 	assert.Equal(t, map[string]string{"tag1": "pattern1", "tag2": "pattern2"}, report.CustomTags)
 	assert.Equal(t, 2, len(report.Groups))
@@ -241,7 +241,7 @@ func TestCreateReport_InvalidS3(t *testing.T) {
 		ReportName:     "test-report",
 		ModelId:        modelId,
 		StorageType:     storage.S3ConnectorType,
-		StorageParams:   datatypes.JSON(storageParams),
+		StorageParams:   json.RawMessage(storageParams),
 		Tags:           []string{"name", "phone"},
 		CustomTags:     map[string]string{"tag1": "pattern1", "tag2": "pattern2"},
 		Groups: map[string]string{
@@ -287,9 +287,9 @@ func TestGetReport(t *testing.T) {
 		&database.ReportTag{ReportId: reportId, Tag: "phone"},
 		&database.CustomTag{ReportId: reportId, Tag: "tag1", Pattern: "pattern1"},
 		&database.ShardDataTask{ReportId: reportId, Status: database.JobCompleted},
-		&database.InferenceTask{ReportId: reportId, TaskId: 1, Status: database.JobCompleted},
-		&database.InferenceTask{ReportId: reportId, TaskId: 2, Status: database.JobRunning},
-		&database.InferenceTask{ReportId: reportId, TaskId: 3, Status: database.JobRunning},
+		&database.InferenceTask{ReportId: reportId, TaskId: 1, Status: database.JobCompleted, StorageParams: datatypes.JSON(json.RawMessage(`{"ChunkKeys": ["test-chunk-key"]}`))},
+		&database.InferenceTask{ReportId: reportId, TaskId: 2, Status: database.JobRunning, StorageParams: datatypes.JSON(json.RawMessage(`{"ChunkKeys": ["test-chunk-key"]}`))},
+		&database.InferenceTask{ReportId: reportId, TaskId: 3, Status: database.JobRunning, StorageParams: datatypes.JSON(json.RawMessage(`{"ChunkKeys": ["test-chunk-key"]}`))},
 		&database.ObjectGroup{ReportId: reportId, GroupId: group1, Object: "object1"},
 		&database.ObjectGroup{ReportId: reportId, GroupId: group2, Object: "object2"},
 		&database.ObjectGroup{ReportId: reportId, GroupId: group1, Object: "object3"},
@@ -320,7 +320,7 @@ func TestGetReport(t *testing.T) {
 			Status: database.ModelTrained,
 		}, report.Model)
 		assert.Equal(t, "s3", report.StorageType)
-		assert.Equal(t, storageParams, report.StorageParams)
+		assert.Equal(t, json.RawMessage(storageParams), report.StorageParams)
 		assert.ElementsMatch(t, []string{"name", "phone"}, report.Tags)
 		assert.Equal(t, map[string]string{"tag1": "pattern1"}, report.CustomTags)
 		assert.Equal(t, 2, len(report.Groups))
@@ -399,7 +399,7 @@ func TestDeleteReport(t *testing.T) {
 	modelId, reportId := uuid.New(), uuid.New()
 	db := createDB(t,
 		&database.Model{Id: modelId, Name: "Model1", Type: "regex", Status: database.ModelTrained},
-		&database.Report{Id: reportId, ModelId: modelId},
+		&database.Report{Id: reportId, ModelId: modelId, StorageType: storage.S3ConnectorType, StorageParams: datatypes.JSON(json.RawMessage(`{"Bucket": "test-bucket", "Prefix": "test-prefix"}`))},
 	)
 
 	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024, nil)
@@ -443,7 +443,7 @@ func TestStopReport(t *testing.T) {
 	modelId, reportId := uuid.New(), uuid.New()
 	db := createDB(t,
 		&database.Model{Id: modelId, Name: "Model1", Type: "regex", Status: database.ModelTrained},
-		&database.Report{Id: reportId, ModelId: modelId},
+		&database.Report{Id: reportId, ModelId: modelId, StorageType: storage.S3ConnectorType, StorageParams: datatypes.JSON(json.RawMessage(`{"Bucket": "test-bucket", "Prefix": "test-prefix"}`))},
 	)
 
 	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024, nil)
@@ -674,6 +674,7 @@ func TestGetInferenceMetrics_WithTasks(t *testing.T) {
 		CompletionTime: sql.NullTime{Time: now.Add(-1 * time.Hour), Valid: true},
 		TotalSize:      2 * 1024 * 1024,
 		TokenCount:     200,
+		StorageParams:  datatypes.JSON(json.RawMessage(`{"ChunkKeys": ["test-chunk-key"]}`)),
 	})
 
 	// A running task 30 min ago, 4 MiB, 300 tokens
@@ -684,6 +685,7 @@ func TestGetInferenceMetrics_WithTasks(t *testing.T) {
 		CreationTime: now.Add(-30 * time.Minute),
 		TotalSize:    4 * 1024 * 1024,
 		TokenCount:   300,
+		StorageParams:  datatypes.JSON(json.RawMessage(`{"ChunkKeys": ["test-chunk-key"]}`)),
 	})
 
 	svc := backend.NewBackendService(db, &mockStorage{}, nil, 0, nil)
@@ -719,6 +721,8 @@ func TestGetInferenceMetrics_WithTasks(t *testing.T) {
 		require.NoError(t, db.Create(&database.Report{
 			Id:      reportID,
 			ModelId: modelID,
+			StorageType: storage.S3ConnectorType,
+			StorageParams: datatypes.JSON(json.RawMessage(`{"Bucket": "test-bucket", "Prefix": "test-prefix"}`)),
 		}).Error)
 
 		now := time.Now().UTC()
@@ -731,6 +735,7 @@ func TestGetInferenceMetrics_WithTasks(t *testing.T) {
 			CompletionTime: sql.NullTime{Time: now, Valid: true},
 			TotalSize:      1 * 1024 * 1024,
 			TokenCount:     0,
+			StorageParams:  datatypes.JSON(json.RawMessage(`{"ChunkKeys": ["test-chunk-key"]}`)),
 		}).Error)
 
 		url := fmt.Sprintf(

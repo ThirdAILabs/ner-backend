@@ -27,6 +27,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -303,6 +304,9 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 
 	// Validate connector params
 	_, err = storage.NewConnector(r.Context(), req.StorageType, req.StorageParams)
+	if err != nil {
+		return nil, CodedErrorf(http.StatusInternalServerError, "error validating connector params: %v", err)
+	}
 
 	if err := validateName(req.ReportName); err != nil {
 		return nil, err
@@ -330,7 +334,7 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		ReportName:     req.ReportName,
 		ModelId:        req.ModelId,
 		StorageType:     req.StorageType,
-		StorageParams:   req.StorageParams,
+		StorageParams:   datatypes.JSON(req.StorageParams),
 		IsUpload:        isUpload,
 		CreationTime:   time.Now().UTC(),
 	}

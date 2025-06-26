@@ -90,6 +90,5 @@ func validateParams(ctx context.Context, client *s3.Client, bucket, prefix strin
 	}); err != nil {
 		return fmt.Errorf("failed to verify objects in s3://%s/%s: %w", bucket, prefix, err)
 	}
-
 	return nil
 }
