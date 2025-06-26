@@ -31,7 +31,6 @@ func setupTestConnector(t *testing.T) (*LocalConnector, *LocalObjectStore, strin
 	return connector, objectStore, dir
 }
 
-// LocalObjectStore Tests
 
 func TestLocalObjectStore_PutObject(t *testing.T) {
 	objectStore, baseDir := setupTestObjectStore(t)
@@ -192,8 +191,6 @@ func TestLocalObjectStore_GetConnector(t *testing.T) {
 	assert.Equal(t, bucket, params.Bucket)
 	assert.Equal(t, prefix, params.Prefix)
 }
-
-// LocalConnector Tests
 
 func TestLocalConnector_Type(t *testing.T) {
 	connector, _, _ := setupTestConnector(t)
