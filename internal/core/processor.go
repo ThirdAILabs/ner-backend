@@ -293,19 +293,11 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 		customTagsRe[tag] = re
 	}
 
-	queue := make(chan storage.ObjectChunkStream, 1)
-
-	go func() {
-		defer close(queue)
-		chunkStreams, err := connector.IterTaskChunks(ctx, taskParams)
-		if err != nil {
-			slog.Error("error iterating over task chunks", "error", err)
-			return
-		}
-		for chunkStream := range chunkStreams {
-			queue <- chunkStream
-		}
-	}()
+	queue, err := connector.IterTaskChunks(ctx, taskParams)
+	if err != nil {
+		slog.Error("error iterating over task chunks", "error", err)
+		return 0, err
+	}
 
 	objectErrorCnt := 0
 	totalObjectCnt := 0
