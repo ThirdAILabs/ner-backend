@@ -1,3 +1,5 @@
+import type { ObjectDatabaseRecord, ClassifiedTokenDatabaseRecord } from '@/types/analyticsTypes';
+
 // ===== WORKFLOWS =====
 export const mockWorkflows = [
   {

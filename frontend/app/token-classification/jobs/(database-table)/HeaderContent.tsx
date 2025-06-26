@@ -1,4 +1,5 @@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import type { ViewMode } from '@/types/analyticsTypes';
 
 interface HeaderContentProps {
   viewMode: ViewMode;

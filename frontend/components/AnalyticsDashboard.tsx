@@ -15,6 +15,7 @@ import _ from 'lodash';
 import { Clock, HardDrive, CheckCircle2 } from 'lucide-react';
 
 import { formatFileSize, formatNumber } from '@/lib/utils';
+import type { Tag } from '@/types/analyticsTypes';
 
 interface AnalyticsDashboardProps {
   tokensProcessed: number; // This is actually bytes processed
@@ -253,7 +254,7 @@ export function AnalyticsDashboard({
                       <g
                         onClick={() => {
                           if (tokenChartData[index].count > 0) {
-                            setTab?.('output');
+                            setTab?.('review');
                             setSelectedTag?.(tokenChartData[index].type);
                           }
                         }}

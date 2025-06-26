@@ -25,8 +25,8 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { useHealth } from '@/contexts/HealthProvider';
 import { alpha } from '@mui/material/styles';
 import { useLicense } from '@/hooks/useLicense';
-
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import useTelemetry from '@/hooks/useTelemetry';
 
 function JobStatus({ report }: { report: ReportWithStatus }) {
   if (report.isLoadingStatus) {
@@ -395,12 +395,21 @@ function Job({ initialReport, onDelete }: JobProps) {
 }
 
 export default function Jobs() {
+  const recordEvent = useTelemetry();
   const [reports, setReports] = useState<ReportWithStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { healthStatus } = useHealth();
   const { license } = useLicense();
   const [isLicenseValid, setIsLicenseValid] = useState<boolean | null>(true);
+
+  useEffect(() => {
+    recordEvent({
+      UserAction: 'View Reports Dashboard',
+      UIComponent: 'Reports Dashboard',
+      Page: 'Reports Dashboard Page',
+    });
+  }, []);
 
   useEffect(() => {
     setIsLicenseValid(
@@ -419,8 +428,7 @@ export default function Jobs() {
       try {
         const reportsData = await nerService.listReports();
         reportsData.sort(
-          (a: ReportWithStatus, b: ReportWithStatus) =>
-            new Date(b.CreationTime).getTime() - new Date(a.CreationTime).getTime()
+          (a, b) => new Date(b.CreationTime).getTime() - new Date(a.CreationTime).getTime()
         );
         setReports(reportsData as ReportWithStatus[]);
       } catch (err) {
@@ -457,41 +465,211 @@ export default function Jobs() {
 
   if (loading) {
     return (
-      <Card sx={{ boxShadow: '0 1px 3px rgba(0,0,0,0.1)', bgcolor: 'white' }}>
-        <CardContent sx={{ p: 3 }}>
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              mb: 3,
-            }}
+      <>
+        {!isLicenseValid && (
+          <div
+            className={`
+                      px-4 py-3 rounded mb-6 border 
+                      bg-red-100 border-red-200 text-red-600
+                    `}
           >
-            <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.125rem' }}>
-              Scan
-            </Typography>
-            <Link href={`/token-classification/jobs/new`} passHref>
-              <Button
-                variant="contained"
-                color="primary"
-                sx={{
-                  bgcolor: '#1976d2',
-                  '&:hover': {
-                    bgcolor: '#1565c0',
-                  },
-                  textTransform: 'none',
-                  fontWeight: 500,
-                }}
-              >
-                <Plus size={16} />
-              </Button>
-            </Link>
-          </Box>
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-            <CircularProgress size={24} />
-          </Box>
-        </CardContent>
-      </Card>
+            {license && license.LicenseError === 'expired license'
+              ? 'Your license has expired. Please contact ThirdAI support to renew your license.'
+              : 'Your license is invalid. Please check your license key or contact ThirdAI support.'}
+          </div>
+        )}
+        {typeof quotaUsedPercentage === 'number' && quotaUsedPercentage > 75 && (
+          <div
+            className={`
+                      px-4 py-3 rounded mb-6 border 
+                      bg-yellow-100 border-yellow-200 text-yellow-600
+                    `}
+          >
+            You have used {quotaUsedPercentage?.toFixed(2)}% of your monthly quota. Any report
+            exceeding the quota will not be processed. The quota resets on the 1st of each month.
+          </div>
+        )}
+        <Card
+          sx={{
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            bgcolor: 'white',
+            borderRadius: '12px',
+            mx: 'auto',
+            maxWidth: '1400px',
+          }}
+        >
+          <CardContent sx={{ p: 4 }}>
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                mb: 4,
+              }}
+            >
+              <Box>
+                <Typography
+                  variant="h5"
+                  sx={{
+                    fontWeight: 600,
+                    fontSize: '1.5rem',
+                    color: '#4a5568',
+                  }}
+                >
+                  Scans
+                </Typography>
+              </Box>
+              {healthStatus && isLicenseValid ? (
+                <Link href={`/token-classification/jobs/new`} passHref legacyBehavior>
+                  <a style={{ textDecoration: 'none' }}>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      startIcon={<Plus size={20} />}
+                      sx={{
+                        bgcolor: '#2563eb',
+                        '&:hover': {
+                          bgcolor: '#1d4ed8',
+                        },
+                        textTransform: 'none',
+                        fontWeight: 500,
+                        px: 3,
+                        py: 1.5,
+                        borderRadius: '8px',
+                        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+                      }}
+                    >
+                      New Scan
+                    </Button>
+                  </a>
+                </Link>
+              ) : (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<Plus size={20} />}
+                  disabled
+                  sx={{
+                    bgcolor: '#2563eb',
+                    textTransform: 'none',
+                    fontWeight: 500,
+                    px: 3,
+                    py: 1.5,
+                    borderRadius: '8px',
+                    boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+                  }}
+                >
+                  New Scan
+                </Button>
+              )}
+            </Box>
+
+            <TableContainer
+              component={Paper}
+              sx={{
+                boxShadow: 'none',
+                border: '1px solid',
+                borderColor: 'grey.200',
+                borderRadius: '12px',
+                bgcolor: 'white',
+                '& .MuiTableCell-root': {
+                  borderBottom: '1px solid',
+                  borderColor: 'grey.200',
+                  py: 2.5,
+                },
+              }}
+            >
+              <Table>
+                <TableHead>
+                  <TableRow sx={{ bgcolor: '#f8fafc' }}>
+                    <TableCell
+                      sx={{
+                        fontWeight: 600,
+                        color: '#475569',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      Name
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        fontWeight: 600,
+                        color: '#475569',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      Model
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        fontWeight: 600,
+                        color: '#475569',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      Progress
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        fontWeight: 600,
+                        color: '#475569',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      Created At
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        fontWeight: 600,
+                        color: '#475569',
+                        fontSize: '0.875rem',
+                        width: '120px',
+                      }}
+                    >
+                      Actions
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {reports && reports.length > 0 ? (
+                    reports.map((report) => (
+                      <Job key={report.Id} initialReport={report} onDelete={handleDelete} />
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={5}
+                        sx={{
+                          py: 8,
+                          textAlign: 'center',
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: 2,
+                          }}
+                        >
+                          <Typography
+                            sx={{
+                              color: '#475569',
+                              fontSize: '0.875rem',
+                            }}
+                          >
+                            -
+                          </Typography>
+                        </Box>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </CardContent>
+        </Card>
+      </>
     );
   }
 
@@ -538,210 +716,164 @@ export default function Jobs() {
   };
 
   return (
-    <>
-      {!isLicenseValid && (
-        <div
-          className={`
-                      px-4 py-3 rounded mb-6 border 
-                      bg-red-100 border-red-200 text-red-600
-                    `}
+    <Card
+      sx={{
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        bgcolor: 'white',
+        borderRadius: '12px',
+        mx: 'auto',
+        maxWidth: '1400px',
+      }}
+    >
+      <CardContent sx={{ p: 4 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mb: 4,
+          }}
         >
-          {license && license.LicenseError === 'expired license'
-            ? 'Your license has expired. Please contact ThirdAI support to renew your license.'
-            : 'Your license is invalid. Please check your license key or contact ThirdAI support.'}
-        </div>
-      )}
-      {typeof quotaUsedPercentage === 'number' && quotaUsedPercentage > 75 && (
-        <div
-          className={`
-                      px-4 py-3 rounded mb-6 border 
-                      bg-yellow-100 border-yellow-200 text-yellow-600
-                    `}
-        >
-          You have used {quotaUsedPercentage?.toFixed(2)}% of your monthly quota. Any report
-          exceeding the quota will not be processed. The quota resets on the 1st of each month.
-        </div>
-      )}
-      <Card
-        sx={{
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-          bgcolor: 'white',
-          borderRadius: '12px',
-          mx: 'auto',
-          maxWidth: '1400px',
-        }}
-      >
-        <CardContent sx={{ p: 4 }}>
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              mb: 4,
-            }}
-          >
-            <Box>
-              <Typography
-                variant="h5"
-                sx={{
-                  fontWeight: 600,
-                  fontSize: '1.5rem',
-                  color: '#4a5568',
-                }}
-              >
-                Scans
-              </Typography>
-            </Box>
-            {healthStatus && isLicenseValid ? (
-              <Link href={`/token-classification/jobs/new`} passHref legacyBehavior>
-                <a style={{ textDecoration: 'none' }}>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    startIcon={<Plus size={20} />}
-                    sx={{
-                      bgcolor: '#2563eb',
-                      '&:hover': {
-                        bgcolor: '#1d4ed8',
-                      },
-                      textTransform: 'none',
-                      fontWeight: 500,
-                      px: 3,
-                      py: 1.5,
-                      borderRadius: '8px',
-                      boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-                    }}
-                  >
-                    New Scan
-                  </Button>
-                </a>
-              </Link>
-            ) : (
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<Plus size={20} />}
-                disabled
-                sx={{
-                  bgcolor: '#2563eb',
-                  textTransform: 'none',
-                  fontWeight: 500,
-                  px: 3,
-                  py: 1.5,
-                  borderRadius: '8px',
-                  boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-                }}
-              >
-                New Scan
-              </Button>
-            )}
+          <Box>
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 600,
+                fontSize: '1.5rem',
+                color: '#4a5568',
+              }}
+            >
+              Scans
+            </Typography>
           </Box>
+          <Link href={`/token-classification/jobs/new`} passHref>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<Plus size={20} />}
+              sx={{
+                bgcolor: '#2563eb',
+                '&:hover': {
+                  bgcolor: '#1d4ed8',
+                },
+                textTransform: 'none',
+                fontWeight: 500,
+                px: 3,
+                py: 1.5,
+                borderRadius: '8px',
+                boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+              }}
+              disabled={!healthStatus}
+            >
+              New Scan
+            </Button>
+          </Link>
+        </Box>
 
-          <TableContainer
-            component={Paper}
-            sx={{
-              boxShadow: 'none',
-              border: '1px solid',
+        <TableContainer
+          component={Paper}
+          sx={{
+            boxShadow: 'none',
+            border: '1px solid',
+            borderColor: 'grey.200',
+            borderRadius: '12px',
+            bgcolor: 'white',
+            '& .MuiTableCell-root': {
+              borderBottom: '1px solid',
               borderColor: 'grey.200',
-              borderRadius: '12px',
-              bgcolor: 'white',
-              '& .MuiTableCell-root': {
-                borderBottom: '1px solid',
-                borderColor: 'grey.200',
-                py: 2.5,
-              },
-            }}
-          >
-            <Table>
-              <TableHead>
-                <TableRow sx={{ bgcolor: '#f8fafc' }}>
+              py: 2.5,
+            },
+          }}
+        >
+          <Table>
+            <TableHead>
+              <TableRow sx={{ bgcolor: '#f8fafc' }}>
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    color: '#475569',
+                    fontSize: '0.875rem',
+                  }}
+                >
+                  Name
+                </TableCell>
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    color: '#475569',
+                    fontSize: '0.875rem',
+                  }}
+                >
+                  Model
+                </TableCell>
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    color: '#475569',
+                    fontSize: '0.875rem',
+                  }}
+                >
+                  Progress
+                </TableCell>
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    color: '#475569',
+                    fontSize: '0.875rem',
+                  }}
+                >
+                  Created At
+                </TableCell>
+                <TableCell
+                  sx={{
+                    fontWeight: 600,
+                    color: '#475569',
+                    fontSize: '0.875rem',
+                    width: '120px',
+                  }}
+                >
+                  Actions
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {reports && reports.length > 0 ? (
+                reports.map((report) => (
+                  <Job key={report.Id} initialReport={report} onDelete={handleDelete} />
+                ))
+              ) : (
+                <TableRow>
                   <TableCell
+                    colSpan={5}
                     sx={{
-                      fontWeight: 600,
-                      color: '#475569',
-                      fontSize: '0.875rem',
+                      py: 8,
+                      textAlign: 'center',
                     }}
                   >
-                    Name
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      fontWeight: 600,
-                      color: '#475569',
-                      fontSize: '0.875rem',
-                    }}
-                  >
-                    Model
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      fontWeight: 600,
-                      color: '#475569',
-                      fontSize: '0.875rem',
-                    }}
-                  >
-                    Progress
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      fontWeight: 600,
-                      color: '#475569',
-                      fontSize: '0.875rem',
-                    }}
-                  >
-                    Created At
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      fontWeight: 600,
-                      color: '#475569',
-                      fontSize: '0.875rem',
-                      width: '120px',
-                    }}
-                  >
-                    Actions
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {reports && reports.length > 0 ? (
-                  reports.map((report) => (
-                    <Job key={report.Id} initialReport={report} onDelete={handleDelete} />
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell
-                      colSpan={5}
+                    <Box
                       sx={{
-                        py: 8,
-                        textAlign: 'center',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 2,
                       }}
                     >
-                      <Box
+                      <Typography
                         sx={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          gap: 2,
+                          color: '#475569',
+                          fontSize: '0.875rem',
                         }}
                       >
-                        <Typography
-                          sx={{
-                            color: '#475569',
-                            fontSize: '0.875rem',
-                          }}
-                        >
-                          -
-                        </Typography>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </CardContent>
-      </Card>
-    </>
+                        -
+                      </Typography>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </CardContent>
+    </Card>
   );
 }

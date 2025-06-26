@@ -52,7 +52,7 @@ func TestListModels(t *testing.T) {
 	fixedTime := time.Date(2025, 6, 11, 12, 0, 0, 0, time.UTC)
 	db := createDB(t,
 		&database.Model{Id: id1, Name: "Model1", Type: "regex", Status: database.ModelTrained, CreationTime: fixedTime},
-		&database.Model{Id: id2, Name: "Model2", Type: "bolt", Status: database.ModelTraining, CreationTime: fixedTime},
+		&database.Model{Id: id2, Name: "Model2", Type: "bolt_udt", Status: database.ModelTraining, CreationTime: fixedTime},
 	)
 
 	service := backend.NewBackendService(db, &mockStorage{}, messaging.NewInMemoryQueue(), 1024, nil)
@@ -69,8 +69,8 @@ func TestListModels(t *testing.T) {
 	err := json.Unmarshal(rec.Body.Bytes(), &response)
 	assert.NoError(t, err)
 	assert.ElementsMatch(t, []api.Model{
-		{Id: id1, Name: "Model1", Status: database.ModelTrained, CreationTime: fixedTime},
-		{Id: id2, Name: "Model2", Status: database.ModelTraining, CreationTime: fixedTime},
+		{Id: id1, Name: "Model1", Status: database.ModelTrained, CreationTime: fixedTime, Finetunable: false},
+		{Id: id2, Name: "Model2", Status: database.ModelTraining, CreationTime: fixedTime, Finetunable: true},
 	}, response)
 }
 
@@ -78,7 +78,7 @@ func TestGetModel(t *testing.T) {
 	modelId := uuid.New()
 	db := createDB(t,
 		&database.Model{Id: uuid.New(), Name: "Model1", Type: "regex", Status: database.ModelTrained},
-		&database.Model{Id: modelId, Name: "Model2", Type: "bolt", Status: database.ModelTraining},
+		&database.Model{Id: modelId, Name: "Model2", Type: "bolt_udt", Status: database.ModelTraining},
 		&database.ModelTag{ModelId: modelId, Tag: "name"},
 		&database.ModelTag{ModelId: modelId, Tag: "phone"},
 	)
@@ -96,7 +96,7 @@ func TestGetModel(t *testing.T) {
 	var response api.Model
 	err := json.Unmarshal(rec.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	assert.Equal(t, api.Model{Id: modelId, Name: "Model2", Status: database.ModelTraining, Tags: []string{"name", "phone"}}, response)
+	assert.Equal(t, api.Model{Id: modelId, Name: "Model2", Status: database.ModelTraining, Tags: []string{"name", "phone"}, Finetunable: true}, response)
 }
 
 func TestFinetuneModel(t *testing.T) {

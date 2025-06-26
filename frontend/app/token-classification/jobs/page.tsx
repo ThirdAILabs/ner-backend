@@ -6,25 +6,18 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ArrowLeft, RefreshCw, Square } from 'lucide-react';
+import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { AnalyticsDashboard } from '@/components/AnalyticsDashboard';
 import { DatabaseTable } from './(database-table)/DatabaseTable';
 import { nerService } from '@/lib/backend';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Box } from '@mui/material';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
 import { Suspense } from 'react';
 import { floor } from 'lodash';
+import { FeedbackPanel } from '@/components/feedback/FeedbackPanel';
+import useFeedbackState from '@/components/feedback/useFeedbackState';
+import { useLicense } from '@/hooks/useLicense';
+import useTelemetry from '@/hooks/useTelemetry';
 
-// Calculate progress based on InferenceTaskStatuses
 const calculateProgress = (report: Report | null): number => {
   const successfulFiles = report?.SucceededFileCount || 0;
   const failedFiles = report?.FailedFileCount || 0;
@@ -33,7 +26,6 @@ const calculateProgress = (report: Report | null): number => {
   return floor(((successfulFiles + failedFiles) / totalFiles) * 100);
 };
 
-// Get the total number of processed tokens
 const getProcessedTokens = (report: Report | null): number => {
   if (!report || !report.InferenceTaskStatuses) {
     return 0;
@@ -46,39 +38,6 @@ const getProcessedTokens = (report: Report | null): number => {
   );
 };
 
-// Source option card component
-interface SourceOptionProps {
-  title: string;
-  description: string;
-  isSelected?: boolean;
-  disabled?: boolean;
-  onClick: () => void;
-}
-
-const SourceOption: React.FC<SourceOptionProps> = ({
-  title,
-  description,
-  isSelected = false,
-  disabled = false,
-  onClick,
-}) => (
-  <div
-    className={`relative p-6 border rounded-md transition-all
-      ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200'}
-      ${
-        disabled
-          ? 'opacity-50 cursor-not-allowed bg-gray-50'
-          : 'cursor-pointer hover:border-blue-300'
-      }
-    `}
-    onClick={() => !disabled && onClick()}
-  >
-    <h3 className="text-base font-medium">{title}</h3>
-    <p className="text-sm text-gray-500 mt-1">{description}</p>
-  </div>
-);
-
-// Tag chip component
 interface TagProps {
   tag: string;
   selected?: boolean;
@@ -88,14 +47,7 @@ interface TagProps {
   displayOnly?: boolean;
 }
 
-const Tag: React.FC<TagProps> = ({
-  tag,
-  selected = true,
-  onClick,
-  custom = false,
-  addNew = false,
-  displayOnly = false,
-}) => {
+const Tag: React.FC<TagProps> = ({ tag, selected = true, onClick, displayOnly = false }) => {
   return (
     <div
       className={`px-3 py-1 text-sm font-medium rounded-sm ${displayOnly ? 'bg-blue-100 text-blue-800' : selected ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'} ${!displayOnly && onClick ? 'cursor-pointer' : ''}`}
@@ -107,7 +59,6 @@ const Tag: React.FC<TagProps> = ({
   );
 };
 
-// Group card component
 interface GroupProps {
   name: string;
   definition: string;
@@ -125,93 +76,17 @@ const GroupCard: React.FC<GroupProps> = ({ name, definition }) => (
 );
 
 interface CustomTag {
-  [key: string]: string;
+  name: string;
+  pattern: string;
 }
 
-const NewTagDialog: React.FC<{
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (tag: CustomTag) => void;
-  existingTags: string[];
-}> = ({ isOpen, onClose, onSubmit, existingTags }) => {
-  const [tagName, setTagName] = useState('');
-  const [pattern, setPattern] = useState('');
-  const [error, setError] = useState('');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (existingTags.includes(tagName)) {
-      setError('Tag name already exists');
-      return;
-    }
-
-    if (!tagName || !pattern) {
-      setError('Both fields are required');
-      return;
-    }
-
-    onSubmit({ name: tagName, pattern });
-    setTagName('');
-    setPattern('');
-    setError('');
-    onClose();
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Create Custom Tag</DialogTitle>
-          <DialogDescription>Define a new custom tag with a regex pattern.</DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="tagName">Tag Name</Label>
-              <Input
-                id="tagName"
-                value={tagName}
-                onChange={(e) => setTagName(e.target.value.toUpperCase())}
-                placeholder="CUSTOM_TAG_NAME"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="pattern">Regex Pattern</Label>
-              <Input
-                id="pattern"
-                value={pattern}
-                onChange={(e) => setPattern(e.target.value)}
-                placeholder="\b[A-Z]{2}\d{6}\b"
-              />
-              <p className="text-sm text-gray-500">
-                Example patterns:
-                <br />
-                Phone: \d{3}[-.]?\d{3}[-.]?\d{4}
-                <br />
-                Custom ID: [A-Z]{2}\d{6}
-              </p>
-            </div>
-            {error && <p className="text-red-500 text-sm">{error}</p>}
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="default" className="bg-blue-400 hover:bg-blue-500">
-              Create Tag
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-};
-
 function JobDetail() {
+  const { isEnterprise } = useLicense();
+
+  const recordEvent = useTelemetry();
   const searchParams = useSearchParams();
   const reportId: string = searchParams.get('jobId') as string;
-  const [tabValue, setTabValue] = useState('analytics');
+  const [tabValue, setTabValue] = useState('summary');
   const [selectedSource, setSelectedSource] = useState<'s3' | 'local'>('s3');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
@@ -228,6 +103,10 @@ function JobDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [dataProcessed, setDataProcessed] = useState<number | null>(null);
 
+  const { displayedFeedback, addFeedback, removeFeedback, submitFeedback } = useFeedbackState(
+    reportData?.Model?.Id || '',
+    reportId
+  );
   const tabChangeByGraph = React.useRef(false);
 
   function setDataProcessedFromReport(report: Report | null) {
@@ -318,13 +197,19 @@ function JobDetail() {
     // 1. By clicking on the tab, in which case we want to have all the filters selected.
     // 2. By clicking on a bar in the graph, in which case we select that label as the selected tag.
     // This code is needed to reset the filters selected when the user clicks on the tab directly.
-    if (tabValue === 'output') {
+    if (tabValue === 'review') {
       if (!tabChangeByGraph.current) {
         setSelectedTag(null);
       } else {
         tabChangeByGraph.current = false;
       }
     }
+
+    recordEvent({
+      UserAction: `Clicked on ${tabValue} Tab`,
+      UIComponent: `${tabValue} Tab`,
+      Page: 'Report Page',
+    });
   }, [tabValue]);
 
   return (
@@ -348,19 +233,19 @@ function JobDetail() {
         <div className="flex items-center justify-between border-b mb-6">
           <TabsList className="border-0 bg-transparent p-0">
             <TabsTrigger
-              value="analytics"
+              value="summary"
               className="data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:shadow-none rounded-none bg-transparent px-4 py-3 data-[state=active]:bg-transparent"
             >
               Summary
             </TabsTrigger>
             <TabsTrigger
-              value="output"
+              value="review"
               className="data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:shadow-none rounded-none bg-transparent px-4 py-3 data-[state=active]:bg-transparent"
             >
               Review
             </TabsTrigger>
             <TabsTrigger
-              value="configuration"
+              value="info"
               className="data-[state=active]:border-b-2 data-[state=active]:border-blue-500 data-[state=active]:shadow-none rounded-none bg-transparent px-4 py-3 data-[state=active]:bg-transparent"
             >
               Info
@@ -368,7 +253,7 @@ function JobDetail() {
           </TabsList>
         </div>
 
-        <TabsContent value="configuration" className="mt-0">
+        <TabsContent value="info" className="mt-0">
           {/* STARTS */}
           {/* Source */}
           <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3 }}>
@@ -436,7 +321,7 @@ function JobDetail() {
 
           {/* Custom Tags */}
           <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3, marginTop: 3 }}>
-            <h2 className="text-2xl font-medium mb-4">Tags</h2>
+            <h2 className="text-2xl font-medium mb-4">Custom Tags</h2>
             <div className="flex justify-between items-center mb-4">
               {isLoading ? (
                 <div className="flex justify-center py-4">
@@ -491,7 +376,7 @@ function JobDetail() {
           {/* ENDS */}
         </TabsContent>
 
-        <TabsContent value="analytics">
+        <TabsContent value="summary">
           <AnalyticsDashboard
             tokensProcessed={getProcessedTokens(reportData)}
             tags={availableTagsCount}
@@ -510,13 +395,26 @@ function JobDetail() {
           />
         </TabsContent>
 
-        <TabsContent value="output">
+        <TabsContent value="review">
           <DatabaseTable
             groups={reportData?.Groups?.map((g) => g.Name) || []}
             tags={availableTagsCount}
+            customTagNames={customTags.map((t) => t.name)}
             uploadId={reportData?.IsUpload ? reportData?.StorageParams.Prefix : ''}
+            addFeedback={addFeedback}
             initialSelectedTag={selectedTag}
           />
+          {isEnterprise && (
+            <div className="fixed bottom-[30px] right-[30px] z-50 w-[300px] flex flex-col">
+              <FeedbackPanel
+                feedbacks={displayedFeedback}
+                availableTags={availableTags}
+                onDelete={removeFeedback}
+                onSubmit={submitFeedback}
+                style={{ height: '500px' }}
+              />
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>

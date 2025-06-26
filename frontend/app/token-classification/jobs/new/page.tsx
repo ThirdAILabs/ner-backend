@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,11 @@ import { ArrowLeft, Plus, RefreshCw, Edit } from 'lucide-react';
 import { nerService } from '@/lib/backend';
 import { NO_GROUP, uniqueFileNames, getFilesFromElectron } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
+import { SearchIcon } from '@heroicons/react/solid';
+import { useLicense } from '@/hooks/useLicense';
+import useTelemetry from '@/hooks/useTelemetry';
+
+import { nerBaseUrl } from '@/lib/axios.config';
 
 const SUPPORTED_TYPES = ['.pdf', '.txt', '.csv', '.html', '.json', '.xml'];
 
@@ -142,16 +147,16 @@ const SourceOption: React.FC<SourceOptionProps> = ({
 
 interface FileSourcesProps {
   selectSource: (source: 's3' | 'files' | 'directory') => void;
-  handleLocalFiles: (files: [File, string][], isUploaded: boolean) => void;
   isLoadingFiles: boolean;
   setIsLoadingFiles: (loading: boolean) => void;
+  addFilesMeta: (filesMeta: any[]) => void;
 }
 
 const FileSources: React.FC<FileSourcesProps> = ({
   selectSource,
-  handleLocalFiles,
   isLoadingFiles,
   setIsLoadingFiles,
+  addFilesMeta,
 }) => {
   const s3 = (
     <SourceOption
@@ -189,8 +194,13 @@ const FileSources: React.FC<FileSourcesProps> = ({
             selectSource('files');
             setIsLoadingFiles(true);
             try {
-              const { files, isUploaded } = await getFilesFromElectron(SUPPORTED_TYPES);
-              handleLocalFiles(files, isUploaded);
+              const { allFilesMeta, totalSize, error } =
+                await getFilesFromElectron(SUPPORTED_TYPES);
+              if (error) {
+                addFilesMeta([]);
+              } else {
+                addFilesMeta(allFilesMeta || []);
+              }
             } finally {
               setIsLoadingFiles(false);
             }
@@ -213,9 +223,13 @@ const FileSources: React.FC<FileSourcesProps> = ({
       try {
         // Add a small delay to show loading state for quick file selections
         await new Promise((resolve) => setTimeout(resolve, 100));
-        handleLocalFiles(
-          Array.from(files).map((file) => [file, '']),
-          true
+        addFilesMeta(
+          Array.from(files).map((file) => ({
+            name: file.name,
+            size: file.size,
+            fullPath: '',
+            file,
+          }))
         );
       } finally {
         setIsLoadingFiles(false);
@@ -288,7 +302,6 @@ const FileSources: React.FC<FileSourcesProps> = ({
   );
 };
 
-// Custom Tag interface
 interface CustomTag {
   name: string;
   pattern: string;
@@ -296,6 +309,9 @@ interface CustomTag {
 
 export default function NewJobPage() {
   const router = useRouter();
+  const recordEvent = useTelemetry();
+
+  const { isEnterprise } = useLicense();
 
   // Essential state
   const [selectedSource, setSelectedSource] = useState<'s3' | 'files' | 'directory' | ''>('files');
@@ -304,18 +320,63 @@ export default function NewJobPage() {
   const [sourceS3Bucket, setSourceS3Bucket] = useState('');
   const [sourceS3Prefix, setSourceS3Prefix] = useState('');
   // [File object, full path] pairs. Full path may be empty if electron is not available.
-  const [selectedFiles, setSelectedFiles] = useState<[File, string][]>([]);
+  const [selectedFilesMeta, setSelectedFilesMeta] = useState<any[]>([]);
+
+  // Helper to assign unique names to selectedFilesMeta
+  const assignUniqueNames = (filesMeta: any[]) => {
+    const names = filesMeta.map((f) => f.name);
+    const uniqueNames = uniqueFileNames(names);
+    return filesMeta.map((f, i) => ({ ...f, uniqueName: uniqueNames[i] }));
+  };
+
+  // Add files, deduplicate by fullPath, and assign unique names
+  const addFilesMeta = (newFilesMeta: any[]) => {
+    const allFiles = [...selectedFilesMeta, ...newFilesMeta];
+    const seen = new Set<string>();
+    const deduped = allFiles.filter((f) => {
+      if (!f.fullPath) return true;
+      if (seen.has(f.fullPath)) return false;
+      seen.add(f.fullPath);
+      return true;
+    });
+    setSelectedFilesMeta(assignUniqueNames(deduped));
+  };
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingFiles, setIsLoadingFiles] = useState(false);
   const [existingReportName, setExistingReportName] = useState<string[]>([]);
-  //Job Name
   const [jobName, setJobName] = useState('');
 
-  // Model selection
   const [models, setModels] = useState<any[]>([]);
-  //Bi-default Presidio model is selected.
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState<any>(null);
+  const [modelSearchQuery, setModelSearchQuery] = useState('');
+
+  const filteredCustomModels = useMemo(() => {
+    return models
+      .filter((model) => !['basic', 'advanced'].includes(model.Name.toLowerCase()))
+      .filter((model) => model.Name.toLowerCase().includes(modelSearchQuery.toLowerCase()));
+  }, [models, modelSearchQuery]);
+
+  const defaultModels = useMemo(() => {
+    return [
+      {
+        Id: models.find((model) => model.Name === 'basic')?.Id || 'basic',
+        Name: 'Basic',
+        Disabled: false,
+        Description: !isEnterprise
+          ? 'Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.'
+          : 'Fast and lightweight AI model, does not allow customization of the fields with user feedback, gives basic usage statistics.',
+      },
+      {
+        Id: 'advanced',
+        Name: 'Advanced',
+        Disabled: true,
+        Description:
+          'Our most advanced AI model, available on enterprise platform. Allows users to perpetually customize fields with user feedback, includes advanced monitoring features.',
+      },
+    ];
+  }, [models]);
 
   // Tags handling
   const [availableTags, setAvailableTags] = useState<string[]>([]);
@@ -354,12 +415,10 @@ export default function NewJobPage() {
     return SUPPORTED_TYPES.some((ext) => filename.toLowerCase().endsWith(ext));
   };
 
-  // Fetch models on page load
   useEffect(() => {
     const fetchModels = async () => {
       try {
         const modelData = await nerService.listModels();
-        // Only show trained models that can be used for inference
         const trainedModels = modelData.filter((model) => model.Status === 'TRAINED');
         setModels(trainedModels.reverse());
         setSelectedModelId(trainedModels[0].Id);
@@ -405,7 +464,6 @@ export default function NewJobPage() {
     fetchTags();
   }, [selectedModelId]);
 
-  // Toggle tag selection
   const toggleTag = (tag: string) => {
     if (selectedTags.includes(tag)) {
       setSelectedTags(selectedTags.filter((t) => t !== tag));
@@ -414,7 +472,6 @@ export default function NewJobPage() {
     }
   };
 
-  // Select all tags
   const selectAllTags = () => {
     setSelectedTags([...availableTags]);
   };
@@ -435,8 +492,8 @@ export default function NewJobPage() {
       return;
     }
 
-    if (!editingGroup && groups[groupName]) {
-      setGroupDialogError('Group name must be unique.');
+    if (!editingGroup && groups[groupName.toUpperCase()]) {
+      setGroupDialogError('Group name already exists.');
       return;
     }
 
@@ -495,7 +552,6 @@ export default function NewJobPage() {
     setGroups(newGroups);
   };
 
-  // Add a custom tag
   const handleAddCustomTag = () => {
     setDialogError(null);
 
@@ -522,6 +578,13 @@ export default function NewJobPage() {
         prev.map((tag) => (tag.name === editingTag.name ? newCustomTag : tag))
       );
     } else {
+      for (let index = 0; index < customTags.length; index++) {
+        const thisTag = customTags[index];
+        if (thisTag.name === customTagName.toUpperCase()) {
+          setDialogError('Custom Tag name already exists.');
+          return;
+        }
+      }
       setCustomTags((prev) => [...prev, newCustomTag]);
     }
 
@@ -550,54 +613,26 @@ export default function NewJobPage() {
     setIsCustomTagDialogOpen(false);
   };
 
-  const addFiles = (files: [File, string][]) => {
-    const newSelectedFiles = [...selectedFiles];
-
-    files.forEach(([newFile, newFullPath]) => {
-      const existingIndex = newSelectedFiles.findIndex((existingFile) => {
-        // In practice, either both are empty or both are not empty
-        // If both are not empty, it means we are using electron to choose files
-        // Otherwise, we are using the file input to choose files
-        if (existingFile[1] !== '' && newFullPath !== '') {
-          return existingFile[1] === newFullPath;
-        }
-        return existingFile[0].name === newFile.name;
-      });
-
-      if (existingIndex !== -1) {
-        // Duplicate file so, replace the existing file with the new one
-        newSelectedFiles[existingIndex] = [newFile, newFullPath];
+  const handleSelectFiles = async () => {
+    setIsLoadingFiles(true);
+    setError(null);
+    try {
+      const result = await getFilesFromElectron(SUPPORTED_TYPES);
+      if (result.error) {
+        setError(result.error);
+        setSelectedFilesMeta([]);
       } else {
-        // Add the new file
-        newSelectedFiles.push([newFile, newFullPath]);
+        addFilesMeta(result.allFilesMeta);
       }
-    });
-
-    // This is to handle the case where there are multiple files with the same name
-    // but different full paths.
-    const newFileNames = uniqueFileNames(newSelectedFiles.map((file) => file[0].name));
-
-    setSelectedFiles(
-      newSelectedFiles.map(([file, fullPath], index) => {
-        const newFile = new File([file], newFileNames[index], {
-          type: file.type,
-          lastModified: file.lastModified,
-        });
-        return [newFile, fullPath];
-      })
-    );
-  };
-
-  // Update file handling to use file/directory input
-  const handleLocalFiles = (files: [File, string][], isUploaded: boolean) => {
-    const supportedFiles = files.filter((file) => isFileSupported(file[0].name));
-
-    if (supportedFiles.length > 0) {
-      addFiles(supportedFiles);
-    } else {
-      if (isUploaded) setIsConfirmDialogOpen(true);
+    } catch (err: any) {
+      setError('Failed to select files.');
+      setSelectedFilesMeta([]);
+    } finally {
+      setIsLoadingFiles(false);
     }
   };
+
+  // Handler for uploading files (calls main process IPC)
 
   const validateS3Bucket = async () => {
     if (!sourceS3Bucket || !sourceS3Region) {
@@ -618,7 +653,7 @@ export default function NewJobPage() {
   };
 
   const removeFile = (index: number) => {
-    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+    setSelectedFilesMeta((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleCloseDialog = () => {
@@ -653,6 +688,21 @@ export default function NewJobPage() {
     validateCustomTagName(value);
   };
 
+  async function uploadFilesBrowser(filesMeta: any[], uploadUrl: string) {
+    const formData = new FormData();
+    filesMeta.forEach((meta) => {
+      formData.append('files', meta.file, meta.uniqueName || meta.name);
+    });
+    const response = await fetch(uploadUrl, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!response.ok) {
+      return { success: false, error: 'Upload failed' };
+    }
+    return await response.json();
+  }
+
   // Submit the new job
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -674,7 +724,7 @@ export default function NewJobPage() {
 
     if (
       (selectedSource === 'files' || selectedSource === 'directory') &&
-      selectedFiles.length === 0
+      selectedFilesMeta.length === 0
     ) {
       setError('Please select at least one file');
       return;
@@ -689,34 +739,72 @@ export default function NewJobPage() {
     setIsSubmitting(true);
 
     try {
-      let uploadId: string | undefined;
+      setIsSubmitting(true);
+      setError(null);
+      setSuccess(false);
 
-      // Handle file/directory uploads if needed
+      const uploadUrl = `${nerBaseUrl}/uploads`;
+      let uploadId: string | undefined = undefined;
+
+      // 1. Upload files via Electron main process or browser
       if (selectedSource === 'files' || selectedSource === 'directory') {
-        const uploadResponse = await nerService.uploadFiles(selectedFiles.map(([file, _]) => file));
-        uploadId = uploadResponse.Id;
+        // @ts-ignore
+        if (typeof window !== 'undefined' && !window.electron) {
+          // Browser context: upload using File objects
+          const result = await uploadFilesBrowser(selectedFilesMeta, uploadUrl);
 
-        // Store file path mappings for local uploads if full path is available
-        const mapping: { [filename: string]: string } = {};
-        selectedFiles.forEach(([file, fullPath]) => {
-          if (fullPath) {
-            mapping[file.name] = fullPath;
+          if (!result.Id) {
+            setError(result.error || 'Upload failed');
+            setIsSubmitting(false);
+            return;
           }
-        });
-        if (Object.keys(mapping).length > 0) {
-          await nerService.storeFileNameToPath(uploadId, mapping);
-          console.log('stored upload paths', mapping);
+          uploadId = result.Id;
+
+          // Note: file path mapping is not possible in browsers due to security reasons.
+          if (typeof uploadId === 'string') {
+            await nerService.storeFileNameToPath(uploadId, {});
+          } else {
+            throw new Error('uploadId is undefined when storing file name to path mapping');
+          }
+        } else {
+          // Electron context: use main process
+          // @ts-ignore
+          const result = await window.electron.uploadFiles({
+            filePaths: selectedFilesMeta.map((f) => f.fullPath),
+            uploadUrl: uploadUrl,
+            uniqueNames: selectedFilesMeta.map((f) => f.uniqueName),
+            originalNames: selectedFilesMeta.map((f) => f.name),
+          });
+
+          if (!result.success || !result.uploadId) {
+            setError(result.error || 'Upload failed');
+            setIsSubmitting(false);
+            return;
+          }
+          uploadId = result.uploadId;
+
+          // 2. Store file path mappings (use uniqueName as key)
+          const mapping: { [filename: string]: string } = {};
+          selectedFilesMeta.forEach((fileMeta) => {
+            if (fileMeta.fullPath) {
+              mapping[fileMeta.uniqueName] = fileMeta.fullPath;
+            }
+          });
+          if (Object.keys(mapping).length > 0) {
+            if (typeof uploadId === 'string') {
+              await nerService.storeFileNameToPath(uploadId, mapping);
+            } else {
+              throw new Error('uploadId is undefined when storing file name to path mapping');
+            }
+          }
         }
       }
-
-      // Create custom tags object for API
       const customTagsObj: Record<string, string> = {};
       customTags.forEach((tag) => {
         customTagsObj[tag.name] = tag.pattern;
       });
 
-      // Create the report
-      console.log('Job Name: ', jobName);
+      // 3. Create the report, now that the files have been uploaded (or for S3, directly)
       const response = await nerService.createReport({
         ModelId: selectedModelId,
         Tags: selectedTags,
@@ -743,10 +831,17 @@ export default function NewJobPage() {
 
       setSuccess(true);
 
+      recordEvent({
+        UserAction: 'Create new report',
+        UIComponent: 'Report Creation Form',
+        Page: 'Report Creation Page',
+      });
+
       // Redirect after success
       setTimeout(() => {
         router.push(`/token-classification/landing?tab=jobs`);
       }, 2000);
+      setSelectedFilesMeta([]);
     } catch (err: unknown) {
       let errorMessage = 'An unexpected error occurred';
 
@@ -761,7 +856,6 @@ export default function NewJobPage() {
       }
 
       setError(`Failed to create report. ${errorMessage}. Please try again.`);
-      console.error(err);
     } finally {
       setIsSubmitting(false);
     }
@@ -895,9 +989,9 @@ export default function NewJobPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <FileSources
                   selectSource={setSelectedSource}
-                  handleLocalFiles={handleLocalFiles}
                   isLoadingFiles={isLoadingFiles}
                   setIsLoadingFiles={setIsLoadingFiles}
+                  addFilesMeta={addFilesMeta}
                 />
               </div>
 
@@ -912,40 +1006,40 @@ export default function NewJobPage() {
               )}
             </div>
 
-            {selectedFiles.length > 0 && (
+            {selectedFilesMeta.length > 0 && (
               <div className="mt-6">
                 <div className="flex justify-between items-center mb-2">
                   <h3 className="text-sm font-medium text-gray-700">
-                    Selected Files ({selectedFiles.length})
+                    Selected Files ({selectedFilesMeta.length})
                   </h3>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setSelectedFiles([])}
+                    onClick={() => setSelectedFilesMeta([])}
                     className="text-red-500"
                   >
                     Clear all
                   </Button>
                 </div>
                 <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-md">
-                  {selectedFiles.map(([file, fullPath], index) => (
+                  {selectedFilesMeta.map((fileMeta, index) => (
                     <div
-                      key={`${file.name}-${fullPath}-${index}`}
+                      key={fileMeta.fullPath || index}
                       className="flex items-center justify-between px-4 py-2 border-b last:border-b-0 hover:bg-gray-50"
                     >
                       <div className="flex items-center">
                         <div className="text-sm text-gray-600">
-                          {fullPath || file.name}
+                          {fileMeta.fullPath || fileMeta.name}
                           <span className="text-xs text-gray-400 ml-2">
-                            ({(file.size / 1024).toFixed(1)} KB)
+                            ({(fileMeta.size / 1024).toFixed(1)} KB)
                           </span>
                         </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                      <button
+                        type="button"
                         onClick={() => removeFile(index)}
-                        className="text-red-500"
+                        className="text-red-500 hover:text-red-700 p-1"
+                        aria-label="Remove file"
                       >
                         <svg
                           className="h-4 w-4"
@@ -960,7 +1054,7 @@ export default function NewJobPage() {
                             d="M6 18L18 6M6 6l12 12"
                           />
                         </svg>
-                      </Button>
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -1052,117 +1146,139 @@ export default function NewJobPage() {
 
           {/* Model Selection */}
           <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3 }}>
-            <div>
-              <h2 className="text-2xl font-medium mb-4">Model</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {models.map((model) => (
-                  <ModelOption
-                    key={model.Id}
-                    title={model.Name[0].toUpperCase() + model.Name.slice(1)}
-                    description={
-                      'Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.'
-                    }
-                    isSelected={selectedModelId === model.Id}
-                    onClick={() => setSelectedModelId(model.Id)}
-                    disabled={model.Name === 'presidio'}
-                  />
-                ))}
-                <ModelOption
-                  key={'Advanced-Model'}
-                  title={'Advanced'}
-                  description={
-                    <>
-                      Our most advanced AI model, available on enterprise platform. Allows users to
-                      perpetually customize fields with user feedback, includes advanced monitoring
-                      features. Reach out to{' '}
-                      <div className="relative inline-block">
-                        <span
-                          className="text-blue-500 underline cursor-pointer hover:text-blue-700"
-                          onClick={() => copyToClipboard('contact@thirdai.com', 'advanced-model')}
-                          title="Click to copy email"
-                        >
-                          contact@thirdai.com
-                        </span>
-                        {showTooltip['advanced-model'] && (
-                          <div className="absolute left-1/2 -translate-x-1/2 mt-1 w-max px-2 py-1 text-xs bg-gray-800 text-white rounded shadow-md z-10">
-                            Email Copied
-                          </div>
-                        )}
-                      </div>{' '}
-                      for an enterprise subscription.
-                    </>
-                  }
-                  isSelected={false}
-                  onClick={() => {}}
-                  disabled={true}
-                />
-              </div>
-            </div>
-
-            {/* Tags Section - Only show if a model is selected */}
-            {selectedModelId && (
+            <h2 className="text-2xl font-medium mb-4">Model</h2>
+            <div className="space-y-6">
               <div>
-                <div className="flex justify-between items-center my-2">
-                  <h2 className="text-lg font-medium">Tags</h2>
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={selectAllTags}
-                      className="text-sm flex items-center"
-                      disabled={isTagsLoading || selectedTags.length === availableTags.length}
-                    >
-                      <span className="mr-1">Select All</span>
+                <h3 className="text-lg font-semibold mb-4">Built-in Models</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {defaultModels.map((model) => (
+                    <ModelOption
+                      key={model.Id}
+                      title={model.Name[0].toUpperCase() + model.Name.slice(1)}
+                      description={model.Description || ''}
+                      isSelected={selectedModelId === model.Id}
+                      onClick={() => {
+                        setSelectedModelId(model.Id);
+                        setSelectedModel(model);
+                      }}
+                      disabled={model.Disabled}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {filteredCustomModels.length > 0 && (
+                <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold">Custom Models</h3>
+                    <div className="relative w-64">
                       <input
-                        type="checkbox"
-                        checked={selectedTags.length === availableTags.length}
-                        onChange={selectAllTags}
-                        className="rounded border-gray-300"
+                        type="text"
+                        placeholder="Search custom models..."
+                        value={modelSearchQuery}
+                        onChange={(e) => setModelSearchQuery(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                       />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedTags([])}
-                      className="text-sm flex items-center"
-                      disabled={isTagsLoading || selectedTags.length === 0}
-                    >
-                      <span className="mr-1">Clear Selection</span>
-                      <input
-                        type="checkbox"
-                        checked={selectedTags.length === 0}
-                        onChange={() => setSelectedTags([])}
-                        className="rounded border-gray-300"
-                      />
-                    </Button>
+                      <SearchIcon className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {filteredCustomModels
+                      .filter((model) => model.Status !== 'TRAINING' && model.Status !== 'QUEUED')
+                      .map((model) => (
+                        <ModelOption
+                          key={model.Id}
+                          title={model.Name}
+                          description={
+                            <div className="space-y-2">
+                              {model.BaseModelId && (
+                                <p className="text-sm text-gray-600">
+                                  Base Model:{' '}
+                                  {models.find((m) => m.Id === model.BaseModelId)?.Name ||
+                                    'Unknown'}
+                                </p>
+                              )}
+                            </div>
+                          }
+                          isSelected={selectedModelId === model.Id}
+                          onClick={() => {
+                            setSelectedModelId(model.Id);
+                            setSelectedModel(model);
+                          }}
+                        />
+                      ))}
                   </div>
                 </div>
+              )}
 
-                {/* Added descriptive note */}
-                <p className="text-sm text-gray-500 mb-4">
-                  Click on any tag to select/unselect it. By default, all tags are selected.
-                </p>
+              {/* Tags Section - Only show if a model is selected */}
+              {selectedModelId && (
+                <div className="mt-8">
+                  <div className="border-t pt-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-semibold">Model Tags</h3>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={selectAllTags}
+                          className="text-sm flex items-center"
+                          disabled={isTagsLoading || selectedTags.length === availableTags.length}
+                        >
+                          <span className="mr-1">Select All</span>
+                          <input
+                            type="checkbox"
+                            checked={selectedTags.length === availableTags.length}
+                            onChange={selectAllTags}
+                            className="rounded border-gray-300"
+                          />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedTags([])}
+                          className="text-sm flex items-center"
+                          disabled={isTagsLoading || selectedTags.length === 0}
+                        >
+                          <span className="mr-1">Clear Selection</span>
+                          <input
+                            type="checkbox"
+                            checked={selectedTags.length === 0}
+                            onChange={() => setSelectedTags([])}
+                            className="rounded border-gray-300"
+                          />
+                        </Button>
+                      </div>
+                    </div>
 
-                {isTagsLoading ? (
-                  <div className="flex justify-center py-4">
-                    <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
+                    {/* Added descriptive note */}
+                    <p className="text-sm text-gray-500 mb-4">
+                      Click on any tag to select/unselect it. By default, all tags are selected.
+                    </p>
+
+                    {isTagsLoading ? (
+                      <div className="flex justify-center py-4">
+                        <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
+                      </div>
+                    ) : availableTags.length === 0 ? (
+                      <div className="text-gray-500 py-2">No tags available for this model</div>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {availableTags.map((tag) => (
+                          <Tag
+                            key={tag}
+                            tag={tag}
+                            selected={selectedTags.includes(tag)}
+                            onClick={() => toggleTag(tag)}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
-                ) : availableTags.length === 0 ? (
-                  <div className="text-gray-500 py-2">No tags available for this model</div>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {availableTags.map((tag) => (
-                      <Tag
-                        key={tag}
-                        tag={tag}
-                        selected={selectedTags.includes(tag)}
-                        onClick={() => toggleTag(tag)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+                </div>
+              )}
+            </div>
           </Box>
 
           {/* Custom Tags Section */}

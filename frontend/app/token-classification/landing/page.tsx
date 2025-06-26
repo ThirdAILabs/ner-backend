@@ -12,8 +12,12 @@ import Link from 'next/link';
 import Dashboard from '../dashboard';
 import Jobs from '../jobs';
 import useTelemetry from '@/hooks/useTelemetry';
+import ModelCustomization from './ModelCustomization';
+import { useLicense } from '@/hooks/useLicense';
 
 function PageContents() {
+  const { isEnterprise } = useLicense();
+
   const searchParams = useSearchParams();
   const defaultTab = searchParams.get('tab') || 'jobs';
   const [tabValue, setTabValue] = useState(defaultTab);
@@ -22,9 +26,9 @@ function PageContents() {
   // Record initial page load
   useEffect(() => {
     recordEvent({
-      UserAction: 'view',
-      UIComponent: 'Page Load',
-      UI: 'Token Classification Page',
+      UserAction: 'View Report Dashboard',
+      UIComponent: 'Report Dashboard',
+      Page: 'Report Dashboard Page',
     });
   }, []);
 
@@ -37,15 +41,15 @@ function PageContents() {
     setTabValue(newValue);
     if (newValue === 'monitoring') {
       recordEvent({
-        UserAction: 'click',
+        UserAction: 'Click on Usage Stats Tab',
         UIComponent: 'Usage Stats Tab',
-        UI: 'Token Classification Page',
+        Page: 'Report Dashboard Page',
       });
     } else if (newValue === 'jobs') {
       recordEvent({
-        UserAction: 'click',
-        UIComponent: 'Scans Dashboard Tab',
-        UI: 'Token Classification Page',
+        UserAction: 'Click on Report Dashboard Tab',
+        UIComponent: 'Reports Dashboard Tab',
+        Page: 'Report Dashboard Page',
       });
     }
   };
@@ -118,7 +122,7 @@ function PageContents() {
           <Tabs
             value={tabValue}
             onChange={handleTabChange}
-            aria-label="token classification tabs"
+            aria-label="scans dashboard tabs"
             sx={{
               '& .MuiTab-root': {
                 textTransform: 'none',
@@ -134,11 +138,13 @@ function PageContents() {
           >
             <Tab label="Scans Dashboard" value="jobs" />
             <Tab label="Usage Stats" value="monitoring" />
+            {isEnterprise && <Tab label="Model Customization" value="customization" />}
           </Tabs>
         </Box>
 
         {tabValue === 'monitoring' && <Dashboard />}
         {tabValue === 'jobs' && <Jobs />}
+        {isEnterprise && tabValue === 'customization' && <ModelCustomization />}
       </main>
     </div>
   );

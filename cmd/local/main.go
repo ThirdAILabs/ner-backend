@@ -39,7 +39,7 @@ type Config struct {
 	ModelType        string `env:"MODEL_TYPE"`
 	AppDataDir       string `env:"APP_DATA_DIR" envDefault:"./pocket-shield"`
 	OnnxRuntimeDylib string `env:"ONNX_RUNTIME_DYLIB"`
-	EnablePython     bool   `env:"ENABLE_PYTHON" envDefault:"true"`
+	EnablePython     bool   `env:"ENABLE_PYTHON" envDefault:"false"`
 }
 
 const (

@@ -37,7 +37,7 @@ const gatherFilesRecursively = async (filePaths, supportedTypes) => {
 const pathToFile = async (filePath) => {
   const stats = await fs.promises.stat(filePath);
   const buffer = await fs.promises.readFile(filePath);
-  
+
   return {
     name: path.basename(filePath),
     size: stats.size,
@@ -51,16 +51,14 @@ const pathToFile = async (filePath) => {
 export const openFileChooser = async (supportedTypes) => {
   const result = {
     directlySelected: [],
-    allFiles: [],
     allFilePaths: [],
+    allFilesMeta: [],
+    totalSize: 0,
   }
 
   const dialogResult = await dialog.showOpenDialog({
     filters: [
-      {
-        name: 'Supported Files',
-        extensions: supportedTypes
-      },
+      { name: 'Supported Files', extensions: supportedTypes },
     ],
     properties: [
       // Note: we cannot both have openFile and openDirectory on Windows.
@@ -70,25 +68,32 @@ export const openFileChooser = async (supportedTypes) => {
     ]
   });
 
-  if (dialogResult.canceled) {
-    return result;
-  }
+  if (dialogResult.canceled) return result;
 
   let allFilePaths = await gatherFilesRecursively(dialogResult.filePaths, supportedTypes);
-  
   // Deduplicate allFiles and sort alphabetically
+  // Only deduplicates by the file path
   allFilePaths = [...new Set(allFilePaths)].sort();
 
-  const allFiles = await Promise.all(
-    allFilePaths.map(pathToFile)
+  let allFilesMeta = await Promise.all(
+    allFilePaths.map(async (filePath) => {
+      const stats = await fs.promises.stat(filePath);
+      return {
+        name: path.basename(filePath),
+        size: stats.size,
+        type: 'application/octet-stream',
+        lastModified: stats.mtimeMs,
+        fullPath: filePath,
+      };
+    })
   );
 
   result.directlySelected = dialogResult.filePaths;
-  result.allFiles = allFiles;
   result.allFilePaths = allFilePaths;
-
+  result.allFilesMeta = allFilesMeta;
+  result.totalSize = allFilesMeta.reduce((sum, file) => sum + file.size, 0);
   return result;
-} 
+}
 
 export const openFile = async (filePath) => {
   const error = await shell.openPath(filePath);

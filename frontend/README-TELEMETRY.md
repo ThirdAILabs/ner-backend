@@ -48,10 +48,10 @@ Telemetry data is sent via POST request to `/api/telemetry` with the following p
   timestamp: string;    // ISO timestamp
   user_machine: string; // Browser user agent
   event: {              // Telemetry event data
-    UserAction: string;   // e.g., "click", "view", "select"
+    UserAction: string;   // e.g., "View SafeGPT Page", "Clicked on Discord Button"
     UIComponent: string;  // e.g., "Usage Stats Tab"
-    UI: string;          // e.g., "Token Classification Page"
-    data?: any;          // Optional additional data
+    Page: string;          // e.g., "Reports Dashboard Page"
+    Data?: any;          // Optional additional data
   };
 }
 ```
