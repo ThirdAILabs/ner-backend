@@ -13,7 +13,7 @@ type LocalObjectStore struct {
 	baseDir string
 }
 
-var _ ObjectStore = &LocalObjectStore{}
+var _ ObjectStore = (*LocalObjectStore)(nil)
 
 func NewLocalObjectStore(dir string) (*LocalObjectStore, error) {
 	baseDir, err := filepath.Abs(dir)

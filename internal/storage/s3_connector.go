@@ -49,7 +49,7 @@ func NewS3Connector(ctx context.Context, params S3ConnectorParams) (*S3Connector
 	}, nil
 }
 
-var _ Connector = &S3Connector{}
+var _ Connector = (*S3Connector)(nil)
 
 func (c *S3Connector) Type() string {
 	return S3ConnectorType

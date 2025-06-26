@@ -24,7 +24,7 @@ type S3ObjectStore struct {
 	cfg        S3ClientConfig
 }
 
-var _ ObjectStore = &S3ObjectStore{}
+var _ ObjectStore = (*S3ObjectStore)(nil)
 
 
 func NewS3ObjectStore(cfg S3ClientConfig) (*S3ObjectStore, error) {

@@ -26,7 +26,7 @@ type LocalConnector struct {
 	params LocalConnectorParams
 }
 
-var _ Connector = &LocalConnector{}
+var _ Connector = (*LocalConnector)(nil)
 
 func NewLocalConnector(params LocalConnectorParams) *LocalConnector {
 	return &LocalConnector{params: params}
