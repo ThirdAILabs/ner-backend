@@ -31,6 +31,7 @@ export interface TagInfo {
 export interface FinetuneRequest {
   Name: string;
   TaskPrompt?: string;
+  GenerateData?: boolean;
   Tags?: TagInfo[];
   Samples?: Feedback[];
 }
@@ -409,7 +410,8 @@ export const nerService = {
       const { data } = await axiosInstance.post(`/models/${modelId}/finetune`, request);
       return data;
     } catch (error) {
-      return handleApiError(error, `Failed to start finetuning for model ${modelId}`);
+      // Don't use custom message for fine-tuning errors so we can see the actual backend error
+      return handleApiError(error);
     }
   },
 };

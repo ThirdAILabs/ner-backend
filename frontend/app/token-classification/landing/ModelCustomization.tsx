@@ -15,6 +15,10 @@ import {
   DialogActions,
   TextField,
   Button,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
+  Alert,
 } from '@mui/material';
 import { Toaster, toast } from 'react-hot-toast';
 import { nerService, SavedFeedback } from '@/lib/backend';
@@ -37,6 +41,9 @@ export interface UserFeedbackSectionProps {
   handleFinetuneSubmit: () => void;
   handleFinetuneCancel: () => void;
   availableTags: string[];
+  generateData: 'yes' | 'no';
+  setGenerateData: (value: 'yes' | 'no') => void;
+  apiKeyError: string | null;
 }
 
 export function UserFeedbackSection({
@@ -53,6 +60,9 @@ export function UserFeedbackSection({
   handleFinetuneSubmit,
   handleFinetuneCancel,
   availableTags,
+  generateData,
+  setGenerateData,
+  apiKeyError,
 }: UserFeedbackSectionProps) {
   return (
     <Box sx={{ mt: 4 }}>
@@ -166,7 +176,39 @@ export function UserFeedbackSection({
               onChange={(e) => setFinetuneTaskPrompt(e.target.value)}
               helperText="Optional custom prompt to guide the finetuning process"
               placeholder="e.g., Focus on improving accuracy for person names and locations..."
+              sx={{ mb: 3 }}
             />
+            <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+              Synthetic Data Generation
+            </Typography>
+            <RadioGroup
+              value={generateData}
+              onChange={(e) => setGenerateData(e.target.value as 'yes' | 'no')}
+              sx={{ mb: 2 }}
+            >
+              <FormControlLabel 
+                value="yes" 
+                control={<Radio />} 
+                label="Generate Synthetic Data" 
+                sx={{ '& .MuiFormControlLabel-label': { fontSize: '0.875rem' } }}
+              />
+              <FormControlLabel 
+                value="no" 
+                control={<Radio />} 
+                label="Do not generate synthetic data" 
+                sx={{ '& .MuiFormControlLabel-label': { fontSize: '0.875rem' } }}
+              />
+            </RadioGroup>
+            {generateData === 'yes' && (
+              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 2 }}>
+                Synthetic data generation will use OpenAI to create additional training examples based on your feedback samples.
+              </Typography>
+            )}
+            {apiKeyError && (
+              <Alert severity="error" sx={{ mt: 2 }}>
+                {apiKeyError}
+              </Alert>
+            )}
           </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -260,6 +302,8 @@ const ModelCustomization: React.FC = () => {
   const [finetuneModelName, setFinetuneModelName] = useState('');
   const [finetuneTaskPrompt, setFinetuneTaskPrompt] = useState('');
   const [finetuning, setFinetuning] = useState(false);
+  const [generateData, setGenerateData] = useState<'yes' | 'no'>('no');
+  const [apiKeyError, setApiKeyError] = useState<string | null>(null);
 
   const handleDeleteFeedback = async (id: string) => {
     if (!selectedModel) return;
@@ -276,16 +320,41 @@ const ModelCustomization: React.FC = () => {
     const timestamp = new Date().toISOString().slice(0, 16).replace('T', '_').replace(':', '-');
     setFinetuneModelName(`finetuned_${timestamp}`);
     setFinetuneTaskPrompt('');
+    setGenerateData('no');
+    setApiKeyError(null);
     setShowFinetuneDialog(true);
   };
 
   const handleFinetuneSubmit = async () => {
     if (!selectedModel || !finetuneModelName.trim()) return;
     setFinetuning(true);
+    setApiKeyError(null);
+    
+    
     try {
+      // Extract unique tags from feedback data
+      const uniqueTags = new Set<string>();
+      feedbackData.forEach(f => {
+        const labels = f.labels || f.Labels || [];
+        labels.forEach(label => {
+          if (label && label !== 'O') {
+            uniqueTags.add(label);
+          }
+        });
+      });
+      
+      // Create tag info array for synthetic data generation
+      const tags = Array.from(uniqueTags).map(tag => ({
+        name: tag,
+        description: `Entity of type ${tag}`,
+        examples: [] // Backend will extract examples from the samples
+      }));
+      
       const request = {
         Name: finetuneModelName.trim(),
         TaskPrompt: finetuneTaskPrompt.trim() || undefined,
+        GenerateData: generateData === 'yes',
+        Tags: generateData === 'yes' ? tags : undefined,
         Samples: feedbackData.length > 0 ? feedbackData.map(f => ({
           Tokens: f.tokens || f.Tokens || [],
           Labels: f.labels || f.Labels || []
@@ -295,6 +364,7 @@ const ModelCustomization: React.FC = () => {
       setShowFinetuneDialog(false);
       setFinetuneModelName('');
       setFinetuneTaskPrompt('');
+      setGenerateData('no');
       toast.success('Finetuning started successfully!', {
         duration: 3000,
         style: {
@@ -305,8 +375,33 @@ const ModelCustomization: React.FC = () => {
         },
         icon: '✓',
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Finetuning failed:', error);
+      // Check if the error is related to OpenAI API key
+      const errorMessage = error?.response?.data?.message || error?.response?.data || error?.message || 'Finetuning failed';
+      const errorString = typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage);
+      
+      // Check for OpenAI-related errors with various patterns
+      const isOpenAIError = errorString.toLowerCase().includes('openai') || 
+                           errorString.toLowerCase().includes('api key') ||
+                           errorString.toLowerCase().includes('api_key') ||
+                           errorString.toLowerCase().includes('unauthorized') ||
+                           errorString.toLowerCase().includes('invalid key');
+                           
+      if (isOpenAIError && generateData === 'yes') {
+        setApiKeyError(errorString);
+      } else {
+        toast.error(errorString, {
+          duration: 5000,
+          style: {
+            background: '#f44336',
+            color: '#fff',
+            padding: '10px',
+            borderRadius: '8px',
+          },
+        });
+        setShowFinetuneDialog(false);
+      }
     } finally {
       setFinetuning(false);
     }
@@ -316,6 +411,8 @@ const ModelCustomization: React.FC = () => {
     setShowFinetuneDialog(false);
     setFinetuneModelName('');
     setFinetuneTaskPrompt('');
+    setGenerateData('no');
+    setApiKeyError(null);
   };
 
   if (!healthStatus) {
@@ -416,6 +513,9 @@ const ModelCustomization: React.FC = () => {
                 .map((f) => f.labels || f.Labels || [])
                 .flat()
                 .filter((tag): tag is string => tag !== undefined)}
+              generateData={generateData}
+              setGenerateData={setGenerateData}
+              apiKeyError={apiKeyError}
             />
           )}
         </CardContent>
