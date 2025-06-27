@@ -195,19 +195,30 @@ export function TableContent({
   };
 
   const handleFullPath = (fileIdentifier: string) => {
-    const filename = fileIdentifier.split('/').slice(-1).join('');
-    const fullPath = pathMap?.[filename];
+    // The fileIdentifier might be the uniqueName directly or a path containing it
+    // First try direct lookup
+    let fullPath = pathMap?.[fileIdentifier];
+    
+    // If not found, try extracting filename from path
+    if (!fullPath) {
+      const filename = fileIdentifier.split('/').slice(-1).join('');
+      fullPath = pathMap?.[filename];
+    }
     
     console.log('handleFullPath:', {
       fileIdentifier,
-      filename,
+      directLookup: pathMap?.[fileIdentifier],
+      extractedFilename: fileIdentifier.split('/').slice(-1).join(''),
       fullPath,
-      pathMap: Object.keys(pathMap || {}).length
+      pathMap: Object.keys(pathMap || {}).length,
+      pathMapKeys: Object.keys(pathMap || {}),
+      pathMapEntries: Object.entries(pathMap || {})
     });
     
     const openFile = () => {
       if (!fullPath) {
-        console.error('No full path found for file:', filename);
+        console.error('No full path found for file:', fileIdentifier);
+        alert(`Cannot open file: Path not found for ${fileIdentifier}`);
         return;
       }
       // @ts-ignore

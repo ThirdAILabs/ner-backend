@@ -334,8 +334,16 @@ export const nerService = {
 
   storeFileNameToPath: async (uploadId: string, mapping: { [filename: string]: string }) => {
     try {
+      console.log('Backend service - Storing file path mapping:', {
+        uploadId,
+        mapping,
+        mappingKeys: Object.keys(mapping),
+        mappingEntries: Object.entries(mapping)
+      });
       await axiosInstance.post(`/file-name-to-path/${uploadId}`, { Mapping: mapping });
+      console.log('Backend service - File path mapping stored successfully');
     } catch (error) {
+      console.error('Backend service - Error storing file path mapping:', error);
       return handleApiError(error, 'Failed to store upload path mappings');
     }
   },

@@ -77,18 +77,21 @@ export function DatabaseTable({
       .then((entities) => {
         console.log(`Loaded ${entities.length} token records from offset ${newOffset}`);
 
-        const mappedRecords = entities.map((entity) => ({
-          token: entity.Text,
-          tag: entity.Label,
-          sourceObject: entity.Object,
-          groups: [],
-          context: {
-            left: entity.LContext || '',
-            right: entity.RContext || '',
-          },
-          start: entity.Start,
-          end: entity.End,
-        }));
+        const mappedRecords = entities.map((entity) => {
+          console.log('Entity object:', entity.Object);
+          return {
+            token: entity.Text,
+            tag: entity.Label,
+            sourceObject: entity.Object,
+            groups: [],
+            context: {
+              left: entity.LContext || '',
+              right: entity.RContext || '',
+            },
+            start: entity.Start,
+            end: entity.End,
+          };
+        });
 
         if (newOffset === 0) {
           setTokenRecords(mappedRecords);
@@ -205,9 +208,15 @@ export function DatabaseTable({
   // Load path map
   useEffect(() => {
     if (uploadId) {
+      console.log('DatabaseTable - Loading path map for uploadId:', uploadId);
       nerService
         .getFileNameToPath(uploadId)
         .then((pathMap) => {
+          console.log('DatabaseTable - Path map loaded:', {
+            uploadId,
+            pathMapKeys: Object.keys(pathMap || {}),
+            pathMapEntries: Object.entries(pathMap || {})
+          });
           setPathMap(pathMap);
         })
         .catch((error) => {

@@ -790,9 +790,14 @@ export default function NewJobPage() {
               mapping[fileMeta.uniqueName] = fileMeta.fullPath;
             }
           });
+          console.log('Frontend - File path mapping being sent:', mapping);
+          console.log('Frontend - Selected files meta:', selectedFilesMeta);
+          console.log('Frontend - Upload ID:', uploadId);
+          
           if (Object.keys(mapping).length > 0) {
             if (typeof uploadId === 'string') {
               await nerService.storeFileNameToPath(uploadId, mapping);
+              console.log('Frontend - File path mapping sent successfully');
             } else {
               throw new Error('uploadId is undefined when storing file name to path mapping');
             }
