@@ -126,9 +126,7 @@ export function TableContent({
                           return (
                             <div className="flex items-center justify-between w-full">
                               {/* Left: File path */}
-                              <span
-                                title={fileIdentifier.split('/').slice(-1).join('')}
-                              >
+                              <span title={fileIdentifier.split('/').slice(-1).join('')}>
                                 {truncateFilePath(fullPath)}
                               </span>
                               {/* Right: Icons */}
