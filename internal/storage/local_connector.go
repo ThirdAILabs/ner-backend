@@ -32,19 +32,6 @@ func NewLocalConnector(params LocalConnectorParams) *LocalConnector {
 	return &LocalConnector{params: params}
 }
 
-func (c *LocalConnector) Type() string {
-	return LocalConnectorType
-}
-
-func (c *LocalConnector) GetParams() ([]byte, error) {
-	cfgJson, err := json.Marshal(c.params)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal local connector params: %w", err)
-	}
-
-	return cfgJson, nil
-}
-
 func (c *LocalConnector) CreateInferenceTasks(ctx context.Context, targetBytes int64) ([]InferenceTask, int64, error) {
 	return createInferenceTasks(c.iterObjects(c.params.Bucket, c.params.Prefix), targetBytes)
 }

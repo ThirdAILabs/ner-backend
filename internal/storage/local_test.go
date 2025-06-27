@@ -192,23 +192,6 @@ func TestLocalObjectStore_GetConnector(t *testing.T) {
 	assert.Equal(t, prefix, params.Prefix)
 }
 
-func TestLocalConnector_Type(t *testing.T) {
-	connector, _, _ := setupTestConnector(t)
-	assert.Equal(t, LocalConnectorType, connector.Type())
-}
-
-func TestLocalConnector_GetParams(t *testing.T) {
-	connector, _, _ := setupTestConnector(t)
-
-	params, err := connector.GetParams()
-	require.NoError(t, err)
-
-	var parsedParams LocalConnectorParams
-	err = json.Unmarshal(params, &parsedParams)
-	require.NoError(t, err)
-	assert.Equal(t, connector.params, parsedParams)
-}
-
 func TestLocalConnector_CreateInferenceTasks(t *testing.T) {
 	connector, objectStore, _ := setupTestConnector(t)
 

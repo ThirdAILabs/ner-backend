@@ -30,10 +30,6 @@ type ObjectChunkStream struct {
 }
 
 type Connector interface {
-	Type() string
-
-	GetParams() ([]byte, error)
-
 	CreateInferenceTasks(ctx context.Context, targetBytes int64) ([]InferenceTask, int64, error)
 
 	IterTaskChunks(ctx context.Context, params []byte) (<-chan ObjectChunkStream, error)

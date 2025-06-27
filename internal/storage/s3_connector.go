@@ -51,19 +51,6 @@ func NewS3Connector(ctx context.Context, params S3ConnectorParams) (*S3Connector
 
 var _ Connector = (*S3Connector)(nil)
 
-func (c *S3Connector) Type() string {
-	return S3ConnectorType
-}
-
-func (c *S3Connector) GetParams() ([]byte, error) {
-	cfgJson, err := json.Marshal(c.params)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal s3 connector params: %w", err)
-	}
-
-	return cfgJson, nil
-}
-
 func (c *S3Connector) CreateInferenceTasks(ctx context.Context, targetBytes int64) ([]InferenceTask, int64, error) {
 	return createInferenceTasks(c.iterObjects(ctx, c.params.Bucket, c.params.Prefix), targetBytes)
 }
