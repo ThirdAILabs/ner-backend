@@ -18,8 +18,13 @@ import (
 
 var defaultStorageProvider = storage.S3ConnectorType
 
-func SetDefaultStorageProvider(provider string) {
-	defaultStorageProvider = provider
+func SetDefaultStorageProvider(provider string) error {
+	connectorType, err := storage.ToConnectorType(provider)
+	if err != nil {
+		return fmt.Errorf("invalid storage type: %v", err)
+	}
+	defaultStorageProvider = connectorType
+	return nil
 }
 
 var defaultLocalBaseDir = ""

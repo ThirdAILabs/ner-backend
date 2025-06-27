@@ -363,7 +363,7 @@ func TestFinetuningOnnxModel(t *testing.T) {
 	reportId := createReport(t, router, api.CreateReportRequest{
 		ReportName:   "test-report",
 		ModelId:      model.Id,
-		StorageType:   storage.LocalConnectorType,
+		StorageType:   string(storage.LocalConnectorType),
 		StorageParams: storageParams,
 		Tags:         tags,
 	})

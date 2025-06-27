@@ -296,13 +296,20 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		if err := json.Unmarshal(req.StorageParams, &uploadParams); err != nil {
 			return nil, CodedErrorf(http.StatusInternalServerError, "error unmarshalling storage params: %v", err)
 		}
-		req.StorageType, req.StorageParams, err = s.storage.GetUploadLocation(uploadBucket, uploadParams.UploadId)
+		connectorType, connectorParams, err := s.storage.GetUploadLocation(uploadBucket, uploadParams.UploadId)
+		req.StorageType = string(connectorType)
+		req.StorageParams = connectorParams
 		if err != nil {
 			return nil, CodedErrorf(http.StatusInternalServerError, "error getting connector params: %v", err)
 		}
 	}
 
-	_, err = storage.NewConnector(r.Context(), storage.ConnectorType(req.StorageType), req.StorageParams)
+	connectorType, err := storage.ToConnectorType(req.StorageType)
+	if err != nil {
+		return nil, CodedErrorf(http.StatusBadRequest, "invalid storage type: %v", err)
+	}
+
+	_, err = storage.NewConnector(r.Context(), connectorType, req.StorageParams)
 	if err != nil {
 		return nil, CodedErrorf(http.StatusInternalServerError, "error validating connector params: %v", err)
 	}

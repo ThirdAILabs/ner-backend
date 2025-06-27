@@ -35,13 +35,23 @@ type Connector interface {
 	IterTaskChunks(ctx context.Context, params []byte) (<-chan ObjectChunkStream, error)
 }
 
-type ConnectorType string
+type connectorType string
 const (
-	LocalConnectorType = "local"
-	S3ConnectorType = "s3"
+	LocalConnectorType connectorType = "local"
+	S3ConnectorType connectorType = "s3"
 )
 
-func NewConnector(ctx context.Context, connectorType ConnectorType, params []byte) (Connector, error) {
+func ToConnectorType(typeString string) (connectorType, error) {
+	switch typeString {
+	case string(LocalConnectorType):
+		return LocalConnectorType, nil
+	case string(S3ConnectorType):
+		return S3ConnectorType, nil
+	}
+	return "", fmt.Errorf("unknown connector type: %s", typeString)
+}
+
+func NewConnector(ctx context.Context, connectorType connectorType, params []byte) (Connector, error) {
 	switch connectorType {
 	case LocalConnectorType:
 		var localConnectorParams LocalConnectorParams

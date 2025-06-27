@@ -235,7 +235,7 @@ func (s *S3ObjectStore) UploadDir(ctx context.Context, bucket, prefix, src strin
 	return nil
 }
 
-func (s *S3ObjectStore) GetUploadLocation(bucket, uploadId string) (string, []byte, error) {
+func (s *S3ObjectStore) GetUploadLocation(bucket, uploadId string) (connectorType, []byte, error) {
 	params, err := json.Marshal(S3ConnectorParams{
 		Endpoint: s.cfg.Endpoint,
 		Region: s.cfg.Region,

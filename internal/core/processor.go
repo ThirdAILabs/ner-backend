@@ -207,7 +207,12 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 		groupToQuery[group.Id] = group.Query
 	}
 
-	connector, err := storage.NewConnector(ctx, storage.ConnectorType(task.Report.StorageType), task.Report.StorageParams)
+	connectorType, err := storage.ToConnectorType(task.Report.StorageType)
+	if err != nil {
+		return fmt.Errorf("invalid storage type: %v", err)
+	}
+
+	connector, err := storage.NewConnector(ctx, connectorType, task.Report.StorageParams)
 	if err != nil {
 		return fmt.Errorf("error initializing connector for inference task: %w", err)
 	}
@@ -728,7 +733,12 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 		return nil
 	}
 
-	connector, err := storage.NewConnector(ctx, storage.ConnectorType(task.Report.StorageType), task.Report.StorageParams)
+	connectorType, err := storage.ToConnectorType(task.Report.StorageType)
+	if err != nil {
+		return fmt.Errorf("invalid storage type: %v", err)
+	}
+
+	connector, err := storage.NewConnector(ctx, connectorType, task.Report.StorageParams)
 	if err != nil {
 		return err
 	}

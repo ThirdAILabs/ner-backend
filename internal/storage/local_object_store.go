@@ -96,7 +96,7 @@ func (s *LocalObjectStore) UploadDir(ctx context.Context, bucket, prefix, src st
 	return nil
 }
 
-func (s *LocalObjectStore) GetUploadLocation(bucket, uploadId string) (string, []byte, error) {
+func (s *LocalObjectStore) GetUploadLocation(bucket, uploadId string) (connectorType, []byte, error) {
 	
 	params, err := json.Marshal(LocalConnectorParams{
 		BaseDir: s.baseDir,
