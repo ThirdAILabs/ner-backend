@@ -160,3 +160,13 @@ export const openFile = async (filePath) => {
     throw err;
   }
 }
+
+export const showFileInFolder = (filePath) => {
+  try {
+    shell.showItemInFolder(filePath);
+  } catch (err) {
+    console.error('Failed to show file in folder', err);
+    throw err;
+  }
+
+}

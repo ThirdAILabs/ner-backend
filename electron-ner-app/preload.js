@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('electron', {
   getUserId: () => ipcRenderer.invoke('get-user-id'),
   openFileChooser: (supportedTypes, isDirectoryMode, isCombinedMode) => ipcRenderer.invoke('open-file-chooser', supportedTypes, isDirectoryMode, isCombinedMode),
   openFile: (filePath) => ipcRenderer.invoke('open-file', filePath),
+  showFileInFolder: (filePath) => ipcRenderer.invoke('show-file-in-folder', filePath),
   openLinkExternally: (url) => ipcRenderer.invoke('open-external-link', url),
   // Window controls
   minimizeWindow: () => ipcRenderer.invoke('minimize-window'),
