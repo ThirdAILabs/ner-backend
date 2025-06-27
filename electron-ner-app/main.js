@@ -192,7 +192,7 @@ autoUpdater.on('download-progress', (progress) => {
 
 ipcMain.handle('telemetry', async (_, data) => await insertTelemetryEvent(data));
 ipcMain.handle('get-user-id', async () => getCurrentUserId());
-ipcMain.handle('open-file-chooser', async (_, types, isDirectoryMode) => openFileChooser(types, isDirectoryMode));
+ipcMain.handle('open-file-chooser', async (_, types, isDirectoryMode, isCombinedMode) => openFileChooser(types, isDirectoryMode, isCombinedMode));
 ipcMain.handle('open-file', async (_, filePath) => openFile(filePath));
 ipcMain.handle('upload-files', async (event, { filePaths, uploadUrl, uniqueNames, originalNames }) => {
     // This function handles the actual uploading of files to the backend.

@@ -186,61 +186,103 @@ const FileSources: React.FC<FileSourcesProps> = ({
 
   // @ts-ignore
   if (window && window.electron) {
-    return (
-      <>
-        <SourceOption
-          onClick={async () => {
-            selectSource('files');
-            setIsLoadingFiles(true);
-            try {
-              const { allFilesMeta, totalSize, error } =
-                await getFilesFromElectron(SUPPORTED_TYPES, false);
-              if (error) {
-                addFilesMeta([]);
-              } else {
-                addFilesMeta(allFilesMeta || []);
+    // Check if we're on macOS
+    const isMacOS = navigator.platform.toLowerCase().includes('mac');
+    
+    if (isMacOS) {
+      // macOS: Single button that allows both files and folders
+      return (
+        <>
+          <SourceOption
+            onClick={async () => {
+              selectSource('files');
+              setIsLoadingFiles(true);
+              try {
+                const { allFilesMeta, totalSize, error } =
+                  await getFilesFromElectron(SUPPORTED_TYPES, false, true); // combined mode
+                if (error) {
+                  addFilesMeta([]);
+                } else {
+                  addFilesMeta(allFilesMeta || []);
+                }
+              } finally {
+                setIsLoadingFiles(false);
               }
-            } finally {
-              setIsLoadingFiles(false);
+            }}
+            icon={
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z M8 11h8m-4-4v8"
+              />
             }
-          }}
-          icon={
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          }
-          title="Local Files"
-          description="Select individual files from your computer"
-          disclaimer={`Supported: ${SUPPORTED_TYPES.join(', ')}`}
-        />
-        <SourceOption
-          onClick={async () => {
-            selectSource('directory');
-            setIsLoadingFiles(true);
-            try {
-              const { allFilesMeta, totalSize, error } =
-                await getFilesFromElectron(SUPPORTED_TYPES, true);
-              if (error) {
-                addFilesMeta([]);
-              } else {
-                addFilesMeta(allFilesMeta || []);
+            title="Local Files or Folders"
+            description="Select files or folders from your computer"
+            disclaimer={`Supported: ${SUPPORTED_TYPES.join(', ')}`}
+            disabled={isLoadingFiles}
+          />
+          {s3}
+        </>
+      );
+    } else {
+      // Windows/Linux: Separate buttons for files and folders
+      return (
+        <>
+          <SourceOption
+            onClick={async () => {
+              selectSource('files');
+              setIsLoadingFiles(true);
+              try {
+                const { allFilesMeta, totalSize, error } =
+                  await getFilesFromElectron(SUPPORTED_TYPES, false);
+                if (error) {
+                  addFilesMeta([]);
+                } else {
+                  addFilesMeta(allFilesMeta || []);
+                }
+              } finally {
+                setIsLoadingFiles(false);
               }
-            } finally {
-              setIsLoadingFiles(false);
+            }}
+            icon={
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
             }
-          }}
-          icon={folderIcon}
-          title="Local Directory"
-          description="Select an entire folder to scan"
-          disclaimer={`Supported: ${SUPPORTED_TYPES.join(', ')}`}
-          disabled={isLoadingFiles}
-        />
-        {s3}
-      </>
-    );
+            title="Local Files"
+            description="Select individual files from your computer"
+            disclaimer={`Supported: ${SUPPORTED_TYPES.join(', ')}`}
+          />
+          <SourceOption
+            onClick={async () => {
+              selectSource('directory');
+              setIsLoadingFiles(true);
+              try {
+                const { allFilesMeta, totalSize, error } =
+                  await getFilesFromElectron(SUPPORTED_TYPES, true);
+                if (error) {
+                  addFilesMeta([]);
+                } else {
+                  addFilesMeta(allFilesMeta || []);
+                }
+              } finally {
+                setIsLoadingFiles(false);
+              }
+            }}
+            icon={folderIcon}
+            title="Local Directory"
+            description="Select an entire folder to scan"
+            disclaimer={`Supported: ${SUPPORTED_TYPES.join(', ')}`}
+            disabled={isLoadingFiles}
+          />
+          {s3}
+        </>
+      );
+    }
   }
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {

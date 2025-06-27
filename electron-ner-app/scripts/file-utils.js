@@ -48,7 +48,7 @@ const pathToFile = async (filePath) => {
   };
 };
 
-export const openFileChooser = async (supportedTypes, isDirectoryMode = false) => {
+export const openFileChooser = async (supportedTypes, isDirectoryMode = false, isCombinedMode = false) => {
   const result = {
     directlySelected: [],
     allFilePaths: [],
@@ -60,7 +60,21 @@ export const openFileChooser = async (supportedTypes, isDirectoryMode = false) =
   let dialogProperties;
   let dialogResult;
 
-  if (isDirectoryMode) {
+  if (isCombinedMode && process.platform === 'darwin') {
+    // macOS combined mode - allows selecting both files and folders
+    dialogProperties = ['openFile', 'openDirectory', 'multiSelections', 'treatPackageAsDirectory'];
+    dialogResult = await dialog.showOpenDialog({
+      filters: [
+        {
+          name: 'Supported Files',
+          extensions: supportedTypes
+        },
+      ],
+      properties: dialogProperties,
+      buttonLabel: 'Select Files or Folders',
+      title: 'Select files or folders to scan'
+    });
+  } else if (isDirectoryMode) {
     // Directory selection mode
     dialogProperties = ['openDirectory'];
     dialogResult = await dialog.showOpenDialog({
