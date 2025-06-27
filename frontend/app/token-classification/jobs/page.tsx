@@ -210,7 +210,7 @@ function JobDetail() {
   }, [tabValue]);
 
   return (
-    <div className="container px-4 py-8 mx-auto" style={{ width: '90%' }}>
+    <div className="container px-2 py-8 mx-auto" style={{ width: '90%' }}>
       {/* Header with Back Button and Title */}
       <div className="flex items-center justify-between mb-6">
         <Button variant="outline" size="sm" asChild>

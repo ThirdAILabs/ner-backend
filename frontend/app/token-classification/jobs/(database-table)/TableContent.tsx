@@ -125,41 +125,66 @@ export function TableContent({
                         if (fullPath && typeof window !== 'undefined' && window.electron) {
                           return (
                             <div className="flex items-center justify-between w-full">
+                              {/* Left: File path */}
                               <span
-                                style={{
-                                  textDecoration: 'underline',
-                                  color: 'inherit',
-                                  cursor: 'pointer',
-                                }}
                                 title={fileIdentifier.split('/').slice(-1).join('')}
-                                onClick={openFile}
                               >
                                 {truncateFilePath(fullPath)}
                               </span>
-                              {/* Right: Show in folder icon */}
-                              <span
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  showFileInFolder();
-                                }}
-                                className="inline-flex items-center gap-1 px-1 py-1 rounded-md text-sm font-medium text-gray-800 hover:bg-gray-100 hover:text-blue-600 border border-transparent hover:border-blue-200 transition-all cursor-pointer"
-                              >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  width="16"
-                                  height="16"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  className="lucide lucide-folder-open-icon lucide-folder-open"
+                              {/* Right: Icons */}
+                              <div className="flex items-center gap-1 ml-2">
+                                <span
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    showFileInFolder();
+                                  }}
+                                  className="inline-flex items-center px-1.5 py-1.5 rounded-md text-sm font-medium text-gray-800 hover:bg-gray-100 hover:text-blue-600 border border-transparent hover:border-blue-200 transition-all cursor-pointer"
                                 >
-                                  <path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" />
-                                </svg>
-                              </span>
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="16"
+                                    height="16"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    className="lucide lucide-folder-open-icon lucide-folder-open"
+                                  >
+                                    <path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" />
+                                  </svg>
+                                </span>
+                                <span
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    openFile();
+                                  }}
+                                  className="inline-flex items-center gap-1 px-1.5 py-1.5 rounded-md  text-sm font-medium text-gray-800 hover:bg-gray-100 hover:text-blue-600 border border-transparent hover:border-blue-200 transition-all cursor-pointer"
+                                >
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="16"
+                                    height="16"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    className="lucide lucide-book-open-text-icon lucide-book-open-text"
+                                  >
+                                    <path d="M12 7v14" />
+                                    <path d="M16 12h2" />
+                                    <path d="M16 8h2" />
+                                    <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" />
+                                    <path d="M6 12h2" />
+                                    <path d="M6 8h2" />
+                                  </svg>
+                                </span>
+                              </div>
                             </div>
                           );
                         } else {
