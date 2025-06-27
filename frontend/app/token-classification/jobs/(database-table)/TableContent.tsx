@@ -58,11 +58,18 @@ export function TableContent({
 
   const handleFullPath = (fileIdentifier: string) => {
     const fullPath = pathMap?.[fileIdentifier.split('/').slice(-1).join('')];
+
     const openFile = () => {
       // @ts-ignore
       window.electron?.openFile?.(fullPath);
     };
-    return { fullPath, openFile };
+
+    const openDirectory = () => {
+      // @ts-ignore
+      window.electron?.showFileInFolder?.(fullPath);
+    };
+    
+    return { fullPath, openFile, openDirectory };
   };
 
   const truncateFilePath = (filePath: string) => {
@@ -179,7 +186,7 @@ export function TableContent({
         filteredRecords.map((record, index) => {
           const fileIdentifier = record.sourceObject;
 
-          const { fullPath, openFile } = handleFullPath(fileIdentifier);
+          const { fullPath, openFile, openDirectory } = handleFullPath(fileIdentifier);
           const tokens = record.taggedTokens.flatMap((token) => {
             const [text, tag] = token;
             return text
@@ -225,6 +232,7 @@ export function TableContent({
               className="group text-sm leading-relaxed bg-white rounded border border-gray-100 shadow-sm mb-4"
             >
               <summary className="p-3 cursor-pointer bg-gray-100 flex items-center justify-between">
+                {/* Left: File path */}
                 <div className="flex items-center gap-2">
                   <ChevronRight className="w-4 h-4 transition-transform group-open:rotate-90" />
                   {/* @ts-ignore */}
@@ -240,37 +248,64 @@ export function TableContent({
                   )}
                 </div>
 
+                {/* Right: Buttons */}
                 {/* @ts-ignore */}
                 {fullPath && typeof window !== 'undefined' && window.electron && (
-                  <span
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      openFile();
-                    }}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-gray-50 text-sm font-medium text-gray-800 hover:bg-gray-100 hover:text-blue-600 border border-transparent hover:border-blue-200 transition-all cursor-pointer"
-                  >
-                    <span className="leading-none">OPEN</span>
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="lucide lucide-external-link-icon lucide-external-link"
+                  <div className="flex items-center gap-2">
+                    <span
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        openDirectory();
+                      }}
+                      className="inline-flex items-center gap-1 px-1.5 py-1.5 rounded-md text-sm font-medium text-gray-800 hover:bg-gray-100 hover:text-blue-600 border border-transparent hover:border-blue-200 transition-all cursor-pointer"
                     >
-                      <path d="M15 3h6v6" />
-                      <path d="M10 14 21 3" />
-                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                    </svg>
-                  </span>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="lucide lucide-folder-open-icon lucide-folder-open"
+                      >
+                        <path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" />
+                      </svg>
+                    </span>
+                    <span
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        openFile();
+                      }}
+                      className="inline-flex items-center gap-1 px-1.5 py-1.5 rounded-md  text-sm font-medium text-gray-800 hover:bg-gray-100 hover:text-blue-600 border border-transparent hover:border-blue-200 transition-all cursor-pointer"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        className="lucide lucide-book-open-text-icon lucide-book-open-text"
+                      >
+                        <path d="M12 7v14" />
+                        <path d="M16 12h2" />
+                        <path d="M16 8h2" />
+                        <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" />
+                        <path d="M6 12h2" />
+                        <path d="M6 8h2" />
+                      </svg>
+                    </span>
+                  </div>
                 )}
               </summary>
-
               <div className="p-4">
                 <TokenHighlighter
                   tokens={tokens}

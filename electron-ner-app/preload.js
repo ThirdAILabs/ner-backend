@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('electron', {
   getUserId: () => ipcRenderer.invoke('get-user-id'),
   openFileChooser: (supportedTypes) => ipcRenderer.invoke('open-file-chooser', supportedTypes),
   openFile: (filePath) => ipcRenderer.invoke('open-file', filePath),
+  showFileInFolder: (filePath) => ipcRenderer.invoke('show-file-in-folder', filePath),
   openLinkExternally: (url) => ipcRenderer.invoke('open-external-link', url),
   uploadFiles: (files) => ipcRenderer.invoke('upload-files', files),
 }); 

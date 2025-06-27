@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import serve from 'electron-serve';
 import { startBackend } from './scripts/start-backend.js';
-import { openFileChooser, openFile } from './scripts/file-utils.js';
+import { openFileChooser, openFile, showFileInFolder } from './scripts/file-utils.js';
 import { initTelemetry, insertTelemetryEvent, closeTelemetry } from './telemetry.js';
 import { initializeUserId, getCurrentUserId } from './userIdManager.js';
 import axios from 'axios';
@@ -175,6 +175,7 @@ ipcMain.handle('telemetry', async (_, data) => await insertTelemetryEvent(data))
 ipcMain.handle('get-user-id', async () => getCurrentUserId());
 ipcMain.handle('open-file-chooser', async (_, types) => openFileChooser(types));
 ipcMain.handle('open-file', async (_, filePath) => openFile(filePath));
+ipcMain.handle('show-file-in-folder', async (_, filePath) => { showFileInFolder(filePath); });
 ipcMain.handle('upload-files', async (event, { filePaths, uploadUrl, uniqueNames, originalNames }) => {
     // This function handles the actual uploading of files to the backend.
     // For the UI, we only store the file metadata in the memory to display to the users.
