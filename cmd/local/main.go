@@ -52,9 +52,11 @@ const (
 var defaultConnectorConfigs = storage.ConnectorConfigs{}
 
 
-func createDatabase(root string, localBaseDir string) *gorm.DB {
-	migration_6.SetDefaultStorageProvider(string(storage.LocalConnectorType))
-	migration_6.SetDefaultLocalBaseDir(localBaseDir)
+func createDatabase(root string) *gorm.DB {
+	err := migration_6.SetDefaultStorageProvider(string(storage.LocalConnectorType))
+	if err != nil {
+		log.Fatalf("Failed to set default storage provider: %v", err)
+	}
 	
 	path := filepath.Join(root, "db", "pocket-shield.db")
 	if err := os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
@@ -187,7 +189,7 @@ func main() {
 
 	localBaseDir := filepath.Join(cfg.Root, "storage")
 
-	db := createDatabase(cfg.AppDataDir, localBaseDir)
+	db := createDatabase(cfg.AppDataDir)
 
 	if err := db.
 		Model(&database.ShardDataTask{}).

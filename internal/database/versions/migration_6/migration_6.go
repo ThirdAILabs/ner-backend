@@ -27,12 +27,6 @@ func SetDefaultStorageProvider(provider string) error {
 	return nil
 }
 
-var defaultLocalBaseDir = ""
-
-func SetDefaultLocalBaseDir(dir string) {
-	defaultLocalBaseDir = dir
-}
-
 type InferenceTask struct {
 	ReportId uuid.UUID `gorm:"type:uuid;primaryKey"`
 	TaskId   int       `gorm:"primaryKey"`
