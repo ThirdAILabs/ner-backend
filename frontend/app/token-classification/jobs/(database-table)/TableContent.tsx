@@ -201,14 +201,23 @@ export function TableContent({
     
     // If not found, try extracting filename from path
     if (!fullPath) {
-      const filename = fileIdentifier.split('/').slice(-1).join('');
+      // Handle both forward slash and backslash separators
+      const parts = fileIdentifier.split(/[/\\]/);
+      const filename = parts[parts.length - 1];
       fullPath = pathMap?.[filename];
+      
+      // If still not found and there's an uploadId prefix, try without it
+      if (!fullPath && parts.length > 1) {
+        // The format might be uploadId\filename or uploadId/filename
+        fullPath = pathMap?.[filename];
+      }
     }
     
     console.log('handleFullPath:', {
       fileIdentifier,
       directLookup: pathMap?.[fileIdentifier],
-      extractedFilename: fileIdentifier.split('/').slice(-1).join(''),
+      parts: fileIdentifier.split(/[/\\]/),
+      extractedFilename: fileIdentifier.split(/[/\\]/).slice(-1).join(''),
       fullPath,
       pathMap: Object.keys(pathMap || {}).length,
       pathMapKeys: Object.keys(pathMap || {}),
@@ -284,7 +293,7 @@ export function TableContent({
                               color: 'inherit',
                               cursor: 'pointer',
                             }}
-                            title={fileIdentifier.split('/').slice(-1).join('')}
+                            title={fileIdentifier.split(/[/\\]/).slice(-1).join('')}
                             onClick={openFile}
                           >
                             {truncateFilePath(fullPath)}
@@ -294,9 +303,9 @@ export function TableContent({
                         return (
                           <span
                             style={{ color: 'inherit' }}
-                            title={fileIdentifier.split('/').slice(-1).join('')}
+                            title={fileIdentifier.split(/[/\\]/).slice(-1).join('')}
                           >
-                            {fileIdentifier.split('/').slice(-1)}
+                            {fileIdentifier.split(/[/\\]/).slice(-1).join('')}
                           </span>
                         );
                       }
@@ -368,7 +377,7 @@ export function TableContent({
                       className="font-semibold"
                       style={{ color: 'inherit', userSelect: 'none' }}
                     >
-                      {fileIdentifier.split('/').slice(-1)}
+                      {fileIdentifier.split(/[/\\]/).slice(-1).join('')}
                     </span>
                   )}
                 </div>
