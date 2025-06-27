@@ -64,9 +64,9 @@ const Dashboard = () => {
     });
   };
   const [models, setModels] = useState<Model[]>([]);
-  const [selectedModel, setSelectedModel] = useState<string>('');
+  const [selectedModel, setSelectedModel] = useState<Model | null>(null);
   const handleModelChange = (e: SelectChangeEvent<string>) => {
-    const model = e.target.value;
+    const model = models.find((m) => m.Id === e.target.value) || null;
     setSelectedModel(model);
     recordEvent({
       UserAction: 'select',
@@ -77,12 +77,23 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    nerService
-      .listModels()
-      .then((ms) => setModels(ms))
-      .catch((err) => {
-        console.error('Failed to load models:', err);
-      });
+    const fetchModels = () => {
+      nerService
+        .listModels()
+        .then((ms) => setModels(ms))
+        .catch((err) => {
+          console.error('Failed to load models:', err);
+        });
+    };
+
+    // Initial fetch
+    fetchModels();
+
+    // Set up polling every 5 seconds
+    const intervalId = setInterval(fetchModels, 5000);
+
+    // Cleanup interval on unmount
+    return () => clearInterval(intervalId);
   }, [healthStatus]);
 
   if (!healthStatus) {
@@ -217,7 +228,7 @@ const Dashboard = () => {
                 }}
               >
                 <Select
-                  value={selectedModel}
+                  value={selectedModel?.Name || ''}
                   displayEmpty
                   onChange={handleModelChange}
                   renderValue={(val) =>
@@ -241,14 +252,64 @@ const Dashboard = () => {
                     <em>All Models</em>
                   </MenuItem>
                   {models.map((m) => (
-                    <MenuItem key={m.Id} value={m.Id}>
-                      {m.Name.charAt(0).toUpperCase() + m.Name.slice(1)}
+                    <MenuItem
+                      key={m.Id}
+                      value={m.Id}
+                      sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                    >
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                          flexGrow: 1,
+                        }}
+                      >
+                        {m.Name.charAt(0).toUpperCase() + m.Name.slice(1)}
+                        {m.Status === 'TRAINING' && (
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <CircularProgress size={16} sx={{ ml: 1 }} />
+                            <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
+                              Training...
+                            </Typography>
+                          </Box>
+                        )}
+                        {m.Status === 'QUEUED' && (
+                          <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
+                            Queued
+                          </Typography>
+                        )}
+                      </Box>
                     </MenuItem>
                   ))}
                 </Select>
               </FormControl>
             </Box>
           </Box>
+
+          {/* Model Details */}
+          {selectedModel && (
+            <Box sx={{ mb: 4, ml: 4 }}>
+              {selectedModel.CreationTime && (
+                <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>
+                  Started Training: {new Date(selectedModel.CreationTime).toLocaleString()}
+                </Typography>
+              )}
+
+              {selectedModel.BaseModelId && (
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  Base Model:{' '}
+                  {(() => {
+                    const baseModel = models.find((m) => m.Id === selectedModel?.BaseModelId);
+                    if (baseModel?.Name) {
+                      return baseModel.Name.charAt(0).toUpperCase() + baseModel.Name.slice(1);
+                    }
+                    return 'Unknown';
+                  })()}
+                </Typography>
+              )}
+            </Box>
+          )}
 
           {/* Metrics Viewer */}
           <Box
@@ -260,7 +321,7 @@ const Dashboard = () => {
               overflow: 'hidden',
             }}
           >
-            <MetricsDataViewer modelId={selectedModel || undefined} days={days} />
+            <MetricsDataViewer modelId={selectedModel?.Id || undefined} days={days} />
           </Box>
         </CardContent>
       </Card>

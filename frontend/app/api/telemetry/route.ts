@@ -24,7 +24,7 @@ pool.on('error', (err) => {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { username, timestamp, user_machine, event } = body;
+    const { username, timestamp, pocketshield_version, user_machine, event } = body;
 
     // Validate required fields
     if (!username || !timestamp || !user_machine || !event) {
@@ -34,11 +34,17 @@ export async function POST(request: NextRequest) {
     const client = await pool.connect();
     try {
       const query = `
-        INSERT INTO telemetry_events (username, timestamp, user_machine, event)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO telemetry_events (username, timestamp, pocketshield_version, user_machine, event)
+        VALUES ($1, $2, $3, $4, $5)
       `;
 
-      await client.query(query, [username, timestamp, user_machine, JSON.stringify(event)]);
+      await client.query(query, [
+        username,
+        timestamp,
+        pocketshield_version,
+        user_machine,
+        JSON.stringify(event),
+      ]);
 
       return NextResponse.json({ success: true }, { status: 201 });
     } catch (error) {

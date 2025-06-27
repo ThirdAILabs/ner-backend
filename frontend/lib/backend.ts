@@ -2,6 +2,40 @@ import axiosInstance, { showApiErrorEvent } from './axios.config';
 import axios from 'axios';
 import qs from 'qs';
 
+// Type definitions for API responses
+export interface ChatResponse {
+  InputText: string;
+  Reply: string;
+  TagMap: Record<string, string>;
+}
+
+export interface Feedback {
+  Tokens: string[];
+  Labels: string[];
+}
+
+export interface SavedFeedback {
+  Id: string;
+  Tokens: string[];
+  Labels: string[];
+}
+
+export interface TagInfo {
+  name: string;
+  description: string;
+  examples: string[];
+}
+
+export interface FinetuneRequest {
+  Name: string;
+  TaskPrompt?: string;
+  Tags?: TagInfo[];
+  Samples?: Feedback[];
+}
+
+export interface FinetuneResponse {
+  ModelId: string;
+}
 // Add a utility function to handle API errors with custom messages
 const handleApiError = (error: unknown, customMessage?: string): never => {
   console.error('API Error:', error);
@@ -352,5 +386,36 @@ export const nerService = {
     const { data } = await axiosInstance.get(`/file-name-to-path/${uploadId}`);
     console.log('getFileNameToPath', data);
     return data.Mapping as { [filename: string]: string };
+  },
+
+  submitFeedback: async (modelId: string, feedback: Feedback) => {
+    const { data } = await axiosInstance.post(`/models/${modelId}/feedback`, feedback);
+    return data;
+  },
+
+  getFeedbackSamples: async (modelId: string): Promise<SavedFeedback[]> => {
+    try {
+      const { data } = await axiosInstance.get(`/models/${modelId}/feedback`);
+      return data;
+    } catch (error) {
+      return handleApiError(error, `Failed to load feedback samples for model ${modelId}`);
+    }
+  },
+
+  deleteModelFeedback: async (modelId: string, feedbackId: string): Promise<void> => {
+    try {
+      await axiosInstance.delete(`/models/${modelId}/feedback/${feedbackId}`);
+    } catch (error) {
+      return handleApiError(error, `Failed to delete feedback ${feedbackId} for model ${modelId}`);
+    }
+  },
+
+  finetuneModel: async (modelId: string, request: FinetuneRequest): Promise<FinetuneResponse> => {
+    try {
+      const { data } = await axiosInstance.post(`/models/${modelId}/finetune`, request);
+      return data;
+    } catch (error) {
+      return handleApiError(error, `Failed to start finetuning for model ${modelId}`);
+    }
   },
 };

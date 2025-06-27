@@ -1,3 +1,5 @@
+import { FeedbackMetadata } from '@/components/feedback/useFeedbackState';
+
 interface Tag {
   type: string;
   count: number;
@@ -26,7 +28,9 @@ interface ClassifiedTokenDatabaseRecord {
 interface DatabaseTableProps {
   groups: string[];
   tags: Tag[];
+  customTagNames: string[];
   uploadId?: string;
+  addFeedback: (tokens: FeedbackMetadata, objectTokens: string[], objectTags: string[]) => void;
   initialSelectedTag?: string | null;
 }
 
@@ -39,11 +43,13 @@ interface TableContentProps {
   isLoadingObjectRecords: boolean;
   isLoadingTokenRecords: boolean;
   tags: Tag[];
+  customTagNames: string[];
   hasMoreTokens?: boolean;
   hasMoreObjects?: boolean;
   onLoadMore?: () => void;
   showFilterContent: boolean;
   pathMap?: Record<string, string>;
+  addFeedback: (tokens: FeedbackMetadata, objectTokens: string[], objectTags: string[]) => void;
 }
 
 type ViewMode = 'object' | 'classified-token';
