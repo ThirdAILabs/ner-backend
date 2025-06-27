@@ -18,16 +18,20 @@ import (
 type WorkerConfig struct {
 	DatabaseURL                 string `env:"DATABASE_URL,notEmpty,required"`
 	RabbitMQURL                 string `env:"RABBITMQ_URL,notEmpty,required"`
-	Endpoint               string `env:"S3_ENDPOINT_URL,notEmpty,required"`
-	AccessKeyID               string `env:"INTERNAL_AWS_ACCESS_KEY_ID,notEmpty,required"`
-	SecretAccessKey           string `env:"INTERNAL_AWS_SECRET_ACCESS_KEY,notEmpty,required"`
+	Endpoint                    string `env:"S3_ENDPOINT_URL,notEmpty,required"`
+	AccessKeyID                 string `env:"INTERNAL_AWS_ACCESS_KEY_ID,notEmpty,required"`
+	SecretAccessKey             string `env:"INTERNAL_AWS_SECRET_ACCESS_KEY,notEmpty,required"`
 	ModelBucketName             string `env:"MODEL_BUCKET_NAME" envDefault:"ner-models"`
+	UploadBucketName            string `env:"UPLOAD_BUCKET_NAME" envDefault:"uploads"`
 	QueueNames                  string `env:"QUEUE_NAMES" envDefault:"inference_queue,training_queue,shard_data_queue"`
 	WorkerConcurrency           int    `env:"CONCURRENCY" envDefault:"1"`
 	LicenseKey                  string `env:"LICENSE_KEY" envDefault:""`
 	PythonExecutablePath        string `env:"PYTHON_EXECUTABLE_PATH" envDefault:"python"`
 	PythonModelPluginScriptPath string `env:"PYTHON_MODEL_PLUGIN_SCRIPT_PATH" envDefault:"plugin/plugin-python/plugin.py"`
 }
+
+// TODO: Instead of hardcoding to empty config, initialize with local config.
+var defaultConnectorConfigs = storage.ConnectorConfigs{}
 
 func main() {
 	log.Println("Starting Worker Process...")
@@ -71,7 +75,7 @@ func main() {
 
 	loaders := core.NewModelLoaders()
 
-	worker := core.NewTaskProcessor(db, s3ObjectStore, publisher, receiver, licensing, "./tmp_models_TODO", cfg.ModelBucketName, loaders)
+	worker := core.NewTaskProcessor(db, s3ObjectStore, publisher, receiver, licensing, "./tmp_models_TODO", cfg.ModelBucketName, cfg.UploadBucketName, defaultConnectorConfigs, loaders)
 
 	go worker.Start()
 

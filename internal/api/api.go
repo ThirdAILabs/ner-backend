@@ -35,24 +35,27 @@ import (
 type BackendService struct {
 	db               *gorm.DB
 	storage          storage.ObjectStore
+	uploadBucket     string
 	publisher        messaging.Publisher
 	chunkTargetBytes int64
 	licensing        licensing.LicenseVerifier
+	
+	// Used for non-upload connectors.
+	defaultConnectorConfigs storage.ConnectorConfigs
 }
 
 const (
 	UploadStorageType = "upload"
-	uploadBucket = "uploads"
 	ErrCodeDB    = 1001 // Custom internal code for DB errors
 )
 
-func NewBackendService(db *gorm.DB, storage storage.ObjectStore, pub messaging.Publisher, chunkTargetBytes int64, licenseVerifier licensing.LicenseVerifier) *BackendService {
+func NewBackendService(db *gorm.DB, storage storage.ObjectStore, uploadBucket string, pub messaging.Publisher, chunkTargetBytes int64, licenseVerifier licensing.LicenseVerifier, defaultConnectorConfigs storage.ConnectorConfigs) *BackendService {
 	if err := storage.CreateBucket(context.Background(), uploadBucket); err != nil {
 		slog.Error("error creating upload bucket", "error", err)
 		panic("failed to create upload bucket")
 	}
 
-	return &BackendService{db: db, storage: storage, publisher: pub, chunkTargetBytes: chunkTargetBytes, licensing: licenseVerifier}
+	return &BackendService{db: db, storage: storage, publisher: pub, chunkTargetBytes: chunkTargetBytes, licensing: licenseVerifier, defaultConnectorConfigs: defaultConnectorConfigs}
 }
 
 func (s *BackendService) AddRoutes(r chi.Router) {
@@ -288,30 +291,17 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 	}
 
 	var isUpload bool = req.StorageType == UploadStorageType
-
-	// Custom connector initialization logic for uploads. It is a special case because it has to be consistent with
-	// the storage used by the backend service.
-	if isUpload {
-		uploadParams := struct{ UploadId string}{}
-		if err := json.Unmarshal(req.StorageParams, &uploadParams); err != nil {
-			return nil, CodedErrorf(http.StatusInternalServerError, "error unmarshalling storage params: %v", err)
-		}
-		connectorType, connectorParams, err := s.storage.GetUploadLocation(uploadBucket, uploadParams.UploadId)
-		req.StorageType = string(connectorType)
-		req.StorageParams = connectorParams
+	// No need to check parameter validity if upload since it uses the default app storage
+	if !isUpload {
+		connectorType, err := storage.ToConnectorType(req.StorageType)
 		if err != nil {
-			return nil, CodedErrorf(http.StatusInternalServerError, "error getting connector params: %v", err)
+			return nil, CodedErrorf(http.StatusBadRequest, "invalid storage type: %v", err)
 		}
-	}
-
-	connectorType, err := storage.ToConnectorType(req.StorageType)
-	if err != nil {
-		return nil, CodedErrorf(http.StatusBadRequest, "invalid storage type: %v", err)
-	}
-
-	_, err = storage.NewConnector(r.Context(), connectorType, req.StorageParams)
-	if err != nil {
-		return nil, CodedErrorf(http.StatusInternalServerError, "error validating connector params: %v", err)
+	
+		_, err = storage.NewConnector(r.Context(), connectorType, s.defaultConnectorConfigs, req.StorageParams)
+		if err != nil {
+			return nil, CodedErrorf(http.StatusInternalServerError, "error validating connector params: %v", err)
+		}
 	}
 
 	if err := validateName(req.ReportName); err != nil {
@@ -877,7 +867,7 @@ func (s *BackendService) UploadFiles(r *http.Request) (any, error) {
 
 			newFilepath := filepath.Join(uploadId.String(), part.FileName())
 
-			if err := s.storage.PutObject(r.Context(), uploadBucket, newFilepath, part); err != nil {
+			if err := s.storage.PutObject(r.Context(), s.uploadBucket, newFilepath, part); err != nil {
 				slog.Error("error uploading file to storage", "error", err)
 				return nil, CodedErrorf(http.StatusInternalServerError, "error saving file")
 			}
@@ -1062,12 +1052,16 @@ func (s *BackendService) ValidateS3Access(r *http.Request) (any, error) {
 		return nil, err
 	}
 
-	_, err = storage.NewS3Connector(r.Context(), storage.S3ConnectorParams{
-		Endpoint: req.S3Endpoint,
-		Region: req.Region,
-		Bucket: req.SourceS3Bucket,
-		Prefix: req.SourceS3Prefix,
-	})
+	_, err = storage.NewS3Connector(
+		r.Context(),
+		s.defaultConnectorConfigs.S3,
+		storage.S3ConnectorParams{
+			Endpoint: req.S3Endpoint,
+			Region: req.Region,
+			Bucket: req.SourceS3Bucket,
+			Prefix: req.SourceS3Prefix,
+		},
+	)
 	
 	return nil, err
 }

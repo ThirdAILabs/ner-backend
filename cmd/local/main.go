@@ -38,6 +38,7 @@ type Config struct {
 	License          string `env:"LICENSE_KEY" envDefault:""`
 	ModelDir         string `env:"MODEL_DIR" envDefault:""`
 	ModelType        string `env:"MODEL_TYPE"`
+	UploadBucket     string `env:"UPLOAD_BUCKET" envDefault:"uploads"`
 	AppDataDir       string `env:"APP_DATA_DIR" envDefault:"./pocket-shield"`
 	OnnxRuntimeDylib string `env:"ONNX_RUNTIME_DYLIB"`
 	EnablePython     bool   `env:"ENABLE_PYTHON" envDefault:"false"`
@@ -47,8 +48,12 @@ const (
 	chunkTargetBytes = 200 * 1024 * 1024 // 200MB
 )
 
+// TODO: Instead of hardcoding to empty config, initialize with local config.
+var defaultConnectorConfigs = storage.ConnectorConfigs{}
+
+
 func createDatabase(root string, localBaseDir string) *gorm.DB {
-	migration_6.SetDefaultStorageProvider(storage.LocalConnectorType)
+	migration_6.SetDefaultStorageProvider(string(storage.LocalConnectorType))
 	migration_6.SetDefaultLocalBaseDir(localBaseDir)
 	
 	path := filepath.Join(root, "db", "pocket-shield.db")
@@ -101,7 +106,7 @@ func createQueue(db *gorm.DB) *messaging.InMemoryQueue {
 	return queue
 }
 
-func createServer(db *gorm.DB, storage storage.ObjectStore, queue messaging.Publisher, port int, modelDir string, modelType core.ModelType, licensing licensing.LicenseVerifier) *http.Server {
+func createServer(db *gorm.DB, storage storage.ObjectStore, queue messaging.Publisher, port int, modelDir string, modelType core.ModelType, uploadBucket string, licensing licensing.LicenseVerifier) *http.Server {
 	r := chi.NewRouter()
 
 	// Middleware
@@ -118,7 +123,7 @@ func createServer(db *gorm.DB, storage storage.ObjectStore, queue messaging.Publ
 	r.Use(middleware.Recoverer)                 // Recover from panics
 	r.Use(middleware.Timeout(60 * time.Second)) // Set request timeout
 
-	apiHandler := api.NewBackendService(db, storage, queue, chunkTargetBytes, licensing)
+	apiHandler := api.NewBackendService(db, storage, uploadBucket, queue, chunkTargetBytes, licensing, defaultConnectorConfigs)
 
 	loaders := core.NewModelLoaders()
 
@@ -234,7 +239,7 @@ func main() {
 
 	licensing := cmd.CreateLicenseVerifier(db, cfg.License)
 
-	worker := core.NewTaskProcessor(db, objectStore, queue, queue, licensing, filepath.Join(cfg.Root, "models"), modelBucket, core.NewModelLoaders())
+	worker := core.NewTaskProcessor(db, objectStore, queue, queue, licensing, filepath.Join(cfg.Root, "models"), modelBucket, cfg.UploadBucket, defaultConnectorConfigs, core.NewModelLoaders())
 
 	var basicModel database.Model
 	if err := db.Where("name = ?", "basic").First(&basicModel).Error; err != nil {
@@ -245,7 +250,7 @@ func main() {
 	if err := objectStore.DownloadDir(context.Background(), modelBucket, basicModel.Id.String(), basicModelDir, true); err != nil {
 		log.Fatalf("failed to download model: %v", err)
 	}
-	server := createServer(db, objectStore, queue, cfg.Port, basicModelDir, core.ParseModelType(cfg.ModelType), licensing)
+	server := createServer(db, objectStore, queue, cfg.Port, basicModelDir, core.ParseModelType(cfg.ModelType), cfg.UploadBucket, licensing)
 
 	slog.Info("starting worker")
 	go worker.Start()

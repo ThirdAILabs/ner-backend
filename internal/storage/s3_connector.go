@@ -10,11 +10,14 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
+type S3ConnectorConfig struct {
+	AccessKeyID string
+	SecretAccessKey string
+}
+
 type S3ConnectorParams struct {
 	Endpoint string
 	Region string
-	AccessKeyID string
-	SecretAccessKey string
 	Bucket string
 	Prefix string
 }
@@ -28,12 +31,12 @@ type S3Connector struct {
 	params S3ConnectorParams
 }
 
-func NewS3Connector(ctx context.Context, params S3ConnectorParams) (*S3Connector, error) {
+func NewS3Connector(ctx context.Context, config S3ConnectorConfig, params S3ConnectorParams) (*S3Connector, error) {
 	client, err := initializeS3Client(S3ClientConfig{
 		Endpoint: params.Endpoint,
 		Region: params.Region,
-		AccessKeyID: params.AccessKeyID,
-		SecretAccessKey: params.SecretAccessKey,
+		AccessKeyID: config.AccessKeyID,
+		SecretAccessKey: config.SecretAccessKey,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize s3 client: %w", err)

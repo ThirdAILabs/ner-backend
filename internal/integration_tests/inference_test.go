@@ -29,8 +29,9 @@ import (
 )
 
 const (
-	dataBucket  = "test-data"
-	unicodeText = `Name: Zoë Faulkner 🌟 | Address: 742 Evergreen Terrace, Springfield 🏡 | SSN: 123-45-6789 🆔
+	uploadBucket = "uploads"
+	dataBucket   = "test-data"
+	unicodeText  = `Name: Zoë Faulkner 🌟 | Address: 742 Evergreen Terrace, Springfield 🏡 | SSN: 123-45-6789 🆔
 Name: Jürgen Müller 🧑‍🔬 | Email: jurgen.müller@example.de 📧 | City: München, Germany 🇩🇪
 Name: Aiko Tanaka 🎎 | Phone: +81-90-1234-5678 📱 | Prefecture: 東京 (Tokyo) 🗼
 Name: Carlos Andrés Pérez 🎭 | Passport: X12345678 🇨🇴 | Address: Calle 123, Bogotá 🏙️
@@ -40,8 +41,8 @@ Name: Chloé Dubois 🎨 | SSN: 987-65-4321 🔐 | City: Marseille 🇫🇷
 Name: Иван Иванов 📚 | Phone: +7 495 123-45-67 ☎️ | City: Москва (Moscow) 🇷🇺
 Name: 李小龍 (Bruce Lee) 🐉 | Email: brucelee@kungfu.cn 📩 | Province: 廣東 (Guangdong) 🏯
 Name: Amelia O’Connell 🍀 | Address: 1 Abbey Rd, Dublin 🇮🇪 | PPSN: 1234567TA 🗃️`
-	phoneText = "this is a test file with a phone number 123-456-7890"
-	emailText = "this is a test file with an email address abc@email.com"
+	phoneText  = "this is a test file with a phone number 123-456-7890"
+	emailText  = "this is a test file with an email address abc@email.com"
 )
 
 var expected = []string{
@@ -77,6 +78,8 @@ var expected = []string{
 	"廣東", "Guangdong",
 	"123",
 }
+
+var defaultConnectorConfigs = storage.ConnectorConfigs{}
 
 func createData(t *testing.T, storage storage.ObjectStore) {
 	require.NoError(t, storage.CreateBucket(context.Background(), dataBucket))
@@ -162,13 +165,13 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 
 	publisher, reciever := setupRabbitMQContainer(t, ctx)
 
-	backend := backendapi.NewBackendService(db, s3ObjectStore, publisher, 120, &DummyLicenseVerifier{})
+	backend := backendapi.NewBackendService(db, s3ObjectStore, uploadBucket, publisher, 120, &DummyLicenseVerifier{}, defaultConnectorConfigs)
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
 	modelName, modelLoader, modelId := createModel(t, s3ObjectStore, db, modelBucket)
 
-	worker := core.NewTaskProcessor(db, s3ObjectStore, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket, map[core.ModelType]core.ModelLoader{
+	worker := core.NewTaskProcessor(db, s3ObjectStore, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket, uploadBucket, defaultConnectorConfigs, map[core.ModelType]core.ModelLoader{
 		core.ParseModelType(modelName): modelLoader,
 	})
 
@@ -272,13 +275,13 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 
 	publisher, reciever := setupRabbitMQContainer(t, ctx)
 
-	backend := backendapi.NewBackendService(db, s3ObjectStore, publisher, 120, &DummyLicenseVerifier{})
+	backend := backendapi.NewBackendService(db, s3ObjectStore, uploadBucket, publisher, 120, &DummyLicenseVerifier{}, defaultConnectorConfigs)
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
 	modelName, modelLoader, modelId := createModel(t, s3ObjectStore, db, modelBucket)
 
-	worker := core.NewTaskProcessor(db, s3ObjectStore, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket, map[core.ModelType]core.ModelLoader{
+	worker := core.NewTaskProcessor(db, s3ObjectStore, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket, uploadBucket, defaultConnectorConfigs, map[core.ModelType]core.ModelLoader{
 		core.ParseModelType(modelName): modelLoader,
 	})
 
@@ -333,7 +336,7 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 
 	publisher, receiver := setupRabbitMQContainer(t, ctx)
 
-	backendSvc := backendapi.NewBackendService(db, s3ObjectStore, publisher, 120, &DummyLicenseVerifier{})
+	backendSvc := backendapi.NewBackendService(db, s3ObjectStore, uploadBucket, publisher, 120, &DummyLicenseVerifier{}, defaultConnectorConfigs)
 	router := chi.NewRouter()
 	backendSvc.AddRoutes(router)
 
@@ -343,7 +346,7 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 	)
 
 	tempDir := t.TempDir()
-	worker := core.NewTaskProcessor(db, s3ObjectStore, publisher, receiver, &DummyLicenseVerifier{}, tempDir, modelBucket, core.NewModelLoaders())
+	worker := core.NewTaskProcessor(db, s3ObjectStore, publisher, receiver, &DummyLicenseVerifier{}, tempDir, modelBucket, uploadBucket, defaultConnectorConfigs, core.NewModelLoaders())
 	go worker.Start()
 	t.Cleanup(worker.Stop)
 

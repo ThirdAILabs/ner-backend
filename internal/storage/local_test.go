@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -23,11 +24,15 @@ func setupTestObjectStore(t *testing.T) (*LocalObjectStore, string) {
 func setupTestConnector(t *testing.T) (*LocalConnector, *LocalObjectStore, string) {
 	t.Helper()
 	objectStore, dir := setupTestObjectStore(t)
-	connector := NewLocalConnector(LocalConnectorParams{
-		BaseDir: dir,
-		Bucket:  "test-bucket",
-		Prefix:  "test-prefix",
-	})
+	connector := NewLocalConnector(
+		LocalConnectorConfig{
+			BaseDir: dir,
+		},
+		LocalConnectorParams{	
+			Bucket:  "test-bucket",
+			Prefix:  "test-prefix",
+		},
+	)
 	return connector, objectStore, dir
 }
 
@@ -174,22 +179,15 @@ func TestLocalObjectStore_DownloadDir_Overwrite(t *testing.T) {
 	assert.Equal(t, "new", string(data), "File should be overwritten when overwrite=true")
 }
 
-func TestLocalObjectStore_GetConnector(t *testing.T) {
-	objectStore, baseDir := setupTestObjectStore(t)
+func TestLocalObjectStore_GetUploadConnector(t *testing.T) {
+	objectStore, _ := setupTestObjectStore(t)
 
 	bucket := "test-bucket"
-	prefix := "test-prefix"
+	uploadId := uuid.New()
 
-	connectorType, connectorParams, err := objectStore.GetUploadLocation(bucket, prefix)
+	connector, err := objectStore.GetUploadConnector(context.Background(), bucket, UploadParams{ UploadId: uploadId })
 	require.NoError(t, err)
-	assert.Equal(t, LocalConnectorType, connectorType)
-	
-	// Verify the params are well formatted
-	var params LocalConnectorParams
-	require.NoError(t, json.Unmarshal(connectorParams, &params))
-	assert.Equal(t, baseDir, params.BaseDir)
-	assert.Equal(t, bucket, params.Bucket)
-	assert.Equal(t, prefix, params.Prefix)
+	require.NotNil(t, connector)
 }
 
 func TestLocalConnector_CreateInferenceTasks(t *testing.T) {

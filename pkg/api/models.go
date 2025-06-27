@@ -75,7 +75,7 @@ type Entity struct {
 type CreateReportRequest struct {
 	ModelId uuid.UUID
 
-	ReportName     string
+	ReportName      string
 	StorageType     string
 	StorageParams   json.RawMessage
 

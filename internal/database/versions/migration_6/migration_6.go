@@ -162,7 +162,6 @@ func transformReports(db *gorm.DB) error {
 		
 		if storageType == storage.LocalConnectorType {
 			storageParams := storage.LocalConnectorParams{
-				BaseDir: defaultLocalBaseDir,
 				Bucket:  report.SourceS3Bucket,
 				Prefix:  report.SourceS3Prefix.String,
 			}

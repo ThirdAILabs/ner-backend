@@ -30,12 +30,16 @@ type TaskProcessor struct {
 	storage   storage.ObjectStore
 	publisher messaging.Publisher
 	reciever  messaging.Reciever
-
+	
 	licensing licensing.LicenseVerifier
-
+	
 	localModelDir string
 	modelBucket   string
+	uploadBucket  string
+	// Configs for non-upload connectors.
+	defaultConnectorConfigs storage.ConnectorConfigs
 	modelLoaders  map[ModelType]ModelLoader
+
 }
 
 const bytesPerMB = 1024 * 1024
@@ -47,16 +51,18 @@ var ExcludedTags = map[string]struct{}{
 	"SERVICE_CODE":       {},
 }
 
-func NewTaskProcessor(db *gorm.DB, storage storage.ObjectStore, publisher messaging.Publisher, reciever messaging.Reciever, licenseVerifier licensing.LicenseVerifier, localModelDir string, modelBucket string, modelLoaders map[ModelType]ModelLoader) *TaskProcessor {
+func NewTaskProcessor(db *gorm.DB, storage storage.ObjectStore, publisher messaging.Publisher, reciever messaging.Reciever, licenseVerifier licensing.LicenseVerifier, localModelDir string, modelBucket string, uploadBucket string, defaultConnectorConfigs storage.ConnectorConfigs, modelLoaders map[ModelType]ModelLoader) *TaskProcessor {
 	return &TaskProcessor{
-		db:            db,
-		storage:       storage,
-		publisher:     publisher,
-		reciever:      reciever,
-		licensing:     licenseVerifier,
-		localModelDir: localModelDir,
-		modelBucket:   modelBucket,
-		modelLoaders:  modelLoaders,
+		db:                      db,
+		storage:                 storage,
+		publisher:               publisher,
+		reciever:                reciever,
+		licensing:               licenseVerifier,
+		localModelDir:           localModelDir,
+		modelBucket:             modelBucket,
+		uploadBucket:            uploadBucket,
+		defaultConnectorConfigs: defaultConnectorConfigs,
+		modelLoaders:            modelLoaders,
 	}
 }
 
@@ -156,6 +162,24 @@ func (proc *TaskProcessor) updateFileCount(reportId uuid.UUID, success bool) err
 	return nil
 }
 
+func (proc *TaskProcessor) getConnector(ctx context.Context, report database.Report) (storage.Connector, error) {
+	// Custom connector initialization logic for uploads. It is a special case because it has to be consistent with
+	// the storage used by the backend service.
+	if report.IsUpload {
+		var uploadParams storage.UploadParams
+		if err := json.Unmarshal(report.StorageParams, &uploadParams); err != nil {
+			return nil, fmt.Errorf("error unmarshalling storage params: %w", err)
+		}
+		return proc.storage.GetUploadConnector(ctx, proc.uploadBucket, uploadParams)
+	}
+	connectorType, err := storage.ToConnectorType(report.StorageType)
+	if err != nil {
+		return nil, fmt.Errorf("invalid storage type: %v", err)
+	}
+	return storage.NewConnector(ctx, connectorType, proc.defaultConnectorConfigs, report.StorageParams)
+
+}
+
 func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload messaging.InferenceTaskPayload) error {
 
 	reportId := payload.ReportId
@@ -207,12 +231,7 @@ func (proc *TaskProcessor) processInferenceTask(ctx context.Context, payload mes
 		groupToQuery[group.Id] = group.Query
 	}
 
-	connectorType, err := storage.ToConnectorType(task.Report.StorageType)
-	if err != nil {
-		return fmt.Errorf("invalid storage type: %v", err)
-	}
-
-	connector, err := storage.NewConnector(ctx, connectorType, task.Report.StorageParams)
+	connector, err := proc.getConnector(ctx, *task.Report)
 	if err != nil {
 		return fmt.Errorf("error initializing connector for inference task: %w", err)
 	}
@@ -733,14 +752,9 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 		return nil
 	}
 
-	connectorType, err := storage.ToConnectorType(task.Report.StorageType)
+	connector, err := proc.getConnector(ctx, *task.Report)
 	if err != nil {
-		return fmt.Errorf("invalid storage type: %v", err)
-	}
-
-	connector, err := storage.NewConnector(ctx, connectorType, task.Report.StorageParams)
-	if err != nil {
-		return err
+		return fmt.Errorf("error initializing connector for inference task: %w", err)
 	}
 
 	inferenceTasks, totalObjects, err := connector.CreateInferenceTasks(ctx, targetBytes)

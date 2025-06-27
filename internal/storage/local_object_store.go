@@ -2,7 +2,6 @@ package storage
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -96,17 +95,14 @@ func (s *LocalObjectStore) UploadDir(ctx context.Context, bucket, prefix, src st
 	return nil
 }
 
-func (s *LocalObjectStore) GetUploadLocation(bucket, uploadId string) (connectorType, []byte, error) {
-	
-	params, err := json.Marshal(LocalConnectorParams{
-		BaseDir: s.baseDir,
-		Bucket: bucket,
-		Prefix: uploadId,
-	})
-
-	if err != nil {
-		return "", nil, fmt.Errorf("failed to marshal upload location: %w", err)
-	}
-
-	return LocalConnectorType, params, nil
+func (s *LocalObjectStore) GetUploadConnector(ctx context.Context, bucket string, uploadParams UploadParams) (Connector, error) {
+	return NewLocalConnector(
+		LocalConnectorConfig{
+			BaseDir: s.baseDir,
+		},
+		LocalConnectorParams{
+			Bucket: bucket,
+			Prefix: uploadParams.UploadId.String(),
+		},
+	), nil
 }

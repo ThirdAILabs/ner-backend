@@ -50,7 +50,7 @@ func setupCommon(t *testing.T) (
 	db = createDB(t)
 	pub, sub = setupRabbitMQContainer(t, ctx)
 
-	backendSvc := backendpkg.NewBackendService(db, s3ObjectStore, pub, 120, &DummyLicenseVerifier{})
+	backendSvc := backendpkg.NewBackendService(db, s3ObjectStore, "uploads", pub, 120, &DummyLicenseVerifier{}, storage.ConnectorConfigs{})
 	r := chi.NewRouter()
 	backendSvc.AddRoutes(r)
 
@@ -66,7 +66,7 @@ func startWorker(
 	bucket string,
 	loaders map[core.ModelType]core.ModelLoader,
 ) (stop func()) {
-	worker := core.NewTaskProcessor(db, s3ObjectStore, pub, sub, &DummyLicenseVerifier{}, t.TempDir(), bucket, loaders)
+	worker := core.NewTaskProcessor(db, s3ObjectStore, pub, sub, &DummyLicenseVerifier{}, t.TempDir(), bucket, "uploads", storage.ConnectorConfigs{}, loaders)
 	go worker.Start()
 	return worker.Stop
 }

@@ -3,7 +3,13 @@ package storage
 import (
 	"context"
 	"io"
+
+	"github.com/google/uuid"
 )
+
+type UploadParams struct {
+	UploadId uuid.UUID
+}
 
 type ObjectStore interface {
 	CreateBucket(ctx context.Context, bucket string) error
@@ -16,5 +22,5 @@ type ObjectStore interface {
 
 	UploadDir(ctx context.Context, bucket, prefix, src string) error
 
-	GetUploadLocation(bucket, uploadId string) (connectorType, []byte, error)
+	GetUploadConnector(ctx context.Context, bucket string, uploadParams UploadParams) (Connector, error)
 }

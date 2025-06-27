@@ -51,21 +51,29 @@ func ToConnectorType(typeString string) (connectorType, error) {
 	return "", fmt.Errorf("unknown connector type: %s", typeString)
 }
 
-func NewConnector(ctx context.Context, connectorType connectorType, params []byte) (Connector, error) {
+type ConnectorConfigs struct {
+	Local LocalConnectorConfig
+	S3    S3ConnectorConfig
+}
+
+func NewConnector(ctx context.Context, connectorType connectorType, defaultConfigs ConnectorConfigs, params []byte) (Connector, error) {
+	// Config is for app-wide configurations such as root directories or credentials while params are for task specific identifiers.
+	// Unlike config, params is stored in the reports table of the database.
+	// 
 	switch connectorType {
 	case LocalConnectorType:
 		var localConnectorParams LocalConnectorParams
 		if err := json.Unmarshal(params, &localConnectorParams); err != nil {
 			return nil, err
 		}
-		return NewLocalConnector(localConnectorParams), nil
+		return NewLocalConnector(defaultConfigs.Local, localConnectorParams), nil
 		
 	case S3ConnectorType:
 		var s3ConnectorParams S3ConnectorParams
 		if err := json.Unmarshal(params, &s3ConnectorParams); err != nil {
 			return nil, err
 		}
-		return NewS3Connector(ctx, s3ConnectorParams)
+		return NewS3Connector(ctx, defaultConfigs.S3, s3ConnectorParams)
 		
 	default:
 		return nil, fmt.Errorf("unknown connector type: %s", connectorType)
