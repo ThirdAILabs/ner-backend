@@ -33,7 +33,7 @@ func NewLocalConnector(params LocalConnectorParams) *LocalConnector {
 }
 
 func (c *LocalConnector) CreateInferenceTasks(ctx context.Context, targetBytes int64) ([]InferenceTask, int64, error) {
-	return createInferenceTasks(c.iterObjects(c.params.Bucket, c.params.Prefix), targetBytes)
+	return createInferenceTasks(c.iterObjects(), targetBytes)
 }
 
 func (c *LocalConnector) IterTaskChunks(ctx context.Context, params []byte) (<-chan ObjectChunkStream, error) {
@@ -45,9 +45,9 @@ func (c *LocalConnector) IterTaskChunks(ctx context.Context, params []byte) (<-c
 	return iterTaskChunks(ctx, c.params.Bucket, parsedParams.ChunkKeys, c)
 }
 
-func (c *LocalConnector) iterObjects(bucket, dir string) ObjectIterator {
+func (c *LocalConnector) iterObjects() ObjectIterator {
 	return func(yield func(obj Object, err error) bool) {
-		err := filepath.WalkDir(localStorageFullpath(c.params.BaseDir, bucket, dir), func(path string, d fs.DirEntry, err error) error {
+		err := filepath.WalkDir(localStorageFullpath(c.params.BaseDir, c.params.Bucket, c.params.Prefix), func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
@@ -60,7 +60,7 @@ func (c *LocalConnector) iterObjects(bucket, dir string) ObjectIterator {
 				return err
 			}
 
-			obj := Object{Name: filepath.Join(dir, d.Name()), Size: info.Size()}
+			obj := Object{Name: filepath.Join(c.params.Prefix, d.Name()), Size: info.Size()}
 			if !yield(obj, nil) {
 				return io.EOF
 			}
