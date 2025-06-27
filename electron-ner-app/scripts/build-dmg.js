@@ -3,6 +3,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
+import { createRequire } from 'module';
+
+// Create require for CommonJS modules
+const require = createRequire(import.meta.url);
+const { getExecutableName } = require('./platform-utils.cjs');
 
 const execAsync = promisify(exec);
 
@@ -21,11 +26,11 @@ console.log('Go project directory:', goProjectDir);
 // Step 1: Check the Go backend executable
 console.log('\n=== Checking Go backend ===');
 try {
-  const backendExecutable = path.join(goProjectDir, 'main.exe');
+  const backendExecutable = path.join(goProjectDir, getExecutableName('main'));
   
   if (!fs.existsSync(backendExecutable)) {
     console.error('Error: Go backend executable not found at:', backendExecutable);
-    console.error('Please make sure you have built the backend first with "go build -o main"');
+    console.error(`Please make sure you have built the backend first with "go build -o ${getExecutableName('main')}"`);
     process.exit(1);
   }
   
@@ -38,9 +43,9 @@ try {
 // Step 2: Copy the backend to bin directory
 console.log('\n=== Copying backend to electron app ===');
 try {
-  const backendExecutable = path.join(goProjectDir, 'main');
+  const backendExecutable = path.join(goProjectDir, getExecutableName('main'));
   const binDir = path.join(rootDir, 'bin');
-  const targetExecutable = path.join(binDir, 'main');
+  const targetExecutable = path.join(binDir, getExecutableName('main'));
   
   // Ensure bin directory exists
   if (!fs.existsSync(binDir)) {
@@ -61,7 +66,7 @@ try {
 // Step 3: Build the frontend with Vite
 console.log('\n=== Building frontend with Vite ===');
 try {
-  execAsync('npm run vite-build', {
+  await execAsync('npm run vite-build', {
     cwd: rootDir,
     stdio: 'inherit'
   });
@@ -76,7 +81,7 @@ try {
 console.log('\n=== Packaging with electron-builder ===');
 try {
   // Make sure we use NODE_ENV=production for packaging
-  execAsync('NODE_ENV=production npm run electron-build -- --mac --x64', {
+  await execAsync('NODE_ENV=production npm run electron-build -- --mac --x64', {
     cwd: rootDir,
     stdio: 'inherit'
   });

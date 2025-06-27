@@ -2,8 +2,14 @@
 
 import React from 'react';
 import { Minus, Square, X } from 'lucide-react';
+import { shouldShowWindowControls } from '@/lib/platform';
 
 export function WindowControls() {
+  // Only render on Windows in Electron
+  if (!shouldShowWindowControls()) {
+    return null;
+  }
+
   const handleMinimize = () => {
     if (typeof window !== 'undefined' && (window as any).electron?.minimizeWindow) {
       (window as any).electron.minimizeWindow();

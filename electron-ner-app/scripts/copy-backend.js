@@ -2,6 +2,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'module';
+
+// Create require for CommonJS modules
+const require = createRequire(import.meta.url);
+const { isWindows, getExecutableName, getWindowsDependencies } = require('./platform-utils.cjs');
 
 // Get __dirname equivalent in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -11,17 +16,8 @@ const __dirname = path.dirname(__filename);
 const projectRoot = path.join(__dirname, '..');
 const binDir = path.join(projectRoot, 'bin');
 const goProjectDir = path.join(projectRoot, '..');
-const backendExecutable = path.join(goProjectDir, 'main.exe');
-const targetExecutable = path.join(binDir, 'main.exe');
-
-const backendLibGcc = path.join(goProjectDir, 'libgcc_s_seh-1.dll');
-const targetLibGcc = path.join(binDir, 'libgcc_s_seh-1.dll');
-const backendsStdc = path.join(goProjectDir, 'libstdc++-6.dll');
-const targetsStdc = path.join(binDir, 'libstdc++-6.dll');
-const backendWinPThread = path.join(goProjectDir, 'libwinpthread-1.dll');
-const targetWinPThread = path.join(binDir, 'libwinpthread-1.dll');
-const backendOnnxRuntime = path.join(goProjectDir, 'onnxruntime.dll');
-const targetOnnxRuntime = path.join(binDir, 'onnxruntime.dll');
+const backendExecutable = path.join(goProjectDir, getExecutableName('main'));
+const targetExecutable = path.join(binDir, getExecutableName('main'));
 
 // Plugin paths
 const pluginDir = path.join(projectRoot, '..', 'plugin/plugin-python/dist/plugin');
@@ -40,7 +36,8 @@ if (!fs.existsSync(backendExecutable)) {
   
   try {
     // Try to build the backend
-    execSync('go build -o main', { cwd: goProjectDir, stdio: 'inherit' });
+    const outputName = getExecutableName('main');
+    execSync(`go build -o ${outputName}`, { cwd: goProjectDir, stdio: 'inherit' });
     console.log('Go backend built successfully.');
   } catch (error) {
     console.error('Failed to build Go backend:', error.message);
@@ -52,10 +49,21 @@ if (!fs.existsSync(backendExecutable)) {
 try {
   console.log(`Copying backend from ${backendExecutable} to ${targetExecutable}`);
   fs.copyFileSync(backendExecutable, targetExecutable);
-  fs.copyFileSync(backendLibGcc, targetLibGcc);
-  fs.copyFileSync(backendsStdc, targetsStdc);
-  fs.copyFileSync(backendWinPThread, targetWinPThread);
-  fs.copyFileSync(backendOnnxRuntime, targetOnnxRuntime);
+  
+  // Copy Windows dependencies if on Windows
+  if (isWindows()) {
+    const windowsDeps = getWindowsDependencies();
+    for (const dep of windowsDeps) {
+      const sourcePath = path.join(goProjectDir, dep);
+      const targetPath = path.join(binDir, dep);
+      if (fs.existsSync(sourcePath)) {
+        console.log(`Copying Windows dependency: ${dep}`);
+        fs.copyFileSync(sourcePath, targetPath);
+      } else {
+        console.warn(`Windows dependency not found: ${sourcePath}`);
+      }
+    }
+  }
   
   // Make it executable
   fs.chmodSync(targetExecutable, '755');

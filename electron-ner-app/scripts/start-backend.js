@@ -3,9 +3,14 @@ import { app } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'module';
 import { FIXED_PORT, ensurePortIsFree } from './check-port.js';
 import log from 'electron-log';
 import { get } from 'node:http';
+
+// Create require for CommonJS modules
+const require = createRequire(import.meta.url);
+const { getExecutableName, getOnnxRuntimePath } = require('./platform-utils.cjs');
 
 log.transports.file.level = 'debug';
 log.transports.file.resolvePath = () => {
@@ -82,7 +87,7 @@ function getBinPath() {
 
 function getBackendPath() {
   const binPath = getBinPath();
-  return binPath ? path.join(binPath, 'main.exe') : null;
+  return binPath ? path.join(binPath, getExecutableName('main')) : null;
 }
 
 function getModelConfigPath() {
@@ -147,36 +152,11 @@ export async function startBackend() {
   const pluginPath = path.join(backendDir, 'plugin', 'plugin');
 
   // Determine the correct path for ONNX Runtime library based on platform and environment
-  let onnxRuntimePath;
   const isProduction = process.env.NODE_ENV === 'production' || (process.execPath && process.execPath.includes('Applications'));
+  const onnxRuntimePath = getOnnxRuntimePath(isProduction, getBinPath());
   
   log.debug('Platform detection:', process.platform);
   log.debug('Is production:', isProduction);
-  log.debug('Platform is win32?', process.platform === 'win32');
-  log.debug('Platform is darwin?', process.platform === 'darwin');
-  
-  if (process.platform === 'win32') {
-    // On Windows, use onnxruntime.dll
-    log.debug('Setting Windows ONNX path');
-    onnxRuntimePath = path.join(getBinPath(), 'onnxruntime.dll');
-  } else if (process.platform === 'darwin') {
-    // On macOS, use libonnxruntime.dylib
-    log.debug('Setting macOS ONNX path');
-    if (isProduction) {
-      // In production, the library is in the Frameworks directory
-      const frameworksDir = path.join(path.dirname(process.execPath), '..', 'Frameworks');
-      onnxRuntimePath = path.join(frameworksDir, 'libonnxruntime.dylib');
-    } else {
-      // In development, the library is in the resources directory
-      log.debug('Setting macOS development ONNX path');
-      onnxRuntimePath = path.join(__dirname, '..', 'resources', 'libonnxruntime.dylib');
-    }
-  } else {
-    // On Linux, use libonnxruntime.so
-    log.debug('Setting Linux ONNX path');
-    onnxRuntimePath = path.join(getBinPath(), 'libonnxruntime.so');
-  }
-  
   log.debug('ONNX Runtime library path:', onnxRuntimePath);
     
   const proc = spawn(
