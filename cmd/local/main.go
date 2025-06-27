@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -240,6 +241,15 @@ func main() {
 		log.Fatalf("failed to download model: %v", err)
 	}
 	server := createServer(db, storage, queue, cfg.Port, basicModelDir, core.ParseModelType(cfg.ModelType), licensing)
+
+	// Read OpenAI API key from file and set as environment variable for worker
+	if apiKeyData, err := os.ReadFile("api-key.txt"); err == nil {
+		apiKey := strings.TrimSpace(string(apiKeyData))
+		if apiKey != "" {
+			os.Setenv("OPENAI_API_KEY", apiKey)
+			slog.Info("loaded OpenAI API key for worker")
+		}
+	}
 
 	slog.Info("starting worker")
 	go worker.Start()

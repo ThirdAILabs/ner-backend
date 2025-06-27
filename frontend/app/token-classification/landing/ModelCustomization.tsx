@@ -44,6 +44,13 @@ export interface UserFeedbackSectionProps {
   generateData: 'yes' | 'no';
   setGenerateData: (value: 'yes' | 'no') => void;
   apiKeyError: string | null;
+  showApiKeyDialog: boolean;
+  setShowApiKeyDialog: (show: boolean) => void;
+  apiKeyInput: string;
+  setApiKeyInput: (input: string) => void;
+  validatingApiKey: boolean;
+  setValidatingApiKey: (validating: boolean) => void;
+  setApiKeyError: (error: string | null) => void;
 }
 
 export function UserFeedbackSection({
@@ -63,6 +70,13 @@ export function UserFeedbackSection({
   generateData,
   setGenerateData,
   apiKeyError,
+  showApiKeyDialog,
+  setShowApiKeyDialog,
+  apiKeyInput,
+  setApiKeyInput,
+  validatingApiKey,
+  setValidatingApiKey,
+  setApiKeyError,
 }: UserFeedbackSectionProps) {
   return (
     <Box sx={{ mt: 4 }}>
@@ -236,6 +250,105 @@ export function UserFeedbackSection({
           </Button>
         </DialogActions>
       </Dialog>
+      
+      {/* API Key Dialog */}
+      <Dialog open={showApiKeyDialog} onClose={() => setShowApiKeyDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>OpenAI API Key Required</DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1 }}>
+            <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
+              Synthetic data generation requires an OpenAI API key. Please enter your API key below.
+            </Typography>
+            {apiKeyError && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {apiKeyError}
+              </Alert>
+            )}
+            <TextField
+              fullWidth
+              label="OpenAI API Key"
+              type="password"
+              value={apiKeyInput}
+              onChange={(e) => setApiKeyInput(e.target.value)}
+              placeholder="sk-..."
+              helperText="Your API key will be stored locally and used for generating synthetic training data."
+              disabled={validatingApiKey}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => {
+              setShowApiKeyDialog(false);
+              setApiKeyInput('');
+            }}
+            disabled={validatingApiKey}
+            sx={{ textTransform: 'none' }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={async () => {
+              if (!apiKeyInput.trim()) {
+                setApiKeyError('Please enter an API key');
+                return;
+              }
+              
+              setValidatingApiKey(true);
+              setApiKeyError(null);
+              
+              try {
+                console.log('Starting API key save process...');
+                console.log('API key input:', apiKeyInput);
+                
+                // Validate the API key
+                console.log('Validating API key...');
+                const validation = await nerService.validateOpenAIApiKey(apiKeyInput);
+                console.log('Validation response:', validation);
+                
+                if (!validation.Valid) {
+                  setApiKeyError(validation.Message);
+                  setValidatingApiKey(false);
+                  return;
+                }
+                
+                // Save the API key
+                console.log('Saving API key...');
+                await nerService.setOpenAIApiKey(apiKeyInput);
+                console.log('API key saved successfully');
+                
+                // Close the dialog
+                setShowApiKeyDialog(false);
+                setApiKeyInput('');
+                setValidatingApiKey(false);
+                
+                // Wait a bit for the file to be written
+                setTimeout(() => {
+                  console.log('Retrying finetune submission...');
+                  // Now retry the finetune submission
+                  handleFinetuneSubmit();
+                }, 100);
+              } catch (error: any) {
+                console.error('Error saving API key:', error);
+                setApiKeyError(`Failed to save API key: ${error?.message || 'Unknown error'}`);
+                setValidatingApiKey(false);
+              }
+            }}
+            variant="contained"
+            disabled={validatingApiKey || !apiKeyInput.trim()}
+            sx={{ textTransform: 'none', ml: 1 }}
+          >
+            {validatingApiKey ? (
+              <>
+                <CircularProgress size={16} sx={{ mr: 1 }} />
+                Validating...
+              </>
+            ) : (
+              'Save and Continue'
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
@@ -304,6 +417,9 @@ const ModelCustomization: React.FC = () => {
   const [finetuning, setFinetuning] = useState(false);
   const [generateData, setGenerateData] = useState<'yes' | 'no'>('no');
   const [apiKeyError, setApiKeyError] = useState<string | null>(null);
+  const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [validatingApiKey, setValidatingApiKey] = useState(false);
 
   const handleDeleteFeedback = async (id: string) => {
     if (!selectedModel) return;
@@ -327,9 +443,41 @@ const ModelCustomization: React.FC = () => {
 
   const handleFinetuneSubmit = async () => {
     if (!selectedModel || !finetuneModelName.trim()) return;
+    
+    // Check if synthetic data generation is enabled
+    if (generateData === 'yes') {
+      // First check if we have an API key stored
+      try {
+        console.log('Checking for stored API key...');
+        const storedKey = await nerService.getOpenAIApiKey();
+        console.log('Stored key:', storedKey ? 'Found' : 'Not found');
+        
+        if (!storedKey || storedKey.trim() === '') {
+          setApiKeyError('OpenAI API key is required for synthetic data generation.');
+          setShowApiKeyDialog(true);
+          return;
+        }
+        
+        // Validate the stored API key
+        console.log('Validating API key...');
+        const validation = await nerService.validateOpenAIApiKey(storedKey);
+        console.log('Validation result:', validation);
+        
+        if (!validation.Valid) {
+          setApiKeyError(`Invalid API key: ${validation.Message}`);
+          setShowApiKeyDialog(true);
+          return;
+        }
+      } catch (error: any) {
+        console.error('Error checking API key:', error);
+        setApiKeyError('Failed to validate OpenAI API key.');
+        setShowApiKeyDialog(true);
+        return;
+      }
+    }
+    
     setFinetuning(true);
     setApiKeyError(null);
-    
     
     try {
       // Extract unique tags from feedback data
@@ -516,6 +664,13 @@ const ModelCustomization: React.FC = () => {
               generateData={generateData}
               setGenerateData={setGenerateData}
               apiKeyError={apiKeyError}
+              showApiKeyDialog={showApiKeyDialog}
+              setShowApiKeyDialog={setShowApiKeyDialog}
+              apiKeyInput={apiKeyInput}
+              setApiKeyInput={setApiKeyInput}
+              validatingApiKey={validatingApiKey}
+              setValidatingApiKey={setValidatingApiKey}
+              setApiKeyError={setApiKeyError}
             />
           )}
         </CardContent>

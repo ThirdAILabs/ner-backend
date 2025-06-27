@@ -366,7 +366,16 @@ export const nerService = {
   },
 
   setOpenAIApiKey: async (apiKey: string): Promise<void> => {
-    await axiosInstance.post('/chat/api-key', { ApiKey: apiKey });
+    try {
+      await axiosInstance.post('/chat/api-key', { ApiKey: apiKey });
+    } catch (error) {
+      return handleApiError(error, 'Failed to save OpenAI API key');
+    }
+  },
+
+  validateOpenAIApiKey: async (apiKey: string): Promise<{ Valid: boolean; Message: string }> => {
+    const response = await axiosInstance.post('/chat/api-key/validate', { ApiKey: apiKey });
+    return response.data;
   },
 
   storeFileNameToPath: async (uploadId: string, mapping: { [filename: string]: string }) => {

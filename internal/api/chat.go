@@ -74,6 +74,7 @@ func (s *ChatService) AddRoutes(r chi.Router) {
 		r.Get("/sessions/{session_id}/history", RestHandler(s.GetHistory))
 		r.Get("/api-key", RestHandler(s.GetOpenAIApiKey))
 		r.Post("/api-key", RestHandler(s.SetOpenAIApiKey))
+		r.Post("/api-key/validate", RestHandler(s.ValidateOpenAIApiKey))
 		r.Delete("/api-key", RestHandler(s.DeleteOpenAIApiKey))
 		r.Delete("/sessions/{session_id}", RestHandler(s.DeleteSession))
 	})
@@ -296,10 +297,17 @@ func (s *ChatService) SetOpenAIApiKey(r *http.Request) (any, error) {
 		return nil, err
 	}
 
+	slog.Info("Setting OpenAI API key", "key_length", len(req.ApiKey))
+	
 	err = os.WriteFile("api-key.txt", []byte(req.ApiKey), 0600)
 	if err != nil {
+		slog.Error("Failed to write API key file", "error", err)
 		return nil, err
 	}
+	
+	// Also set it as environment variable immediately
+	os.Setenv("OPENAI_API_KEY", req.ApiKey)
+	slog.Info("OpenAI API key saved and set as environment variable")
 
 	return nil, nil
 }
@@ -310,4 +318,26 @@ func (s *ChatService) DeleteOpenAIApiKey(r *http.Request) (any, error) {
 		return nil, err
 	}
 	return nil, nil
+}
+
+func (s *ChatService) ValidateOpenAIApiKey(r *http.Request) (any, error) {
+	req, err := ParseRequest[api.ApiKey](r)
+	if err != nil {
+		return nil, err
+	}
+
+	// Basic validation
+	apiKey := strings.TrimSpace(req.ApiKey)
+	if apiKey == "" {
+		return api.ValidationResponse{Valid: false, Message: "API key is empty"}, nil
+	}
+
+	// Check if it starts with expected prefix
+	if !strings.HasPrefix(apiKey, "sk-") {
+		return api.ValidationResponse{Valid: false, Message: "API key format is invalid"}, nil
+	}
+
+	// For now, just do basic format validation
+	// A full implementation would make a test API call to OpenAI
+	return api.ValidationResponse{Valid: true, Message: "API key format is valid"}, nil
 }
