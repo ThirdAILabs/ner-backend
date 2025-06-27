@@ -55,7 +55,7 @@ func NewBackendService(db *gorm.DB, storage storage.ObjectStore, uploadBucket st
 		panic("failed to create upload bucket")
 	}
 
-	return &BackendService{db: db, storage: storage, publisher: pub, chunkTargetBytes: chunkTargetBytes, licensing: licenseVerifier, defaultConnectorConfigs: defaultConnectorConfigs}
+	return &BackendService{db: db, storage: storage, uploadBucket: uploadBucket, publisher: pub, chunkTargetBytes: chunkTargetBytes, licensing: licenseVerifier, defaultConnectorConfigs: defaultConnectorConfigs}
 }
 
 func (s *BackendService) AddRoutes(r chi.Router) {
@@ -866,7 +866,6 @@ func (s *BackendService) UploadFiles(r *http.Request) (any, error) {
 			filenames = append(filenames, part.FileName())
 
 			newFilepath := filepath.Join(uploadId.String(), part.FileName())
-
 			if err := s.storage.PutObject(r.Context(), s.uploadBucket, newFilepath, part); err != nil {
 				slog.Error("error uploading file to storage", "error", err)
 				return nil, CodedErrorf(http.StatusInternalServerError, "error saving file")

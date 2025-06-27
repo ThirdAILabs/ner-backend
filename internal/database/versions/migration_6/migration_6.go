@@ -65,7 +65,7 @@ type Report struct {
 
 	// Old source fields
 	S3Endpoint     sql.NullString
-	Region       sql.NullString
+	S3Region       sql.NullString
 	SourceS3Bucket string
 	SourceS3Prefix sql.NullString
 	
@@ -142,7 +142,7 @@ func transformReports(db *gorm.DB) error {
 	var reports []struct {
 		Id              uuid.UUID
 		S3Endpoint      sql.NullString
-		Region        sql.NullString
+		S3Region        sql.NullString
 		SourceS3Bucket  string
 		SourceS3Prefix  sql.NullString
 	}
@@ -169,7 +169,7 @@ func transformReports(db *gorm.DB) error {
 		} else {
 			storageParams := storage.S3ConnectorParams{
 				Endpoint: report.S3Endpoint.String,
-				Region:   report.Region.String,
+				Region:   report.S3Region.String,
 				Bucket:   report.SourceS3Bucket,
 				Prefix:   report.SourceS3Prefix.String,
 			}

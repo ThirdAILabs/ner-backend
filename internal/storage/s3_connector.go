@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -38,6 +39,7 @@ func NewS3Connector(ctx context.Context, config S3ConnectorConfig, params S3Conn
 		AccessKeyID: config.AccessKeyID,
 		SecretAccessKey: config.SecretAccessKey,
 	})
+	slog.Info("Initialized S3 Connector", "config", config, "params", params)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize s3 client: %w", err)
 	}

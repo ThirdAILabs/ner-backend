@@ -170,6 +170,7 @@ func (proc *TaskProcessor) getConnector(ctx context.Context, report database.Rep
 		if err := json.Unmarshal(report.StorageParams, &uploadParams); err != nil {
 			return nil, fmt.Errorf("error unmarshalling storage params: %w", err)
 		}
+		slog.Info("Get upload connector", "upload bucket", proc.uploadBucket)
 		return proc.storage.GetUploadConnector(ctx, proc.uploadBucket, uploadParams)
 	}
 	connectorType, err := storage.ToConnectorType(report.StorageType)

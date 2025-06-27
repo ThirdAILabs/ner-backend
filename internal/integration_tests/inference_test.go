@@ -302,21 +302,20 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 
 	report := waitForReport(t, router, reportId, 10)
 
-	var params storage.LocalConnectorParams
+	var params storage.UploadParams
 	require.NoError(t, json.Unmarshal(report.StorageParams, &params))
 
 	assert.Equal(t, modelId, report.Model.Id)
-	assert.Equal(t, "uploads", params.Bucket)
-	assert.Equal(t, uploadId.String(), params.Prefix)
+	assert.Equal(t, uploadId, params.UploadId)
 
 	entities := getReportEntities(t, router, reportId)
 	assert.Equal(t, 2, len(entities))
 }
 
 func TestInferenceWorkflowForModels(t *testing.T) {
-	if os.Getenv("PYTHON_EXECUTABLE_PATH") == "" || os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH") == "" {
-		t.Fatalf("PYTHON_EXECUTABLE_PATH and PYTHON_MODEL_PLUGIN_SCRIPT_PATH must be set")
-	}
+	// if os.Getenv("PYTHON_EXECUTABLE_PATH") == "" || os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH") == "" {
+	// 	t.Fatalf("PYTHON_EXECUTABLE_PATH and PYTHON_MODEL_PLUGIN_SCRIPT_PATH must be set")
+	// }
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
@@ -341,8 +340,10 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 	backendSvc.AddRoutes(router)
 
 	python.EnablePythonPlugin(
-		os.Getenv("PYTHON_EXECUTABLE_PATH"),
-		os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH"),
+		"python",
+		"plugin/plugin-python/plugin.py",
+		// os.Getenv("PYTHON_EXECUTABLE_PATH"),
+		// os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH"),
 	)
 
 	tempDir := t.TempDir()
@@ -404,12 +405,11 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 
 			report := waitForReport(t, router, reportID, 180)
 
-			var params storage.LocalConnectorParams
+			var params storage.UploadParams
 			require.NoError(t, json.Unmarshal(report.StorageParams, &params))
 
 			assert.Equal(t, model.Id, report.Model.Id)
-			assert.Equal(t, "uploads", params.Bucket)
-			assert.Equal(t, uploadID.String(), params.Prefix)
+			assert.Equal(t, uploadID, params.UploadId)
 
 			entities := getReportEntities(t, router, reportID)
 
