@@ -1,0 +1,145 @@
+/* Content script styles for NER Chrome Extension */
+
+/* Entity highlight styles */
+.ner-highlight {
+    display: inline !important;
+    position: relative !important;
+    z-index: 1000 !important;
+    border-radius: 2px !important;
+    padding: 1px 2px !important;
+    margin: 0 !important;
+    font-weight: 500 !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.15) !important;
+    cursor: help !important;
+    transition: all 0.2s ease !important;
+}
+
+.ner-highlight:hover {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+    transform: translateY(-1px) !important;
+    z-index: 1001 !important;
+}
+
+/* Entity type specific colors */
+.ner-highlight.ner-person {
+    background-color: #FFE4E1 !important;
+    border-bottom-color: #FF6B6B !important;
+}
+
+.ner-highlight.ner-organization {
+    background-color: #E6F3FF !important;
+    border-bottom-color: #4A90E2 !important;
+}
+
+.ner-highlight.ner-location {
+    background-color: #E6FFE6 !important;
+    border-bottom-color: #50C878 !important;
+}
+
+.ner-highlight.ner-date {
+    background-color: #FFF0E6 !important;
+    border-bottom-color: #FF8C00 !important;
+}
+
+.ner-highlight.ner-money {
+    background-color: #F0E6FF !important;
+    border-bottom-color: #9370DB !important;
+}
+
+.ner-highlight.ner-time {
+    background-color: #FFFFE6 !important;
+    border-bottom-color: #FFD700 !important;
+}
+
+.ner-highlight.ner-misc {
+    background-color: #F5F5F5 !important;
+    border-bottom-color: #999999 !important;
+}
+
+/* Tooltip styles for entity information */
+.ner-highlight::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: normal;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    z-index: 1002;
+    margin-bottom: 4px;
+}
+
+.ner-highlight:hover::after {
+    opacity: 1;
+}
+
+/* Ensure highlights don't break layout */
+.ner-highlight {
+    line-height: inherit !important;
+    font-size: inherit !important;
+    font-family: inherit !important;
+    text-decoration: none !important;
+}
+
+/* Handle overlapping highlights */
+.ner-highlight .ner-highlight {
+    background-color: rgba(255, 255, 0, 0.3) !important;
+    border: 1px solid #FF6B6B !important;
+}
+
+/* Animation for new highlights */
+@keyframes nerHighlightIn {
+    0% {
+        background-color: #FFFF99;
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.ner-highlight.ner-new {
+    animation: nerHighlightIn 0.5s ease-out;
+}
+
+/* Ensure highlights are visible on dark backgrounds */
+.ner-highlight {
+    color: inherit !important;
+    text-shadow: none !important;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .ner-highlight {
+        border: 2px solid currentColor !important;
+        border-radius: 4px !important;
+        background-color: transparent !important;
+    }
+    
+    .ner-highlight::after {
+        border: 1px solid white;
+    }
+}
+
+/* Print styles - remove highlights when printing */
+@media print {
+    .ner-highlight {
+        background-color: transparent !important;
+        border: none !important;
+        font-weight: normal !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    
+    .ner-highlight::after {
+        display: none !important;
+    }
+} 

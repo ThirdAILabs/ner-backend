@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NER Text Analyzer</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>NER Analyzer</h1>
+            <p>Extract and analyze text for named entities</p>
+        </div>
+        
+        <div class="actions">
+            <button id="extractText" class="btn btn-primary">
+                Extract Page Text
+            </button>
+            <button id="highlightEntities" class="btn btn-secondary">
+                Highlight Entities
+            </button>
+            <button id="clearHighlights" class="btn btn-secondary">
+                Clear Highlights
+            </button>
+        </div>
+        
+        <div class="stats" id="stats" style="display: none;">
+            <h3>Analysis Results</h3>
+            <div class="stat-item">
+                <span class="label">Text Length:</span>
+                <span id="textLength">0</span> characters
+            </div>
+            <div class="stat-item">
+                <span class="label">Words:</span>
+                <span id="wordCount">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="label">Entities Found:</span>
+                <span id="entityCount">0</span>
+            </div>
+        </div>
+        
+        <div class="entities" id="entitiesContainer" style="display: none;">
+            <h3>Detected Entities</h3>
+            <div id="entitiesList"></div>
+        </div>
+        
+        <div class="settings">
+            <h3>Settings</h3>
+            <div class="setting-item">
+                <label>
+                    <input type="checkbox" id="autoAnalyze" checked>
+                    Auto-analyze on page load
+                </label>
+            </div>
+            <div class="setting-item">
+                <label>
+                    Backend URL:
+                    <input type="text" id="backendUrl" placeholder="http://localhost:8080" value="http://localhost:8080">
+                </label>
+            </div>
+        </div>
+        
+        <div class="status" id="status">
+            Ready
+        </div>
+    </div>
+    
+    <script src="popup.js"></script>
+</body>
+</html> 
