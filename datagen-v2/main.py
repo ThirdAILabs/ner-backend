@@ -62,11 +62,12 @@ tag_info = [
 ]
 
 
+openai_key = ""
 if __name__ == "__main__":
     current_time = pd.Timestamp.now().strftime("%H-%M-%S")
     factory = DataFactory(
         out_dir=f"generated_data/{current_time}",
-        openai_key="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",
+        openai_key=openai_key,
     )
 
     factory.generate(tags_info=tag_info, k=100)
