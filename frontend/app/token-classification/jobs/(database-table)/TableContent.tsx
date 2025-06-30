@@ -233,7 +233,8 @@ export function TableContent({
                     </div>
                   </TableCell>
                 </TableRow>
-            ))
+              );
+            })
           ) : (
             <TableRow>
               <TableCell colSpan={2} className="text-center py-8 text-gray-500">
