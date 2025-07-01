@@ -15,10 +15,11 @@ const NICE_COLOR_PAIRS = [
   { replacement: '#81C784', original: '#E8F5E9' }, // green
   { replacement: '#FFF176', original: '#FFFDE7' }, // yellow
   { replacement: '#FFB74D', original: '#FFF3E0' }, // orange
-  { replacement: '#BA68C8', original: '#F3E5F5' }, // purple
+  { replacement: '#BA68C8', original: '#F3E5F5' } // purple
 ];
 
-const TAG_COLORS: Record<string, { replacement: string; original: string }> = {};
+const TAG_COLORS: Record<string, { replacement: string; original: string }> =
+  {};
 
 const toTagName = (replacementToken: string) => {
   const pieces = replacementToken.split('_');
@@ -33,7 +34,11 @@ const getTagColors = (tagName: string) => {
   return TAG_COLORS[tagName];
 };
 
-function RedactedMessage({ redactedContent }: { redactedContent: RedactedContentPiece[] }) {
+function RedactedMessage({
+  redactedContent
+}: {
+  redactedContent: RedactedContentPiece[];
+}) {
   // TODO: Fix markdown rendering in redacted mode
   return (
     <div>
@@ -43,7 +48,8 @@ function RedactedMessage({ redactedContent }: { redactedContent: RedactedContent
         }
 
         const tagName = toTagName(piece.replacement);
-        const { replacement: replColor, original: origColor } = getTagColors(tagName);
+        const { replacement: replColor, original: origColor } =
+          getTagColors(tagName);
 
         return (
           <span
@@ -52,7 +58,10 @@ function RedactedMessage({ redactedContent }: { redactedContent: RedactedContent
             style={{ backgroundColor: origColor }}
           >
             <del>{piece.original}</del>
-            <span className={`px-1 rounded-sm text-white`} style={{ backgroundColor: replColor }}>
+            <span
+              className={`px-1 rounded-sm text-white`}
+              style={{ backgroundColor: replColor }}
+            >
               {piece.replacement}
             </span>
           </span>
@@ -83,7 +92,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   saveApiKey,
   showRedaction,
   model,
-  onSelectModel,
+  onSelectModel
 }) => {
   // Options menu-related logic
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
@@ -158,7 +167,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       const file = files[i];
       try {
         const text = await extractFileText(file);
-        extractedText += (extractedText ? '\n\n' : '') + `[From ${file.name}]:\n` + text;
+        extractedText +=
+          (extractedText ? '\n\n' : '') + `[From ${file.name}]:\n` + text;
       } catch (error) {
         console.error(`Failed to extract text from ${file.name}:`, error);
       }
@@ -185,7 +195,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       const file = files[i];
       try {
         const text = await extractFileText(file);
-        extractedText += (extractedText ? '\n\n' : '') + `[From ${file.name}]:\n` + text;
+        extractedText +=
+          (extractedText ? '\n\n' : '') + `[From ${file.name}]:\n` + text;
       } catch (error) {
         console.error(`Failed to extract text from ${file.name}:`, error);
       }
@@ -268,7 +279,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         {messages.length === 0 && (
           <div className="h-[calc(100%-2rem)] flex flex-col items-center justify-center text-gray-500">
             <MessageSquare size={48} className="mb-4 text-gray-400" />
-            <h3 className="text-xl font-semibold mb-2">Welcome to Secure Chat</h3>
+            <h3 className="text-xl font-semibold mb-2">
+              Welcome to Secure Chat
+            </h3>
             <p className="text-sm text-gray-400">
               Your messages are end-to-end encrypted and securely stored
             </p>
@@ -319,9 +332,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             className="flex-1 p-4 pr-[85px] border-[1px] rounded-2xl resize-none min-h-[56px] max-h-[150px]"
             style={{
               overflowY:
-                inputMessage && textareaRef.current && textareaRef.current.scrollHeight > 150
+                inputMessage &&
+                textareaRef.current &&
+                textareaRef.current.scrollHeight > 150
                   ? 'auto'
-                  : 'hidden',
+                  : 'hidden'
             }}
             disabled={isLoading}
           />

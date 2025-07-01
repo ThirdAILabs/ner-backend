@@ -31,7 +31,7 @@ const Tag: React.FC<TagProps> = ({
   selected = false,
   onClick,
   custom = false,
-  addNew = false,
+  addNew = false
 }) => {
   return (
     <div
@@ -59,7 +59,7 @@ const ModelOption: React.FC<ModelOptionProps> = ({
   description,
   isSelected = false,
   disabled = false,
-  onClick,
+  onClick
 }) => (
   <div
     className={`relative p-6 border rounded-md transition-all
@@ -88,7 +88,12 @@ const GroupCard: React.FC<GroupProps> = ({ name, definition, onRemove }) => (
   <div className="border border-gray-200 rounded-md overflow-hidden">
     <div className="p-4 border-b border-gray-200 flex justify-between items-center">
       <h3 className="text-base font-medium">{name}</h3>
-      <Button variant="ghost" size="sm" onClick={onRemove} className="text-red-500">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onRemove}
+        className="text-red-500"
+      >
         Remove
       </Button>
     </div>
@@ -115,7 +120,7 @@ const SourceOption: React.FC<SourceOptionProps> = ({
   title,
   description,
   disclaimer,
-  disabled = false,
+  disabled = false
 }) => (
   <div
     className={`relative p-6 border-2 border-dashed rounded-lg transition-colors ${
@@ -157,7 +162,7 @@ const FileSources: React.FC<FileSourcesProps> = ({
   selectSource,
   isLoadingFiles,
   setIsLoadingFiles,
-  addFilesMeta,
+  addFilesMeta
 }) => {
   const s3 = (
     <SourceOption
@@ -200,11 +205,8 @@ const FileSources: React.FC<FileSourcesProps> = ({
               selectSource('files');
               setIsLoadingFiles(true);
               try {
-                const { allFilesMeta, totalSize, error } = await getFilesFromElectron(
-                  SUPPORTED_TYPES,
-                  false,
-                  true
-                ); // combined mode
+                const { allFilesMeta, totalSize, error } =
+                  await getFilesFromElectron(SUPPORTED_TYPES, false, true); // combined mode
                 if (error) {
                   addFilesMeta([]);
                 } else {
@@ -239,10 +241,8 @@ const FileSources: React.FC<FileSourcesProps> = ({
               selectSource('files');
               setIsLoadingFiles(true);
               try {
-                const { allFilesMeta, totalSize, error } = await getFilesFromElectron(
-                  SUPPORTED_TYPES,
-                  false
-                );
+                const { allFilesMeta, totalSize, error } =
+                  await getFilesFromElectron(SUPPORTED_TYPES, false);
                 if (error) {
                   addFilesMeta([]);
                 } else {
@@ -270,10 +270,8 @@ const FileSources: React.FC<FileSourcesProps> = ({
               selectSource('directory');
               setIsLoadingFiles(true);
               try {
-                const { allFilesMeta, totalSize, error } = await getFilesFromElectron(
-                  SUPPORTED_TYPES,
-                  true
-                );
+                const { allFilesMeta, totalSize, error } =
+                  await getFilesFromElectron(SUPPORTED_TYPES, true);
                 if (error) {
                   addFilesMeta([]);
                 } else {
@@ -307,7 +305,7 @@ const FileSources: React.FC<FileSourcesProps> = ({
             name: file.name,
             size: file.size,
             fullPath: '',
-            file,
+            file
           }))
         );
       } finally {
@@ -360,7 +358,9 @@ const FileSources: React.FC<FileSourcesProps> = ({
           )
         }
         title="Local Files"
-        description={isLoadingFiles ? 'Loading files...' : 'Scan files from your computer'}
+        description={
+          isLoadingFiles ? 'Loading files...' : 'Scan files from your computer'
+        }
         disclaimer={`Supported: ${SUPPORTED_TYPES.join(', ')}`}
         disabled={isLoadingFiles}
       />
@@ -370,9 +370,17 @@ const FileSources: React.FC<FileSourcesProps> = ({
           selectSource('directory');
         }}
         input={directoryInput}
-        icon={isLoadingFiles ? <RefreshCw className="w-8 h-8 animate-spin" /> : folderIcon}
+        icon={
+          isLoadingFiles ? (
+            <RefreshCw className="w-8 h-8 animate-spin" />
+          ) : (
+            folderIcon
+          )
+        }
         title="Local Directory"
-        description={isLoadingFiles ? 'Loading files...' : 'Scan an entire directory'}
+        description={
+          isLoadingFiles ? 'Loading files...' : 'Scan an entire directory'
+        }
         disclaimer={`Supported: ${SUPPORTED_TYPES.join(', ')}`}
         disabled={isLoadingFiles}
       />
@@ -393,7 +401,9 @@ export default function NewJobPage() {
   const { isEnterprise } = useLicense();
 
   // Essential state
-  const [selectedSource, setSelectedSource] = useState<'s3' | 'files' | 'directory' | ''>('files');
+  const [selectedSource, setSelectedSource] = useState<
+    's3' | 'files' | 'directory' | ''
+  >('files');
   const [sourceS3Endpoint, setSourceS3Endpoint] = useState('');
   const [sourceS3Region, setSourceS3Region] = useState('');
   const [sourceS3Bucket, setSourceS3Bucket] = useState('');
@@ -433,8 +443,12 @@ export default function NewJobPage() {
 
   const filteredCustomModels = useMemo(() => {
     return models
-      .filter((model) => !['basic', 'advanced'].includes(model.Name.toLowerCase()))
-      .filter((model) => model.Name.toLowerCase().includes(modelSearchQuery.toLowerCase()));
+      .filter(
+        (model) => !['basic', 'advanced'].includes(model.Name.toLowerCase())
+      )
+      .filter((model) =>
+        model.Name.toLowerCase().includes(modelSearchQuery.toLowerCase())
+      );
   }, [models, modelSearchQuery]);
 
   const defaultModels = useMemo(() => {
@@ -445,15 +459,15 @@ export default function NewJobPage() {
         Disabled: false,
         Description: !isEnterprise
           ? 'Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.'
-          : 'Fast and lightweight AI model, does not allow customization of the fields with user feedback, gives basic usage statistics.',
+          : 'Fast and lightweight AI model, does not allow customization of the fields with user feedback, gives basic usage statistics.'
       },
       {
         Id: 'advanced',
         Name: 'Advanced',
         Disabled: true,
         Description:
-          'Our most advanced AI model, available on enterprise platform. Allows users to perpetually customize fields with user feedback, includes advanced monitoring features.',
-      },
+          'Our most advanced AI model, available on enterprise platform. Allows users to perpetually customize fields with user feedback, includes advanced monitoring features.'
+      }
     ];
   }, [models]);
 
@@ -498,7 +512,9 @@ export default function NewJobPage() {
     const fetchModels = async () => {
       try {
         const modelData = await nerService.listModels();
-        const trainedModels = modelData.filter((model) => model.Status === 'TRAINED');
+        const trainedModels = modelData.filter(
+          (model) => model.Status === 'TRAINED'
+        );
         setModels(trainedModels.reverse());
         setSelectedModelId(trainedModels[0].Id);
       } catch (err) {
@@ -584,7 +600,8 @@ export default function NewJobPage() {
       return;
     }
 
-    const errorMessage = await nerService.validateGroupDefinition(formattedGroupQuery);
+    const errorMessage =
+      await nerService.validateGroupDefinition(formattedGroupQuery);
     console.log('Error message:', errorMessage);
 
     if (errorMessage) {
@@ -612,7 +629,7 @@ export default function NewJobPage() {
 
     setGroups((prev) => ({
       ...prev,
-      [groupName.trim().toUpperCase()]: groupQuery.trim().toUpperCase(),
+      [groupName.trim().toUpperCase()]: groupQuery.trim().toUpperCase()
     }));
 
     handleGroupCancel();
@@ -641,7 +658,7 @@ export default function NewJobPage() {
 
     const newCustomTag = {
       name: customTagName.trim().toUpperCase(),
-      pattern: customTagPattern,
+      pattern: customTagPattern
     };
 
     for (let index = 0; index < customTags.length; index++) {
@@ -753,7 +770,9 @@ export default function NewJobPage() {
     }
 
     if (!/^[A-Za-z0-9_]+$/.test(name)) {
-      setDialogError('Tag name can only contain letters, numbers, and underscores');
+      setDialogError(
+        'Tag name can only contain letters, numbers, and underscores'
+      );
       return false;
     }
 
@@ -774,7 +793,7 @@ export default function NewJobPage() {
     });
     const response = await fetch(uploadUrl, {
       method: 'POST',
-      body: formData,
+      body: formData
     });
     if (!response.ok) {
       return { success: false, error: 'Upload failed' };
@@ -843,7 +862,9 @@ export default function NewJobPage() {
           if (typeof uploadId === 'string') {
             await nerService.storeFileNameToPath(uploadId, {});
           } else {
-            throw new Error('uploadId is undefined when storing file name to path mapping');
+            throw new Error(
+              'uploadId is undefined when storing file name to path mapping'
+            );
           }
         } else {
           // Electron context: use main process
@@ -852,7 +873,7 @@ export default function NewJobPage() {
             filePaths: selectedFilesMeta.map((f) => f.fullPath),
             uploadUrl: uploadUrl,
             uniqueNames: selectedFilesMeta.map((f) => f.uniqueName),
-            originalNames: selectedFilesMeta.map((f) => f.name),
+            originalNames: selectedFilesMeta.map((f) => f.name)
           });
 
           if (!result.success || !result.uploadId) {
@@ -878,7 +899,9 @@ export default function NewJobPage() {
               await nerService.storeFileNameToPath(uploadId, mapping);
               console.log('Frontend - File path mapping sent successfully');
             } else {
-              throw new Error('uploadId is undefined when storing file name to path mapping');
+              throw new Error(
+                'uploadId is undefined when storing file name to path mapping'
+              );
             }
           }
         }
@@ -900,17 +923,17 @@ export default function NewJobPage() {
                 Endpoint: sourceS3Endpoint,
                 Region: sourceS3Region,
                 Bucket: sourceS3Bucket,
-                Prefix: sourceS3Prefix,
-              },
+                Prefix: sourceS3Prefix
+              }
             }
           : {
               StorageType: 'upload',
               StorageParams: {
-                UploadId: uploadId,
-              },
+                UploadId: uploadId
+              }
             }),
         Groups: groups,
-        ReportName: jobName,
+        ReportName: jobName
       });
 
       setSuccess(true);
@@ -918,7 +941,7 @@ export default function NewJobPage() {
       recordEvent({
         UserAction: 'Create new report',
         UIComponent: 'Report Creation Form',
-        Page: 'Report Creation Page',
+        Page: 'Report Creation Page'
       });
 
       // Redirect after success
@@ -959,7 +982,9 @@ export default function NewJobPage() {
     }
 
     if (!/^[A-Za-z0-9_-]+$/.test(name)) {
-      setNameError('Scan name can only contain letters, numbers, underscores, and hyphens');
+      setNameError(
+        'Scan name can only contain letters, numbers, underscores, and hyphens'
+      );
       return false;
     }
 
@@ -998,7 +1023,12 @@ export default function NewJobPage() {
             className="text-red-500 hover:text-red-700 p-1"
             aria-label="Remove file"
           >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -1017,7 +1047,10 @@ export default function NewJobPage() {
       {/* Title and Back Button */}
       <div className="flex items-center justify-between mb-6">
         <Button variant="outline" size="sm" asChild>
-          <Link href={`/token-classification/landing?tab=jobs`} className="flex items-center">
+          <Link
+            href={`/token-classification/landing?tab=jobs`}
+            className="flex items-center"
+          >
             <ArrowLeft className="mr-1 h-4 w-4" /> Back to Scans
           </Link>
         </Button>
@@ -1061,7 +1094,8 @@ export default function NewJobPage() {
                 </p>
               ) : (
                 <p className="text-sm text-gray-500 mt-1">
-                  Use only letters, numbers, underscores, and hyphens. No spaces allowed.
+                  Use only letters, numbers, underscores, and hyphens. No spaces
+                  allowed.
                 </p>
               )}
             </div>
@@ -1084,7 +1118,9 @@ export default function NewJobPage() {
                 <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center rounded-lg z-10">
                   <div className="flex flex-col items-center space-y-3">
                     <RefreshCw className="h-8 w-8 animate-spin text-blue-500" />
-                    <p className="text-sm font-medium text-gray-700">Loading files...</p>
+                    <p className="text-sm font-medium text-gray-700">
+                      Loading files...
+                    </p>
                   </div>
                 </div>
               )}
@@ -1149,12 +1185,14 @@ export default function NewJobPage() {
               <div className="space-y-4">
                 <div>
                   <div className="text-sm text-gray-500 mt-1 mb-3">
-                    Your S3 bucket must be public. Private bucket support is available on the
-                    enterprise platform. Reach out to{' '}
+                    Your S3 bucket must be public. Private bucket support is
+                    available on the enterprise platform. Reach out to{' '}
                     <div className="relative inline-block">
                       <span
                         className="text-blue-500 underline cursor-pointer hover:text-blue-700"
-                        onClick={() => copyToClipboard('contact@thirdai.com', 's3')}
+                        onClick={() =>
+                          copyToClipboard('contact@thirdai.com', 's3')
+                        }
                         title="Click to copy email"
                       >
                         contact@thirdai.com
@@ -1187,7 +1225,9 @@ export default function NewJobPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">S3 Region</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    S3 Region
+                  </label>
                   <input
                     type="text"
                     value={sourceS3Region}
@@ -1269,7 +1309,11 @@ export default function NewJobPage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {filteredCustomModels
-                      .filter((model) => model.Status !== 'TRAINING' && model.Status !== 'QUEUED')
+                      .filter(
+                        (model) =>
+                          model.Status !== 'TRAINING' &&
+                          model.Status !== 'QUEUED'
+                      )
                       .map((model) => (
                         <ModelOption
                           key={model.Id}
@@ -1279,8 +1323,9 @@ export default function NewJobPage() {
                               {model.BaseModelId && (
                                 <p className="text-sm text-gray-600">
                                   Base Model:{' '}
-                                  {models.find((m) => m.Id === model.BaseModelId)?.Name ||
-                                    'Unknown'}
+                                  {models.find(
+                                    (m) => m.Id === model.BaseModelId
+                                  )?.Name || 'Unknown'}
                                 </p>
                               )}
                             </div>
@@ -1308,12 +1353,17 @@ export default function NewJobPage() {
                           size="sm"
                           onClick={selectAllTags}
                           className="text-sm flex items-center"
-                          disabled={isTagsLoading || selectedTags.length === availableTags.length}
+                          disabled={
+                            isTagsLoading ||
+                            selectedTags.length === availableTags.length
+                          }
                         >
                           <span className="mr-1">Select All</span>
                           <input
                             type="checkbox"
-                            checked={selectedTags.length === availableTags.length}
+                            checked={
+                              selectedTags.length === availableTags.length
+                            }
                             onChange={selectAllTags}
                             className="rounded border-gray-300"
                           />
@@ -1338,7 +1388,8 @@ export default function NewJobPage() {
 
                     {/* Added descriptive note */}
                     <p className="text-sm text-gray-500 mb-4">
-                      Click on any tag to select/unselect it. By default, all tags are selected.
+                      Click on any tag to select/unselect it. By default, all
+                      tags are selected.
                     </p>
 
                     {isTagsLoading ? (
@@ -1346,7 +1397,9 @@ export default function NewJobPage() {
                         <RefreshCw className="h-6 w-6 animate-spin text-gray-400" />
                       </div>
                     ) : availableTags.length === 0 ? (
-                      <div className="text-gray-500 py-2">No tags available for this model</div>
+                      <div className="text-gray-500 py-2">
+                        No tags available for this model
+                      </div>
                     ) : (
                       <div className="flex flex-wrap gap-2">
                         {availableTags.map((tag) => (
@@ -1369,7 +1422,9 @@ export default function NewJobPage() {
           <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3 }}>
             <h2 className="text-2xl font-medium mb-4">
               Custom Tags
-              <span className="text-sm font-normal text-gray-500 ml-2">(Optional)</span>
+              <span className="text-sm font-normal text-gray-500 ml-2">
+                (Optional)
+              </span>
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {customTags.map((customTag) => (
@@ -1470,7 +1525,9 @@ export default function NewJobPage() {
                             onChange={() => setPatternType('string')}
                             className="mr-1"
                           />
-                          <span className="block text-sm font-medium text-gray-700">String</span>
+                          <span className="block text-sm font-medium text-gray-700">
+                            String
+                          </span>
                         </label>
                         <label className="flex items-center text-sm text-gray-700">
                           <input
@@ -1480,7 +1537,9 @@ export default function NewJobPage() {
                             onChange={() => setPatternType('regex')}
                             className="mr-1"
                           />
-                          <span className="block text-sm font-medium text-gray-700">Regex</span>
+                          <span className="block text-sm font-medium text-gray-700">
+                            Regex
+                          </span>
                         </label>
                       </div>
 
@@ -1489,7 +1548,11 @@ export default function NewJobPage() {
                         value={customTagPattern}
                         onChange={(e) => setCustomTagPattern(e.target.value)}
                         className="w-full p-2 border border-gray-300 rounded"
-                        placeholder={patternType === 'regex' ? '\\b[A-Z]{2}\\d{6}\\b' : 'John Doe'}
+                        placeholder={
+                          patternType === 'regex'
+                            ? '\\b[A-Z]{2}\\d{6}\\b'
+                            : 'John Doe'
+                        }
                       />
 
                       {patternType === 'string' && (
@@ -1522,7 +1585,7 @@ export default function NewJobPage() {
                         variant="outline"
                         onClick={handleCancel}
                         style={{
-                          color: '#1976d2',
+                          color: '#1976d2'
                         }}
                       >
                         Cancel
@@ -1534,10 +1597,14 @@ export default function NewJobPage() {
                         style={{
                           backgroundColor: '#1976d2',
                           textTransform: 'none',
-                          fontWeight: 500,
+                          fontWeight: 500
                         }}
-                        onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#1565c0')}
-                        onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#1976d2')}
+                        onMouseOver={(e) =>
+                          (e.currentTarget.style.backgroundColor = '#1565c0')
+                        }
+                        onMouseOut={(e) =>
+                          (e.currentTarget.style.backgroundColor = '#1976d2')
+                        }
                         onClick={handleAddCustomTag}
                       >
                         Add Tag
@@ -1553,13 +1620,18 @@ export default function NewJobPage() {
           <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3 }}>
             <h2 className="text-2xl font-medium mb-4">
               Groups
-              <span className="text-sm font-normal text-gray-500 ml-2">(Optional)</span>
+              <span className="text-sm font-normal text-gray-500 ml-2">
+                (Optional)
+              </span>
             </h2>
 
             {/* Display defined groups */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               {Object.entries(groups).map(([name, query]) => (
-                <div key={name} className="border border-gray-200 rounded-md overflow-hidden">
+                <div
+                  key={name}
+                  className="border border-gray-200 rounded-md overflow-hidden"
+                >
                   <div className="py-1 px-4 border-b border-gray-200 flex justify-between items-center">
                     <span className="font-medium">{name}</span>
                     <div className="flex items-center space-x-1">
@@ -1662,11 +1734,14 @@ export default function NewJobPage() {
                       <p>Example queries:</p>
                       <ul className="list-disc pl-5 mt-1 space-y-1">
                         <li>
-                          <code>COUNT(SSN) &gt; 0</code> - Documents containing SSNs
+                          <code>COUNT(SSN) &gt; 0</code> - Documents containing
+                          SSNs
                         </li>
                         <li>
-                          <code>COUNT(NAME) &gt; 2 AND COUNT(PHONE) &gt; 0</code> - Documents with
-                          multiple names and a phone number
+                          <code>
+                            COUNT(NAME) &gt; 2 AND COUNT(PHONE) &gt; 0
+                          </code>{' '}
+                          - Documents with multiple names and a phone number
                         </li>
                       </ul>
                     </div>
@@ -1677,7 +1752,7 @@ export default function NewJobPage() {
                         variant="outline"
                         onClick={handleGroupCancel}
                         style={{
-                          color: '#1976d2',
+                          color: '#1976d2'
                         }}
                       >
                         Cancel
@@ -1689,10 +1764,14 @@ export default function NewJobPage() {
                         style={{
                           backgroundColor: '#1976d2',
                           textTransform: 'none',
-                          fontWeight: 500,
+                          fontWeight: 500
                         }}
-                        onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#1565c0')}
-                        onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#1976d2')}
+                        onMouseOver={(e) =>
+                          (e.currentTarget.style.backgroundColor = '#1565c0')
+                        }
+                        onMouseOut={(e) =>
+                          (e.currentTarget.style.backgroundColor = '#1976d2')
+                        }
                         onClick={handleAddGroup}
                       >
                         {editingGroup ? 'Save Changes' : 'Add Group'}
@@ -1717,10 +1796,14 @@ export default function NewJobPage() {
               style={{
                 backgroundColor: '#1976d2',
                 textTransform: 'none',
-                fontWeight: 500,
+                fontWeight: 500
               }}
-              onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#1565c0')}
-              onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#1976d2')}
+              onMouseOver={(e) =>
+                (e.currentTarget.style.backgroundColor = '#1565c0')
+              }
+              onMouseOut={(e) =>
+                (e.currentTarget.style.backgroundColor = '#1976d2')
+              }
               onClick={() => {
                 setIsPressedSubmit(true);
               }}
@@ -1754,7 +1837,7 @@ export default function NewJobPage() {
                 onClick={handleCloseDialog}
                 style={{
                   backgroundColor: '#1976d2',
-                  color: 'white',
+                  color: 'white'
                 }}
               >
                 OK
