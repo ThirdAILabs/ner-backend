@@ -1,11 +1,5 @@
 import React, { useMemo } from 'react';
-import {
-  TableHead,
-  TableRow,
-  TableHeader,
-  TableBody,
-  TableCell
-} from '@/components/ui/table';
+import { TableHead, TableRow, TableHeader, TableBody, TableCell } from '@/components/ui/table';
 import { Loader2, ChevronRight } from 'lucide-react';
 import { NO_GROUP } from '@/lib/utils';
 import { TokenHighlighter } from '@/components/feedback/TokenHighlighter';
@@ -14,24 +8,8 @@ import type { TableContentProps } from '@/types/analyticsTypes';
 import { useLicense } from '@/hooks/useLicense';
 import { environment } from '@/lib/environment';
 
-const PASTELS = [
-  '#E5A49C',
-  '#F6C886',
-  '#FBE7AA',
-  '#99E3B5',
-  '#A6E6E7',
-  '#A5A1E1',
-  '#D8A4E2'
-];
-const DARKERS = [
-  '#D34F3E',
-  '#F09336',
-  '#F7CF5F',
-  '#5CC96E',
-  '#65CFD0',
-  '#597CE2',
-  '#B64DC8'
-];
+const PASTELS = ['#E5A49C', '#F6C886', '#FBE7AA', '#99E3B5', '#A6E6E7', '#A5A1E1', '#D8A4E2'];
+const DARKERS = ['#D34F3E', '#F09336', '#F7CF5F', '#5CC96E', '#65CFD0', '#597CE2', '#B64DC8'];
 
 interface HighlightColor {
   text: string;
@@ -53,7 +31,7 @@ export function TableContent({
   onLoadMore,
   showFilterContent,
   pathMap,
-  addFeedback
+  addFeedback,
 }: TableContentProps) {
   const { isEnterprise } = useLicense();
 
@@ -64,7 +42,7 @@ export function TableContent({
       .forEach((tag, index) => {
         colors[tag.type] = {
           text: PASTELS[index % PASTELS.length],
-          tag: DARKERS[index % DARKERS.length]
+          tag: DARKERS[index % DARKERS.length],
         };
       });
     return colors;
@@ -73,13 +51,9 @@ export function TableContent({
   const filterRecords = (recordGroups: string[], recordTags: string[]) => {
     const matchTags = recordTags.some((tag) => tagFilters[tag] !== false);
     const matchNoGroup = recordGroups.length === 0 && groupFilters[NO_GROUP];
-    const matchUserDefinedGroup = recordGroups.some(
-      (group) => groupFilters[group] !== false
-    );
+    const matchUserDefinedGroup = recordGroups.some((group) => groupFilters[group] !== false);
     const noGroupConfigured = Object.keys(groupFilters).length === 0;
-    return (
-      matchTags && (matchNoGroup || matchUserDefinedGroup || noGroupConfigured)
-    );
+    return matchTags && (matchNoGroup || matchUserDefinedGroup || noGroupConfigured);
   };
 
   const handleFullPath = (fileIdentifier: string) => {
@@ -109,7 +83,7 @@ export function TableContent({
       fullPath,
       pathMap: Object.keys(pathMap || {}).length,
       pathMapKeys: Object.keys(pathMap || {}),
-      pathMapEntries: Object.entries(pathMap || {})
+      pathMapEntries: Object.entries(pathMap || {}),
     });
     const openFile = () => {
       if (!fullPath) {
@@ -135,9 +109,7 @@ export function TableContent({
   const truncateFilePath = (filePath: string) => {
     const maxLength = 50;
     if (filePath.length > maxLength) {
-      return (
-        '...' + filePath.slice(filePath.length - maxLength, filePath.length)
-      );
+      return '...' + filePath.slice(filePath.length - maxLength, filePath.length);
     }
     return filePath;
   };
@@ -161,7 +133,7 @@ export function TableContent({
               let tokens = [
                 [record.context?.left || '', 'O'],
                 [record.token, record.tag],
-                [record.context?.right || '', 'O']
+                [record.context?.right || '', 'O'],
               ].flatMap((token) =>
                 token[0]
                   .split(/\s+/)
@@ -184,20 +156,11 @@ export function TableContent({
                         const { fullPath, openFile, showFileInFolder } =
                           handleFullPath(fileIdentifier);
                         // @ts-ignore
-                        if (
-                          fullPath &&
-                          typeof window !== 'undefined' &&
-                          window.electron
-                        ) {
+                        if (fullPath && typeof window !== 'undefined' && window.electron) {
                           return (
                             <div className="flex items-center justify-between w-full">
                               {/* Left: File path */}
-                              <span
-                                title={fileIdentifier
-                                  .split(/[/\\]/)
-                                  .slice(-1)
-                                  .join('')}
-                              >
+                              <span title={fileIdentifier.split(/[/\\]/).slice(-1).join('')}>
                                 {truncateFilePath(fullPath)}
                               </span>
                               {/* Right: Icons */}
@@ -260,10 +223,7 @@ export function TableContent({
                           return (
                             <span
                               style={{ color: 'inherit' }}
-                              title={fileIdentifier
-                                .split(/[/\\]/)
-                                .slice(-1)
-                                .join('')}
+                              title={fileIdentifier.split(/[/\\]/).slice(-1).join('')}
                             >
                               {fileIdentifier.split(/[/\\]/).slice(-1).join('')}
                             </span>
@@ -299,23 +259,18 @@ export function TableContent({
   }
 
   const filteredRecords = objectRecords.filter((record) =>
-    filterRecords(record.groups, [
-      ...new Set(record.taggedTokens.map((token) => token[1]))
-    ])
+    filterRecords(record.groups, [...new Set(record.taggedTokens.map((token) => token[1]))])
   );
 
   return (
     <div className="mt-4">
       {filteredRecords.length === 0 ? (
-        <div className="text-gray-500">
-          No records match the current filters.
-        </div>
+        <div className="text-gray-500">No records match the current filters.</div>
       ) : (
         filteredRecords.map((record, index) => {
           const fileIdentifier = record.sourceObject;
 
-          const { fullPath, openFile, showFileInFolder } =
-            handleFullPath(fileIdentifier);
+          const { fullPath, openFile, showFileInFolder } = handleFullPath(fileIdentifier);
           const tokens = record.taggedTokens.flatMap((token) => {
             const [text, tag] = token;
             return text
@@ -324,11 +279,7 @@ export function TableContent({
               .map((word) => ({ text: word, tag }));
           });
 
-          const onTagAssign = (
-            startIndex: number,
-            endIndex: number,
-            newTag: string
-          ) => {
+          const onTagAssign = (startIndex: number, endIndex: number, newTag: string) => {
             const leftContext = tokens
               .slice(Math.max(0, startIndex - 5), startIndex)
               .map((t) => t.text)
@@ -349,12 +300,11 @@ export function TableContent({
                 rightContext,
                 startIndex,
                 endIndex,
-                objectId: fileIdentifier
+                objectId: fileIdentifier,
               },
               tokens.map((token) => token.text),
               tokens.map((token) =>
-                !environment.allowCustomTagsInFeedback &&
-                customTagNames.includes(token.tag)
+                !environment.allowCustomTagsInFeedback && customTagNames.includes(token.tag)
                   ? 'O'
                   : token.tag
               )
@@ -370,12 +320,8 @@ export function TableContent({
                 <div className="flex items-center gap-2">
                   <ChevronRight className="w-4 h-4 transition-transform group-open:rotate-90" />
                   {/* @ts-ignore */}
-                  {fullPath &&
-                  typeof window !== 'undefined' &&
-                  window.electron ? (
-                    <span className="font-semibold">
-                      {truncateFilePath(fullPath)}
-                    </span>
+                  {fullPath && typeof window !== 'undefined' && window.electron ? (
+                    <span className="font-semibold">{truncateFilePath(fullPath)}</span>
                   ) : (
                     <span
                       className="font-semibold"
@@ -388,72 +334,68 @@ export function TableContent({
 
                 {/* Right: Buttons */}
                 {/* @ts-ignore */}
-                {fullPath &&
-                  typeof window !== 'undefined' &&
-                  window.electron && (
-                    <div className="flex items-center gap-2">
-                      <span
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          showFileInFolder();
-                        }}
-                        className="inline-flex items-center gap-1 px-1.5 py-1.5 rounded-md text-sm font-medium text-gray-800 hover:bg-gray-100 hover:text-blue-600 border border-transparent hover:border-blue-200 transition-all cursor-pointer"
+                {fullPath && typeof window !== 'undefined' && window.electron && (
+                  <div className="flex items-center gap-2">
+                    <span
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        showFileInFolder();
+                      }}
+                      className="inline-flex items-center gap-1 px-1.5 py-1.5 rounded-md text-sm font-medium text-gray-800 hover:bg-gray-100 hover:text-blue-600 border border-transparent hover:border-blue-200 transition-all cursor-pointer"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="lucide lucide-folder-open-icon lucide-folder-open"
                       >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="lucide lucide-folder-open-icon lucide-folder-open"
-                        >
-                          <path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" />
-                        </svg>
-                      </span>
-                      <span
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          openFile();
-                        }}
-                        className="inline-flex items-center gap-1 px-1.5 py-1.5 rounded-md  text-sm font-medium text-gray-800 hover:bg-gray-100 hover:text-blue-600 border border-transparent hover:border-blue-200 transition-all cursor-pointer"
+                        <path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" />
+                      </svg>
+                    </span>
+                    <span
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        openFile();
+                      }}
+                      className="inline-flex items-center gap-1 px-1.5 py-1.5 rounded-md  text-sm font-medium text-gray-800 hover:bg-gray-100 hover:text-blue-600 border border-transparent hover:border-blue-200 transition-all cursor-pointer"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        className="lucide lucide-book-open-text-icon lucide-book-open-text"
                       >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="2"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          className="lucide lucide-book-open-text-icon lucide-book-open-text"
-                        >
-                          <path d="M12 7v14" />
-                          <path d="M16 12h2" />
-                          <path d="M16 8h2" />
-                          <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" />
-                          <path d="M6 12h2" />
-                          <path d="M6 8h2" />
-                        </svg>
-                      </span>
-                    </div>
-                  )}
+                        <path d="M12 7v14" />
+                        <path d="M16 12h2" />
+                        <path d="M16 8h2" />
+                        <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" />
+                        <path d="M6 12h2" />
+                        <path d="M6 8h2" />
+                      </svg>
+                    </span>
+                  </div>
+                )}
               </summary>
               <div className="p-4">
                 <TokenHighlighter
                   tokens={tokens}
                   editable={isEnterprise}
                   availableTags={tags.map((tag) => tag.type)}
-                  unassignableTags={
-                    !environment.allowCustomTagsInFeedback ? customTagNames : []
-                  }
+                  unassignableTags={!environment.allowCustomTagsInFeedback ? customTagNames : []}
                   onTagAssign={onTagAssign}
                   objectId={fileIdentifier}
                   tagFilters={tagFilters}
@@ -462,8 +404,7 @@ export function TableContent({
                 <br />
                 <br />
                 <p className="text-gray-500 text-xs">
-                  Truncated File View. Please open the original file for the
-                  entire content.
+                  Truncated File View. Please open the original file for the entire content.
                 </p>
               </div>
             </details>

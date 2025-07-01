@@ -30,7 +30,7 @@ export function FilterSection({
   onDeselectAllGroups,
   onSelectAllTags,
   onDeselectAllTags,
-  onToggleFilterSection
+  onToggleFilterSection,
 }: FilterSectionProps) {
   const [isGroupsExpanded, setIsGroupsExpanded] = useState(true);
   const [isTagsExpanded, setIsTagsExpanded] = useState(true);

@@ -1,26 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { IconButton, Alert, AlertTitle } from '@mui/material';
 import { Play } from 'lucide-react';
 
-const mockLabels = [
-  'NAME',
-  'PHONE',
-  'EMAIL',
-  'ADDRESS',
-  'DATE',
-  'ORGANIZATION',
-  'O'
-];
+const mockLabels = ['NAME', 'PHONE', 'EMAIL', 'ADDRESS', 'DATE', 'ORGANIZATION', 'O'];
 
 // Mock data for display
 const mockSamples = [
@@ -35,44 +21,42 @@ const mockSamples = [
       'at',
       'john.doe@example.com',
       'or',
-      '555-123-4567'
+      '555-123-4567',
     ],
     tags: ['O', 'O', 'NAME', 'NAME', 'O', 'EMAIL', 'O', 'PHONE'],
-    timestamp: '11/15/2023, 8:32:00 AM'
+    timestamp: '11/15/2023, 8:32:00 AM',
   },
   {
     id: 2,
     text: 'Our office is located at 123 Main St',
     tokens: ['Our', 'office', 'is', 'located', 'at', '123', 'Main', 'St'],
     tags: ['O', 'O', 'O', 'O', 'O', 'ADDRESS', 'ADDRESS', 'ADDRESS'],
-    timestamp: '11/14/2023, 3:18:00 AM'
+    timestamp: '11/14/2023, 3:18:00 AM',
   },
   {
     id: 3,
     text: 'Robert Johnson will visit on January 15th',
     tokens: ['Robert', 'Johnson', 'will', 'visit', 'on', 'January', '15th'],
     tags: ['NAME', 'NAME', 'O', 'O', 'O', 'DATE', 'DATE'],
-    timestamp: '11/13/2023, 10:45:00 AM'
+    timestamp: '11/13/2023, 10:45:00 AM',
   },
   {
     id: 4,
     text: 'The meeting is at Google headquarters',
     tokens: ['The', 'meeting', 'is', 'at', 'Google', 'headquarters'],
     tags: ['O', 'O', 'O', 'O', 'ORGANIZATION', 'O'],
-    timestamp: '11/12/2023, 9:30:00 AM'
+    timestamp: '11/12/2023, 9:30:00 AM',
   },
   {
     id: 5,
     text: 'Please email Jane Doe at jane.doe@example.com',
     tokens: ['Please', 'email', 'Jane', 'Doe', 'at', 'jane.doe@example.com'],
     tags: ['O', 'O', 'NAME', 'NAME', 'O', 'EMAIL'],
-    timestamp: '11/11/2023, 2:15:00 PM'
-  }
+    timestamp: '11/11/2023, 2:15:00 PM',
+  },
 ];
 
-const Separator: React.FC = () => (
-  <hr className="my-3 border-t border-gray-200" />
-);
+const Separator: React.FC = () => <hr className="my-3 border-t border-gray-200" />;
 
 interface HighlightColor {
   text: string;
@@ -85,11 +69,7 @@ interface HighlightedSampleProps {
   tagColors: Record<string, HighlightColor>;
 }
 
-function HighlightedSample({
-  tokens,
-  tags,
-  tagColors
-}: HighlightedSampleProps) {
+function HighlightedSample({ tokens, tags, tagColors }: HighlightedSampleProps) {
   return (
     <div className="mb-4 leading-relaxed">
       {tokens.map((token, index) => (
@@ -98,13 +78,12 @@ function HighlightedSample({
           className={`inline-block px-1 py-0.5 rounded transition-colors duration-200 ease-in-out mr-1`}
           style={{
             backgroundColor: tagColors[tags[index]]?.text || 'transparent',
-            userSelect: 'none'
+            userSelect: 'none',
           }}
         >
           {token}
           {tagColors[tags[index]] &&
-            (index === tokens.length - 1 ||
-              tags[index] !== tags[index + 1]) && (
+            (index === tokens.length - 1 || tags[index] !== tags[index + 1]) && (
               <span
                 className="text-xs font-bold text-white rounded px-1 py-0.5 ml-1 align-text-top"
                 style={{ backgroundColor: tagColors[tags[index]].tag }}
@@ -126,9 +105,7 @@ const RecentSamples: React.FC<RecentSamplesProps> = ({ deploymentUrl }) => {
   const [samples] = useState(mockSamples);
   const [isLoadingLabels, setIsLoadingLabels] = useState(false);
   const [isLoadingSamples, setIsLoadingSamples] = useState(false);
-  const [tagColors, setTagColors] = useState<Record<string, HighlightColor>>(
-    {}
-  );
+  const [tagColors, setTagColors] = useState<Record<string, HighlightColor>>({});
   const colorAssignmentsRef = useRef<Record<string, HighlightColor>>({});
 
   const predefinedColors: HighlightColor[] = [
@@ -138,19 +115,17 @@ const RecentSamples: React.FC<RecentSamplesProps> = ({ deploymentUrl }) => {
     { text: '#DBEAFE', tag: '#3B82F6' }, // Blue
     { text: '#E0E7FF', tag: '#6366F1' }, // Indigo
     { text: '#EDE9FE', tag: '#8B5CF6' }, // Violet
-    { text: '#FCE7F3', tag: '#EC4899' } // Pink
+    { text: '#FCE7F3', tag: '#EC4899' }, // Pink
   ];
 
   // Extract all unique tags from samples (excluding 'O')
-  const uniqueLabels = Array.from(
-    new Set(samples.flatMap((sample) => sample.tags))
-  ).filter((tag) => tag !== 'O');
+  const uniqueLabels = Array.from(new Set(samples.flatMap((sample) => sample.tags))).filter(
+    (tag) => tag !== 'O'
+  );
 
   useEffect(() => {
     const allTags = samples.flatMap((sample) => sample.tags);
-    const uniqueTags = Array.from(new Set(allTags)).filter(
-      (tag) => tag !== 'O'
-    );
+    const uniqueTags = Array.from(new Set(allTags)).filter((tag) => tag !== 'O');
     const newColors: Record<string, HighlightColor> = {};
 
     uniqueTags.forEach((tag, index) => {
@@ -162,7 +137,7 @@ const RecentSamples: React.FC<RecentSamplesProps> = ({ deploymentUrl }) => {
         const hue = (index * 137.508) % 360;
         newColors[tag] = {
           text: `hsl(${hue}, 70%, 90%)`,
-          tag: `hsl(${hue}, 70%, 40%)`
+          tag: `hsl(${hue}, 70%, 40%)`,
         };
       }
       colorAssignmentsRef.current[tag] = newColors[tag];
@@ -216,9 +191,7 @@ const RecentSamples: React.FC<RecentSamplesProps> = ({ deploymentUrl }) => {
 
         <Card className="h-[calc(100vh-16rem)] overflow-hidden">
           <CardHeader className="pb-2">
-            <CardTitle className="text-xl font-semibold">
-              Recent Samples from Users
-            </CardTitle>
+            <CardTitle className="text-xl font-semibold">Recent Samples from Users</CardTitle>
             <CardDescription>The latest inserted samples</CardDescription>
           </CardHeader>
           <CardContent className="overflow-y-auto h-[calc(100%-5rem)]">

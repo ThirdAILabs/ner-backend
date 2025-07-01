@@ -1,13 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 // Types to match the original
 interface TrainingExample {
@@ -31,58 +25,50 @@ const mockReport: TrainReportData = {
     true_positives: {
       O: [
         {
-          source:
-            'Contact John at john@example.com for more information about the project.',
+          source: 'Contact John at john@example.com for more information about the project.',
           target: 'O O NAME O EMAIL O O O O O O O',
           predictions: 'O O NAME O EMAIL O O O O O O O',
-          index: 2
+          index: 2,
         },
         {
-          source:
-            'Please send your documents to 555 Main Street, New York, NY 10001.',
+          source: 'Please send your documents to 555 Main Street, New York, NY 10001.',
           target: 'O O O O O ADDRESS ADDRESS ADDRESS ADDRESS ADDRESS',
-          predictions:
-            'O O O O O ADDRESS ADDRESS ADDRESS ADDRESS ADDRESS ADDRESS',
-          index: 5
-        }
+          predictions: 'O O O O O ADDRESS ADDRESS ADDRESS ADDRESS ADDRESS ADDRESS',
+          index: 5,
+        },
       ],
       NAME: [
         {
-          source:
-            'Sarah Johnson will be presenting at the conference tomorrow.',
+          source: 'Sarah Johnson will be presenting at the conference tomorrow.',
           target: 'NAME NAME O O O O O O O',
           predictions: 'NAME NAME O O O O O O O',
-          index: 0
-        }
+          index: 0,
+        },
       ],
       PHONE: [
         {
-          source:
-            'You can reach customer service at (800) 555-1234 from 9am to 5pm.',
+          source: 'You can reach customer service at (800) 555-1234 from 9am to 5pm.',
           target: 'O O O O O O O PHONE PHONE PHONE O O O O',
           predictions: 'O O O O O O O PHONE PHONE PHONE O O O O',
-          index: 7
-        }
+          index: 7,
+        },
       ],
       EMAIL: [
         {
-          source:
-            'For technical support, email support@company.com with your query.',
+          source: 'For technical support, email support@company.com with your query.',
           target: 'O O O O EMAIL O O O',
           predictions: 'O O O O EMAIL O O O',
-          index: 4
-        }
+          index: 4,
+        },
       ],
       ADDRESS: [
         {
-          source:
-            'The new office is located at 123 Business Ave, Suite 400, Chicago, IL.',
+          source: 'The new office is located at 123 Business Ave, Suite 400, Chicago, IL.',
           target: 'O O O O O O ADDRESS ADDRESS ADDRESS ADDRESS ADDRESS ADDRESS',
-          predictions:
-            'O O O O O O ADDRESS ADDRESS ADDRESS ADDRESS ADDRESS ADDRESS',
-          index: 6
-        }
-      ]
+          predictions: 'O O O O O O ADDRESS ADDRESS ADDRESS ADDRESS ADDRESS ADDRESS',
+          index: 6,
+        },
+      ],
     },
     false_positives: {
       O: [
@@ -90,54 +76,53 @@ const mockReport: TrainReportData = {
           source: 'Contact Alex from the marketing team for updates.',
           target: 'O NAME O O O O O O',
           predictions: 'O O O O O O O O',
-          index: 1
-        }
+          index: 1,
+        },
       ],
       NAME: [
         {
           source: 'The company headquarters is in San Francisco.',
           target: 'O O O O O ADDRESS',
           predictions: 'O O O O O NAME',
-          index: 5
-        }
+          index: 5,
+        },
       ],
       EMAIL: [
         {
           source: 'Send a message to the team chat.',
           target: 'O O O O O O O',
           predictions: 'O O O O O EMAIL O',
-          index: 5
-        }
-      ]
+          index: 5,
+        },
+      ],
     },
     false_negatives: {
       NAME: [
         {
-          source:
-            'Michael Brown is the new project manager starting next month.',
+          source: 'Michael Brown is the new project manager starting next month.',
           target: 'NAME NAME O O O O O O O O',
           predictions: 'O O O O O O O O O O',
-          index: 0
-        }
+          index: 0,
+        },
       ],
       PHONE: [
         {
           source: 'Call me at 212-555-6789 when you arrive.',
           target: 'O O O PHONE O O O',
           predictions: 'O O O O O O O',
-          index: 3
-        }
+          index: 3,
+        },
       ],
       ADDRESS: [
         {
           source: 'The meeting will be at 350 Fifth Avenue, New York.',
           target: 'O O O O O ADDRESS ADDRESS ADDRESS',
           predictions: 'O O O O O O O O',
-          index: 5
-        }
-      ]
-    }
-  }
+          index: 5,
+        },
+      ],
+    },
+  },
 };
 
 interface TokenHighlightProps {
@@ -147,12 +132,7 @@ interface TokenHighlightProps {
   type: 'tp' | 'fp' | 'fn';
 }
 
-const TokenHighlight: React.FC<TokenHighlightProps> = ({
-  text,
-  index,
-  highlightIndex,
-  type
-}) => {
+const TokenHighlight: React.FC<TokenHighlightProps> = ({ text, index, highlightIndex, type }) => {
   const isHighlighted = index === highlightIndex;
 
   const getHighlightColor = () => {
@@ -212,9 +192,7 @@ const ExamplePair: React.FC<ExamplePairProps> = ({ example, type }) => {
 
   return (
     <div className="border rounded-lg p-4 space-y-3">
-      <div
-        className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getTypeColor()}`}
-      >
+      <div className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getTypeColor()}`}>
         {getTypeLabel()}
       </div>
 
@@ -278,9 +256,7 @@ interface ExamplesVisualizerProps {
   report?: TrainReportData;
 }
 
-const ExamplesVisualizer: React.FC<ExamplesVisualizerProps> = ({
-  report = mockReport
-}) => {
+const ExamplesVisualizer: React.FC<ExamplesVisualizerProps> = ({ report = mockReport }) => {
   const allLabels = Object.keys(report.after_train_examples.true_positives);
   const [selectedLabel, setSelectedLabel] = useState(allLabels[0]);
   const [selectedType, setSelectedType] = useState<'tp' | 'fp' | 'fn'>('tp');
@@ -289,18 +265,18 @@ const ExamplesVisualizer: React.FC<ExamplesVisualizerProps> = ({
     {
       id: 'tp',
       label: 'True Positives',
-      color: 'bg-green-100 hover:bg-green-200'
+      color: 'bg-green-100 hover:bg-green-200',
     },
     {
       id: 'fp',
       label: 'False Positives',
-      color: 'bg-red-100 hover:bg-red-200'
+      color: 'bg-red-100 hover:bg-red-200',
     },
     {
       id: 'fn',
       label: 'False Negatives',
-      color: 'bg-yellow-100 hover:bg-yellow-200'
-    }
+      color: 'bg-yellow-100 hover:bg-yellow-200',
+    },
   ] as const;
 
   const getExamples = () => {
@@ -318,9 +294,7 @@ const ExamplesVisualizer: React.FC<ExamplesVisualizerProps> = ({
     <Card>
       <CardHeader>
         <CardTitle>Sample Predictions</CardTitle>
-        <CardDescription>
-          Analyze model predictions with token-level details
-        </CardDescription>
+        <CardDescription>Analyze model predictions with token-level details</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Label Selection */}
@@ -346,9 +320,7 @@ const ExamplesVisualizer: React.FC<ExamplesVisualizerProps> = ({
 
         {/* Prediction Type Selection */}
         <div className="space-y-2">
-          <div className="text-sm font-medium text-gray-500">
-            Select Prediction Type
-          </div>
+          <div className="text-sm font-medium text-gray-500">Select Prediction Type</div>
           <div className="flex flex-wrap gap-2">
             {predictionTypes.map(({ id, label, color }) => (
               <button

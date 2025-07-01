@@ -19,19 +19,19 @@ const useTokenClassificationEndpoints = () => {
         data: {
           tokens: words.map((word) => ({
             text: word,
-            tag: Math.random() > 0.8 ? 'PII' : 'O'
-          }))
-        }
+            tag: Math.random() > 0.8 ? 'PII' : 'O',
+          })),
+        },
       };
     },
     getLabels: async () => {
       return {
-        data: ['O', 'PII', 'NAME', 'ADDRESS', 'PHONE', 'EMAIL', 'SSN']
+        data: ['O', 'PII', 'NAME', 'ADDRESS', 'PHONE', 'EMAIL', 'SSN'],
       };
     },
     addLabel: async (label: string) => {
       return { success: true };
-    }
+    },
   };
 };
 
@@ -88,7 +88,7 @@ function Highlight({
   allLabels,
   onSelectTag,
   onNewLabel,
-  anchorEl
+  anchorEl,
 }: HighlightProps) {
   const [hover, setHover] = useState<boolean>(false);
 
@@ -107,7 +107,7 @@ function Highlight({
           cursor: hover ? 'pointer' : 'default',
           userSelect: 'none',
           display: 'inline-flex',
-          alignItems: 'center'
+          alignItems: 'center',
         }}
         onMouseOver={(e) => {
           setHover(true);
@@ -130,7 +130,7 @@ function Highlight({
               fontWeight: 'bold',
               borderRadius: '2px',
               marginLeft: '4px',
-              padding: '1px 3px'
+              padding: '1px 3px',
             }}
           >
             {currentToken.tag}
@@ -158,7 +158,7 @@ function TagSelector({
   onSelect,
   onNewLabel,
   currentTag,
-  anchorEl
+  anchorEl,
 }: TagSelectorProps) {
   const [query, setQuery] = useState('');
   const [searchableChoices, setSearchableChoices] = useState<string[]>([]);
@@ -173,9 +173,7 @@ function TagSelector({
   }, [choices, currentTag]);
 
   const filteredChoices = query
-    ? searchableChoices.filter((choice) =>
-        choice.toLowerCase().includes(query.toLowerCase())
-      )
+    ? searchableChoices.filter((choice) => choice.toLowerCase().includes(query.toLowerCase()))
     : searchableChoices;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -199,7 +197,7 @@ function TagSelector({
       onClose={() => onSelect(currentTag)}
       anchorOrigin={{
         vertical: 'bottom',
-        horizontal: 'left'
+        horizontal: 'left',
       }}
     >
       <Box sx={{ p: 1, width: 200 }}>
@@ -235,9 +233,7 @@ function TagSelector({
             });
           }}
         >
-          <Typography sx={{ fontStyle: 'italic' }}>
-            Add "{query}" as new label
-          </Typography>
+          <Typography sx={{ fontStyle: 'italic' }}>Add "{query}" as new label</Typography>
         </MenuItem>
       )}
     </Menu>
@@ -249,9 +245,7 @@ export default function Interact() {
   const [isLoading, setIsLoading] = useState(false);
   const [tokens, setTokens] = useState<Token[]>([]);
   const [allLabels, setAllLabels] = useState<string[]>(['O']);
-  const [tagColors, setTagColors] = useState<Record<string, HighlightColor>>(
-    {}
-  );
+  const [tagColors, setTagColors] = useState<Record<string, HighlightColor>>({});
   const [selectionStart, setSelectionStart] = useState<number | null>(null);
   const [selectionEnd, setSelectionEnd] = useState<number | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -290,7 +284,7 @@ export default function Interact() {
       { tag: '#81C784', text: '#E8F5E9' }, // green
       { tag: '#FFF176', text: '#FFFDE7' }, // yellow
       { tag: '#FFB74D', text: '#FFF3E0' }, // orange
-      { tag: '#BA68C8', text: '#F3E5F5' } // purple
+      { tag: '#BA68C8', text: '#F3E5F5' }, // purple
     ];
 
     tags.forEach((tag, index) => {
@@ -337,7 +331,7 @@ export default function Interact() {
         { tag: '#81C784', text: '#E8F5E9' }, // green
         { tag: '#FFF176', text: '#FFFDE7' }, // yellow
         { tag: '#FFB74D', text: '#FFF3E0' }, // orange
-        { tag: '#BA68C8', text: '#F3E5F5' } // purple
+        { tag: '#BA68C8', text: '#F3E5F5' }, // purple
       ];
 
       newTagColors[newLabel] = tagColorPairs[colorIndex];
@@ -375,11 +369,7 @@ export default function Interact() {
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleDocumentClick = (e: MouseEvent) => {
-      if (
-        showDropdown &&
-        cardRef.current &&
-        !cardRef.current.contains(e.target as Node)
-      ) {
+      if (showDropdown && cardRef.current && !cardRef.current.contains(e.target as Node)) {
         setShowDropdown(false);
         setSelectionStart(null);
         setSelectionEnd(null);
@@ -452,7 +442,7 @@ export default function Interact() {
       style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-        gap: '1.5rem'
+        gap: '1.5rem',
       }}
     >
       {/* Left Column: Input area */}
@@ -460,7 +450,7 @@ export default function Interact() {
         <Card
           sx={{
             backgroundColor: '#fff',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
           }}
         >
           <CardContent sx={{ p: 3 }}>
@@ -475,7 +465,7 @@ export default function Interact() {
                 backgroundColor: '#fff',
                 borderRadius: '4px',
                 border: '1px solid #ddd',
-                padding: '12px'
+                padding: '12px',
               }}
             />
 
@@ -488,8 +478,8 @@ export default function Interact() {
                   position: 'absolute',
                   top: '50%',
                   width: '100%',
-                  borderTop: '1px solid #ddd'
-                }
+                  borderTop: '1px solid #ddd',
+                },
               }}
             >
               <Typography
@@ -502,7 +492,7 @@ export default function Interact() {
                   display: 'inline-block',
                   px: 2,
                   left: '50%',
-                  transform: 'translateX(-50%)'
+                  transform: 'translateX(-50%)',
                 }}
               >
                 OR
@@ -518,14 +508,12 @@ export default function Interact() {
                 cursor: 'pointer',
                 mb: 3,
                 '&:hover': {
-                  borderColor: '#aaa'
-                }
+                  borderColor: '#aaa',
+                },
               }}
               onClick={handleFileUpload}
             >
-              <Typography color="text.secondary">
-                Upload Document here
-              </Typography>
+              <Typography color="text.secondary">Upload Document here</Typography>
             </Box>
 
             <Box sx={{ display: 'flex', justifyContent: 'center' }}>
@@ -537,19 +525,15 @@ export default function Interact() {
                   backgroundColor: '#9E9E9E',
                   color: 'white',
                   '&:hover': {
-                    backgroundColor: '#757575'
+                    backgroundColor: '#757575',
                   },
                   minWidth: '100px',
                   borderRadius: '4px',
                   boxShadow: 'none',
-                  textTransform: 'none'
+                  textTransform: 'none',
                 }}
               >
-                {isLoading ? (
-                  <CircularProgress size={24} color="inherit" />
-                ) : (
-                  'Run'
-                )}
+                {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Run'}
               </Button>
             </Box>
           </CardContent>
@@ -560,7 +544,7 @@ export default function Interact() {
             sx={{
               backgroundColor: '#fff',
               boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-              mt: 3
+              mt: 3,
             }}
           >
             <CardContent sx={{ p: 3 }}>
@@ -577,7 +561,7 @@ export default function Interact() {
         <Card
           sx={{
             backgroundColor: '#fff',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
           }}
         >
           <CardContent sx={{ p: 3 }}>
@@ -592,10 +576,10 @@ export default function Interact() {
                   backgroundColor: '#EEEEEE',
                   color: '#666',
                   '&:hover': {
-                    backgroundColor: '#E0E0E0'
+                    backgroundColor: '#E0E0E0',
                   },
                   textTransform: 'none',
-                  boxShadow: 'none'
+                  boxShadow: 'none',
                 }}
                 onClick={handleSubmitFeedback}
               >

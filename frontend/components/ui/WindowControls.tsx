@@ -11,28 +11,19 @@ export function WindowControls() {
   }
 
   const handleMinimize = () => {
-    if (
-      typeof window !== 'undefined' &&
-      (window as any).electron?.minimizeWindow
-    ) {
+    if (typeof window !== 'undefined' && (window as any).electron?.minimizeWindow) {
       (window as any).electron.minimizeWindow();
     }
   };
 
   const handleMaximize = () => {
-    if (
-      typeof window !== 'undefined' &&
-      (window as any).electron?.maximizeWindow
-    ) {
+    if (typeof window !== 'undefined' && (window as any).electron?.maximizeWindow) {
       (window as any).electron.maximizeWindow();
     }
   };
 
   const handleClose = () => {
-    if (
-      typeof window !== 'undefined' &&
-      (window as any).electron?.closeWindow
-    ) {
+    if (typeof window !== 'undefined' && (window as any).electron?.closeWindow) {
       (window as any).electron.closeWindow();
     }
   };

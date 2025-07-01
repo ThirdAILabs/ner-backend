@@ -10,7 +10,7 @@ import type {
   DatabaseTableProps,
   ClassifiedTokenDatabaseRecord,
   ObjectDatabaseRecord,
-  ViewMode
+  ViewMode,
 } from '@/types/analyticsTypes';
 
 export function DatabaseTable({
@@ -19,7 +19,7 @@ export function DatabaseTable({
   customTagNames,
   uploadId,
   addFeedback,
-  initialSelectedTag
+  initialSelectedTag,
 }: DatabaseTableProps) {
   const searchParams = useSearchParams();
   const reportId: string = searchParams.get('jobId') as string;
@@ -35,12 +35,8 @@ export function DatabaseTable({
   const [showTableShadow, setShowTableShadow] = useState(false);
 
   // Data states
-  const [tokenRecords, setTokenRecords] = useState<
-    ClassifiedTokenDatabaseRecord[]
-  >([]);
-  const [objectRecords, setObjectRecords] = useState<ObjectDatabaseRecord[]>(
-    []
-  );
+  const [tokenRecords, setTokenRecords] = useState<ClassifiedTokenDatabaseRecord[]>([]);
+  const [objectRecords, setObjectRecords] = useState<ObjectDatabaseRecord[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('object');
   const [query, setQuery] = useState('');
   const [pathMap, setPathMap] = useState<Record<string, string>>({});
@@ -54,17 +50,14 @@ export function DatabaseTable({
   const OBJECTS_LIMIT = 25; // Number of object records to fetch per request
 
   // Filter states
-  const [groupFilters, setGroupFilters] = useState<Record<string, boolean>>(
-    () => Object.fromEntries(groups.map((group) => [group, true]))
+  const [groupFilters, setGroupFilters] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(groups.map((group) => [group, true]))
   );
 
   const [tagFilters, setTagFilters] = useState<Record<string, boolean>>(() => {
     const allTagKeys = tags.map((tag) => tag.type);
     return Object.fromEntries(
-      allTagKeys.map((tag) => [
-        tag,
-        initialSelectedTag ? tag === initialSelectedTag : true
-      ])
+      allTagKeys.map((tag) => [tag, initialSelectedTag ? tag === initialSelectedTag : true])
     );
   });
 
@@ -74,15 +67,9 @@ export function DatabaseTable({
       .map(([tagType]) => tagType);
   };
 
-  const loadTokenRecords = (
-    newOffset = 0,
-    tagFilter: string[],
-    limit = TOKENS_LIMIT
-  ) => {
+  const loadTokenRecords = (newOffset = 0, tagFilter: string[], limit = TOKENS_LIMIT) => {
     if (isLoadingTokenRecords || (!hasMoreTokens && newOffset > 0)) {
-      console.log(
-        'Skipping token records load - already loading or no more data'
-      );
+      console.log('Skipping token records load - already loading or no more data');
       return;
     }
 
@@ -92,12 +79,10 @@ export function DatabaseTable({
       .getReportEntities(reportId, {
         offset: newOffset,
         limit: limit,
-        tags: tagFilter
+        tags: tagFilter,
       })
       .then((entities) => {
-        console.log(
-          `Loaded ${entities.length} token records from offset ${newOffset}`
-        );
+        console.log(`Loaded ${entities.length} token records from offset ${newOffset}`);
 
         const mappedRecords = entities.map((entity) => {
           console.log('Entity object:', entity.Object);
@@ -108,10 +93,10 @@ export function DatabaseTable({
             groups: [],
             context: {
               left: entity.LContext || '',
-              right: entity.RContext || ''
+              right: entity.RContext || '',
             },
             start: entity.Start,
-            end: entity.End
+            end: entity.End,
           };
         });
 
@@ -131,16 +116,10 @@ export function DatabaseTable({
       });
   };
 
-  const loadObjectRecords = (
-    newOffset = 0,
-    objectsFilter?: string[],
-    limit = OBJECTS_LIMIT
-  ) => {
+  const loadObjectRecords = (newOffset = 0, objectsFilter?: string[], limit = OBJECTS_LIMIT) => {
     // Don't load if we're already loading or if we've reached the end
     if (isLoadingObjectRecords || (!hasMoreObjects && newOffset > 0)) {
-      console.log(
-        'Skipping object records load - already loading or no more data'
-      );
+      console.log('Skipping object records load - already loading or no more data');
       return;
     }
 
@@ -150,21 +129,17 @@ export function DatabaseTable({
       .getReportObjects(reportId, {
         offset: newOffset,
         limit: limit,
-        tags: objectsFilter
+        tags: objectsFilter,
       })
       .then((objects) => {
-        console.log(
-          `Loaded ${objects.length} object records from offset ${newOffset}`
-        );
+        console.log(`Loaded ${objects.length} object records from offset ${newOffset}`);
 
         // Map API objects to our record format
         const mappedRecords = objects.map((obj) => ({
           sourceObject: obj.object,
           taggedTokens:
-            obj.tokens?.map(
-              (token, i) => [token, obj.tags[i]] as [string, string]
-            ) || [],
-          groups: [] // This would need to be populated from somewhere if needed
+            obj.tokens?.map((token, i) => [token, obj.tags[i]] as [string, string]) || [],
+          groups: [], // This would need to be populated from somewhere if needed
         }));
 
         // If resetting (offset=0), replace records; otherwise append
@@ -241,7 +216,7 @@ export function DatabaseTable({
           console.log('DatabaseTable - Path map loaded:', {
             uploadId,
             pathMapKeys: Object.keys(pathMap || {}),
-            pathMapEntries: Object.entries(pathMap || {})
+            pathMapEntries: Object.entries(pathMap || {}),
           });
           setPathMap(pathMap);
         })
@@ -262,17 +237,9 @@ export function DatabaseTable({
 
       if (scrollHeight - (scrollTop + clientHeight) < bottomThreshold) {
         // Load more records based on view mode
-        if (
-          viewMode === 'object' &&
-          !isLoadingObjectRecords &&
-          hasMoreObjects
-        ) {
+        if (viewMode === 'object' && !isLoadingObjectRecords && hasMoreObjects) {
           loadObjectRecords(objectOffset, toActiveTagList(tagFilters));
-        } else if (
-          viewMode === 'classified-token' &&
-          !isLoadingTokenRecords &&
-          hasMoreTokens
-        ) {
+        } else if (viewMode === 'classified-token' && !isLoadingTokenRecords && hasMoreTokens) {
           loadTokenRecords(tokenOffset, toActiveTagList(tagFilters));
         }
       }
@@ -283,11 +250,7 @@ export function DatabaseTable({
   const handleLoadMore = () => {
     if (viewMode === 'object' && !isLoadingObjectRecords && hasMoreObjects) {
       loadObjectRecords(objectOffset, toActiveTagList(tagFilters));
-    } else if (
-      viewMode === 'classified-token' &&
-      !isLoadingTokenRecords &&
-      hasMoreTokens
-    ) {
+    } else if (viewMode === 'classified-token' && !isLoadingTokenRecords && hasMoreTokens) {
       loadTokenRecords(tokenOffset, toActiveTagList(tagFilters));
     }
   };
@@ -296,7 +259,7 @@ export function DatabaseTable({
   const handleGroupFilterChange = (filterKey: string) => {
     setGroupFilters((prev) => ({
       ...prev,
-      [filterKey]: !prev[filterKey]
+      [filterKey]: !prev[filterKey],
     }));
   };
 
@@ -304,7 +267,7 @@ export function DatabaseTable({
     setTagFilters((prev) => {
       const newFilters = {
         ...prev,
-        [filterKey]: !prev[filterKey]
+        [filterKey]: !prev[filterKey],
       };
 
       const activeTagList = toActiveTagList(newFilters);
@@ -374,16 +337,9 @@ export function DatabaseTable({
       hasMoreTokens,
       objectRecords: objectRecords.length,
       objectOffset,
-      hasMoreObjects
+      hasMoreObjects,
     });
-  }, [
-    tokenRecords,
-    objectRecords,
-    tokenOffset,
-    objectOffset,
-    hasMoreTokens,
-    hasMoreObjects
-  ]);
+  }, [tokenRecords, objectRecords, tokenOffset, objectOffset, hasMoreTokens, hasMoreObjects]);
   const [showFilterSection, setShowFilterSection] = useState<boolean>(true);
 
   return (
@@ -423,9 +379,7 @@ export function DatabaseTable({
               className="flex-1 overflow-auto"
               onScroll={handleTableScroll}
               style={{
-                boxShadow: showTableShadow
-                  ? 'inset 0 4px 6px -4px rgba(0, 0, 0, 0.1)'
-                  : 'none'
+                boxShadow: showTableShadow ? 'inset 0 4px 6px -4px rgba(0, 0, 0, 0.1)' : 'none',
               }}
             >
               <div className="px-6">

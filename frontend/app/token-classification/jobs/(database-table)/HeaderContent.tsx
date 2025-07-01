@@ -18,7 +18,7 @@ export function HeaderContent({
   onViewModeChange,
   onSave,
   onSearch,
-  searchLoading = false
+  searchLoading = false,
 }: HeaderContentProps) {
   // Cast the ViewMode to string for compatibility with the Tabs component
   const handleViewModeChange = (value: string) => {

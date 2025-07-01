@@ -12,7 +12,7 @@ import {
   TableHead,
   TableRow,
   Paper,
-  CircularProgress
+  CircularProgress,
 } from '@mui/material';
 import { Plus } from 'lucide-react';
 
@@ -57,8 +57,7 @@ function JobStatus({ report }: { report: ReportWithStatus }) {
   const { ShardDataTaskStatus, InferenceTaskStatuses } = report.detailedStatus;
   const reportErrors = report.Errors || [];
   const monthlyQuotaExceeded =
-    reportErrors.length > 0 &&
-    reportErrors.includes('license verification failed: quota exceeded');
+    reportErrors.length > 0 && reportErrors.includes('license verification failed: quota exceeded');
 
   // Check for ShardDataTask failure first
   if (ShardDataTaskStatus === 'FAILED') {
@@ -70,7 +69,7 @@ function JobStatus({ report }: { report: ReportWithStatus }) {
             height: '8px',
             bgcolor: '#f1f5f9',
             borderRadius: '9999px',
-            overflow: 'hidden'
+            overflow: 'hidden',
           }}
         >
           <Box
@@ -78,7 +77,7 @@ function JobStatus({ report }: { report: ReportWithStatus }) {
               height: '100%',
               width: '100%',
               bgcolor: '#ef4444', // red color for failure
-              borderRadius: '9999px'
+              borderRadius: '9999px',
             }}
           />
         </Box>
@@ -87,7 +86,7 @@ function JobStatus({ report }: { report: ReportWithStatus }) {
           sx={{
             color: '#ef4444',
             whiteSpace: 'nowrap',
-            fontWeight: 'medium'
+            fontWeight: 'medium',
           }}
         >
           Failed
@@ -118,7 +117,7 @@ function JobStatus({ report }: { report: ReportWithStatus }) {
             display: 'flex',
             alignItems: 'center',
             gap: 0.5,
-            color: 'red'
+            color: 'red',
           }}
         >
           Monthly Quota Exceeded
@@ -164,7 +163,7 @@ function JobStatus({ report }: { report: ReportWithStatus }) {
             borderRadius: '9999px',
             overflow: 'hidden',
             display: 'flex',
-            position: 'relative'
+            position: 'relative',
           }}
         >
           {/* Green (successful files) */}
@@ -172,7 +171,7 @@ function JobStatus({ report }: { report: ReportWithStatus }) {
             sx={{
               height: '100%',
               width: `${(succeededFileCount / fileCount) * 100}%`,
-              bgcolor: '#4caf50'
+              bgcolor: '#4caf50',
             }}
           />
           {/* Red (failed files) */}
@@ -180,7 +179,7 @@ function JobStatus({ report }: { report: ReportWithStatus }) {
             sx={{
               height: '100%',
               width: `${(failedFileCount / fileCount) * 100}%`,
-              bgcolor: '#ef4444'
+              bgcolor: '#ef4444',
             }}
           />
           {/* Loading animation */}
@@ -194,7 +193,7 @@ function JobStatus({ report }: { report: ReportWithStatus }) {
                   top: 0,
                   left: 0,
                   right: 0,
-                  bottom: 0
+                  bottom: 0,
                 }}
               />
             )}
@@ -204,7 +203,7 @@ function JobStatus({ report }: { report: ReportWithStatus }) {
           sx={{
             color: 'text.secondary',
             whiteSpace: 'nowrap',
-            fontWeight: 'medium'
+            fontWeight: 'medium',
           }}
         >
           {`${(((succeededFileCount + failedFileCount) / fileCount) * 100).toFixed(0)} %`}
@@ -225,7 +224,7 @@ interface JobProps {
 function Job({ initialReport, onDelete }: JobProps) {
   const [report, setReport] = useState<ReportWithStatus>({
     ...initialReport,
-    isLoadingStatus: true
+    isLoadingStatus: true,
   });
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -241,17 +240,15 @@ function Job({ initialReport, onDelete }: JobProps) {
         TotalFileCount: detailedReport.TotalFileCount,
         detailedStatus: {
           ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
-          InferenceTaskStatuses: detailedReport.InferenceTaskStatuses
+          InferenceTaskStatuses: detailedReport.InferenceTaskStatuses,
         },
-        isLoadingStatus: false
+        isLoadingStatus: false,
       }));
 
-      const seenFileCount =
-        detailedReport.SucceededFileCount + detailedReport.FailedFileCount;
+      const seenFileCount = detailedReport.SucceededFileCount + detailedReport.FailedFileCount;
 
       const isCompleted =
-        detailedReport.TotalFileCount !== 0 &&
-        seenFileCount === detailedReport.TotalFileCount;
+        detailedReport.TotalFileCount !== 0 && seenFileCount === detailedReport.TotalFileCount;
 
       return isCompleted;
     } catch (err) {
@@ -297,16 +294,16 @@ function Job({ initialReport, onDelete }: JobProps) {
       sx={{
         bgcolor: 'white',
         '&:hover': {
-          bgcolor: alpha('#60a5fa', 0.04)
+          bgcolor: alpha('#60a5fa', 0.04),
         },
-        transition: 'background-color 0.2s'
+        transition: 'background-color 0.2s',
       }}
     >
       <TableCell>
         <Typography
           sx={{
             fontWeight: 500,
-            color: '#1e293b'
+            color: '#1e293b',
           }}
         >
           {report.ReportName}
@@ -320,17 +317,16 @@ function Job({ initialReport, onDelete }: JobProps) {
             px: 2,
             py: 0.5,
             bgcolor: '#f1f5f9',
-            borderRadius: '16px'
+            borderRadius: '16px',
           }}
         >
           <Typography
             sx={{
               fontSize: '0.875rem',
-              color: '#475569'
+              color: '#475569',
             }}
           >
-            {report.Model.Name.charAt(0).toUpperCase() +
-              report.Model.Name.slice(1)}
+            {report.Model.Name.charAt(0).toUpperCase() + report.Model.Name.slice(1)}
           </Typography>
         </Box>
       </TableCell>
@@ -352,13 +348,13 @@ function Job({ initialReport, onDelete }: JobProps) {
           sx={{
             display: 'flex',
             alignItems: 'center',
-            gap: 1
+            gap: 1,
           }}
         >
           <Link
             href={`/token-classification/jobs?jobId=${report.Id}`}
             style={{
-              textDecoration: 'none'
+              textDecoration: 'none',
             }}
           >
             <Button
@@ -369,11 +365,11 @@ function Job({ initialReport, onDelete }: JobProps) {
                 color: '#475569',
                 '&:hover': {
                   borderColor: '#cbd5e1',
-                  bgcolor: '#f8fafc'
+                  bgcolor: '#f8fafc',
                 },
                 textTransform: 'none',
                 minWidth: 0,
-                px: 2
+                px: 2,
               }}
             >
               View
@@ -386,8 +382,8 @@ function Job({ initialReport, onDelete }: JobProps) {
               sx={{
                 color: '#dc2626',
                 '&:hover': {
-                  bgcolor: alpha('#dc2626', 0.04)
-                }
+                  bgcolor: alpha('#dc2626', 0.04),
+                },
               }}
             >
               <DeleteIcon fontSize="small" />
@@ -412,7 +408,7 @@ export default function Jobs() {
     recordEvent({
       UserAction: 'View Reports Dashboard',
       UIComponent: 'Reports Dashboard',
-      Page: 'Reports Dashboard Page'
+      Page: 'Reports Dashboard Page',
     });
   }, []);
 
@@ -426,18 +422,14 @@ export default function Jobs() {
 
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const [quotaUsedPercentage, setQuotaUsedPercentage] = useState<number | null>(
-    null
-  );
+  const [quotaUsedPercentage, setQuotaUsedPercentage] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchReports = async () => {
       try {
         const reportsData = await nerService.listReports();
         reportsData.sort(
-          (a, b) =>
-            new Date(b.CreationTime).getTime() -
-            new Date(a.CreationTime).getTime()
+          (a, b) => new Date(b.CreationTime).getTime() - new Date(a.CreationTime).getTime()
         );
         setReports(reportsData as ReportWithStatus[]);
       } catch (err) {
@@ -467,9 +459,7 @@ export default function Jobs() {
   useEffect(() => {
     if (license && license?.LicenseInfo?.LicenseType === 'free') {
       setQuotaUsedPercentage(
-        (license.LicenseInfo.Usage.UsedBytes /
-          license.LicenseInfo.Usage.MaxBytes) *
-          100
+        (license.LicenseInfo.Usage.UsedBytes / license.LicenseInfo.Usage.MaxBytes) * 100
       );
     }
   }, [reports]);
@@ -489,26 +479,24 @@ export default function Jobs() {
               : 'Your license is invalid. Please check your license key or contact ThirdAI support.'}
           </div>
         )}
-        {typeof quotaUsedPercentage === 'number' &&
-          quotaUsedPercentage > 75 && (
-            <div
-              className={`
+        {typeof quotaUsedPercentage === 'number' && quotaUsedPercentage > 75 && (
+          <div
+            className={`
                       px-4 py-3 rounded mb-6 border 
                       bg-yellow-100 border-yellow-200 text-yellow-600
                     `}
-            >
-              You have used {quotaUsedPercentage?.toFixed(2)}% of your monthly
-              quota. Any report exceeding the quota will not be processed. The
-              quota resets on the 1st of each month.
-            </div>
-          )}
+          >
+            You have used {quotaUsedPercentage?.toFixed(2)}% of your monthly quota. Any report
+            exceeding the quota will not be processed. The quota resets on the 1st of each month.
+          </div>
+        )}
         <Card
           sx={{
             boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
             bgcolor: 'white',
             borderRadius: '12px',
             mx: 'auto',
-            maxWidth: '1400px'
+            maxWidth: '1400px',
           }}
         >
           <CardContent sx={{ p: 4 }}>
@@ -517,7 +505,7 @@ export default function Jobs() {
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                mb: 4
+                mb: 4,
               }}
             >
               <Box>
@@ -526,18 +514,14 @@ export default function Jobs() {
                   sx={{
                     fontWeight: 600,
                     fontSize: '1.5rem',
-                    color: '#4a5568'
+                    color: '#4a5568',
                   }}
                 >
                   Scans
                 </Typography>
               </Box>
               {healthStatus && isLicenseValid ? (
-                <Link
-                  href={`/token-classification/jobs/new`}
-                  passHref
-                  legacyBehavior
-                >
+                <Link href={`/token-classification/jobs/new`} passHref legacyBehavior>
                   <a style={{ textDecoration: 'none' }}>
                     <Button
                       variant="contained"
@@ -546,14 +530,14 @@ export default function Jobs() {
                       sx={{
                         bgcolor: '#2563eb',
                         '&:hover': {
-                          bgcolor: '#1d4ed8'
+                          bgcolor: '#1d4ed8',
                         },
                         textTransform: 'none',
                         fontWeight: 500,
                         px: 3,
                         py: 1.5,
                         borderRadius: '8px',
-                        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+                        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
                       }}
                     >
                       New Scan
@@ -573,7 +557,7 @@ export default function Jobs() {
                     px: 3,
                     py: 1.5,
                     borderRadius: '8px',
-                    boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+                    boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
                   }}
                 >
                   New Scan
@@ -592,8 +576,8 @@ export default function Jobs() {
                 '& .MuiTableCell-root': {
                   borderBottom: '1px solid',
                   borderColor: 'grey.200',
-                  py: 2.5
-                }
+                  py: 2.5,
+                },
               }}
             >
               <Table>
@@ -603,7 +587,7 @@ export default function Jobs() {
                       sx={{
                         fontWeight: 600,
                         color: '#475569',
-                        fontSize: '0.875rem'
+                        fontSize: '0.875rem',
                       }}
                     >
                       Name
@@ -612,7 +596,7 @@ export default function Jobs() {
                       sx={{
                         fontWeight: 600,
                         color: '#475569',
-                        fontSize: '0.875rem'
+                        fontSize: '0.875rem',
                       }}
                     >
                       Model
@@ -621,7 +605,7 @@ export default function Jobs() {
                       sx={{
                         fontWeight: 600,
                         color: '#475569',
-                        fontSize: '0.875rem'
+                        fontSize: '0.875rem',
                       }}
                     >
                       Progress
@@ -630,7 +614,7 @@ export default function Jobs() {
                       sx={{
                         fontWeight: 600,
                         color: '#475569',
-                        fontSize: '0.875rem'
+                        fontSize: '0.875rem',
                       }}
                     >
                       Created At
@@ -640,7 +624,7 @@ export default function Jobs() {
                         fontWeight: 600,
                         color: '#475569',
                         fontSize: '0.875rem',
-                        width: '120px'
+                        width: '120px',
                       }}
                     >
                       Actions
@@ -650,11 +634,7 @@ export default function Jobs() {
                 <TableBody>
                   {reports && reports.length > 0 ? (
                     reports.map((report) => (
-                      <Job
-                        key={report.Id}
-                        initialReport={report}
-                        onDelete={handleDelete}
-                      />
+                      <Job key={report.Id} initialReport={report} onDelete={handleDelete} />
                     ))
                   ) : (
                     <TableRow>
@@ -662,7 +642,7 @@ export default function Jobs() {
                         colSpan={5}
                         sx={{
                           py: 8,
-                          textAlign: 'center'
+                          textAlign: 'center',
                         }}
                       >
                         <Box
@@ -670,13 +650,13 @@ export default function Jobs() {
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
-                            gap: 2
+                            gap: 2,
                           }}
                         >
                           <Typography
                             sx={{
                               color: '#475569',
-                              fontSize: '0.875rem'
+                              fontSize: '0.875rem',
                             }}
                           >
                             -
@@ -703,13 +683,10 @@ export default function Jobs() {
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              mb: 3
+              mb: 3,
             }}
           >
-            <Typography
-              variant="h6"
-              sx={{ fontWeight: 600, fontSize: '1.125rem' }}
-            >
+            <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.125rem' }}>
               Scan
             </Typography>
             <Link href={`/token-classification/jobs/new`} passHref>
@@ -719,19 +696,17 @@ export default function Jobs() {
                 sx={{
                   bgcolor: '#1976d2',
                   '&:hover': {
-                    bgcolor: '#1565c0'
+                    bgcolor: '#1565c0',
                   },
                   textTransform: 'none',
-                  fontWeight: 500
+                  fontWeight: 500,
                 }}
               >
                 <Plus size={16} />
               </Button>
             </Link>
           </Box>
-          <Typography sx={{ textAlign: 'center', py: 2, color: 'error.main' }}>
-            {error}
-          </Typography>
+          <Typography sx={{ textAlign: 'center', py: 2, color: 'error.main' }}>{error}</Typography>
         </CardContent>
       </Card>
     );
@@ -748,7 +723,7 @@ export default function Jobs() {
         bgcolor: 'white',
         borderRadius: '12px',
         mx: 'auto',
-        maxWidth: '1400px'
+        maxWidth: '1400px',
       }}
     >
       <CardContent sx={{ p: 4 }}>
@@ -757,7 +732,7 @@ export default function Jobs() {
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            mb: 4
+            mb: 4,
           }}
         >
           <Box>
@@ -766,7 +741,7 @@ export default function Jobs() {
               sx={{
                 fontWeight: 600,
                 fontSize: '1.5rem',
-                color: '#4a5568'
+                color: '#4a5568',
               }}
             >
               Scans
@@ -780,14 +755,14 @@ export default function Jobs() {
               sx={{
                 bgcolor: '#2563eb',
                 '&:hover': {
-                  bgcolor: '#1d4ed8'
+                  bgcolor: '#1d4ed8',
                 },
                 textTransform: 'none',
                 fontWeight: 500,
                 px: 3,
                 py: 1.5,
                 borderRadius: '8px',
-                boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+                boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
               }}
               disabled={!healthStatus}
             >
@@ -807,8 +782,8 @@ export default function Jobs() {
             '& .MuiTableCell-root': {
               borderBottom: '1px solid',
               borderColor: 'grey.200',
-              py: 2.5
-            }
+              py: 2.5,
+            },
           }}
         >
           <Table>
@@ -818,7 +793,7 @@ export default function Jobs() {
                   sx={{
                     fontWeight: 600,
                     color: '#475569',
-                    fontSize: '0.875rem'
+                    fontSize: '0.875rem',
                   }}
                 >
                   Name
@@ -827,7 +802,7 @@ export default function Jobs() {
                   sx={{
                     fontWeight: 600,
                     color: '#475569',
-                    fontSize: '0.875rem'
+                    fontSize: '0.875rem',
                   }}
                 >
                   Model
@@ -836,7 +811,7 @@ export default function Jobs() {
                   sx={{
                     fontWeight: 600,
                     color: '#475569',
-                    fontSize: '0.875rem'
+                    fontSize: '0.875rem',
                   }}
                 >
                   Progress
@@ -845,7 +820,7 @@ export default function Jobs() {
                   sx={{
                     fontWeight: 600,
                     color: '#475569',
-                    fontSize: '0.875rem'
+                    fontSize: '0.875rem',
                   }}
                 >
                   Created At
@@ -855,7 +830,7 @@ export default function Jobs() {
                     fontWeight: 600,
                     color: '#475569',
                     fontSize: '0.875rem',
-                    width: '120px'
+                    width: '120px',
                   }}
                 >
                   Actions
@@ -865,11 +840,7 @@ export default function Jobs() {
             <TableBody>
               {reports && reports.length > 0 ? (
                 reports.map((report) => (
-                  <Job
-                    key={report.Id}
-                    initialReport={report}
-                    onDelete={handleDelete}
-                  />
+                  <Job key={report.Id} initialReport={report} onDelete={handleDelete} />
                 ))
               ) : (
                 <TableRow>
@@ -877,7 +848,7 @@ export default function Jobs() {
                     colSpan={5}
                     sx={{
                       py: 8,
-                      textAlign: 'center'
+                      textAlign: 'center',
                     }}
                   >
                     <Box
@@ -885,13 +856,13 @@ export default function Jobs() {
                         display: 'flex',
                         flexDirection: 'column',
                         alignItems: 'center',
-                        gap: 2
+                        gap: 2,
                       }}
                     >
                       <Typography
                         sx={{
                           color: '#475569',
-                          fontSize: '0.875rem'
+                          fontSize: '0.875rem',
                         }}
                       >
                         -

@@ -93,10 +93,7 @@ export const nerService = {
       const response = await axiosInstance.get(`/models/${modelId}`);
       return response.data;
     } catch (error) {
-      return handleApiError(
-        error,
-        `Failed to load model details for ${modelId}`
-      );
+      return handleApiError(error, `Failed to load model details for ${modelId}`);
     }
   },
 
@@ -119,9 +116,7 @@ export const nerService = {
     }
   },
 
-  createReport: async (
-    data: CreateReportRequest
-  ): Promise<{ ReportId: string }> => {
+  createReport: async (data: CreateReportRequest): Promise<{ ReportId: string }> => {
     try {
       const response = await axiosInstance.post('/reports', data);
       return response.data;
@@ -148,9 +143,7 @@ export const nerService = {
   },
 
   getReportGroup: async (reportId: string, groupId: string): Promise<Group> => {
-    const response = await axiosInstance.get(
-      `/reports/${reportId}/groups/${groupId}`
-    );
+    const response = await axiosInstance.get(`/reports/${reportId}/groups/${groupId}`);
     return response.data;
   },
 
@@ -166,10 +159,9 @@ export const nerService = {
       params: {
         offset: params?.offset || 0,
         limit: params?.limit || 100,
-        tags: params?.tags
+        tags: params?.tags,
       },
-      paramsSerializer: (params) =>
-        qs.stringify(params, { arrayFormat: 'repeat' })
+      paramsSerializer: (params) => qs.stringify(params, { arrayFormat: 'repeat' }),
     });
     console.log('Entities response:', response.data);
     return response.data;
@@ -184,27 +176,20 @@ export const nerService = {
     }
   ): Promise<ObjectPreview[]> => {
     // Fetch object previews from the backend
-    const response = await axiosInstance.get<ObjectPreview[]>(
-      `/reports/${reportId}/objects`,
-      {
-        params: {
-          offset: params?.offset || 0,
-          limit: params?.limit || 100,
-          tags: params?.tags
-        },
-        paramsSerializer: (params) =>
-          qs.stringify(params, { arrayFormat: 'repeat' })
-      }
-    );
+    const response = await axiosInstance.get<ObjectPreview[]>(`/reports/${reportId}/objects`, {
+      params: {
+        offset: params?.offset || 0,
+        limit: params?.limit || 100,
+        tags: params?.tags,
+      },
+      paramsSerializer: (params) => qs.stringify(params, { arrayFormat: 'repeat' }),
+    });
     return response.data;
   },
 
-  searchReport: async (
-    reportId: string,
-    query: string
-  ): Promise<{ Objects: string[] }> => {
+  searchReport: async (reportId: string, query: string): Promise<{ Objects: string[] }> => {
     const response = await axiosInstance.get(`/reports/${reportId}/search`, {
-      params: { query }
+      params: { query },
     });
     return response.data;
   },
@@ -218,8 +203,8 @@ export const nerService = {
 
       const response = await axiosInstance.post(`/uploads`, formData, {
         headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+          'Content-Type': 'multipart/form-data',
+        },
       });
       return response.data;
     } catch (error) {
@@ -227,38 +212,27 @@ export const nerService = {
     }
   },
 
-  getInferenceMetrics: async (
-    modelId?: string,
-    days?: number
-  ): Promise<InferenceMetrics> => {
+  getInferenceMetrics: async (modelId?: string, days?: number): Promise<InferenceMetrics> => {
     const params: Record<string, any> = {};
     if (modelId) params.model_id = modelId;
     if (days !== undefined) params.days = days;
     const { data } = await axiosInstance.get<InferenceMetrics>('/metrics', {
-      params
+      params,
     });
     return data;
   },
 
-  getThroughputMetrics: async (
-    modelId: string,
-    reportId?: string
-  ): Promise<ThroughputMetrics> => {
+  getThroughputMetrics: async (modelId: string, reportId?: string): Promise<ThroughputMetrics> => {
     const params: Record<string, any> = { model_id: modelId };
     if (reportId) params.report_id = reportId;
-    const { data } = await axiosInstance.get<ThroughputMetrics>(
-      '/metrics/throughput',
-      { params }
-    );
+    const { data } = await axiosInstance.get<ThroughputMetrics>('/metrics/throughput', { params });
     return data;
   },
 
-  validateGroupDefinition: async (
-    groupQuery: string
-  ): Promise<string | null> => {
+  validateGroupDefinition: async (groupQuery: string): Promise<string | null> => {
     try {
       await axiosInstance.get('/validate/group', {
-        params: { GroupQuery: groupQuery }
+        params: { GroupQuery: groupQuery },
       });
       return null;
     } catch (error) {
@@ -281,8 +255,8 @@ export const nerService = {
           S3Endpoint: endpoint,
           S3Region: region,
           SourceS3Bucket: bucket,
-          SourceS3Prefix: prefix
-        }
+          SourceS3Prefix: prefix,
+        },
       });
 
       return null;
@@ -301,7 +275,7 @@ export const nerService = {
   startChatSession: async (model: string, title: string): Promise<string> => {
     const { data } = await axiosInstance.post('/chat/sessions', {
       Model: model,
-      Title: title
+      Title: title,
     });
     return data.SessionID;
   },
@@ -317,12 +291,9 @@ export const nerService = {
     return data;
   },
 
-  renameChatSession: async (
-    sessionId: string,
-    title: string
-  ): Promise<void> => {
+  renameChatSession: async (sessionId: string, title: string): Promise<void> => {
     await axiosInstance.post(`/chat/sessions/${sessionId}/rename`, {
-      Title: title
+      Title: title,
     });
   },
 
@@ -338,11 +309,11 @@ export const nerService = {
         `/chat/sessions/${sessionId}/messages`,
         {
           Model: model,
-          Message: message
+          Message: message,
         },
         {
           responseType: 'stream',
-          adapter: 'fetch'
+          adapter: 'fetch',
         }
       );
     } catch (error) {
@@ -388,9 +359,7 @@ export const nerService = {
       Metadata?: any;
     }[]
   > => {
-    const { data } = await axiosInstance.get(
-      `/chat/sessions/${sessionId}/history`
-    );
+    const { data } = await axiosInstance.get(`/chat/sessions/${sessionId}/history`);
     return data || [];
   },
 
@@ -403,26 +372,20 @@ export const nerService = {
     await axiosInstance.post('/chat/api-key', { ApiKey: apiKey });
   },
 
-  storeFileNameToPath: async (
-    uploadId: string,
-    mapping: { [filename: string]: string }
-  ) => {
+  storeFileNameToPath: async (uploadId: string, mapping: { [filename: string]: string }) => {
     try {
       console.log('Backend service - Storing file path mapping:', {
         uploadId,
         mapping,
         mappingKeys: Object.keys(mapping),
-        mappingEntries: Object.entries(mapping)
+        mappingEntries: Object.entries(mapping),
       });
       await axiosInstance.post(`/file-name-to-path/${uploadId}`, {
-        Mapping: mapping
+        Mapping: mapping,
       });
       console.log('Backend service - File path mapping stored successfully');
     } catch (error) {
-      console.error(
-        'Backend service - Error storing file path mapping:',
-        error
-      );
+      console.error('Backend service - Error storing file path mapping:', error);
       return handleApiError(error, 'Failed to store upload path mappings');
     }
   },
@@ -434,10 +397,7 @@ export const nerService = {
   },
 
   submitFeedback: async (modelId: string, feedback: Feedback) => {
-    const { data } = await axiosInstance.post(
-      `/models/${modelId}/feedback`,
-      feedback
-    );
+    const { data } = await axiosInstance.post(`/models/${modelId}/feedback`, feedback);
     return data;
   },
 
@@ -446,42 +406,24 @@ export const nerService = {
       const { data } = await axiosInstance.get(`/models/${modelId}/feedback`);
       return data;
     } catch (error) {
-      return handleApiError(
-        error,
-        `Failed to load feedback samples for model ${modelId}`
-      );
+      return handleApiError(error, `Failed to load feedback samples for model ${modelId}`);
     }
   },
 
-  deleteModelFeedback: async (
-    modelId: string,
-    feedbackId: string
-  ): Promise<void> => {
+  deleteModelFeedback: async (modelId: string, feedbackId: string): Promise<void> => {
     try {
       await axiosInstance.delete(`/models/${modelId}/feedback/${feedbackId}`);
     } catch (error) {
-      return handleApiError(
-        error,
-        `Failed to delete feedback ${feedbackId} for model ${modelId}`
-      );
+      return handleApiError(error, `Failed to delete feedback ${feedbackId} for model ${modelId}`);
     }
   },
 
-  finetuneModel: async (
-    modelId: string,
-    request: FinetuneRequest
-  ): Promise<FinetuneResponse> => {
+  finetuneModel: async (modelId: string, request: FinetuneRequest): Promise<FinetuneResponse> => {
     try {
-      const { data } = await axiosInstance.post(
-        `/models/${modelId}/finetune`,
-        request
-      );
+      const { data } = await axiosInstance.post(`/models/${modelId}/finetune`, request);
       return data;
     } catch (error) {
-      return handleApiError(
-        error,
-        `Failed to start finetuning for model ${modelId}`
-      );
+      return handleApiError(error, `Failed to start finetuning for model ${modelId}`);
     }
-  }
+  },
 };
