@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -337,7 +338,25 @@ func (s *ChatService) ValidateOpenAIApiKey(r *http.Request) (any, error) {
 		return api.ValidationResponse{Valid: false, Message: "API key format is invalid"}, nil
 	}
 
-	// For now, just do basic format validation
-	// A full implementation would make a test API call to OpenAI
-	return api.ValidationResponse{Valid: true, Message: "API key format is valid"}, nil
+	// Make a test API call to validate the key
+	client := &http.Client{Timeout: 10 * time.Second}
+	testReq, err := http.NewRequest("GET", "https://api.openai.com/v1/models", nil)
+	if err != nil {
+		return api.ValidationResponse{Valid: false, Message: "Failed to create validation request"}, nil
+	}
+	
+	testReq.Header.Set("Authorization", "Bearer "+apiKey)
+	resp, err := client.Do(testReq)
+	if err != nil {
+		return api.ValidationResponse{Valid: false, Message: "Failed to connect to OpenAI API"}, nil
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == 401 {
+		return api.ValidationResponse{Valid: false, Message: "Invalid API key"}, nil
+	} else if resp.StatusCode == 200 {
+		return api.ValidationResponse{Valid: true, Message: "API key is valid"}, nil
+	} else {
+		return api.ValidationResponse{Valid: false, Message: fmt.Sprintf("Unexpected response: %s", resp.Status)}, nil
+	}
 }
