@@ -327,7 +327,6 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		ModelId:        req.ModelId,
 		StorageType:     req.StorageType,
 		StorageParams:   datatypes.JSON(req.StorageParams),
-		IsUpload:        isUpload,
 		CreationTime:   time.Now().UTC(),
 	}
 

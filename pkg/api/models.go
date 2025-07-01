@@ -40,7 +40,6 @@ type Report struct {
 	ReportName     string
 	StorageType     string
 	StorageParams   json.RawMessage
-	IsUpload        bool
 
 	Stopped            bool
 	CreationTime       time.Time

@@ -70,7 +70,6 @@ func convertReport(r database.Report) api.Report {
 		ReportName:         r.ReportName,
 		StorageType:        r.StorageType,
 		StorageParams:      json.RawMessage(r.StorageParams),
-		IsUpload:           r.IsUpload,
 		Stopped:            r.Stopped,
 		CreationTime:       r.CreationTime,
 		Groups:             convertGroups(r.Groups),

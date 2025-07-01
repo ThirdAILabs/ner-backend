@@ -62,12 +62,11 @@ type Report struct {
 	S3Region       sql.NullString
 	SourceS3Bucket string
 	SourceS3Prefix sql.NullString
+	IsUpload        bool
 	
 	// New source fields. Default value only for migration.
 	StorageType     string `gorm:"size:20;not null;default:''"`
 	StorageParams   datatypes.JSON `gorm:"type:jsonb;not null;default:'{}'"`
-	
-	IsUpload        bool
 	
 	CreationTime       time.Time
 	SucceededFileCount int `gorm:"default:0"`
@@ -123,6 +122,10 @@ func Migration(db *gorm.DB) error {
 
 	if err := db.Migrator().DropColumn(&Report{}, "source_s3_prefix"); err != nil {
 		return fmt.Errorf("error dropping SourceS3Prefix column: %w", err)
+	}
+
+	if err := db.Migrator().DropColumn(&Report{}, "is_upload"); err != nil {
+		return fmt.Errorf("error dropping IsUpload column: %w", err)
 	}
 	
 	if err := db.Migrator().DropColumn(&InferenceTask{}, "source_s3_keys"); err != nil {

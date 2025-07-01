@@ -55,7 +55,6 @@ type Report struct {
 
 	StorageType     string `gorm:"size:20;not null"`
 	StorageParams   datatypes.JSON `gorm:"type:jsonb;not null"`
-	IsUpload        bool
 
 	CreationTime       time.Time
 	SucceededFileCount int `gorm:"default:0"`

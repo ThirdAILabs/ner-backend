@@ -17,6 +17,7 @@ import { FeedbackPanel } from '@/components/feedback/FeedbackPanel';
 import useFeedbackState from '@/components/feedback/useFeedbackState';
 import { useLicense } from '@/hooks/useLicense';
 import useTelemetry from '@/hooks/useTelemetry';
+import { isUploadReport } from '@/lib/utils';
 
 const calculateProgress = (report: Report | null): number => {
   const successfulFiles = report?.SucceededFileCount || 0;
@@ -87,7 +88,7 @@ function JobDetail() {
   const searchParams = useSearchParams();
   const reportId: string = searchParams.get('jobId') as string;
   const [tabValue, setTabValue] = useState('summary');
-  const [selectedSource, setSelectedSource] = useState<'s3' | 'local'>('s3');
+  const [selectedSource, setSelectedSource] = useState<StorageType>('s3');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
   // Remove selectedTags state, just keep availableTags
@@ -133,7 +134,7 @@ function JobDetail() {
       // Set selectedSource based on IsUpload field
       // Here, "local" refers to the fact that the files are uploaded from the user's machine to the backend.
       // It does not reflect where the backend ends up storing the files.
-      if (report.IsUpload) {
+      if (isUploadReport(report)) {
         setSelectedSource('local');
       } else {
         setSelectedSource(report.StorageType);
@@ -400,7 +401,7 @@ function JobDetail() {
             groups={reportData?.Groups?.map((g) => g.Name) || []}
             tags={availableTagsCount}
             customTagNames={customTags.map((t) => t.name)}
-            uploadId={reportData?.IsUpload ? reportData?.StorageParams.Prefix : ''}
+            uploadId={reportData && isUploadReport(reportData) ? reportData?.StorageParams.Prefix : ''}
             addFeedback={addFeedback}
             initialSelectedTag={selectedTag}
           />

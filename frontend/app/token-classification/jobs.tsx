@@ -27,6 +27,7 @@ import { alpha } from '@mui/material/styles';
 import { useLicense } from '@/hooks/useLicense';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import useTelemetry from '@/hooks/useTelemetry';
+import { isUploadReport } from '@/lib/utils';
 
 function JobStatus({ report }: { report: ReportWithStatus }) {
   if (report.isLoadingStatus) {
@@ -125,10 +126,10 @@ function JobStatus({ report }: { report: ReportWithStatus }) {
           </Tooltip>
         </Box>
       );
-    } else if (totalTasks === 0 && report.IsUpload) {
+    } else if (totalTasks === 0 && isUploadReport(report)) {
       // Local Upload
       return `Queued...`;
-    } else if (totalTasks === 0 && !report.IsUpload) {
+    } else if (totalTasks === 0 && !isUploadReport(report)) {
       // S3 Upload
       return 'Gathering Files...';
     } else if (aborted > 0) {

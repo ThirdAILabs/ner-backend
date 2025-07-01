@@ -162,7 +162,7 @@ func (proc *TaskProcessor) updateFileCount(reportId uuid.UUID, success bool) err
 func (proc *TaskProcessor) getConnector(ctx context.Context, report database.Report) (storage.Connector, error) {
 	// Custom connector initialization logic for uploads. It is a special case because it has to be consistent with
 	// the storage used by the backend service.
-	if report.IsUpload {
+	if report.StorageType == string(storage.UploadType) {
 		var uploadParams storage.UploadParams
 		if err := json.Unmarshal(report.StorageParams, &uploadParams); err != nil {
 			return nil, fmt.Errorf("error unmarshalling storage params: %w", err)

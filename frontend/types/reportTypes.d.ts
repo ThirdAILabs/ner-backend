@@ -1,3 +1,5 @@
+type StorageType = 's3' | 'local' | 'upload';
+
 interface Model {
   Id: string;
   Name: string;
@@ -24,9 +26,8 @@ interface TaskStatusCategory {
 interface Report {
   Id: string;
   Model: Model;
-  StorageType: 's3' | 'local';
+  StorageType: StorageType;
   StorageParams: any; // This is []byte in Go, represented as any in TypeScript
-  IsUpload: boolean;
   Stopped: boolean;
   CreationTime: string;
   Tags?: string[];
