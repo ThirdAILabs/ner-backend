@@ -15,12 +15,13 @@ user_prompt = """## Task: Generate {{ k }} diverse and realistic sentences conta
 **Tag examples:** {{ tag.examples | random_sample(10) | join(', ') }}
 **Tag contexts:** {{ tag.contexts | random_sample(10) | join(', ') }}
 {% endfor %}
-## Example sentences for tags NAME, ADDRESS, and DATE:
+
+> Tagging format: ##entity text##TAG##
+> Example sentences for tags NAME, ADDRESS, and DATE:
 1. "##Karun naiyar##NAME## lives at ##123 Main St, Springfield##ADDRESS##, and his birthday is ##January 1, 1990##DATE##."
 2. "Working at Acme Corp, located in ##Los Angeles##ADDRESS##, and ##Maria Gomez##NAME## was born on ##March 15, 1985##DATE##."
 
 ### Requirements:
-- Tagged tokens should be strictly enclosed in **double hash symbols** (Format: ##token##TAG##).
 - Use varying sentence lengths: short (2–10 words), medium (10–30 words), and long (30+ words, preferred).
 - Preferrably try to include many tags in each sentence, but also allow for less-tag sentences.
 - Include data from multiple contexts as specified in the tag information but not limited to those contexts.

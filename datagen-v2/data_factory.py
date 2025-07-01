@@ -8,8 +8,10 @@ from typing import Optional, List, Dict, TypedDict
 from prompts import extend_description_prompt as extend_description_template
 from prompts import extend_examples_prompt as extend_examples_template
 from prompts import context_prompt as context_prompt_template
-import prompts.annoated_data_generation_prompt as annotated_data_generation_prompt_template
-from concurrent.futures import ProcessPoolExecutor
+from prompts import (
+    annoated_data_generation_prompt as annotated_data_generation_prompt_template,
+)
+
 from utils import write_to_csv, requirements
 
 env = Environment()
@@ -206,48 +208,64 @@ class DataFactory:
                 target_col="target",
             )
 
-            write_to_csv(
-                path=output_file,
-                data_points=data_points,
-                fieldnames=["source", "target"],
-            )
+            if data_points:
+                write_to_csv(
+                    path=output_file,
+                    data_points=data_points,
+                    fieldnames=["source", "target"],
+                )
 
     def transform_sentence(
         self, annotated_text: str, tags_name: List[str], source_col, target_col: str
     ) -> Dict[str, str]:
+        annotated_text = annotated_text.strip()
         try:
-            pattern = r"([^#\s]*)(#+)([^#]+)(#+)([^#]+)(#+)([^#\s]*)"
+            pattern = re.compile(
+                r"(?P<before>[^\w\s#]*)"
+                r"#+(?P<entity>[^#]+?)#+(?P<tag>[A-Z_]+)#+"
+                r"(?P<after>[^\w\s#']*[\w']*)?"
+            )
             source_tokens, target_tokens = [], []
 
-            matches = re.finditer(pattern, annotated_text)
-            end_pos = 0
-            for match in matches:
-                # process the annoated_text[end_pos:match.start()]
-                if end_pos < match.start():
-                    tmp = annotated_text[end_pos : match.start()].split()
-                    source_tokens.extend(tmp)
-                    target_tokens.extend(["O"] * len(tmp))
+            last_idx = 0
+            for match in pattern.finditer(annotated_text):
+                start, end = match.span()
 
-                # process the match
-                pre_match, _, tokens, _, tag, _, post_match = match.groups()
-                pre_match, tokens, tag, post_match = pre_match.strip(), tokens.strip(), tag.strip(), post_match.strip()
-                tag = tag.upper()
-                tmp = (pre_match + tokens + post_match).split()
-                source_tokens.extend(tmp)
+                # Handle text before this match
+                if last_idx < start:
+                    prefix_text = annotated_text[last_idx:start]
+                    prefix_tokens = prefix_text.strip().split()
+                    source_tokens.extend(prefix_tokens)
+                    target_tokens.extend(["O"] * len(prefix_tokens))
 
-                # llm may generate tags that are not in the tag_list
-                if tag not in tags_name:
-                    target_tokens.extend(["O"] * len(tmp))
+                # Process the matched token + surrounding punctuation
+                before = match.group("before") or ""
+                entity = match.group("entity").strip()
+                tag = match.group("tag").upper()
+                after = match.group("after") or ""
+
+                full_span = (before + entity + after).strip()
+                token_list = full_span.split()
+                source_tokens.extend(token_list)
+
+                if tag in tags_name:
+                    target_tokens.extend([tag] * len(token_list))
                 else:
-                    target_tokens.extend([tag] * len(tmp))
+                    target_tokens.extend(["O"] * len(token_list))
 
-                end_pos = match.end()
+                last_idx = end
 
-            # process the remaining part of the annotated_text
-            if end_pos < len(annotated_text):
-                tmp = annotated_text[end_pos:].split()
-                source_tokens.extend(tmp)
-                target_tokens.extend(["O"] * len(tmp))
+            # Handle remaining text
+            if last_idx < len(annotated_text):
+                suffix = annotated_text[last_idx:]
+                suffix_tokens = suffix.strip().split()
+                source_tokens.extend(suffix_tokens)
+                target_tokens.extend(["O"] * len(suffix_tokens))
+
+            return {
+                source_col: " ".join(source_tokens),
+                target_col: " ".join(target_tokens),
+            }
 
         except Exception as e:
             pass
@@ -264,20 +282,15 @@ class DataFactory:
         target_col: str = "target",
     ) -> List[Dict[str, str]]:
 
-        if len(annotated_texts) > 100:
-            with ProcessPoolExecutor() as executor:
-                transformed_data = list(
-                    executor.map(
-                        lambda text: self.transform_sentence(
-                            text, tags_name, source_col, target_col
-                        ),
-                        annotated_texts,
-                    )
-                )
-        else:
-            transformed_data = [
-                self.transform_sentence(text, tags_name, source_col, target_col)
-                for text in annotated_texts
-            ]
-
-        return transformed_data
+        transformed_data = list(
+            map(
+                lambda x: self.transform_sentence(x, tags_name, source_col, target_col),
+                annotated_texts,
+            )
+        )
+        return list(
+            filter(
+                lambda x: x[source_col] and x[target_col],
+                transformed_data,
+            )
+        )
