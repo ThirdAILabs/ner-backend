@@ -60,21 +60,21 @@ export function TableContent({
     // The fileIdentifier might be the uniqueName directly or a path containing it
     // First try direct lookup
     let fullPath = pathMap?.[fileIdentifier];
-    
+
     // If not found, try extracting filename from path
     if (!fullPath) {
       // Handle both forward slash and backslash separators
       const parts = fileIdentifier.split(/[/\\]/);
       const filename = parts[parts.length - 1];
       fullPath = pathMap?.[filename];
-      
+
       // If still not found and there's an uploadId prefix, try without it
       if (!fullPath && parts.length > 1) {
         // The format might be uploadId\filename or uploadId/filename
         fullPath = pathMap?.[filename];
       }
     }
-    
+
     console.log('handleFullPath:', {
       fileIdentifier,
       directLookup: pathMap?.[fileIdentifier],
@@ -83,7 +83,7 @@ export function TableContent({
       fullPath,
       pathMap: Object.keys(pathMap || {}).length,
       pathMapKeys: Object.keys(pathMap || {}),
-      pathMapEntries: Object.entries(pathMap || {})
+      pathMapEntries: Object.entries(pathMap || {}),
     });
     const openFile = () => {
       if (!fullPath) {

@@ -317,7 +317,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             placeholder="Type a message..."
             rows={1}
             className="flex-1 p-4 pr-[85px] border-[1px] rounded-2xl resize-none min-h-[56px] max-h-[150px]"
-            style={{ overflowY: inputMessage && textareaRef.current && textareaRef.current.scrollHeight > 150 ? 'auto' : 'hidden' }}
+            style={{
+              overflowY:
+                inputMessage && textareaRef.current && textareaRef.current.scrollHeight > 150
+                  ? 'auto'
+                  : 'hidden',
+            }}
             disabled={isLoading}
           />
           <>

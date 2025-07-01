@@ -372,7 +372,7 @@ export const nerService = {
         uploadId,
         mapping,
         mappingKeys: Object.keys(mapping),
-        mappingEntries: Object.entries(mapping)
+        mappingEntries: Object.entries(mapping),
       });
       await axiosInstance.post(`/file-name-to-path/${uploadId}`, { Mapping: mapping });
       console.log('Backend service - File path mapping stored successfully');

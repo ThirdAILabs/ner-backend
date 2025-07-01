@@ -190,7 +190,7 @@ const FileSources: React.FC<FileSourcesProps> = ({
   if (window && window.electron) {
     // Check if we're on macOS
     const isMacOS = navigator.platform.toLowerCase().includes('mac');
-    
+
     if (isMacOS) {
       // macOS: Single button that allows both files and folders
       return (
@@ -200,8 +200,11 @@ const FileSources: React.FC<FileSourcesProps> = ({
               selectSource('files');
               setIsLoadingFiles(true);
               try {
-                const { allFilesMeta, totalSize, error } =
-                  await getFilesFromElectron(SUPPORTED_TYPES, false, true); // combined mode
+                const { allFilesMeta, totalSize, error } = await getFilesFromElectron(
+                  SUPPORTED_TYPES,
+                  false,
+                  true
+                ); // combined mode
                 if (error) {
                   addFilesMeta([]);
                 } else {
@@ -236,8 +239,10 @@ const FileSources: React.FC<FileSourcesProps> = ({
               selectSource('files');
               setIsLoadingFiles(true);
               try {
-                const { allFilesMeta, totalSize, error } =
-                  await getFilesFromElectron(SUPPORTED_TYPES, false);
+                const { allFilesMeta, totalSize, error } = await getFilesFromElectron(
+                  SUPPORTED_TYPES,
+                  false
+                );
                 if (error) {
                   addFilesMeta([]);
                 } else {
@@ -265,8 +270,10 @@ const FileSources: React.FC<FileSourcesProps> = ({
               selectSource('directory');
               setIsLoadingFiles(true);
               try {
-                const { allFilesMeta, totalSize, error } =
-                  await getFilesFromElectron(SUPPORTED_TYPES, true);
+                const { allFilesMeta, totalSize, error } = await getFilesFromElectron(
+                  SUPPORTED_TYPES,
+                  true
+                );
                 if (error) {
                   addFilesMeta([]);
                 } else {
@@ -865,7 +872,7 @@ export default function NewJobPage() {
           console.log('Frontend - File path mapping being sent:', mapping);
           console.log('Frontend - Selected files meta:', selectedFilesMeta);
           console.log('Frontend - Upload ID:', uploadId);
-          
+
           if (Object.keys(mapping).length > 0) {
             if (typeof uploadId === 'string') {
               await nerService.storeFileNameToPath(uploadId, mapping);

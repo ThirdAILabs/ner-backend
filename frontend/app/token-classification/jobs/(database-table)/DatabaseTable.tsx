@@ -216,7 +216,7 @@ export function DatabaseTable({
           console.log('DatabaseTable - Path map loaded:', {
             uploadId,
             pathMapKeys: Object.keys(pathMap || {}),
-            pathMapEntries: Object.entries(pathMap || {})
+            pathMapEntries: Object.entries(pathMap || {}),
           });
           setPathMap(pathMap);
         })
