@@ -183,7 +183,7 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 	reportId := createReport(t, router, api.CreateReportRequest{
 		ReportName:     "test-report",
 		ModelId:        modelId,
-		StorageType:     string(storage.S3ConnectorType),
+		StorageType:     string(storage.S3Type),
 		StorageParams:   storageParams,
 		Tags:           []string{"phone", "email"},
 		CustomTags:     map[string]string{"custom_token": `(\w\d){3}`},
@@ -293,7 +293,7 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 	reportId := createReport(t, router, api.CreateReportRequest{
 		ReportName:   "test-report",
 		ModelId:      modelId,
-		StorageType:   backendapi.UploadStorageType,
+		StorageType:   string(storage.UploadType),
 		StorageParams: storageParams,
 		Tags:         []string{"phone", "email"},
 	})
@@ -393,7 +393,7 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 			reportID := createReport(t, router, api.CreateReportRequest{
 				ReportName: fmt.Sprintf("test-report-%s", m.tag),
 				ModelId:    model.Id,
-				StorageType: string(storage.LocalConnectorType),
+				StorageType: string(storage.UploadType),
 				StorageParams: storageParams,
 				Tags: []string{"ADDRESS", "CARD_NUMBER", "COMPANY", "CREDIT_SCORE", "DATE",
 					"EMAIL", "ID_NUMBER", "LICENSE_PLATE",

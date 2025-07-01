@@ -42,7 +42,6 @@ type BackendService struct {
 }
 
 const (
-	UploadStorageType = "upload"
 	ErrCodeDB    = 1001 // Custom internal code for DB errors
 )
 
@@ -287,10 +286,10 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		}
 	}
 
-	var isUpload bool = req.StorageType == UploadStorageType
+	var isUpload bool = req.StorageType == string(storage.UploadType)
 	// No need to check parameter validity if upload since it uses the default app storage
 	if !isUpload {
-		connectorType, err := storage.ToConnectorType(req.StorageType)
+		connectorType, err := storage.ToStorageType(req.StorageType)
 		if err != nil {
 			return nil, CodedErrorf(http.StatusBadRequest, "invalid storage type: %v", err)
 		}

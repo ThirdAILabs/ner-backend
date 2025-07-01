@@ -174,7 +174,7 @@ func TestCreateReport(t *testing.T) {
 	payload := api.CreateReportRequest{
 		ReportName:     "test-report",
 		ModelId:        modelId,
-		StorageType:     string(storage.S3ConnectorType),
+		StorageType:     string(storage.S3Type),
 		StorageParams:   json.RawMessage(storageParams),
 		Tags:           []string{"name", "phone"},
 		CustomTags:     map[string]string{"tag1": "pattern1", "tag2": "pattern2"},
@@ -240,7 +240,7 @@ func TestCreateReport_InvalidS3(t *testing.T) {
 	payload := api.CreateReportRequest{
 		ReportName:     "test-report",
 		ModelId:        modelId,
-		StorageType:     string(storage.S3ConnectorType),
+		StorageType:     string(storage.S3Type),
 		StorageParams:   json.RawMessage(storageParams),
 		Tags:           []string{"name", "phone"},
 		CustomTags:     map[string]string{"tag1": "pattern1", "tag2": "pattern2"},
@@ -276,7 +276,7 @@ func TestGetReport(t *testing.T) {
 		&database.Report{
 			Id:             reportId,
 			ModelId:        modelId,
-			StorageType:     string(storage.S3ConnectorType),
+			StorageType:     string(storage.S3Type),
 			StorageParams:   datatypes.JSON(storageParams),
 			Groups: []database.Group{
 				{Id: group1, Name: "group_a", ReportId: reportId, Query: `label1 CONTAINS "xyz"`},
@@ -399,7 +399,7 @@ func TestDeleteReport(t *testing.T) {
 	modelId, reportId := uuid.New(), uuid.New()
 	db := createDB(t,
 		&database.Model{Id: modelId, Name: "Model1", Type: "regex", Status: database.ModelTrained},
-		&database.Report{Id: reportId, ModelId: modelId, StorageType: string(storage.S3ConnectorType), StorageParams: datatypes.JSON(json.RawMessage(`{"Bucket": "test-bucket", "Prefix": "test-prefix"}`))},
+		&database.Report{Id: reportId, ModelId: modelId, StorageType: string(storage.S3Type), StorageParams: datatypes.JSON(json.RawMessage(`{"Bucket": "test-bucket", "Prefix": "test-prefix"}`))},
 	)
 
 	service := backend.NewBackendService(db, &mockStorage{}, "uploads", messaging.NewInMemoryQueue(), 1024, nil)
@@ -443,7 +443,7 @@ func TestStopReport(t *testing.T) {
 	modelId, reportId := uuid.New(), uuid.New()
 	db := createDB(t,
 		&database.Model{Id: modelId, Name: "Model1", Type: "regex", Status: database.ModelTrained},
-		&database.Report{Id: reportId, ModelId: modelId, StorageType: string(storage.S3ConnectorType), StorageParams: datatypes.JSON(json.RawMessage(`{"Bucket": "test-bucket", "Prefix": "test-prefix"}`))},
+		&database.Report{Id: reportId, ModelId: modelId, StorageType: string(storage.S3Type), StorageParams: datatypes.JSON(json.RawMessage(`{"Bucket": "test-bucket", "Prefix": "test-prefix"}`))},
 	)
 
 	service := backend.NewBackendService(db, &mockStorage{}, "uploads", messaging.NewInMemoryQueue(), 1024, nil)
@@ -484,7 +484,7 @@ func TestReportSearch(t *testing.T) {
 		&database.Report{
 			Id:             reportId,
 			ModelId:        modelId,
-			StorageType:     string(storage.S3ConnectorType),
+			StorageType:     string(storage.S3Type),
 			StorageParams:   datatypes.JSON(storageParams),
 		},
 		&database.ObjectEntity{ReportId: reportId, Object: "object1", Start: 1, End: 2, Label: "label1", Text: "text1"},
@@ -721,7 +721,7 @@ func TestGetInferenceMetrics_WithTasks(t *testing.T) {
 		require.NoError(t, db.Create(&database.Report{
 			Id:      reportID,
 			ModelId: modelID,
-			StorageType: string(storage.S3ConnectorType),
+			StorageType: string(storage.S3Type),
 			StorageParams: datatypes.JSON(json.RawMessage(`{"Bucket": "test-bucket", "Prefix": "test-prefix"}`)),
 		}).Error)
 

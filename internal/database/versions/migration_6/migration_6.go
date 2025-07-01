@@ -16,10 +16,10 @@ import (
 	"gorm.io/gorm"
 )
 
-var defaultStorageProvider = storage.S3ConnectorType
+var defaultStorageProvider = storage.S3Type
 
 func SetDefaultStorageProvider(provider string) error {
-	connectorType, err := storage.ToConnectorType(provider)
+	connectorType, err := storage.ToStorageType(provider)
 	if err != nil {
 		return fmt.Errorf("invalid storage type: %v", err)
 	}
@@ -154,7 +154,7 @@ func transformReports(db *gorm.DB) error {
 		var paramsJSON []byte
 		var err error
 		
-		if storageType == storage.LocalConnectorType {
+		if storageType == storage.LocalType {
 			storageParams := storage.LocalConnectorParams{
 				Bucket:  report.SourceS3Bucket,
 				Prefix:  report.SourceS3Prefix.String,

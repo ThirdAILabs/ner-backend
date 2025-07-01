@@ -49,7 +49,7 @@ const (
 )
 
 func createDatabase(root string) *gorm.DB {
-	err := migration_6.SetDefaultStorageProvider(string(storage.LocalConnectorType))
+	err := migration_6.SetDefaultStorageProvider(string(storage.LocalType))
 	if err != nil {
 		log.Fatalf("Failed to set default storage provider: %v", err)
 	}

@@ -170,7 +170,7 @@ func (proc *TaskProcessor) getConnector(ctx context.Context, report database.Rep
 		slog.Info("Get upload connector", "upload bucket", proc.uploadBucket)
 		return proc.storage.GetUploadConnector(ctx, proc.uploadBucket, uploadParams)
 	}
-	connectorType, err := storage.ToConnectorType(report.StorageType)
+	connectorType, err := storage.ToStorageType(report.StorageType)
 	if err != nil {
 		return nil, fmt.Errorf("invalid storage type: %v", err)
 	}

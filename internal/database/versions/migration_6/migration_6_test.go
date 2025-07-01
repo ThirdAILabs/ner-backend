@@ -104,7 +104,7 @@ func TestMigration_Reports(t *testing.T) {
 	err = db.Raw("SELECT storage_type, storage_params FROM reports WHERE id = ?", reportID).Scan(&result).Error
 	require.NoError(t, err)
 
-	assert.Equal(t, string(storage.S3ConnectorType), result.StorageType)
+	assert.Equal(t, string(storage.S3Type), result.StorageType)
 
 	var params storage.S3ConnectorParams
 	err = json.Unmarshal([]byte(result.StorageParams), &params)
