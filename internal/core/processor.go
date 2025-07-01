@@ -36,8 +36,6 @@ type TaskProcessor struct {
 	localModelDir string
 	modelBucket   string
 	uploadBucket  string
-	// Configs for non-upload connectors.
-	defaultConnectorConfigs storage.ConnectorConfigs
 	modelLoaders  map[ModelType]ModelLoader
 
 }
@@ -51,7 +49,7 @@ var ExcludedTags = map[string]struct{}{
 	"SERVICE_CODE":       {},
 }
 
-func NewTaskProcessor(db *gorm.DB, storage storage.ObjectStore, publisher messaging.Publisher, reciever messaging.Reciever, licenseVerifier licensing.LicenseVerifier, localModelDir string, modelBucket string, uploadBucket string, defaultConnectorConfigs storage.ConnectorConfigs, modelLoaders map[ModelType]ModelLoader) *TaskProcessor {
+func NewTaskProcessor(db *gorm.DB, storage storage.ObjectStore, publisher messaging.Publisher, reciever messaging.Reciever, licenseVerifier licensing.LicenseVerifier, localModelDir string, modelBucket string, uploadBucket string, modelLoaders map[ModelType]ModelLoader) *TaskProcessor {
 	return &TaskProcessor{
 		db:                      db,
 		storage:                 storage,
@@ -61,7 +59,6 @@ func NewTaskProcessor(db *gorm.DB, storage storage.ObjectStore, publisher messag
 		localModelDir:           localModelDir,
 		modelBucket:             modelBucket,
 		uploadBucket:            uploadBucket,
-		defaultConnectorConfigs: defaultConnectorConfigs,
 		modelLoaders:            modelLoaders,
 	}
 }
@@ -177,7 +174,7 @@ func (proc *TaskProcessor) getConnector(ctx context.Context, report database.Rep
 	if err != nil {
 		return nil, fmt.Errorf("invalid storage type: %v", err)
 	}
-	return storage.NewConnector(ctx, connectorType, proc.defaultConnectorConfigs, report.StorageParams)
+	return storage.NewConnector(ctx, connectorType, report.StorageParams)
 
 }
 

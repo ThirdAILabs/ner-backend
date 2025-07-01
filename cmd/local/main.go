@@ -48,10 +48,6 @@ const (
 	chunkTargetBytes = 200 * 1024 * 1024 // 200MB
 )
 
-// TODO: Instead of hardcoding to empty config, initialize with local config.
-var defaultConnectorConfigs = storage.ConnectorConfigs{}
-
-
 func createDatabase(root string) *gorm.DB {
 	err := migration_6.SetDefaultStorageProvider(string(storage.LocalConnectorType))
 	if err != nil {
@@ -125,7 +121,7 @@ func createServer(db *gorm.DB, storage storage.ObjectStore, queue messaging.Publ
 	r.Use(middleware.Recoverer)                 // Recover from panics
 	r.Use(middleware.Timeout(60 * time.Second)) // Set request timeout
 
-	apiHandler := api.NewBackendService(db, storage, uploadBucket, queue, chunkTargetBytes, licensing, defaultConnectorConfigs)
+	apiHandler := api.NewBackendService(db, storage, uploadBucket, queue, chunkTargetBytes, licensing)
 
 	loaders := core.NewModelLoaders()
 
@@ -241,7 +237,7 @@ func main() {
 
 	licensing := cmd.CreateLicenseVerifier(db, cfg.License)
 
-	worker := core.NewTaskProcessor(db, objectStore, queue, queue, licensing, filepath.Join(cfg.Root, "models"), modelBucket, cfg.UploadBucket, defaultConnectorConfigs, core.NewModelLoaders())
+	worker := core.NewTaskProcessor(db, objectStore, queue, queue, licensing, filepath.Join(cfg.Root, "models"), modelBucket, cfg.UploadBucket, core.NewModelLoaders())
 
 	var basicModel database.Model
 	if err := db.Where("name = ?", "basic").First(&basicModel).Error; err != nil {

@@ -30,9 +30,6 @@ type WorkerConfig struct {
 	PythonModelPluginScriptPath string `env:"PYTHON_MODEL_PLUGIN_SCRIPT_PATH" envDefault:"plugin/plugin-python/plugin.py"`
 }
 
-// TODO: Instead of hardcoding to empty config, initialize with local config.
-var defaultConnectorConfigs = storage.ConnectorConfigs{}
-
 func main() {
 	log.Println("Starting Worker Process...")
 
@@ -75,7 +72,7 @@ func main() {
 
 	loaders := core.NewModelLoaders()
 
-	worker := core.NewTaskProcessor(db, s3ObjectStore, publisher, receiver, licensing, "./tmp_models_TODO", cfg.ModelBucketName, cfg.UploadBucketName, defaultConnectorConfigs, loaders)
+	worker := core.NewTaskProcessor(db, s3ObjectStore, publisher, receiver, licensing, "./tmp_models_TODO", cfg.ModelBucketName, cfg.UploadBucketName, loaders)
 
 	go worker.Start()
 

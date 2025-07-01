@@ -37,9 +37,6 @@ type APIConfig struct {
 	HostModelDir       string `env:"HOST_MODEL_DIR" envDefault:"/app/models"`
 }
 
-// TODO: Instead of hardcoding to empty config, initialize with local config.
-var defaultConnectorConfigs = storage.ConnectorConfigs{}
-
 func main() {
 	log.Println("Starting API Server...")
 
@@ -118,7 +115,7 @@ func main() {
 		log.Fatalf("License verification failed - Info: %v, Error: %v", licenseInfo, err)
 	}
 
-	apiHandler := api.NewBackendService(db, s3ObjectStore, cfg.UploadBucketName,publisher, cfg.ChunkTargetBytes, licensing, defaultConnectorConfigs)
+	apiHandler := api.NewBackendService(db, s3ObjectStore, cfg.UploadBucketName,publisher, cfg.ChunkTargetBytes, licensing)
 
 	// Your existing API routes should be prefixed with /api to avoid conflicts
 	r.Route("/api/v1", func(r chi.Router) {

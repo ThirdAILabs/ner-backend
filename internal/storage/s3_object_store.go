@@ -237,15 +237,13 @@ func (s *S3ObjectStore) UploadDir(ctx context.Context, bucket, prefix, src strin
 func (s *S3ObjectStore) GetUploadConnector(ctx context.Context, bucket string, uploadParams UploadParams) (Connector, error) {
 	return NewS3Connector(
 		ctx,
-		S3ConnectorConfig{
-			AccessKeyID: s.cfg.AccessKeyID,
-			SecretAccessKey: s.cfg.SecretAccessKey,
-		},
 		S3ConnectorParams{
 			Endpoint: s.cfg.Endpoint,
 			Region: s.cfg.Region,
 			Bucket: bucket,
 			Prefix: uploadParams.UploadId.String(),
+			AccessKeyID: s.cfg.AccessKeyID,
+			SecretAccessKey: s.cfg.SecretAccessKey,
 		},
 	)
 }

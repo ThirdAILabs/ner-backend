@@ -39,9 +39,6 @@ type BackendService struct {
 	publisher        messaging.Publisher
 	chunkTargetBytes int64
 	licensing        licensing.LicenseVerifier
-	
-	// Used for non-upload connectors.
-	defaultConnectorConfigs storage.ConnectorConfigs
 }
 
 const (
@@ -49,13 +46,13 @@ const (
 	ErrCodeDB    = 1001 // Custom internal code for DB errors
 )
 
-func NewBackendService(db *gorm.DB, storage storage.ObjectStore, uploadBucket string, pub messaging.Publisher, chunkTargetBytes int64, licenseVerifier licensing.LicenseVerifier, defaultConnectorConfigs storage.ConnectorConfigs) *BackendService {
+func NewBackendService(db *gorm.DB, storage storage.ObjectStore, uploadBucket string, pub messaging.Publisher, chunkTargetBytes int64, licenseVerifier licensing.LicenseVerifier) *BackendService {
 	if err := storage.CreateBucket(context.Background(), uploadBucket); err != nil {
 		slog.Error("error creating upload bucket", "error", err)
 		panic("failed to create upload bucket")
 	}
 
-	return &BackendService{db: db, storage: storage, uploadBucket: uploadBucket, publisher: pub, chunkTargetBytes: chunkTargetBytes, licensing: licenseVerifier, defaultConnectorConfigs: defaultConnectorConfigs}
+	return &BackendService{db: db, storage: storage, uploadBucket: uploadBucket, publisher: pub, chunkTargetBytes: chunkTargetBytes, licensing: licenseVerifier}
 }
 
 func (s *BackendService) AddRoutes(r chi.Router) {
@@ -298,7 +295,7 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 			return nil, CodedErrorf(http.StatusBadRequest, "invalid storage type: %v", err)
 		}
 	
-		_, err = storage.NewConnector(r.Context(), connectorType, s.defaultConnectorConfigs, req.StorageParams)
+		_, err = storage.NewConnector(r.Context(), connectorType, req.StorageParams)
 		if err != nil {
 			return nil, CodedErrorf(http.StatusInternalServerError, "error validating connector params: %v", err)
 		}
@@ -1053,7 +1050,6 @@ func (s *BackendService) ValidateS3Access(r *http.Request) (any, error) {
 
 	_, err = storage.NewS3Connector(
 		r.Context(),
-		s.defaultConnectorConfigs.S3,
 		storage.S3ConnectorParams{
 			Endpoint: req.S3Endpoint,
 			Region: req.Region,

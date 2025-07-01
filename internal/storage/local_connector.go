@@ -12,11 +12,8 @@ import (
 	"path/filepath"
 )
 
-type LocalConnectorConfig struct {
-	BaseDir string
-}
-
 type LocalConnectorParams struct {
+	BaseDir string
 	Bucket string
 	Prefix string
 }
@@ -26,14 +23,13 @@ type LocalConnectorTaskParams struct {
 }
 
 type LocalConnector struct {
-	config LocalConnectorConfig
 	params LocalConnectorParams
 }
 
 var _ Connector = (*LocalConnector)(nil)
 
-func NewLocalConnector(config LocalConnectorConfig, params LocalConnectorParams) *LocalConnector {
-	return &LocalConnector{config: config, params: params}
+func NewLocalConnector(params LocalConnectorParams) *LocalConnector {
+	return &LocalConnector{params: params}
 }
 
 func (c *LocalConnector) CreateInferenceTasks(ctx context.Context, targetBytes int64) ([]InferenceTask, int64, error) {
@@ -51,7 +47,7 @@ func (c *LocalConnector) IterTaskChunks(ctx context.Context, params []byte) (<-c
 
 func (c *LocalConnector) iterObjects() ObjectIterator {
 	return func(yield func(obj Object, err error) bool) {
-		err := filepath.WalkDir(localStorageFullpath(c.config.BaseDir, c.params.Bucket, c.params.Prefix), func(path string, d fs.DirEntry, err error) error {
+		err := filepath.WalkDir(localStorageFullpath(c.params.BaseDir, c.params.Bucket, c.params.Prefix), func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
@@ -81,7 +77,7 @@ func (c *LocalConnector) iterObjects() ObjectIterator {
 func (c *LocalConnector) getObject(bucket, key string) ([]byte, error) {
 	// TODO: This method loads entire files into memory which can cause issues with large files.
 	// Change this method to return io.ReadCloser instead of []byte to stream data
-	data, err := os.ReadFile(localStorageFullpath(c.config.BaseDir, bucket, key))
+	data, err := os.ReadFile(localStorageFullpath(c.params.BaseDir, bucket, key))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read file %s/%s: %w", bucket, key, err)
 	}

@@ -25,10 +25,8 @@ func setupTestConnector(t *testing.T) (*LocalConnector, *LocalObjectStore, strin
 	t.Helper()
 	objectStore, dir := setupTestObjectStore(t)
 	connector := NewLocalConnector(
-		LocalConnectorConfig{
-			BaseDir: dir,
-		},
 		LocalConnectorParams{	
+			BaseDir: dir,
 			Bucket:  "test-bucket",
 			Prefix:  "test-prefix",
 		},

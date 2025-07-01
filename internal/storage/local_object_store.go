@@ -97,10 +97,8 @@ func (s *LocalObjectStore) UploadDir(ctx context.Context, bucket, prefix, src st
 
 func (s *LocalObjectStore) GetUploadConnector(ctx context.Context, bucket string, uploadParams UploadParams) (Connector, error) {
 	return NewLocalConnector(
-		LocalConnectorConfig{
-			BaseDir: s.baseDir,
-		},
 		LocalConnectorParams{
+			BaseDir: s.baseDir,
 			Bucket: bucket,
 			Prefix: uploadParams.UploadId.String(),
 		},

@@ -79,8 +79,6 @@ var expected = []string{
 	"123",
 }
 
-var defaultConnectorConfigs = storage.ConnectorConfigs{}
-
 func createData(t *testing.T, storage storage.ObjectStore) {
 	require.NoError(t, storage.CreateBucket(context.Background(), dataBucket))
 
@@ -165,13 +163,13 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 
 	publisher, reciever := setupRabbitMQContainer(t, ctx)
 
-	backend := backendapi.NewBackendService(db, s3ObjectStore, uploadBucket, publisher, 120, &DummyLicenseVerifier{}, defaultConnectorConfigs)
+	backend := backendapi.NewBackendService(db, s3ObjectStore, uploadBucket, publisher, 120, &DummyLicenseVerifier{})
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
 	modelName, modelLoader, modelId := createModel(t, s3ObjectStore, db, modelBucket)
 
-	worker := core.NewTaskProcessor(db, s3ObjectStore, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket, uploadBucket, defaultConnectorConfigs, map[core.ModelType]core.ModelLoader{
+	worker := core.NewTaskProcessor(db, s3ObjectStore, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket, uploadBucket, map[core.ModelType]core.ModelLoader{
 		core.ParseModelType(modelName): modelLoader,
 	})
 
@@ -275,13 +273,13 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 
 	publisher, reciever := setupRabbitMQContainer(t, ctx)
 
-	backend := backendapi.NewBackendService(db, s3ObjectStore, uploadBucket, publisher, 120, &DummyLicenseVerifier{}, defaultConnectorConfigs)
+	backend := backendapi.NewBackendService(db, s3ObjectStore, uploadBucket, publisher, 120, &DummyLicenseVerifier{})
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
 	modelName, modelLoader, modelId := createModel(t, s3ObjectStore, db, modelBucket)
 
-	worker := core.NewTaskProcessor(db, s3ObjectStore, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket, uploadBucket, defaultConnectorConfigs, map[core.ModelType]core.ModelLoader{
+	worker := core.NewTaskProcessor(db, s3ObjectStore, publisher, reciever, &DummyLicenseVerifier{}, t.TempDir(), modelBucket, uploadBucket, map[core.ModelType]core.ModelLoader{
 		core.ParseModelType(modelName): modelLoader,
 	})
 
@@ -335,7 +333,7 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 
 	publisher, receiver := setupRabbitMQContainer(t, ctx)
 
-	backendSvc := backendapi.NewBackendService(db, s3ObjectStore, uploadBucket, publisher, 120, &DummyLicenseVerifier{}, defaultConnectorConfigs)
+	backendSvc := backendapi.NewBackendService(db, s3ObjectStore, uploadBucket, publisher, 120, &DummyLicenseVerifier{})
 	router := chi.NewRouter()
 	backendSvc.AddRoutes(router)
 
@@ -347,7 +345,7 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 	)
 
 	tempDir := t.TempDir()
-	worker := core.NewTaskProcessor(db, s3ObjectStore, publisher, receiver, &DummyLicenseVerifier{}, tempDir, modelBucket, uploadBucket, defaultConnectorConfigs, core.NewModelLoaders())
+	worker := core.NewTaskProcessor(db, s3ObjectStore, publisher, receiver, &DummyLicenseVerifier{}, tempDir, modelBucket, uploadBucket, core.NewModelLoaders())
 	go worker.Start()
 	t.Cleanup(worker.Stop)
 
