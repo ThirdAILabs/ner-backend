@@ -50,3 +50,7 @@ type ChatHistoryItem struct {
 type ApiKey struct {
 	ApiKey string
 }
+
+type ChatMessage struct {
+	Message string
+}

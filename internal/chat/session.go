@@ -64,7 +64,15 @@ func NewChatSession(db *ChatDB, sessionID uuid.UUID, model, apiKey string, ner c
 	}, nil
 }
 
-func (session *ChatSession) Redact(text string, tagMetadata TagMetadata) (string, TagMetadata, error) {
+func NewExtensionChatSession(db *ChatDB, sessionID uuid.UUID, ner core.Model) ChatSession {
+	return ChatSession{
+		db:           db,
+		sessionID:    sessionID,
+		ner:          ner,
+	}
+}
+
+func (session *ChatSession) redact(text string, tagMetadata TagMetadata) (string, TagMetadata, error) {
 	entities, err := session.ner.Predict(text)
 	if err != nil {
 		return "", TagMetadata{}, fmt.Errorf("error predicting entities: %w", err)
@@ -106,6 +114,33 @@ func (session *ChatSession) Redact(text string, tagMetadata TagMetadata) (string
 	return b.String(), tagMetadata, nil
 }
 
+func (session *ChatSession) Redact(text string) (string, error) {
+	tagMetadata, err := session.getTagMetadata()
+	if err != nil {
+		return "", fmt.Errorf("error getting tag metadata: %v", err)
+	}
+	
+	redactedText, _, err := session.redact(text, tagMetadata)
+	if err != nil {
+		return "", fmt.Errorf("error redacting text: %v", err)
+	}
+
+	return redactedText, nil
+}
+
+func (session *ChatSession) Restore(text string) (string, error) {
+	tagMetadata, err := session.getTagMetadata()
+	if err != nil {
+		return "", fmt.Errorf("error getting tag metadata: %v", err)
+	}
+
+	for replacement, original := range tagMetadata.TagMap {
+		text = strings.ReplaceAll(text, replacement, original)
+	}
+
+	return text, nil
+}
+
 type ChatItem struct {
 	RedactedText string
 	Reply        string
@@ -119,7 +154,7 @@ func (session *ChatSession) ChatStream(userInput string) (ChatIterator, error) {
 		return nil, fmt.Errorf("error getting tag metadata: %v", err)
 	}
 
-	redactedText, newTagMetadata, err := session.Redact(userInput, tagMetadata)
+	redactedText, newTagMetadata, err := session.redact(userInput, tagMetadata)
 	if err != nil {
 		return nil, fmt.Errorf("error redacting user input: %v", err)
 	}

@@ -156,6 +156,7 @@ type ChatSession struct {
 	ID          uuid.UUID      `gorm:"type:uuid;primaryKey"`
 	Title       string         `gorm:"not null"`
 	TagMetadata datatypes.JSON `gorm:"type:jsonb"`
+	ExtensionSessionId uuid.NullUUID `gorm:"type:uuid"`
 }
 
 type ChatHistory struct {

@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -15,7 +16,6 @@ import (
 
 	"ner-backend/internal/chat"
 	"ner-backend/internal/core"
-	"ner-backend/internal/database"
 	"ner-backend/pkg/api"
 )
 
@@ -72,6 +72,8 @@ func (s *ChatService) AddRoutes(r chi.Router) {
 		r.Post("/sessions/{session_id}/rename", RestHandler(s.RenameSession))
 		r.Post("/sessions/{session_id}/messages", RestStreamHandler(s.SendMessageStream))
 		r.Get("/sessions/{session_id}/history", RestHandler(s.GetHistory))
+		r.Get("/sessions/{session_id}/redact", RestHandler(s.RedactMessage))
+		r.Get("/sessions/{session_id}/restore", RestHandler(s.RestoreMessage))
 		r.Get("/api-key", RestHandler(s.GetOpenAIApiKey))
 		r.Post("/api-key", RestHandler(s.SetOpenAIApiKey))
 		r.Delete("/api-key", RestHandler(s.DeleteOpenAIApiKey))
@@ -106,18 +108,8 @@ func (s *ChatService) StartSession(r *http.Request) (any, error) {
 		return nil, err
 	}
 
-	tagMetadata := chat.NewTagMetadata()
-	tagMetadataJSON, err := json.Marshal(tagMetadata)
-	if err != nil {
-		return nil, err
-	}
-	
 	sessionID := uuid.New()
-	err = s.db.CreateSession(&database.ChatSession{
-		ID:          sessionID,
-		Title:       req.Title,
-		TagMetadata: tagMetadataJSON,
-	})
+	err = s.db.CreateSession(sessionID, req.Title, uuid.NullUUID{})
 	if err != nil {
 		return nil, err
 	}
@@ -310,4 +302,72 @@ func (s *ChatService) DeleteOpenAIApiKey(r *http.Request) (any, error) {
 		return nil, err
 	}
 	return nil, nil
+}
+
+func (s *ChatService) RedactMessage(r *http.Request) (any, error) {
+	sessionID, err := URLParamUUID(r, "session_id")
+	if err != nil {
+		return nil, err
+	}
+	
+	req, err := ParseRequest[api.ChatMessage](r)
+	if err != nil {
+		return nil, err
+	}
+
+	session, err := s.getExtensionSession(sessionID)
+	if err != nil {		
+		return nil, err
+	}
+
+	redactedText, err := session.Redact(req.Message)
+	if err != nil {
+		return nil, err
+	}
+
+	return api.ChatMessage{Message: redactedText}, nil
+}
+
+func (s *ChatService) RestoreMessage(r *http.Request) (any, error) {
+	sessionID, err := URLParamUUID(r, "session_id")
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := ParseRequest[api.ChatMessage](r)
+	if err != nil {
+		return nil, err
+	}
+	
+	session, err := s.getExtensionSession(sessionID)
+	if err != nil {		
+		return nil, err
+	}
+	
+	restoredText, err := session.Restore(req.Message)
+	if err != nil {
+		return nil, err
+	}
+
+	return api.ChatMessage{Message: restoredText}, nil
+}
+
+func (s *ChatService) getExtensionSession(sessionID uuid.UUID) (*chat.ChatSession, error) {
+	session, err := s.db.GetSession(sessionID)
+	if err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, err
+		}
+
+		err = s.db.CreateSession(sessionID, "Extension-" + sessionID.String(), uuid.NullUUID{UUID: sessionID, Valid: true})
+		if err != nil {
+			return nil, err
+		}
+	}
+	if !session.ExtensionSessionId.Valid {
+		return nil, fmt.Errorf("this endpoint is only available for extension sessions, session %s is not an extension session", sessionID)
+	}
+
+	extensionSession := chat.NewExtensionChatSession(s.db, sessionID, s.model)
+	return &extensionSession, nil
 }

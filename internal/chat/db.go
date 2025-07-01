@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"encoding/json"
 	"ner-backend/internal/database"
 	"sync"
 
@@ -29,10 +30,21 @@ func (c *ChatDB) GetSessions() ([]database.ChatSession, error) {
 	return sessions, err
 }
 
-func (c *ChatDB) CreateSession(session *database.ChatSession) error {
+func (c *ChatDB) CreateSession(sessionID uuid.UUID, title string, extensionSessionID uuid.NullUUID) error {
+	tagMetadata := NewTagMetadata()
+	tagMetadataJSON, err := json.Marshal(tagMetadata)
+	if err != nil {
+		return err
+	}
+
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	return c.db.Create(session).Error
+	return c.db.Create(&database.ChatSession{
+		ID: sessionID,
+		Title: title,
+		TagMetadata: tagMetadataJSON,
+		ExtensionSessionId: extensionSessionID,
+	}).Error
 }
 
 func (c *ChatDB) GetSession(sessionID uuid.UUID) (database.ChatSession, error) {
