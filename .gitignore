@@ -63,4 +63,4 @@ main
 .cursor/
 
 plugin/.cache
-plugin/plugin-python/.cache
+plugin/plugin-python/.cache*.a
