@@ -1,4 +1,4 @@
-package core
+package storage
 
 import (
 	"fmt"
@@ -10,15 +10,8 @@ import (
 	"github.com/gen2brain/go-fitz"
 )
 
-type ParsedChunk struct {
-	Text    string
-	Offset  int
-	Error   error
-	RawSize int64
-}
-
 type Parser interface {
-	Parse(object string, data io.Reader) chan ParsedChunk
+	Parse(object string, data io.Reader) chan Chunk
 }
 
 type DefaultParser struct {
@@ -34,8 +27,8 @@ func NewDefaultParser() *DefaultParser {
 	return &DefaultParser{maxChunkSize: defaultMaxChunkSize}
 }
 
-func (parser *DefaultParser) Parse(object string, data io.Reader) chan ParsedChunk {
-	output := make(chan ParsedChunk, queueBufferSize)
+func (parser *DefaultParser) Parse(object string, data io.Reader) chan Chunk {
+	output := make(chan Chunk, queueBufferSize)
 
 	ext := filepath.Ext(object)
 
@@ -55,16 +48,16 @@ func (parser *DefaultParser) Parse(object string, data io.Reader) chan ParsedChu
 	return output
 }
 
-func (parser *DefaultParser) parsePdf(object string, data io.Reader, output chan ParsedChunk) {
+func (parser *DefaultParser) parsePdf(object string, data io.Reader, output chan Chunk) {
 	document := make([]byte, parser.maxChunkSize)
 
 	n, err := io.ReadFull(data, document)
 	if err == nil {
 		// if the error is nil then the end of the stream was not reached, thus we cannot parse the pdf.
-		output <- ParsedChunk{Error: fmt.Errorf("pdf is too large for parsing")}
+		output <- Chunk{Error: fmt.Errorf("pdf is too large for parsing")}
 		return
 	} else if err != io.EOF && err != io.ErrUnexpectedEOF {
-		output <- ParsedChunk{Error: err}
+		output <- Chunk{Error: err}
 		return
 	}
 
@@ -72,7 +65,7 @@ func (parser *DefaultParser) parsePdf(object string, data io.Reader, output chan
 
 	pdf, err := fitz.NewFromMemory(document)
 	if err != nil {
-		output <- ParsedChunk{Error: err}
+		output <- Chunk{Error: err}
 		return
 	}
 	defer pdf.Close()
@@ -82,13 +75,13 @@ func (parser *DefaultParser) parsePdf(object string, data io.Reader, output chan
 	for i := 0; i < pdf.NumPage(); i++ {
 		pageText, err := pdf.Text(i)
 		if err != nil {
-			output <- ParsedChunk{Error: err}
+			output <- Chunk{Error: err}
 			return
 		}
 		pages = append(pages, pageText)
 	}
 
-	output <- ParsedChunk{
+	output <- Chunk{
 		Text:    strings.Join(pages, "\n\n"),
 		Offset:  0,
 		Error:   nil,
@@ -96,7 +89,7 @@ func (parser *DefaultParser) parsePdf(object string, data io.Reader, output chan
 	}
 }
 
-func (parser *DefaultParser) parsePlaintext(filename string, data io.Reader, output chan ParsedChunk) {
+func (parser *DefaultParser) parsePlaintext(filename string, data io.Reader, output chan Chunk) {
 	offset := 0
 	for {
 		chunk := make([]byte, parser.maxChunkSize)
@@ -108,7 +101,7 @@ func (parser *DefaultParser) parsePlaintext(filename string, data io.Reader, out
 			isEnd = true
 		}
 
-		output <- ParsedChunk{
+		output <- Chunk{
 			Text:    string(chunk[:n]),
 			Offset:  offset,
 			Error:   err,

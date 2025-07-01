@@ -62,3 +62,7 @@ export const uniqueFileNames = (fileNames: string[]): string[] => {
   });
   return newFileNames;
 };
+
+export const isUploadReport = (report: Report): boolean => {
+  return report.StorageType === 'upload';
+};
