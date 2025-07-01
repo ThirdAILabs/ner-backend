@@ -311,9 +311,9 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 }
 
 func TestInferenceWorkflowForModels(t *testing.T) {
-	// if os.Getenv("PYTHON_EXECUTABLE_PATH") == "" || os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH") == "" {
-	// 	t.Fatalf("PYTHON_EXECUTABLE_PATH and PYTHON_MODEL_PLUGIN_SCRIPT_PATH must be set")
-	// }
+	if os.Getenv("PYTHON_EXECUTABLE_PATH") == "" || os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH") == "" {
+		t.Fatalf("PYTHON_EXECUTABLE_PATH and PYTHON_MODEL_PLUGIN_SCRIPT_PATH must be set")
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
@@ -338,10 +338,8 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 	backendSvc.AddRoutes(router)
 
 	python.EnablePythonPlugin(
-		"python",
-		"plugin/plugin-python/plugin.py",
-		// os.Getenv("PYTHON_EXECUTABLE_PATH"),
-		// os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH"),
+		os.Getenv("PYTHON_EXECUTABLE_PATH"),
+		os.Getenv("PYTHON_MODEL_PLUGIN_SCRIPT_PATH"),
 	)
 
 	tempDir := t.TempDir()
