@@ -89,7 +89,8 @@ func (s *LocalObjectStore) UploadDir(ctx context.Context, bucket, prefix, src st
 		return fmt.Errorf("failed to create parent directory for %s/%s: %w", bucket, prefix, err)
 	}
 
-	if err := os.Symlink(src, destPath); err != nil {
+	// Hard link so that if the original file is deleted, the linked file stays valid.
+	if err := os.Link(src, destPath); err != nil {
 		return fmt.Errorf("failed to create symlink from %s to %s/%s: %w", src, bucket, prefix, err)
 	}
 	return nil
