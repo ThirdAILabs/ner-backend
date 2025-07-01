@@ -127,12 +127,14 @@ export function UserFeedbackSection({
         ) : (
           <div className="divide-y">
             {feedbackData.map((feedback: SavedFeedback, index) => {
-              const tokens = (feedback.tokens || feedback.Tokens || []).map((token: string, tokenIndex: number) => {
-                return {
-                  text: token,
-                  tag: (feedback.labels || feedback.Labels)?.[tokenIndex] || 'O',
-                };
-              });
+              const tokens = (feedback.tokens || feedback.Tokens || []).map(
+                (token: string, tokenIndex: number) => {
+                  return {
+                    text: token,
+                    tag: (feedback.labels || feedback.Labels)?.[tokenIndex] || 'O',
+                  };
+                }
+              );
               return (
                 <details key={index} className="group text-sm leading-relaxed bg-white">
                   <summary className="p-3 cursor-pointer bg-gray-100 flex items-center justify-between">
@@ -203,22 +205,26 @@ export function UserFeedbackSection({
               onChange={(e) => setGenerateData(e.target.value as 'yes' | 'no')}
               sx={{ mb: 2 }}
             >
-              <FormControlLabel 
-                value="yes" 
-                control={<Radio />} 
-                label="Generate Synthetic Data" 
+              <FormControlLabel
+                value="yes"
+                control={<Radio />}
+                label="Generate Synthetic Data"
                 sx={{ '& .MuiFormControlLabel-label': { fontSize: '0.875rem' } }}
               />
-              <FormControlLabel 
-                value="no" 
-                control={<Radio />} 
-                label="Do not generate synthetic data" 
+              <FormControlLabel
+                value="no"
+                control={<Radio />}
+                label="Do not generate synthetic data"
                 sx={{ '& .MuiFormControlLabel-label': { fontSize: '0.875rem' } }}
               />
             </RadioGroup>
             {generateData === 'yes' && (
-              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 2 }}>
-                Synthetic data generation will use OpenAI to create additional training examples based on your feedback samples.
+              <Typography
+                variant="caption"
+                sx={{ color: 'text.secondary', display: 'block', mb: 2 }}
+              >
+                Synthetic data generation will use OpenAI to create additional training examples
+                based on your feedback samples.
               </Typography>
             )}
           </Box>
@@ -248,7 +254,7 @@ export function UserFeedbackSection({
           </Button>
         </DialogActions>
       </Dialog>
-      
+
       {/* API Key Dialog */}
       <ApiKeyDialog
         open={showApiKeyDialog}
@@ -355,23 +361,23 @@ const ModelCustomization: React.FC = () => {
 
   const handleFinetuneSubmit = async () => {
     if (!selectedModel || !finetuneModelName.trim()) return;
-    
+
     // Check if synthetic data generation is enabled
     if (generateData === 'yes') {
       // First check if we have an API key stored
       try {
         // Check for stored API key
         const storedKey = await nerService.getOpenAIApiKey();
-        
+
         if (!storedKey || storedKey.trim() === '') {
           setApiKeyError('OpenAI API key is required for synthetic data generation.');
           setShowApiKeyDialog(true);
           return;
         }
-        
+
         // Validate the stored API key
         const validation = await nerService.validateOpenAIApiKey(storedKey);
-        
+
         if (!validation.Valid) {
           setApiKeyError(`Invalid API key: ${validation.Message}`);
           setShowApiKeyDialog(true);
@@ -384,38 +390,41 @@ const ModelCustomization: React.FC = () => {
         return;
       }
     }
-    
+
     setFinetuning(true);
     setApiKeyError(null);
-    
+
     try {
       // Extract unique tags from feedback data
       const uniqueTags = new Set<string>();
-      feedbackData.forEach(f => {
+      feedbackData.forEach((f) => {
         const labels = f.labels || f.Labels || [];
-        labels.forEach(label => {
+        labels.forEach((label) => {
           if (label && label !== 'O') {
             uniqueTags.add(label);
           }
         });
       });
-      
+
       // Create tag info array for synthetic data generation
-      const tags = Array.from(uniqueTags).map(tag => ({
+      const tags = Array.from(uniqueTags).map((tag) => ({
         name: tag,
         description: `Entity of type ${tag}`,
-        examples: [] // Backend will extract examples from the samples
+        examples: [], // Backend will extract examples from the samples
       }));
-      
+
       const request = {
         Name: finetuneModelName.trim(),
         TaskPrompt: finetuneTaskPrompt.trim() || undefined,
         GenerateData: generateData === 'yes',
         Tags: generateData === 'yes' ? tags : undefined,
-        Samples: feedbackData.length > 0 ? feedbackData.map(f => ({
-          Tokens: f.tokens || f.Tokens || [],
-          Labels: f.labels || f.Labels || []
-        })) : undefined,
+        Samples:
+          feedbackData.length > 0
+            ? feedbackData.map((f) => ({
+                Tokens: f.tokens || f.Tokens || [],
+                Labels: f.labels || f.Labels || [],
+              }))
+            : undefined,
       };
       await nerService.finetuneModel(selectedModel.Id, request);
       setShowFinetuneDialog(false);
@@ -435,16 +444,22 @@ const ModelCustomization: React.FC = () => {
     } catch (error: any) {
       // Finetuning failed
       // Check if the error is related to OpenAI API key
-      const errorMessage = error?.response?.data?.message || error?.response?.data || error?.message || 'Finetuning failed';
-      const errorString = typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage);
-      
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.response?.data ||
+        error?.message ||
+        'Finetuning failed';
+      const errorString =
+        typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage);
+
       // Check for OpenAI-related errors with various patterns
-      const isOpenAIError = errorString.toLowerCase().includes('openai') || 
-                           errorString.toLowerCase().includes('api key') ||
-                           errorString.toLowerCase().includes('api_key') ||
-                           errorString.toLowerCase().includes('unauthorized') ||
-                           errorString.toLowerCase().includes('invalid key');
-                           
+      const isOpenAIError =
+        errorString.toLowerCase().includes('openai') ||
+        errorString.toLowerCase().includes('api key') ||
+        errorString.toLowerCase().includes('api_key') ||
+        errorString.toLowerCase().includes('unauthorized') ||
+        errorString.toLowerCase().includes('invalid key');
+
       if (isOpenAIError && generateData === 'yes') {
         setApiKeyError(errorString);
       } else {

@@ -46,28 +46,28 @@ export function ApiKeyDialog({
       setApiKeyError('Please enter an API key');
       return;
     }
-    
+
     setValidatingApiKey(true);
     setApiKeyError(null);
-    
+
     try {
       // Validate the API key
       const validation = await nerService.validateOpenAIApiKey(apiKeyInput);
-      
+
       if (!validation.Valid) {
         setApiKeyError(validation.Message);
         setValidatingApiKey(false);
         return;
       }
-      
+
       // Save the API key
       await nerService.setOpenAIApiKey(apiKeyInput);
-      
+
       // Close the dialog
       onClose();
       setApiKeyInput('');
       setValidatingApiKey(false);
-      
+
       // Wait a bit for the file to be written
       setTimeout(() => {
         // Now retry the finetune submission
@@ -106,11 +106,7 @@ export function ApiKeyDialog({
         </Box>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button
-          onClick={handleCancel}
-          disabled={validatingApiKey}
-          sx={{ textTransform: 'none' }}
-        >
+        <Button onClick={handleCancel} disabled={validatingApiKey} sx={{ textTransform: 'none' }}>
           Cancel
         </Button>
         <Button
