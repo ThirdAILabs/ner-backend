@@ -144,6 +144,7 @@ def build_images(
                     image.key: image_name_for_branch(image.name, branch)
                     for image in images_to_build
                 },
+                "TARGETARCH": "amd64",
             }
 
         image_ids.update(
