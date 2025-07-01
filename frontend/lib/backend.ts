@@ -36,6 +36,7 @@ export interface FinetuneRequest {
 export interface FinetuneResponse {
   ModelId: string;
 }
+
 // Add a utility function to handle API errors with custom messages
 const handleApiError = (error: unknown, customMessage?: string): never => {
   console.error('API Error:', error);

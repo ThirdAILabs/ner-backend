@@ -22,6 +22,7 @@ type WorkerConfig struct {
 	S3AccessKeyID               string `env:"INTERNAL_AWS_ACCESS_KEY_ID,notEmpty,required"`
 	S3SecretAccessKey           string `env:"INTERNAL_AWS_SECRET_ACCESS_KEY,notEmpty,required"`
 	ModelBucketName             string `env:"MODEL_BUCKET_NAME" envDefault:"ner-models"`
+	UploadBucketName            string `env:"UPLOAD_BUCKET_NAME" envDefault:"uploads"`
 	QueueNames                  string `env:"QUEUE_NAMES" envDefault:"inference_queue,training_queue,shard_data_queue"`
 	WorkerConcurrency           int    `env:"CONCURRENCY" envDefault:"1"`
 	LicenseKey                  string `env:"LICENSE_KEY" envDefault:""`
@@ -44,12 +45,12 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	s3Cfg := storage.S3ProviderConfig{
-		S3EndpointURL:     cfg.S3EndpointURL,
-		S3AccessKeyID:     cfg.S3AccessKeyID,
-		S3SecretAccessKey: cfg.S3SecretAccessKey,
+	s3ObjectStoreCfg := storage.S3ClientConfig{
+		Endpoint:     cfg.S3EndpointURL,
+		AccessKeyID:     cfg.S3AccessKeyID,
+		SecretAccessKey: cfg.S3SecretAccessKey,
 	}
-	s3Client, err := storage.NewS3Provider(s3Cfg)
+	s3ObjectStore, err := storage.NewS3ObjectStore(s3ObjectStoreCfg)
 	if err != nil {
 		log.Fatalf("Worker: Failed to create S3 client: %v", err)
 	}
@@ -71,7 +72,7 @@ func main() {
 
 	loaders := core.NewModelLoaders()
 
-	worker := core.NewTaskProcessor(db, s3Client, publisher, receiver, licensing, "./tmp_models_TODO", cfg.ModelBucketName, loaders)
+	worker := core.NewTaskProcessor(db, s3ObjectStore, publisher, receiver, licensing, "./tmp_models_TODO", cfg.ModelBucketName, cfg.UploadBucketName, loaders)
 
 	go worker.Start()
 

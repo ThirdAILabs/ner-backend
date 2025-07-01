@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"ner-backend/internal/licensing"
 	"time"
 
@@ -37,17 +38,14 @@ type Report struct {
 
 	Model          Model
 	ReportName     string
-	SourceS3Bucket string
-	SourceS3Prefix string
-	S3Endpoint     string
-	S3Region       string
-	IsUpload       bool
+	StorageType     string
+	StorageParams   json.RawMessage
 
 	Stopped            bool
 	CreationTime       time.Time
-	TotalFileCount     int `json:"FileCount"`
-	SucceededFileCount int `json:"SucceededFileCount"`
-	FailedFileCount    int `json:"FailedFileCount"`
+	TotalFileCount     int
+	SucceededFileCount int
+	FailedFileCount    int
 
 	Tags       []string          `json:"Tags,omitempty"`
 	CustomTags map[string]string `json:"CustomTags,omitempty"`
@@ -76,12 +74,9 @@ type Entity struct {
 type CreateReportRequest struct {
 	ModelId uuid.UUID
 
-	ReportName     string `json:"report_name"`
-	UploadId       uuid.UUID
-	S3Endpoint     string
-	S3Region       string
-	SourceS3Bucket string
-	SourceS3Prefix string
+	ReportName      string
+	StorageType     string
+	StorageParams   json.RawMessage
 
 	Tags       []string
 	CustomTags map[string]string
@@ -155,7 +150,7 @@ type ValidateGroupDefinitionRequest struct {
 
 type ValidateS3BucketRequest struct {
 	S3Endpoint     string
-	S3Region       string
+	Region       string
 	SourceS3Bucket string
 	SourceS3Prefix string
 }
