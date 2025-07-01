@@ -1,0 +1,4 @@
+azure:
+  branches:
+  registry: pocketshield.azurecr.io
+provider: azure
