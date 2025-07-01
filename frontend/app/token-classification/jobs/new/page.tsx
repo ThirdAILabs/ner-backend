@@ -258,6 +258,7 @@ const FileSources: React.FC<FileSourcesProps> = ({
             title="Local Files"
             description="Select individual files from your computer"
             disclaimer={`Supported: ${SUPPORTED_TYPES.join(', ')}`}
+            disabled={isLoadingFiles}
           />
           <SourceOption
             onClick={async () => {
@@ -289,7 +290,7 @@ const FileSources: React.FC<FileSourcesProps> = ({
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files) {
+    if (files && files.length > 0) {
       setIsLoadingFiles(true);
       try {
         // Add a small delay to show loading state for quick file selections
