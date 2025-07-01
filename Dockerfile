@@ -1,12 +1,12 @@
 # --- Frontend Build Stage ---
 FROM node:22-alpine AS frontend-builder
 WORKDIR /frontend
-    
-COPY ../frontend/package*.json ./
+
+COPY frontend/package*.json ./
 RUN npm install --force
-    
-COPY ../frontend .
-    
+
+COPY frontend .
+
 RUN npm run build
 
 

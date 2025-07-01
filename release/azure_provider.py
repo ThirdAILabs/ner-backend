@@ -53,13 +53,10 @@ class AzureProvider(CloudProviderInterface):
         )
         image_id: Optional[str] = None
         for chunk in generator:
-            # Handle errors immediately
-            print("Chunk before error: ", chunk)
+            # Handle errors immediately=
             if "errorDetail" in chunk:
                 raise RuntimeError(chunk["errorDetail"]["message"])
 
-            # BuildKit success case: look for aux.ID
-            print("Chunk: ", chunk)
             if "aux" in chunk and isinstance(chunk["aux"], dict):
                 aux_id = chunk["aux"].get("ID")
                 if aux_id:
