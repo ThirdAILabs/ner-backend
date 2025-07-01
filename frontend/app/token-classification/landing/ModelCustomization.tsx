@@ -221,11 +221,6 @@ export function UserFeedbackSection({
                 Synthetic data generation will use OpenAI to create additional training examples based on your feedback samples.
               </Typography>
             )}
-            {apiKeyError && (
-              <Alert severity="error" sx={{ mt: 2 }}>
-                {apiKeyError}
-              </Alert>
-            )}
           </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
