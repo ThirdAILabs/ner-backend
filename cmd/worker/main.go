@@ -18,9 +18,9 @@ import (
 type WorkerConfig struct {
 	DatabaseURL                 string `env:"DATABASE_URL,notEmpty,required"`
 	RabbitMQURL                 string `env:"RABBITMQ_URL,notEmpty,required"`
-	Endpoint                    string `env:"S3_ENDPOINT_URL,notEmpty,required"`
-	AccessKeyID                 string `env:"INTERNAL_AWS_ACCESS_KEY_ID,notEmpty,required"`
-	SecretAccessKey             string `env:"INTERNAL_AWS_SECRET_ACCESS_KEY,notEmpty,required"`
+	S3EndpointURL               string `env:"S3_ENDPOINT_URL,notEmpty,required"`
+	S3AccessKeyID               string `env:"INTERNAL_AWS_ACCESS_KEY_ID,notEmpty,required"`
+	S3SecretAccessKey           string `env:"INTERNAL_AWS_SECRET_ACCESS_KEY,notEmpty,required"`
 	ModelBucketName             string `env:"MODEL_BUCKET_NAME" envDefault:"ner-models"`
 	UploadBucketName            string `env:"UPLOAD_BUCKET_NAME" envDefault:"uploads"`
 	QueueNames                  string `env:"QUEUE_NAMES" envDefault:"inference_queue,training_queue,shard_data_queue"`
@@ -46,9 +46,9 @@ func main() {
 	}
 
 	s3ObjectStoreCfg := storage.S3ClientConfig{
-		Endpoint:     cfg.Endpoint,
-		AccessKeyID:     cfg.AccessKeyID,
-		SecretAccessKey: cfg.SecretAccessKey,
+		Endpoint:     cfg.S3EndpointURL,
+		AccessKeyID:     cfg.S3AccessKeyID,
+		SecretAccessKey: cfg.S3SecretAccessKey,
 	}
 	s3ObjectStore, err := storage.NewS3ObjectStore(s3ObjectStoreCfg)
 	if err != nil {
