@@ -16,8 +16,8 @@ type S3ConnectorParams struct {
 	Region string
 	Bucket string
 	Prefix string
-	AccessKeyID string
-	SecretAccessKey string
+	AccessKeyID string      `json:"-"`
+	SecretAccessKey string  `json:"-"`
 }
 
 type S3ConnectorTaskParams struct {
