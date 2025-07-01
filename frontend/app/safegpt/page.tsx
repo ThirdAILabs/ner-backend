@@ -29,7 +29,8 @@ function DeleteDialog({ onCancel, onConfirm }: DeleteDialogProps) {
       <div className="bg-white rounded-lg p-6 w-full max-w-md">
         <h3 className="text-lg font-medium mb-4">Delete Chat</h3>
         <p className="text-sm text-gray-600 mb-4">
-          Are you sure you want to delete this chat? This action cannot be undone.
+          Are you sure you want to delete this chat? This action cannot be
+          undone.
         </p>
         <div className="flex justify-end space-x-2">
           <Button
@@ -37,7 +38,7 @@ function DeleteDialog({ onCancel, onConfirm }: DeleteDialogProps) {
             variant="outline"
             onClick={onCancel}
             style={{
-              color: 'rgb(85,152,229)',
+              color: 'rgb(85,152,229)'
             }}
           >
             Cancel
@@ -56,7 +57,13 @@ function DeleteDialog({ onCancel, onConfirm }: DeleteDialogProps) {
   );
 }
 
-function SidebarToggle({ collapsed, onClick }: { collapsed: boolean; onClick: () => void }) {
+function SidebarToggle({
+  collapsed,
+  onClick
+}: {
+  collapsed: boolean;
+  onClick: () => void;
+}) {
   return (
     <Button
       variant="ghost"
@@ -92,7 +99,7 @@ function SafeGPTContent() {
     invalidApiKey,
     deleteChat,
     model,
-    setModel,
+    setModel
   } = useSafeGPT(selectedId || 'new');
 
   const [showRedaction, setShowRedaction] = useState<boolean>(false);
@@ -106,7 +113,7 @@ function SafeGPTContent() {
     recordEvent({
       UserAction: 'View SafeGPT Page',
       UIComponent: 'SafeGPT Page',
-      Page: 'SafeGPT',
+      Page: 'SafeGPT'
     });
   }, []);
 
@@ -138,7 +145,7 @@ function SafeGPTContent() {
     recordEvent({
       UserAction: 'Create new chat',
       UIComponent: 'SafeGPT New Chat',
-      Page: 'SafeGPT',
+      Page: 'SafeGPT'
     });
   };
 
@@ -151,7 +158,7 @@ function SafeGPTContent() {
     recordEvent({
       UserAction: 'Send message to SafeGPT',
       UIComponent: 'SafeGPT Chat',
-      Page: 'SafeGPT New Chat',
+      Page: 'SafeGPT New Chat'
     });
   };
 
@@ -186,16 +193,22 @@ function SafeGPTContent() {
     <div>
       <div
         className={`fixed inset-0 flex items-start justify-start z-50 transition-all duration-300 ease-in-out p-4 ${
-          showNewChatDialog ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+          showNewChatDialog
+            ? 'opacity-100 pointer-events-auto'
+            : 'opacity-0 pointer-events-none'
         }`}
         style={{ paddingTop: '70px' }}
       >
         <div
           className={`bg-white rounded-lg shadow-lg p-3 border border-gray-200 transition-all duration-300 ease-in-out transform ${
-            showNewChatDialog ? 'scale-100 translate-y-0' : 'scale-95 translate-y-2'
+            showNewChatDialog
+              ? 'scale-100 translate-y-0'
+              : 'scale-95 translate-y-2'
           }`}
         >
-          <p className="text-gray-700 font-medium">This is a new chat. Start chatting!</p>
+          <p className="text-gray-700 font-medium">
+            This is a new chat. Start chatting!
+          </p>
         </div>
       </div>
       <div className="flex h-0 items-end">
@@ -263,7 +276,9 @@ function SafeGPTContent() {
         </div>
         <div
           className="transition-all duration-100"
-          style={{ width: isSidebarCollapsed ? '100vw' : 'calc(100vw - 250px)' }}
+          style={{
+            width: isSidebarCollapsed ? '100vw' : 'calc(100vw - 250px)'
+          }}
         >
           <ChatInterface
             messages={messages}
@@ -279,7 +294,10 @@ function SafeGPTContent() {
       </div>
 
       {isDeleteDialogOpen && (
-        <DeleteDialog onCancel={handleCancelDelete} onConfirm={handleConfirmDelete} />
+        <DeleteDialog
+          onCancel={handleCancelDelete}
+          onConfirm={handleConfirmDelete}
+        />
       )}
     </div>
   );
@@ -296,7 +314,11 @@ function Loading() {
       gap={4}
     >
       <CircularProgress sx={{ color: 'rgb(85,152,229)' }} />
-      <Typography className="text-gray-500" variant="h5" sx={{ fontWeight: 600, mb: 2 }}>
+      <Typography
+        className="text-gray-500"
+        variant="h5"
+        sx={{ fontWeight: 600, mb: 2 }}
+      >
         Securing the environment
       </Typography>
     </Box>

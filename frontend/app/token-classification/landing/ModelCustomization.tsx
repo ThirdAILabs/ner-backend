@@ -14,7 +14,7 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  Button,
+  Button
 } from '@mui/material';
 import { Toaster, toast } from 'react-hot-toast';
 import { nerService, SavedFeedback } from '@/lib/backend';
@@ -52,17 +52,24 @@ export function UserFeedbackSection({
   finetuning,
   handleFinetuneSubmit,
   handleFinetuneCancel,
-  availableTags,
+  availableTags
 }: UserFeedbackSectionProps) {
   return (
     <Box sx={{ mt: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 2
+        }}
+      >
         <Typography
           variant="h6"
           sx={{
             fontWeight: 600,
             fontSize: '1.25rem',
-            color: '#4a5568',
+            color: '#4a5568'
           }}
         >
           User Feedback
@@ -76,7 +83,7 @@ export function UserFeedbackSection({
             sx={{
               textTransform: 'none',
               fontWeight: 600,
-              px: 3,
+              px: 3
             }}
           >
             Finetune Model
@@ -97,14 +104,19 @@ export function UserFeedbackSection({
         ) : (
           <div className="divide-y">
             {feedbackData.map((feedback, index) => {
-              const tokens = feedback.Tokens.map((token: string, tokenIndex: number) => {
-                return {
-                  text: token,
-                  tag: feedback.Labels[tokenIndex],
-                };
-              });
+              const tokens = feedback.Tokens.map(
+                (token: string, tokenIndex: number) => {
+                  return {
+                    text: token,
+                    tag: feedback.Labels[tokenIndex]
+                  };
+                }
+              );
               return (
-                <details key={index} className="group text-sm leading-relaxed bg-white">
+                <details
+                  key={index}
+                  className="group text-sm leading-relaxed bg-white"
+                >
                   <summary className="p-3 cursor-pointer bg-gray-100 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <ChevronRight className="w-4 h-4 transition-transform group-open:rotate-90" />
@@ -135,13 +147,19 @@ export function UserFeedbackSection({
         )}
       </div>
       {/* Finetune Dialog */}
-      <Dialog open={showFinetuneDialog} onClose={handleFinetuneCancel} maxWidth="sm" fullWidth>
+      <Dialog
+        open={showFinetuneDialog}
+        onClose={handleFinetuneCancel}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>Finetune Model</DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 1 }}>
             <Typography variant="body2" sx={{ mb: 3, color: 'text.secondary' }}>
-              Create a new finetuned model using the feedback data you've reviewed. This will use
-              all {feedbackData.length} feedback samples as training data.
+              Create a new finetuned model using the feedback data you've
+              reviewed. This will use all {feedbackData.length} feedback samples
+              as training data.
             </Typography>
             <TextField
               autoFocus
@@ -204,7 +222,7 @@ const ModelCustomization: React.FC = () => {
     recordEvent({
       UserAction: 'view',
       UIComponent: 'Model Customization Page',
-      Page: 'Token Classification Page',
+      Page: 'Token Classification Page'
     });
   }, []);
 
@@ -270,7 +288,11 @@ const ModelCustomization: React.FC = () => {
 
   const handleFinetuneClick = () => {
     if (!selectedModel) return;
-    const timestamp = new Date().toISOString().slice(0, 16).replace('T', '_').replace(':', '-');
+    const timestamp = new Date()
+      .toISOString()
+      .slice(0, 16)
+      .replace('T', '_')
+      .replace(':', '-');
     setFinetuneModelName(`finetuned_${timestamp}`);
     setFinetuneTaskPrompt('');
     setShowFinetuneDialog(true);
@@ -283,9 +305,12 @@ const ModelCustomization: React.FC = () => {
       const request = {
         Name: finetuneModelName.trim(),
         TaskPrompt: finetuneTaskPrompt.trim() || undefined,
-        Samples: feedbackData.length > 0 ? feedbackData : undefined,
+        Samples: feedbackData.length > 0 ? feedbackData : undefined
       };
-      const response = await nerService.finetuneModel(selectedModel.Id, request);
+      const response = await nerService.finetuneModel(
+        selectedModel.Id,
+        request
+      );
       setShowFinetuneDialog(false);
       setFinetuneModelName('');
       setFinetuneTaskPrompt('');
@@ -295,9 +320,9 @@ const ModelCustomization: React.FC = () => {
           background: '#4CAF50',
           color: '#fff',
           padding: '10px',
-          borderRadius: '8px',
+          borderRadius: '8px'
         },
-        icon: '✓',
+        icon: '✓'
       });
     } catch (error) {
       console.error('Finetuning failed:', error);
@@ -328,13 +353,18 @@ const ModelCustomization: React.FC = () => {
           bgcolor: 'white',
           borderRadius: '12px',
           mx: 'auto',
-          maxWidth: '1400px',
+          maxWidth: '1400px'
         }}
       >
         <CardContent sx={{ p: 4 }}>
           <Typography
             variant="h5"
-            sx={{ fontWeight: 600, fontSize: '1.5rem', color: '#4a5568', mb: 4 }}
+            sx={{
+              fontWeight: 600,
+              fontSize: '1.5rem',
+              color: '#4a5568',
+              mb: 4
+            }}
           >
             Model Customization
           </Typography>
@@ -360,7 +390,8 @@ const ModelCustomization: React.FC = () => {
                       ? models
                           .find((m) => m.Id === val)!
                           .Name.charAt(0)
-                          .toUpperCase() + models.find((m) => m.Id === val)!.Name.slice(1)
+                          .toUpperCase() +
+                        models.find((m) => m.Id === val)!.Name.slice(1)
                       : val
                 }
                 sx={{ bgcolor: '#f8fafc', '&:hover': { bgcolor: '#f1f5f9' } }}
@@ -371,18 +402,31 @@ const ModelCustomization: React.FC = () => {
                     value={m.Id}
                     sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
                   >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1 }}>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        flexGrow: 1
+                      }}
+                    >
                       {m.Name.charAt(0).toUpperCase() + m.Name.slice(1)}
                       {m.Status === 'TRAINING' && (
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                           <CircularProgress size={16} sx={{ ml: 1 }} />
-                          <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
+                          <Typography
+                            variant="caption"
+                            sx={{ ml: 1, color: 'text.secondary' }}
+                          >
                             Training...
                           </Typography>
                         </Box>
                       )}
                       {m.Status === 'QUEUED' && (
-                        <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
+                        <Typography
+                          variant="caption"
+                          sx={{ ml: 1, color: 'text.secondary' }}
+                        >
                           Queued
                         </Typography>
                       )}

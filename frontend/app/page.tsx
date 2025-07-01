@@ -11,7 +11,7 @@ function Choice({
   title,
   subtitle,
   icon,
-  href,
+  href
 }: {
   title: string;
   subtitle: string;
@@ -24,7 +24,10 @@ function Choice({
         <Box>
           <div className="flex justify-center mt-4">{icon}</div>
           <CardTitle className="text-center text-gray-500">{title}</CardTitle>
-          <Typography variant="subtitle2" className="text-center text-gray-400 pt-3">
+          <Typography
+            variant="subtitle2"
+            className="text-center text-gray-400 pt-3"
+          >
             {subtitle}
           </Typography>
         </Box>
@@ -36,8 +39,16 @@ function Choice({
 export default function Page() {
   return (
     // Height is 100vh - 30px to account for the title bar region of the electron app.
-    <div style={{ width: '90%', minHeight: 'calc(100vh-30px)', margin: '0 auto' }}>
-      <header style={{ width: '100%', padding: '16px', borderBottom: '1px solid #e0e0e0' }}>
+    <div
+      style={{ width: '90%', minHeight: 'calc(100vh-30px)', margin: '0 auto' }}
+    >
+      <header
+        style={{
+          width: '100%',
+          padding: '16px',
+          borderBottom: '1px solid #e0e0e0'
+        }}
+      >
         <div
           style={{
             margin: '0 auto',
@@ -45,7 +56,7 @@ export default function Page() {
             display: 'flex',
             flexDirection: 'row',
             gap: '20px',
-            justifyContent: 'center',
+            justifyContent: 'center'
           }}
         >
           <Image
@@ -63,7 +74,7 @@ export default function Page() {
               mt: 0.5,
               fontFamily: '"Plus Jakarta Sans", sans-serif',
               fontWeight: 600,
-              color: 'rgb(85,152,229)',
+              color: 'rgb(85,152,229)'
             }}
           >
             {'PocketShield'}
@@ -78,7 +89,7 @@ export default function Page() {
           padding: '50px',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
+          justifyContent: 'center'
         }}
       >
         <Box sx={{ position: 'relative' }}>
@@ -90,7 +101,7 @@ export default function Page() {
               sx={{
                 mt: 0.5,
                 fontFamily: '"Plus Jakarta Sans", sans-serif',
-                fontWeight: 600,
+                fontWeight: 600
               }}
             >
               What would you like to do today?
@@ -103,7 +114,7 @@ export default function Page() {
               justifyContent: 'center',
               alignItems: 'center',
               gap: '50px',
-              width: '100%',
+              width: '100%'
             }}
           >
             <Choice

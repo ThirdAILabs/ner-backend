@@ -1,5 +1,14 @@
 import React, { useState } from 'react';
-import { Box, Card, CardContent, Typography, Tabs, Tab, Divider, useTheme } from '@mui/material';
+import {
+  Box,
+  Card,
+  CardContent,
+  Typography,
+  Tabs,
+  Tab,
+  Divider,
+  useTheme
+} from '@mui/material';
 import { MetricsChart } from './MetricsChart';
 
 // Mock data for metrics
@@ -10,15 +19,15 @@ const mockMetricsData = {
       Organization: 0.75,
       Location: 0.78,
       Date: 0.85,
-      Product: 0.7,
+      Product: 0.7
     },
     after: {
       Person: 0.88,
       Organization: 0.8,
       Location: 0.83,
       Date: 0.87,
-      Product: 0.76,
-    },
+      Product: 0.76
+    }
   },
   recall: {
     before: {
@@ -26,15 +35,15 @@ const mockMetricsData = {
       Organization: 0.72,
       Location: 0.75,
       Date: 0.81,
-      Product: 0.68,
+      Product: 0.68
     },
     after: {
       Person: 0.85,
       Organization: 0.78,
       Location: 0.81,
       Date: 0.84,
-      Product: 0.73,
-    },
+      Product: 0.73
+    }
   },
   f1: {
     before: {
@@ -42,23 +51,28 @@ const mockMetricsData = {
       Organization: 0.73,
       Location: 0.76,
       Date: 0.83,
-      Product: 0.69,
+      Product: 0.69
     },
     after: {
       Person: 0.86,
       Organization: 0.79,
       Location: 0.82,
       Date: 0.85,
-      Product: 0.74,
-    },
-  },
+      Product: 0.74
+    }
+  }
 };
 
 const MetricsComparison: React.FC = () => {
   const theme = useTheme();
-  const [currentMetric, setCurrentMetric] = useState<'precision' | 'recall' | 'f1'>('f1');
+  const [currentMetric, setCurrentMetric] = useState<
+    'precision' | 'recall' | 'f1'
+  >('f1');
 
-  const handleMetricChange = (_: React.SyntheticEvent, newValue: 'precision' | 'recall' | 'f1') => {
+  const handleMetricChange = (
+    _: React.SyntheticEvent,
+    newValue: 'precision' | 'recall' | 'f1'
+  ) => {
     setCurrentMetric(newValue);
   };
 
@@ -68,7 +82,7 @@ const MetricsComparison: React.FC = () => {
         mb: 3,
         boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.05)',
         backgroundColor: '#FFFFFF',
-        borderRadius: 1,
+        borderRadius: 1
       }}
     >
       <CardContent>
@@ -86,7 +100,7 @@ const MetricsComparison: React.FC = () => {
             minHeight: '40px',
             mb: 2,
             '& .MuiTabs-indicator': {
-              backgroundColor: theme.palette.primary.main,
+              backgroundColor: theme.palette.primary.main
             },
             '& .MuiTab-root': {
               textTransform: 'none',
@@ -95,9 +109,9 @@ const MetricsComparison: React.FC = () => {
               fontSize: '0.875rem',
               '&.Mui-selected': {
                 color: theme.palette.primary.main,
-                fontWeight: 600,
-              },
-            },
+                fontWeight: 600
+              }
+            }
           }}
         >
           <Tab value="precision" label="Precision" />
@@ -108,7 +122,10 @@ const MetricsComparison: React.FC = () => {
         <Divider sx={{ mb: 3 }} />
 
         <Box sx={{ height: 350 }}>
-          <MetricsChart metrics={mockMetricsData[currentMetric]} metricType={currentMetric} />
+          <MetricsChart
+            metrics={mockMetricsData[currentMetric]}
+            metricType={currentMetric}
+          />
         </Box>
       </CardContent>
     </Card>

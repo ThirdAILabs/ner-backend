@@ -12,7 +12,7 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
+  TableRow
 } from '@/components/ui/table';
 import {
   Button,
@@ -20,7 +20,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField,
+  TextField
 } from '@mui/material';
 import type { SavedFeedback, FinetuneRequest } from '@/lib/backend';
 import { Toaster, toast } from 'react-hot-toast';
@@ -30,10 +30,15 @@ interface MetricsDataViewerProps {
   days: number;
 }
 
-const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) => {
+const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({
+  modelId,
+  days
+}) => {
   const [infMetrics, setInfMetrics] = useState<InferenceMetrics | null>(null);
   const [tpMetrics, setTpMetrics] = useState<ThroughputMetrics | null>(null);
-  const [infSeries, setInfSeries] = useState<{ day: number; dataMB: number; tokens: number }[]>([]);
+  const [infSeries, setInfSeries] = useState<
+    { day: number; dataMB: number; tokens: number }[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [throughput, setThroughput] = useState<string | null>('-');
@@ -128,7 +133,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
       { text: '#FFE8F8', tag: '#E91E63' }, // Pink
       { text: '#F8FFE8', tag: '#8BC34A' }, // Light Green
       { text: '#E8E8FF', tag: '#6366F1' }, // Indigo
-      { text: '#FFF0E8', tag: '#FF8C00' }, // Dark Orange
+      { text: '#FFF0E8', tag: '#FF8C00' } // Dark Orange
     ];
 
     // Create a simple hash function for consistent color assignment
@@ -158,7 +163,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
             userSelect: 'none',
             display: 'inline-flex',
             alignItems: 'center',
-            wordBreak: 'break-word',
+            wordBreak: 'break-word'
           }}
         >
           {token}
@@ -170,7 +175,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
               fontWeight: 'bold',
               borderRadius: '2px',
               marginLeft: '4px',
-              padding: '1px 3px',
+              padding: '1px 3px'
             }}
           >
             {label}
@@ -201,7 +206,9 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
   if (error) {
     return (
       <Box sx={{ p: 3 }}>
-        <Typography sx={{ color: 'error.main', fontSize: '0.875rem' }}>{error}</Typography>
+        <Typography sx={{ color: 'error.main', fontSize: '0.875rem' }}>
+          {error}
+        </Typography>
       </Box>
     );
   }
@@ -216,11 +223,14 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
         sx={{
           display: 'grid',
           gridTemplateColumns: 'repeat(5, 1fr)',
-          gap: 3,
+          gap: 3
         }}
       >
         {/* In-Progress Tasks */}
-        <MetricsDataViewerCard value={infMetrics.InProgress} label="In-Progress Scans" />
+        <MetricsDataViewerCard
+          value={infMetrics.InProgress}
+          label="In-Progress Scans"
+        />
 
         {/* Completed Tasks */}
         <MetricsDataViewerCard

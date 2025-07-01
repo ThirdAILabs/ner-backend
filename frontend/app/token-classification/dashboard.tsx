@@ -10,7 +10,7 @@ import {
   MenuItem,
   SelectChangeEvent,
   Card,
-  CardContent,
+  CardContent
 } from '@mui/material';
 import { useSearchParams } from 'next/navigation';
 import { nerService } from '@/lib/backend';
@@ -32,7 +32,7 @@ const Dashboard = () => {
     recordEvent({
       UserAction: 'View usage stats dashboard',
       UIComponent: 'Usage Stats Dashboard',
-      Page: 'Usage Stats Dashboard Page',
+      Page: 'Usage Stats Dashboard Page'
     });
   }, []);
   const { healthStatus } = useHealth();
@@ -60,7 +60,7 @@ const Dashboard = () => {
       UserAction: 'select',
       UIComponent: 'Days Filter',
       Page: 'Usage Stats Dashboard Page',
-      Data: { days: newDays },
+      Data: { days: newDays }
     });
   };
   const [models, setModels] = useState<Model[]>([]);
@@ -72,7 +72,7 @@ const Dashboard = () => {
       UserAction: 'select',
       UIComponent: 'Model Filter',
       Page: 'Usage Stats Dashboard Page',
-      Data: { model },
+      Data: { model }
     });
   };
 
@@ -120,7 +120,7 @@ const Dashboard = () => {
           bgcolor: 'white',
           borderRadius: '12px',
           mx: 'auto',
-          maxWidth: '1400px',
+          maxWidth: '1400px'
         }}
       >
         <CardContent sx={{ p: 4 }}>
@@ -129,7 +129,7 @@ const Dashboard = () => {
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              mb: 4,
+              mb: 4
             }}
           >
             <Typography
@@ -137,7 +137,7 @@ const Dashboard = () => {
               sx={{
                 fontWeight: 600,
                 fontSize: '1.5rem',
-                color: '#4a5568',
+                color: '#4a5568'
               }}
             >
               Metrics Dashboard
@@ -154,9 +154,9 @@ const Dashboard = () => {
                 bgcolor: 'white',
                 borderRadius: '8px',
                 '& .MuiSelect-select': {
-                  py: 1.5,
-                },
-              },
+                  py: 1.5
+                }
+              }
             }}
           >
             {/* Days Filter */}
@@ -167,7 +167,7 @@ const Dashboard = () => {
                 sx={{
                   fontWeight: 600,
                   color: '#475569',
-                  mb: 1,
+                  mb: 1
                 }}
               >
                 Days
@@ -179,9 +179,9 @@ const Dashboard = () => {
                   '& .MuiOutlinedInput-root': {
                     borderColor: 'grey.200',
                     '&:hover': {
-                      borderColor: 'grey.300',
-                    },
-                  },
+                      borderColor: 'grey.300'
+                    }
+                  }
                 }}
               >
                 <Select
@@ -191,8 +191,8 @@ const Dashboard = () => {
                   sx={{
                     bgcolor: '#f8fafc',
                     '&:hover': {
-                      bgcolor: '#f1f5f9',
-                    },
+                      bgcolor: '#f1f5f9'
+                    }
                   }}
                 >
                   <MenuItem value={1}>1 day</MenuItem>
@@ -210,7 +210,7 @@ const Dashboard = () => {
                 sx={{
                   fontWeight: 600,
                   color: '#475569',
-                  mb: 1,
+                  mb: 1
                 }}
               >
                 Model
@@ -222,9 +222,9 @@ const Dashboard = () => {
                   '& .MuiOutlinedInput-root': {
                     borderColor: 'grey.200',
                     '&:hover': {
-                      borderColor: 'grey.300',
-                    },
-                  },
+                      borderColor: 'grey.300'
+                    }
+                  }
                 }}
               >
                 <Select
@@ -238,14 +238,15 @@ const Dashboard = () => {
                         ? models
                             .find((m) => m.Id === val)!
                             .Name.charAt(0)
-                            .toUpperCase() + models.find((m) => m.Id === val)!.Name.slice(1)
+                            .toUpperCase() +
+                          models.find((m) => m.Id === val)!.Name.slice(1)
                         : val
                   }
                   sx={{
                     bgcolor: '#f8fafc',
                     '&:hover': {
-                      bgcolor: '#f1f5f9',
-                    },
+                      bgcolor: '#f1f5f9'
+                    }
                   }}
                 >
                   <MenuItem value="">
@@ -262,20 +263,26 @@ const Dashboard = () => {
                           display: 'flex',
                           alignItems: 'center',
                           gap: 1,
-                          flexGrow: 1,
+                          flexGrow: 1
                         }}
                       >
                         {m.Name.charAt(0).toUpperCase() + m.Name.slice(1)}
                         {m.Status === 'TRAINING' && (
                           <Box sx={{ display: 'flex', alignItems: 'center' }}>
                             <CircularProgress size={16} sx={{ ml: 1 }} />
-                            <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
+                            <Typography
+                              variant="caption"
+                              sx={{ ml: 1, color: 'text.secondary' }}
+                            >
                               Training...
                             </Typography>
                           </Box>
                         )}
                         {m.Status === 'QUEUED' && (
-                          <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
+                          <Typography
+                            variant="caption"
+                            sx={{ ml: 1, color: 'text.secondary' }}
+                          >
                             Queued
                           </Typography>
                         )}
@@ -291,8 +298,12 @@ const Dashboard = () => {
           {selectedModel && (
             <Box sx={{ mb: 4, ml: 4 }}>
               {selectedModel.CreationTime && (
-                <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>
-                  Started Training: {new Date(selectedModel.CreationTime).toLocaleString()}
+                <Typography
+                  variant="body2"
+                  sx={{ color: 'text.secondary', mb: 1 }}
+                >
+                  Started Training:{' '}
+                  {new Date(selectedModel.CreationTime).toLocaleString()}
                 </Typography>
               )}
 
@@ -300,9 +311,14 @@ const Dashboard = () => {
                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                   Base Model:{' '}
                   {(() => {
-                    const baseModel = models.find((m) => m.Id === selectedModel?.BaseModelId);
+                    const baseModel = models.find(
+                      (m) => m.Id === selectedModel?.BaseModelId
+                    );
                     if (baseModel?.Name) {
-                      return baseModel.Name.charAt(0).toUpperCase() + baseModel.Name.slice(1);
+                      return (
+                        baseModel.Name.charAt(0).toUpperCase() +
+                        baseModel.Name.slice(1)
+                      );
                     }
                     return 'Unknown';
                   })()}
@@ -318,10 +334,13 @@ const Dashboard = () => {
               borderRadius: '12px',
               border: '1px solid',
               borderColor: 'grey.200',
-              overflow: 'hidden',
+              overflow: 'hidden'
             }}
           >
-            <MetricsDataViewer modelId={selectedModel?.Id || undefined} days={days} />
+            <MetricsDataViewer
+              modelId={selectedModel?.Id || undefined}
+              days={days}
+            />
           </Box>
         </CardContent>
       </Card>
@@ -334,7 +353,7 @@ const Dashboard = () => {
             borderRadius: '12px',
             mx: 'auto',
             mt: 4,
-            maxWidth: '1400px',
+            maxWidth: '1400px'
           }}
         >
           <CardContent sx={{ p: 4 }}>
@@ -343,7 +362,7 @@ const Dashboard = () => {
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                mb: 4,
+                mb: 4
               }}
             >
               <Typography
@@ -351,7 +370,7 @@ const Dashboard = () => {
                 sx={{
                   fontWeight: 600,
                   fontSize: '1.5rem',
-                  color: '#4a5568',
+                  color: '#4a5568'
                 }}
               >
                 Free Tier Quota
@@ -364,7 +383,7 @@ const Dashboard = () => {
                 borderRadius: '12px',
                 border: '1px solid',
                 borderColor: 'grey.200',
-                overflow: 'hidden',
+                overflow: 'hidden'
               }}
             >
               <div style={{ padding: '16px' }}>
@@ -374,7 +393,10 @@ const Dashboard = () => {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       Quota Used
                       <Tooltip title="Resets on the 1st of each month.">
-                        <InfoOutlinedIcon fontSize="inherit" sx={{ cursor: 'pointer' }} />
+                        <InfoOutlinedIcon
+                          fontSize="inherit"
+                          sx={{ cursor: 'pointer' }}
+                        />
                       </Tooltip>
                     </Box>
                   }

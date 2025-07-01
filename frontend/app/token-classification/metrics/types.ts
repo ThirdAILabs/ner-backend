@@ -6,7 +6,8 @@ export interface TokenFeedback {
 
 export const mockFeedbackData: TokenFeedback[] = [
   {
-    object: '1e82d3fd-c36a-40a1-a3af-81da9d464fd4/deepseek sparse attention long context.pdf',
+    object:
+      '1e82d3fd-c36a-40a1-a3af-81da9d464fd4/deepseek sparse attention long context.pdf',
     tokens: [
       'Native Sparse Attention: Hardware-Aligned and Natively Trainable ',
       'Sparse',
@@ -27,7 +28,7 @@ export const mockFeedbackData: TokenFeedback[] = [
       ' Zhang1, ',
       'Zhenda',
       ' ',
-      'Xie1,',
+      'Xie1,'
       // ... Add more tokens as needed (shortened for brevity)
     ],
     tags: [
@@ -50,8 +51,8 @@ export const mockFeedbackData: TokenFeedback[] = [
       'O',
       'NAME',
       'O',
-      'NAME',
+      'NAME'
       // ... Add more tags as needed (shortened for brevity)
-    ],
-  },
+    ]
+  }
 ];

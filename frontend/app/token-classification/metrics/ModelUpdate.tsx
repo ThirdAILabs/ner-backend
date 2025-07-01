@@ -1,8 +1,21 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, TextField, Button, Alert, Tooltip } from '@mui/material';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Box,
+  Typography,
+  TextField,
+  Button,
+  Alert,
+  Tooltip
+} from '@mui/material';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from '@/components/ui/card';
 import { Upload, HelpCircle } from 'lucide-react';
 import RecentSamples from './RecentSamples';
 // Comment out the import that's causing errors until the component is created
@@ -19,9 +32,9 @@ const getTrainReport = async (modelId: string) => {
     data: {
       metrics: {
         before: { precision: 0.85, recall: 0.82, f1: 0.83 },
-        after: { precision: 0.91, recall: 0.89, f1: 0.9 },
-      },
-    },
+        after: { precision: 0.91, recall: 0.89, f1: 0.9 }
+      }
+    }
   };
 };
 
@@ -43,18 +56,23 @@ const getLabels = async () => {
     'TIME',
     'MONEY',
     'PERCENT',
-    'QUANTITY',
+    'QUANTITY'
   ];
 };
 
-const trainUDTWithCSV = async ({ model_name, file, base_model_identifier, test_split }: any) => {
+const trainUDTWithCSV = async ({
+  model_name,
+  file,
+  base_model_identifier,
+  test_split
+}: any) => {
   // Simulate API delay
   await new Promise((resolve) => setTimeout(resolve, 1500));
 
   return {
     status: 'success',
     message: 'Training initiated successfully',
-    model_id: 'model_123456',
+    model_id: 'model_123456'
   };
 };
 
@@ -65,7 +83,7 @@ const retrainTokenClassifier = async ({ model_name, base_model_id }: any) => {
   return {
     status: 'success',
     message: 'Retraining initiated successfully',
-    model_id: 'model_789012',
+    model_id: 'model_789012'
   };
 };
 
@@ -84,7 +102,7 @@ const ModelUpdate: React.FC<ModelUpdateProps> = ({
   deploymentUrl = 'https://api.example.com/token-classification',
   workflowNames = [],
   deployStatus = 'complete',
-  modelId = 'model_123',
+  modelId = 'model_123'
 }) => {
   // States for CSV upload
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -161,7 +179,11 @@ const ModelUpdate: React.FC<ModelUpdateProps> = ({
         const response = await getTrainReport(modelId);
         setTrainReport(response.data);
       } catch (error) {
-        setReportError(error instanceof Error ? error.message : 'Failed to fetch training report');
+        setReportError(
+          error instanceof Error
+            ? error.message
+            : 'Failed to fetch training report'
+        );
       } finally {
         setIsLoadingReport(false);
       }
@@ -230,12 +252,16 @@ const ModelUpdate: React.FC<ModelUpdateProps> = ({
     }
 
     if (name.includes(' ')) {
-      setWarningMessage('The app name cannot contain spaces. Please remove the spaces.');
+      setWarningMessage(
+        'The app name cannot contain spaces. Please remove the spaces.'
+      );
       return false;
     }
 
     if (name.includes('.')) {
-      setWarningMessage("The app name cannot contain periods ('.'). Please remove the periods.");
+      setWarningMessage(
+        "The app name cannot contain periods ('.'). Please remove the periods."
+      );
       return false;
     }
 
@@ -292,7 +318,7 @@ const ModelUpdate: React.FC<ModelUpdateProps> = ({
         model_name: newModelName,
         file: selectedFile,
         base_model_identifier: `${username}/${modelName}`,
-        test_split: 0.1,
+        test_split: 0.1
       });
 
       if (response.status === 'success') {
@@ -319,7 +345,9 @@ const ModelUpdate: React.FC<ModelUpdateProps> = ({
 
     // Check deploy status before proceeding
     if (deployStatus !== 'complete') {
-      setPollingError('Model must be fully deployed before updating with user feedback.');
+      setPollingError(
+        'Model must be fully deployed before updating with user feedback.'
+      );
       return;
     }
 
@@ -331,7 +359,7 @@ const ModelUpdate: React.FC<ModelUpdateProps> = ({
     try {
       const response = await retrainTokenClassifier({
         model_name: pollingModelName,
-        base_model_id: modelId,
+        base_model_id: modelId
       });
 
       if (response.status === 'success') {
@@ -376,8 +404,14 @@ const ModelUpdate: React.FC<ModelUpdateProps> = ({
               <div className="text-center py-4">
                 <Typography variant="h6">Training Report</Typography>
                 <div className="mt-2">
-                  <div>Before: F1 {trainReport.metrics?.before?.f1.toFixed(2) || 'N/A'}</div>
-                  <div>After: F1 {trainReport.metrics?.after?.f1.toFixed(2) || 'N/A'}</div>
+                  <div>
+                    Before: F1{' '}
+                    {trainReport.metrics?.before?.f1.toFixed(2) || 'N/A'}
+                  </div>
+                  <div>
+                    After: F1{' '}
+                    {trainReport.metrics?.after?.f1.toFixed(2) || 'N/A'}
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -417,7 +451,10 @@ const ModelUpdate: React.FC<ModelUpdateProps> = ({
                   {tags.map(
                     (tag, index) =>
                       index < numTagDisplay && (
-                        <div className="rounded-lg p-2 m-2 bg-slate-100" key={`${index}-${tag}`}>
+                        <div
+                          className="rounded-lg p-2 m-2 bg-slate-100"
+                          key={`${index}-${tag}`}
+                        >
                           {tag}
                         </div>
                       )
@@ -427,7 +464,11 @@ const ModelUpdate: React.FC<ModelUpdateProps> = ({
                       color="inherit"
                       variant="outlined"
                       size="medium"
-                      onClick={numTagDisplay === 5 ? handleTagDisplayMore : handleTagDisplayLess}
+                      onClick={
+                        numTagDisplay === 5
+                          ? handleTagDisplayMore
+                          : handleTagDisplayLess
+                      }
                     >
                       {numTagDisplay === 5 ? 'Expand ▼' : 'Collapse ▲'}
                     </Button>
@@ -457,7 +498,9 @@ const ModelUpdate: React.FC<ModelUpdateProps> = ({
                 value={newModelName}
                 onChange={(e) => setNewModelName(e.target.value)}
                 placeholder="Enter new model name"
-                helperText={warningMessage || 'Example: my-model-v2 or updated_model_123'}
+                helperText={
+                  warningMessage || 'Example: my-model-v2 or updated_model_123'
+                }
                 error={!!warningMessage}
                 sx={{ mt: 1 }}
               />
@@ -495,7 +538,9 @@ const ModelUpdate: React.FC<ModelUpdateProps> = ({
 
             <Button
               onClick={handleUploadUpdate}
-              disabled={isUploadUpdating || !selectedFile || uploadButtonDisabled}
+              disabled={
+                isUploadUpdating || !selectedFile || uploadButtonDisabled
+              }
               variant="contained"
               color={uploadSuccess ? 'success' : 'primary'}
               fullWidth
@@ -514,7 +559,9 @@ const ModelUpdate: React.FC<ModelUpdateProps> = ({
       <Card>
         <CardHeader>
           <CardTitle>Update Model with Recent User Feedback</CardTitle>
-          <CardDescription>View and use recent labeled samples to update the model</CardDescription>
+          <CardDescription>
+            View and use recent labeled samples to update the model
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <Box sx={{ mb: 4 }}>
@@ -534,7 +581,10 @@ const ModelUpdate: React.FC<ModelUpdateProps> = ({
               value={pollingModelName}
               onChange={(e) => setPollingModelName(e.target.value)}
               placeholder="Enter new model name"
-              helperText={pollingWarningMessage || 'Example: my-model-v2 or updated_model_123'}
+              helperText={
+                pollingWarningMessage ||
+                'Example: my-model-v2 or updated_model_123'
+              }
               error={!!pollingWarningMessage}
               sx={{ mt: 1 }}
             />
@@ -559,7 +609,11 @@ const ModelUpdate: React.FC<ModelUpdateProps> = ({
 
             <Button
               onClick={handlePollingUpdate}
-              disabled={isPollingUpdating || pollingButtonDisabled || deployStatus !== 'complete'}
+              disabled={
+                isPollingUpdating ||
+                pollingButtonDisabled ||
+                deployStatus !== 'complete'
+              }
               variant="contained"
               color={pollingSuccess ? 'success' : 'primary'}
               fullWidth

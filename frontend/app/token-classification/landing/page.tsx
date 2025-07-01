@@ -28,7 +28,7 @@ function PageContents() {
     recordEvent({
       UserAction: 'View Report Dashboard',
       UIComponent: 'Report Dashboard',
-      Page: 'Report Dashboard Page',
+      Page: 'Report Dashboard Page'
     });
   }, []);
 
@@ -43,13 +43,13 @@ function PageContents() {
       recordEvent({
         UserAction: 'Click on Usage Stats Tab',
         UIComponent: 'Usage Stats Tab',
-        Page: 'Report Dashboard Page',
+        Page: 'Report Dashboard Page'
       });
     } else if (newValue === 'jobs') {
       recordEvent({
         UserAction: 'Click on Report Dashboard Tab',
         UIComponent: 'Reports Dashboard Tab',
-        Page: 'Report Dashboard Page',
+        Page: 'Report Dashboard Page'
       });
     }
   };
@@ -60,7 +60,7 @@ function PageContents() {
       style={{
         width: '90%',
         minHeight: 'calc(100vh - 30px)',
-        margin: '0 auto',
+        margin: '0 auto'
       }}
     >
       <header
@@ -70,7 +70,7 @@ function PageContents() {
           borderBottom: '1px solid #e0e0e0',
           display: 'flex',
           alignItems: 'center',
-          position: 'relative',
+          position: 'relative'
         }}
       >
         {/* Left - Back Button */}
@@ -89,7 +89,7 @@ function PageContents() {
             alignItems: 'center',
             gap: '20px',
             justifyContent: 'center',
-            margin: '0 auto',
+            margin: '0 auto'
           }}
         >
           <Image
@@ -106,7 +106,7 @@ function PageContents() {
             sx={{
               fontFamily: '"Plus Jakarta Sans", sans-serif',
               fontWeight: 600,
-              color: 'rgb(85,152,229)',
+              color: 'rgb(85,152,229)'
             }}
           >
             PocketShield
@@ -131,14 +131,16 @@ function PageContents() {
                 color: '#5F6368',
                 minWidth: 100,
                 padding: '12px 16px',
-                '&.Mui-selected': { color: '#1a73e8', fontWeight: 500 },
+                '&.Mui-selected': { color: '#1a73e8', fontWeight: 500 }
               },
-              '& .MuiTabs-indicator': { backgroundColor: '#1a73e8' },
+              '& .MuiTabs-indicator': { backgroundColor: '#1a73e8' }
             }}
           >
             <Tab label="Scans Dashboard" value="jobs" />
             <Tab label="Usage Stats" value="monitoring" />
-            {isEnterprise && <Tab label="Model Customization" value="customization" />}
+            {isEnterprise && (
+              <Tab label="Model Customization" value="customization" />
+            )}
           </Tabs>
         </Box>
 
@@ -154,7 +156,12 @@ export default function Page() {
   return (
     <Suspense
       fallback={
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+        <Box
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          minHeight="100vh"
+        >
           <CircularProgress />
           <Typography variant="h6" component="p" sx={{ ml: 2 }}>
             Loading page...

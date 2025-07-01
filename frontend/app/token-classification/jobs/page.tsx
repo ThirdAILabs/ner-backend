@@ -48,7 +48,12 @@ interface TagProps {
   displayOnly?: boolean;
 }
 
-const Tag: React.FC<TagProps> = ({ tag, selected = true, onClick, displayOnly = false }) => {
+const Tag: React.FC<TagProps> = ({
+  tag,
+  selected = true,
+  onClick,
+  displayOnly = false
+}) => {
   return (
     <div
       className={`px-3 py-1 text-sm font-medium rounded-sm ${displayOnly ? 'bg-blue-100 text-blue-800' : selected ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'} ${!displayOnly && onClick ? 'cursor-pointer' : ''}`}
@@ -93,9 +98,9 @@ function JobDetail() {
 
   // Remove selectedTags state, just keep availableTags
   const [availableTags, setAvailableTags] = useState<string[]>([]);
-  const [availableTagsCount, setAvailableTagsCount] = useState<{ type: string; count: number }[]>(
-    []
-  );
+  const [availableTagsCount, setAvailableTagsCount] = useState<
+    { type: string; count: number }[]
+  >([]);
 
   const [timeTaken, setTimeTaken] = useState(0);
 
@@ -104,10 +109,8 @@ function JobDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [dataProcessed, setDataProcessed] = useState<number | null>(null);
 
-  const { displayedFeedback, addFeedback, removeFeedback, submitFeedback } = useFeedbackState(
-    reportData?.Model?.Id || '',
-    reportId
-  );
+  const { displayedFeedback, addFeedback, removeFeedback, submitFeedback } =
+    useFeedbackState(reportData?.Model?.Id || '', reportId);
   const tabChangeByGraph = React.useRef(false);
 
   function setDataProcessedFromReport(report: Report | null) {
@@ -129,7 +132,10 @@ function JobDetail() {
 
       setDataProcessedFromReport(reportData);
 
-      setTimeTaken((report.TotalInferenceTimeSeconds || 0) + (report.ShardDataTimeSeconds || 0));
+      setTimeTaken(
+        (report.TotalInferenceTimeSeconds || 0) +
+          (report.ShardDataTimeSeconds || 0)
+      );
 
       // Set selectedSource based on IsUpload field
       // Here, "local" refers to the fact that the files are uploaded from the user's machine to the backend.
@@ -149,7 +155,7 @@ function JobDetail() {
         const customTagName: string[] = Object.keys(customTagsObj);
         const allCustomTags: CustomTag[] = customTagName.map((tag) => ({
           name: tag,
-          pattern: customTagsObj[tag],
+          pattern: customTagsObj[tag]
         }));
 
         setCustomTags(allCustomTags);
@@ -161,7 +167,7 @@ function JobDetail() {
         const allTagsCounts = tags.map((tag) => {
           return {
             type: tag,
-            count: tagObject[tag],
+            count: tagObject[tag]
           };
         });
         setAvailableTagsCount(allTagsCounts);
@@ -209,7 +215,7 @@ function JobDetail() {
     recordEvent({
       UserAction: `Clicked on ${tabValue} Tab`,
       UIComponent: `${tabValue} Tab`,
-      Page: 'Report Page',
+      Page: 'Report Page'
     });
   }, [tabValue]);
 
@@ -218,7 +224,10 @@ function JobDetail() {
       {/* Header with Back Button and Title */}
       <div className="flex items-center justify-between mb-6">
         <Button variant="outline" size="sm" asChild>
-          <Link href={`/token-classification/landing?tab=jobs`} className="flex items-center">
+          <Link
+            href={`/token-classification/landing?tab=jobs`}
+            className="flex items-center"
+          >
             <ArrowLeft className="mr-1 h-4 w-4" /> Back to Scans
           </Link>
         </Button>
@@ -266,7 +275,7 @@ function JobDetail() {
                     p: 2,
                     bgcolor: 'grey.50',
                     borderRadius: 2,
-                    boxShadow: 1,
+                    boxShadow: 1
                   }}
                 >
                   <h3 className="text-lg font-medium mb-1">S3 Bucket</h3>
@@ -301,7 +310,10 @@ function JobDetail() {
           </Box>
 
           {/* Tags */}
-          <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3, marginTop: 3 }}>
+          <Box
+            className="bg-muted/60"
+            sx={{ p: 3, borderRadius: 3, marginTop: 3 }}
+          >
             <h2 className="text-2xl font-medium mb-4">Tags</h2>
             <div className="flex justify-between items-center mb-4">
               {isLoading ? (
@@ -321,7 +333,10 @@ function JobDetail() {
           </Box>
 
           {/* Custom Tags */}
-          <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3, marginTop: 3 }}>
+          <Box
+            className="bg-muted/60"
+            sx={{ p: 3, borderRadius: 3, marginTop: 3 }}
+          >
             <h2 className="text-2xl font-medium mb-4">Custom Tags</h2>
             <div className="flex justify-between items-center mb-4">
               {isLoading ? (
@@ -346,14 +361,19 @@ function JobDetail() {
                 </div>
               ) : (
                 <div className="text-center py-10 bg-gray-50 border border-dashed border-gray-200 rounded-lg w-[400px]">
-                  <p className="text-gray-500">No custom tags defined for this report</p>
+                  <p className="text-gray-500">
+                    No custom tags defined for this report
+                  </p>
                 </div>
               )}
             </div>
           </Box>
 
           {/* Groups */}
-          <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3, marginTop: 3 }}>
+          <Box
+            className="bg-muted/60"
+            sx={{ p: 3, borderRadius: 3, marginTop: 3 }}
+          >
             <h2 className="text-2xl font-medium mb-4">Groups</h2>
             <div className="flex justify-between items-center mb-4">
               {isLoading ? (
@@ -363,12 +383,18 @@ function JobDetail() {
               ) : (reportData?.Groups ?? []).length > 0 ? (
                 <div className="grid grid-cols-3 md:grid-cols-3 gap-4">
                   {reportData?.Groups?.map((group) => (
-                    <GroupCard key={group.Id} name={group.Name} definition={group.Query} />
+                    <GroupCard
+                      key={group.Id}
+                      name={group.Name}
+                      definition={group.Query}
+                    />
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-10 bg-gray-50 border border-dashed border-gray-200 rounded-lg w-[400px]">
-                  <p className="text-gray-500">No groups defined for this report</p>
+                  <p className="text-gray-500">
+                    No groups defined for this report
+                  </p>
                 </div>
               )}
             </div>
@@ -402,7 +428,9 @@ function JobDetail() {
             tags={availableTagsCount}
             customTagNames={customTags.map((t) => t.name)}
             uploadId={
-              reportData && isUploadReport(reportData) ? reportData?.StorageParams.Prefix : ''
+              reportData && isUploadReport(reportData)
+                ? reportData?.StorageParams.Prefix
+                : ''
             }
             addFeedback={addFeedback}
             initialSelectedTag={selectedTag}

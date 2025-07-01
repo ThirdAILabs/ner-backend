@@ -140,6 +140,11 @@ input[type='search']::-ms-clear {
   left: 0;
   height: 100%;
   width: 40px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
   animation: shimmer 2.5s infinite;
 }

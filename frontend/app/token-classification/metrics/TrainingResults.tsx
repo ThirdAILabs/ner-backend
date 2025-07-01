@@ -7,9 +7,15 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer,
+  ResponsiveContainer
 } from 'recharts';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from '@/components/ui/card';
 
 // Mock data structure to match frontend version
 interface LabelMetrics {
@@ -33,15 +39,15 @@ const mockReportData: TrainReportData = {
     NAME: { precision: 0.83, recall: 0.79, fmeasure: 0.81 },
     PHONE: { precision: 0.86, recall: 0.82, fmeasure: 0.84 },
     EMAIL: { precision: 0.9, recall: 0.86, fmeasure: 0.88 },
-    ADDRESS: { precision: 0.81, recall: 0.77, fmeasure: 0.79 },
+    ADDRESS: { precision: 0.81, recall: 0.77, fmeasure: 0.79 }
   },
   after_train_metrics: {
     O: { precision: 0.95, recall: 0.92, fmeasure: 0.93 },
     NAME: { precision: 0.88, recall: 0.84, fmeasure: 0.86 },
     PHONE: { precision: 0.92, recall: 0.88, fmeasure: 0.9 },
     EMAIL: { precision: 0.96, recall: 0.92, fmeasure: 0.94 },
-    ADDRESS: { precision: 0.89, recall: 0.85, fmeasure: 0.87 },
-  },
+    ADDRESS: { precision: 0.89, recall: 0.85, fmeasure: 0.87 }
+  }
 };
 
 interface MetricsChartProps {
@@ -49,7 +55,10 @@ interface MetricsChartProps {
   afterMetrics: LabelMetrics;
 }
 
-const MetricsChart: React.FC<MetricsChartProps> = ({ beforeMetrics, afterMetrics }) => {
+const MetricsChart: React.FC<MetricsChartProps> = ({
+  beforeMetrics,
+  afterMetrics
+}) => {
   // Get all unique labels
   const allLabels = Array.from(
     new Set([...Object.keys(beforeMetrics), ...Object.keys(afterMetrics)])
@@ -67,7 +76,7 @@ const MetricsChart: React.FC<MetricsChartProps> = ({ beforeMetrics, afterMetrics
           : null,
         'After Training': Number.isFinite(afterMetrics[label]?.precision)
           ? afterMetrics[label].precision * 100
-          : null,
+          : null
       },
       {
         name: 'Recall',
@@ -76,7 +85,7 @@ const MetricsChart: React.FC<MetricsChartProps> = ({ beforeMetrics, afterMetrics
           : null,
         'After Training': Number.isFinite(afterMetrics[label]?.recall)
           ? afterMetrics[label].recall * 100
-          : null,
+          : null
       },
       {
         name: 'F1',
@@ -85,8 +94,8 @@ const MetricsChart: React.FC<MetricsChartProps> = ({ beforeMetrics, afterMetrics
           : null,
         'After Training': Number.isFinite(afterMetrics[label]?.fmeasure)
           ? afterMetrics[label].fmeasure * 100
-          : null,
-      },
+          : null
+      }
     ];
   };
 
@@ -97,7 +106,10 @@ const MetricsChart: React.FC<MetricsChartProps> = ({ beforeMetrics, afterMetrics
     return value;
   };
 
-  const getMetricDifference = (label: string, metricKey: 'precision' | 'recall' | 'fmeasure') => {
+  const getMetricDifference = (
+    label: string,
+    metricKey: 'precision' | 'recall' | 'fmeasure'
+  ) => {
     const before = beforeMetrics[label]?.[metricKey] || 0;
     const after = afterMetrics[label]?.[metricKey] || 0;
     return ((after - before) * 100).toFixed(1);
@@ -126,8 +138,12 @@ const MetricsChart: React.FC<MetricsChartProps> = ({ beforeMetrics, afterMetrics
       {/* Metrics Card */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Metrics for &quot;{selectedLabel}&quot;</CardTitle>
-          <CardDescription>Comparing performance before and after training</CardDescription>
+          <CardTitle className="text-lg">
+            Metrics for &quot;{selectedLabel}&quot;
+          </CardTitle>
+          <CardDescription>
+            Comparing performance before and after training
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {/* Chart */}
@@ -142,8 +158,16 @@ const MetricsChart: React.FC<MetricsChartProps> = ({ beforeMetrics, afterMetrics
               <YAxis domain={[0, 100]} tickFormatter={(value) => `${value}%`} />
               <Tooltip formatter={formatTooltip} />
               <Legend />
-              <Bar dataKey="Before Training" fill="#94a3b8" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="After Training" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              <Bar
+                dataKey="Before Training"
+                fill="#94a3b8"
+                radius={[4, 4, 0, 0]}
+              />
+              <Bar
+                dataKey="After Training"
+                fill="#3b82f6"
+                radius={[4, 4, 0, 0]}
+              />
             </BarChart>
           </ResponsiveContainer>
 
@@ -162,7 +186,9 @@ const MetricsChart: React.FC<MetricsChartProps> = ({ beforeMetrics, afterMetrics
                       : 'text-red-600'
                   }`}
                 >
-                  {Number(getMetricDifference(selectedLabel, 'precision')) >= 0 ? '+' : ''}
+                  {Number(getMetricDifference(selectedLabel, 'precision')) >= 0
+                    ? '+'
+                    : ''}
                   {getMetricDifference(selectedLabel, 'precision')}%
                 </span>
               </div>
@@ -180,7 +206,9 @@ const MetricsChart: React.FC<MetricsChartProps> = ({ beforeMetrics, afterMetrics
                       : 'text-red-600'
                   }`}
                 >
-                  {Number(getMetricDifference(selectedLabel, 'recall')) >= 0 ? '+' : ''}
+                  {Number(getMetricDifference(selectedLabel, 'recall')) >= 0
+                    ? '+'
+                    : ''}
                   {getMetricDifference(selectedLabel, 'recall')}%
                 </span>
               </div>
@@ -198,7 +226,9 @@ const MetricsChart: React.FC<MetricsChartProps> = ({ beforeMetrics, afterMetrics
                       : 'text-red-600'
                   }`}
                 >
-                  {Number(getMetricDifference(selectedLabel, 'fmeasure')) >= 0 ? '+' : ''}
+                  {Number(getMetricDifference(selectedLabel, 'fmeasure')) >= 0
+                    ? '+'
+                    : ''}
                   {getMetricDifference(selectedLabel, 'fmeasure')}%
                 </span>
               </div>
@@ -216,20 +246,30 @@ interface PerformanceSummaryProps {
   afterMetrics: LabelMetrics;
 }
 
-const PerformanceSummary: React.FC<PerformanceSummaryProps> = ({ beforeMetrics, afterMetrics }) => {
+const PerformanceSummary: React.FC<PerformanceSummaryProps> = ({
+  beforeMetrics,
+  afterMetrics
+}) => {
   // Calculate overall averages
-  const calculateAverage = (metrics: LabelMetrics, key: 'precision' | 'recall' | 'fmeasure') => {
+  const calculateAverage = (
+    metrics: LabelMetrics,
+    key: 'precision' | 'recall' | 'fmeasure'
+  ) => {
     const values = Object.values(metrics).map((m) => m[key]);
     return values.reduce((sum, val) => sum + val, 0) / values.length;
   };
 
-  const labels = Array.from(new Set([...Object.keys(beforeMetrics), ...Object.keys(afterMetrics)]));
+  const labels = Array.from(
+    new Set([...Object.keys(beforeMetrics), ...Object.keys(afterMetrics)])
+  );
 
   const tableData = labels.map((label) => ({
     label,
     beforeF1: beforeMetrics[label]?.fmeasure || 0,
     afterF1: afterMetrics[label]?.fmeasure || 0,
-    change: (afterMetrics[label]?.fmeasure || 0) - (beforeMetrics[label]?.fmeasure || 0),
+    change:
+      (afterMetrics[label]?.fmeasure || 0) -
+      (beforeMetrics[label]?.fmeasure || 0)
   }));
 
   // Add overall average row
@@ -240,13 +280,15 @@ const PerformanceSummary: React.FC<PerformanceSummaryProps> = ({ beforeMetrics, 
     label: 'Overall Average',
     beforeF1: beforeAvgF1,
     afterF1: afterAvgF1,
-    change: afterAvgF1 - beforeAvgF1,
+    change: afterAvgF1 - beforeAvgF1
   });
 
   return (
     <div className="mb-8">
       <h3 className="text-lg font-semibold mb-2">Performance Summary</h3>
-      <p className="text-sm text-gray-500 mb-4">Overview of F1 score changes across all labels</p>
+      <p className="text-sm text-gray-500 mb-4">
+        Overview of F1 score changes across all labels
+      </p>
 
       <div className="overflow-hidden border rounded-md">
         <div className="bg-gray-50 grid grid-cols-4 p-3 border-b text-sm font-medium">
@@ -267,7 +309,9 @@ const PerformanceSummary: React.FC<PerformanceSummaryProps> = ({ beforeMetrics, 
               <div>{row.label}</div>
               <div>{(row.beforeF1 * 100).toFixed(1)}%</div>
               <div>{(row.afterF1 * 100).toFixed(1)}%</div>
-              <div className="text-green-600">↑ +{(row.change * 100).toFixed(1)}%</div>
+              <div className="text-green-600">
+                ↑ +{(row.change * 100).toFixed(1)}%
+              </div>
             </div>
           ))}
         </div>
@@ -280,7 +324,9 @@ interface TrainingResultsProps {
   report?: TrainReportData;
 }
 
-const TrainingResults: React.FC<TrainingResultsProps> = ({ report = mockReportData }) => {
+const TrainingResults: React.FC<TrainingResultsProps> = ({
+  report = mockReportData
+}) => {
   return (
     <Card>
       <CardHeader>
