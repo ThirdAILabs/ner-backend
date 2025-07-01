@@ -1,3 +1,5 @@
+type StorageType = 's3' | 'local' | 'upload';
+
 interface Model {
   Id: string;
   Name: string;
@@ -5,6 +7,7 @@ interface Model {
   BaseModelId?: string;
   CreationTime?: string;
   Tags?: string[];
+  CreationTime?: string;
 }
 
 interface Group {
@@ -23,15 +26,13 @@ interface TaskStatusCategory {
 interface Report {
   Id: string;
   Model: Model;
-  SourceS3Bucket: string;
-  SourceS3Prefix?: string;
-  S3Endpoint?: string;
-  S3Region?: string;
-  IsUpload?: boolean;
+  StorageType: StorageType;
+  StorageParams: any; // This is []byte in Go, represented as any in TypeScript
+  Stopped: boolean;
   CreationTime: string;
   Tags?: string[];
   CustomTags?: { [key: string]: string };
-  FileCount: number;
+  TotalFileCount: number;
   SucceededFileCount: number;
   FailedFileCount: number;
   Groups?: Group[];
@@ -70,15 +71,12 @@ interface ObjectPreview {
 
 interface CreateReportRequest {
   ModelId: string;
-  UploadId?: string;
-  S3Endpoint?: string;
-  S3Region?: string;
-  SourceS3Bucket?: string;
-  SourceS3Prefix?: string;
+  ReportName: string;
+  StorageType: string;
+  StorageParams: any; // This is []byte in Go, represented as any in TypeScript
   Tags: string[];
   CustomTags?: { [key: string]: string };
   Groups?: { [key: string]: string };
-  report_name: string;
 }
 
 interface InferenceMetrics {

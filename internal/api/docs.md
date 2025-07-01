@@ -157,7 +157,7 @@ Create a new report. The tags fields indicates which of the models tags are cons
 
 ### GET /reports/{report_id}
 **Description:**  
-Retrieve details of a specific report by its ID. The field `IsUpload` indicates if the source was uploaded file(s) rather than a cloud bucket.
+Retrieve details of a specific report by its ID. 
 
 **Path Parameters:**  
 - `report_id` (UUID): The ID of the report.
@@ -177,9 +177,8 @@ Retrieve details of a specific report by its ID. The field `IsUpload` indicates 
     "Type": "bolt",
     "Status": "TRAINED"
   },
-  "SourceS3Bucket": "example-bucket",
-  "SourceS3Prefix": "data/",
-  "IsUpload": false,
+  "StorageType": "upload",
+  "StoragePrams": { "UploadId": "123e4567-e89b-12d3-a456-426614174005" },
   "CreationTime": "2023-01-01T12:00:00Z",
   "Tags": ["NAME", "EMAIL"],
   "CustomTags": {"tag1": "regex1"},
