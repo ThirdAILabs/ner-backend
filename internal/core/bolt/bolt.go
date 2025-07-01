@@ -1,7 +1,8 @@
 package bolt
 
-// #cgo linux LDFLAGS: -L./lib/linux_amd64 -L./lib/linux_arm64 -lthirdai -lrocksdb -lutf8proc -lspdlog -fopenmp
-// #cgo darwin LDFLAGS: -L./lib/macos_arm64 -lthirdai -lrocksdb -lutf8proc -lspdlog -L/opt/homebrew/opt/libomp/lib/ -lomp
+// #cgo linux,amd64 LDFLAGS: -L${SRCDIR}/lib/linux_amd64 -lthirdai -lrocksdb -lutf8proc -lspdlog -ltokenizers -ldl -lm -lstdc++ -fopenmp
+// #cgo linux,arm64 LDFLAGS: -L${SRCDIR}/lib/linux_arm64 -lthirdai -lrocksdb -lutf8proc -lspdlog -ltokenizers -ldl -lm -lstdc++ -fopenmp
+// #cgo darwin,arm64 LDFLAGS: -L${SRCDIR}/lib/macos_arm64 -lthirdai -lrocksdb -lutf8proc -lspdlog -ltokenizers -lstdc++ -L/opt/homebrew/opt/libomp/lib/ -lomp
 // #cgo CFLAGS: -O3
 // #cgo CXXFLAGS: -O3 -fPIC -std=c++17 -I./include -fvisibility=hidden
 // #include "binding.h"

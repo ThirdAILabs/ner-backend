@@ -1,11 +1,7 @@
 /*
-#cgo linux   LDFLAGS: -L${SRCDIR}/bolt/lib/linux_amd64 \
-                     -L${SRCDIR}/bolt/lib/linux_arm64 \
-                     -ltokenizers -lstdc++
-
-#cgo darwin  LDFLAGS: -L${SRCDIR}/bolt/lib/macos_arm64 \
-                     -ltokenizers -lstdc++
-
+#cgo linux,amd64 LDFLAGS: -L${SRCDIR}/bolt/lib/linux_amd64 -ltokenizers -ldl -lm -lstdc++
+#cgo linux,arm64 LDFLAGS: -L${SRCDIR}/bolt/lib/linux_arm64 -ltokenizers -ldl -lm -lstdc++
+#cgo darwin,arm64 LDFLAGS: -L${SRCDIR}/bolt/lib/macos_arm64 -ltokenizers -lstdc++
 */
 
 package core
