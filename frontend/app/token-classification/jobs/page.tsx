@@ -401,7 +401,9 @@ function JobDetail() {
             groups={reportData?.Groups?.map((g) => g.Name) || []}
             tags={availableTagsCount}
             customTagNames={customTags.map((t) => t.name)}
-            uploadId={reportData && isUploadReport(reportData) ? reportData?.StorageParams.Prefix : ''}
+            uploadId={
+              reportData && isUploadReport(reportData) ? reportData?.StorageParams.Prefix : ''
+            }
             addFeedback={addFeedback}
             initialSelectedTag={selectedTag}
           />
