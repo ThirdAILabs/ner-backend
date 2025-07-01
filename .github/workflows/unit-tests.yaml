@@ -75,4 +75,7 @@ jobs:
           $PYTHON_EXECUTABLE_PATH -m spacy download en_core_web_lg
 
       - name: Run unit tests
-        run: go test -v ./...
+        run: |
+          export CGO_ENABLED=1
+          export CGO_LDFLAGS="-L${GITHUB_WORKSPACE}/internal/core/bolt/lib/linux_amd64"
+          go test -v ./...
