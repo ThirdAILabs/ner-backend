@@ -24,7 +24,7 @@ images_to_build = [
         key="pocket_shield",
         name="pocket_shield",
         dockerfile_path="Dockerfile",
-        context_path="./",
+        context_path="",
     ),
 ]
 

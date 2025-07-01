@@ -37,7 +37,9 @@ class AzureProvider(CloudProviderInterface):
         :param buildargs: Build arguments for the Docker build
         :return: ID of the built image
         """
-        print(f"Building image at path: {context_path} with tag: {tag}")
+        print(
+            f"Building image at path: {context_path} with tag: {tag}, docker file path: {dockerfile_path}"
+        )
         docker_client = docker.APIClient(base_url="unix://var/run/docker.sock")
         generator = docker_client.build(
             path=context_path,
@@ -47,27 +49,36 @@ class AzureProvider(CloudProviderInterface):
             platform="linux/x86_64",
             nocache=nocache,
             buildargs=buildargs,
+            decode=True,
         )
         image_id: Optional[str] = None
         for chunk in generator:
-            for minichunk in chunk.strip(b"\r\n").split(b"\r\n"):
-                json_chunk = json.loads(minichunk)
-                if "stream" in json_chunk:
-                    print(json_chunk["stream"].strip())
-                    match = re.search(
-                        r"(^Successfully built |sha256:)([0-9a-f]+)$",
-                        json_chunk["stream"],
-                    )
-                    if match:
-                        image_id = match.group(2)
-                if "errorDetail" in json_chunk:
-                    raise RuntimeError(json_chunk["errorDetail"]["message"])
+            # Handle errors immediately
+            print("Chunk before error: ", chunk)
+            if "errorDetail" in chunk:
+                raise RuntimeError(chunk["errorDetail"]["message"])
+
+            # BuildKit success case: look for aux.ID
+            print("Chunk: ", chunk)
+            if "aux" in chunk and isinstance(chunk["aux"], dict):
+                aux_id = chunk["aux"].get("ID")
+                if aux_id:
+                    image_id = aux_id.split(":", 1)[1]
+                    continue
+
+            # Legacy Docker success case: look in the stream text
+            if "stream" in chunk:
+                line = chunk["stream"].strip()
+                print(line)
+                match = re.search(r"(?:^Successfully built |sha256:)([0-9a-f]+)$", line)
+                if match:
+                    image_id = match.group(1)
+
         if not image_id:
             raise RuntimeError(f"Did not successfully build {tag} from {context_path}")
 
         print(f"\nLocal: Built {image_id}\n")
         print("\n===============================================================\n")
-
         return image_id
 
     def push_image(self, image_id: str, tag: str) -> None:

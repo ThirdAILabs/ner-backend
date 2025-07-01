@@ -68,7 +68,7 @@ def get_root_absolute_path() -> Path:
     :return: Absolute path to the project root
     """
     current_path = Path(__file__).resolve()
-    while current_path.name != "Thirdai-Platform-v2":
+    while current_path.name != "ner-backend":
         current_path = current_path.parent
 
     return current_path
@@ -134,7 +134,7 @@ def build_images(
 
     for image in images_to_build:
         buildargs = {}
-        if image.name == "thirdai_platform":
+        if image.name == "pocket_shield":
             buildargs = {
                 "tag": tag,
                 "docker_registry": provider.get_registry_name(),
@@ -231,7 +231,7 @@ def main() -> None:
     provider_name = config["provider"]
     if provider_name == "azure":
         if not config["azure"]["registry"]:
-            config["azure"]["registry"] = "thirdaiplatform.azurecr.io"
+            config["azure"]["registry"] = "pocketshield.azurecr.io"
 
         # Ensure branch configuration exists
         if "branches" not in config["azure"]:
@@ -262,7 +262,7 @@ def main() -> None:
 
         if not push_username or not push_password:
             new_push_credentials = provider.create_credentials(
-                name=f"thirdaiplatform-push-{sanitized_branch}",
+                name=f"pocketshield-push-{sanitized_branch}",
                 image_names=[
                     image_name_for_branch(image.name, args.branch)
                     for image in images_to_build
@@ -280,7 +280,7 @@ def main() -> None:
         else:
             if not args.dont_update_scope:
                 provider.update_credentials(
-                    name=f"thirdaiplatform-push-{sanitized_branch}",
+                    name=f"pocketshield-push-{sanitized_branch}",
                     image_names=[
                         image_name_for_branch(image.name, args.branch)
                         for image in images_to_build
@@ -291,7 +291,7 @@ def main() -> None:
 
         if not pull_username or not pull_password:
             new_pull_credentials = provider.create_credentials(
-                name=f"thirdaiplatform-pull-{sanitized_branch}",
+                name=f"pocketshield-pull-{sanitized_branch}",
                 image_names=[
                     image_name_for_branch(image.name, args.branch)
                     for image in images_to_build
@@ -309,7 +309,7 @@ def main() -> None:
         else:
             if not args.dont_update_scope:
                 provider.update_credentials(
-                    name=f"thirdaiplatform-pull-{sanitized_branch}",
+                    name=f"pocketshield-pull-{sanitized_branch}",
                     image_names=[
                         image_name_for_branch(image.name, args.branch)
                         for image in images_to_build

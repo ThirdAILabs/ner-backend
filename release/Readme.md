@@ -89,7 +89,7 @@ The `config.yaml` file is used to configure the settings for building and pushin
 ```yaml
 provider: azure
 azure:
-  registry: thirdaiplatform.azurecr.io
+  registry: pocketshield.azurecr.io
   branches:
     prod:
       version: "1.0.0"

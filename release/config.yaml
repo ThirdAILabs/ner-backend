@@ -1,4 +1,20 @@
 azure:
   branches:
+    main:
+      pull_credentials:
+        password: LiX2XTsZ6hMVzHDMI0UOJuCcrsXkMnzLqp3cP73cM1+ACRAWkkgi
+        username: pocketshield-pull-main
+      push_credentials:
+        password: Fun2eFhCYOL1sEHQkbntapDvxLLIvc5jCtwf9ghBsn+ACRAjwW5W
+        username: pocketshield-push-main
+      version: 0.0.1
+    prod:
+      pull_credentials:
+        password: YA5Rm8350UhKrEQaaqNjbGk2TfjN+ri7Cy0Di9UReB+ACRBRSYKs
+        username: prism-pull
+      push_credentials:
+        password: QfKXji872oiQaHrp+ZgjfSs1ertCeInK+D0PBDXe4c+ACRCB3faT
+        username: prism-push
+      version: 0.0.10
   registry: pocketshield.azurecr.io
 provider: azure
