@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"ner-backend/internal/core/datagen_v2/prompts"
+	"ner-backend/pkg/api"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -29,7 +30,7 @@ type DataFactory struct {
 }
 
 // NewDataFactory creates the output directory and LLM wrapper.
-func NewDataFactory(outDir, apiKey, baseURL string) (*DataFactory, error) {
+func NewDataFactory(outDir string) (*DataFactory, error) {
 	if err := os.MkdirAll(outDir, 0755); err != nil {
 		return nil, err
 	}
@@ -158,103 +159,125 @@ func (d *DataFactory) runAndCollect(
 	return out, nil
 }
 
+type GenerateOptions struct {
+	TagsInfo           []TagInfo    // built from api.TagInfo
+	Samples            []api.Sample // initial seed samples (optional)
+	RecordsToGenerate  int          // total sentences to generate
+	RecordsPerTemplate int          // sentences per LLM call
+	TestSplit          float32      // fraction to reserve for test
+	UserInstructions   []string     // extra LLM instructions
+	WriteBatchSize     int          // batch size for LLM calls
+}
+
 // Generate runs the full pipeline: enrich tags, then generate & write annotated data.
 func (d *DataFactory) Generate(
-	tags []TagInfo,
-	k int,
-	userInstructions []string,
-	writeBatchSize int,
-	generatePerCall int,
-) error {
-	// clamp
-	if writeBatchSize > k {
-		writeBatchSize = k
-	}
-	if generatePerCall > k {
-		generatePerCall = k
-	}
-
-	// enrich tags
+	opts GenerateOptions,
+) ([]api.Sample, []api.Sample, error) {
+	// 1) Enrich tags with description, examples, and contexts
+	tags := opts.TagsInfo
 	for i := range tags {
-		desc, err := d.ExtendDescription(&tags[i])
+		// Description
+		ed, err := d.ExtendDescription(&tags[i])
 		if err != nil {
-			return err
+			return nil, nil, fmt.Errorf("extend description: %w", err)
 		}
-		tags[i].Desc = desc
+		tags[i].Desc = ed
 
+		// Examples
 		exs, err := d.ExtendExamples(&tags[i], 20)
 		if err != nil {
-			return err
+			return nil, nil, fmt.Errorf("extend examples: %w", err)
 		}
 		tags[i].Examples = append(tags[i].Examples, exs...)
 
+		// Contexts
 		if tags[i].Contexts == nil {
 			ctxs, err := d.GetTagContext(&tags[i], 25)
 			if err != nil {
-				return err
+				return nil, nil, fmt.Errorf("get contexts: %w", err)
 			}
 			tags[i].Contexts = ctxs
 		}
 	}
 
-	// prepare annotated data schema
+	// 2) Compute batch parameters
+	total := opts.RecordsToGenerate
+	perCall := opts.RecordsPerTemplate
+	batchSize := opts.WriteBatchSize
+	if batchSize <= 0 {
+		batchSize = total
+	}
+	if perCall <= 0 {
+		perCall = total
+	}
+	callsPerBatch := batchSize / perCall
+
+	// 3) Prepare JSON-schema response format
 	annotFmt, err := prompts.ToResponseFormatUnion(prompts.AnnotatedDataFormat)
 	if err != nil {
-		return fmt.Errorf("convert annotated_data format: %w", err)
+		return nil, nil, fmt.Errorf("convert annotated_data format: %w", err)
 	}
 
-	outFile := filepath.Join(d.OutDir, "generated_data.csv")
-	callsPerBatch := writeBatchSize / generatePerCall
+	// 4) Annotate in batches
+	var allSentences []string
+	for offset := 0; offset < total; offset += batchSize {
+		n := perCall
+		if rem := total - offset; rem < perCall {
+			n = rem
+		}
 
-	for offset := 0; offset < k; offset += writeBatchSize {
-		// build prompts
+		// Build prompt batch
 		batch := make([]string, callsPerBatch)
 		for i := 0; i < callsPerBatch; i++ {
 			var buf bytes.Buffer
 			if err := prompts.AnnotatedDataTmpl.Execute(&buf, map[string]interface{}{
 				"TagInfo":          tags,
-				"K":                min(generatePerCall, k-offset),
+				"K":                n,
 				"Requirements":     Requirements,
-				"UserInstructions": userInstructions,
+				"UserInstructions": opts.UserInstructions,
 			}); err != nil {
-				return err
+				return nil, nil, fmt.Errorf("render prompt: %w", err)
 			}
 			batch[i] = buf.String()
 		}
 
-		// call LLM
 		raws, err := d.runAndCollect(batch, prompts.AnnotatedDataSystem, annotFmt, true)
 		if err != nil {
-			return err
+			return nil, nil, fmt.Errorf("batch generate: %w", err)
 		}
 
-		// collect sentences
-		var allSentences []string
 		for _, r := range raws {
 			var tmp struct {
 				Sentences []string `json:"sentences"`
 			}
-			if err := json.Unmarshal([]byte(r), &tmp); err == nil {
+			if jerr := json.Unmarshal([]byte(r), &tmp); jerr == nil {
 				allSentences = append(allSentences, tmp.Sentences...)
-			}
-		}
-
-		// transform & write
-		var rows []map[string]string
-		for _, s := range allSentences {
-			src, tgt := transformSentence(s, tags)
-			if src != "" && tgt != "" {
-				rows = append(rows, map[string]string{"source": src, "target": tgt})
-			}
-		}
-		if len(rows) > 0 {
-			if err := WriteToCSV(outFile, rows, []string{"source", "target"}); err != nil {
-				return err
 			}
 		}
 	}
 
-	return nil
+	// 5) Transform sentences to api.Sample
+	allSamples := make([]api.Sample, 0, len(allSentences))
+	for _, s := range allSentences {
+		src, tgt := transformSentence(s, tags)
+		toks := strings.Fields(src)
+		lbls := strings.Fields(tgt)
+		if len(toks) == len(lbls) {
+			allSamples = append(allSamples, api.Sample{Tokens: toks, Labels: lbls})
+		}
+	}
+
+	// 6) Split into train/test
+	splitIdx := int(float32(len(allSamples)) * (1 - opts.TestSplit))
+	if splitIdx < 0 {
+		splitIdx = 0
+	} else if splitIdx > len(allSamples) {
+		splitIdx = len(allSamples)
+	}
+	train := allSamples[:splitIdx]
+	test := allSamples[splitIdx:]
+
+	return train, test, nil
 }
 
 var (
@@ -312,11 +335,4 @@ func transformSentence(text string, tags []TagInfo) (string, string) {
 	}
 
 	return strings.Join(srcTokens, " "), strings.Join(tgtTokens, " ")
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }

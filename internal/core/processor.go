@@ -6,13 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"ner-backend/internal/core/datagen"
+	datagenv2 "ner-backend/internal/core/datagen_v2"
 	"ner-backend/internal/core/types"
 	"ner-backend/internal/database"
 	"ner-backend/internal/licensing"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/storage"
-	"ner-backend/pkg/api"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -833,14 +832,6 @@ func (proc *TaskProcessor) getModel(ctx context.Context, modelId uuid.UUID) (dat
 	return model, nil
 }
 
-func extractTagNames(infos []api.TagInfo) []string {
-	out := make([]string, len(infos))
-	for i, t := range infos {
-		out[i] = t.Name
-	}
-	return out
-}
-
 func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload messaging.FinetuneTaskPayload) error {
 	database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelTraining) //nolint:errcheck
 
@@ -872,19 +863,39 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 
 	allSamples := payload.Samples
 	if payload.GenerateData {
-		opts := datagen.DatagenOpts{
-			Tags:               extractTagNames(payload.Tags),
+		tagsInfo := make([]datagenv2.TagInfo, len(payload.Tags))
+		for i, t := range payload.Tags {
+			tagsInfo[i] = datagenv2.TagInfo{
+				Name:     t.Name,
+				Desc:     t.Description,
+				Examples: t.Examples,
+			}
+		}
+
+		// instantiate new factory
+		genDir := filepath.Join(proc.localModelDir, payload.ModelId.String(), "generated")
+		factory, err := datagenv2.NewDataFactory(genDir)
+		if err != nil {
+			database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint
+			return fmt.Errorf("creating DataFactory: %w", err)
+		}
+
+		// prepare GenerateOptions
+		opts := datagenv2.GenerateOptions{
+			TagsInfo:           tagsInfo,
 			Samples:            payload.Samples,
-			NumValuesPerTag:    payload.NumValuesPerTag,
 			RecordsToGenerate:  payload.RecordsToGenerate,
 			RecordsPerTemplate: payload.RecordsPerTemplate,
 			TestSplit:          payload.TestSplit,
+			WriteBatchSize:     payload.RecordsToGenerate,
 		}
-		train, test, err := datagen.GenerateData(opts)
+
+		train, test, err := factory.Generate(opts)
 		if err != nil {
 			database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint
-			return fmt.Errorf("datagen error: %w", err)
+			return fmt.Errorf("generating synthetic data: %w", err)
 		}
+
 		allSamples = append(allSamples, train...)
 		allSamples = append(allSamples, test...)
 	}
