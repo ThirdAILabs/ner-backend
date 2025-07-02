@@ -27,30 +27,31 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
 type BackendService struct {
 	db               *gorm.DB
-	storage          storage.Provider
+	storage          storage.ObjectStore
+	uploadBucket     string
 	publisher        messaging.Publisher
 	chunkTargetBytes int64
 	licensing        licensing.LicenseVerifier
 }
 
 const (
-	uploadBucket = "uploads"
 	ErrCodeDB    = 1001 // Custom internal code for DB errors
 )
 
-func NewBackendService(db *gorm.DB, storage storage.Provider, pub messaging.Publisher, chunkTargetBytes int64, licenseVerifier licensing.LicenseVerifier) *BackendService {
+func NewBackendService(db *gorm.DB, storage storage.ObjectStore, uploadBucket string, pub messaging.Publisher, chunkTargetBytes int64, licenseVerifier licensing.LicenseVerifier) *BackendService {
 	if err := storage.CreateBucket(context.Background(), uploadBucket); err != nil {
 		slog.Error("error creating upload bucket", "error", err)
 		panic("failed to create upload bucket")
 	}
 
-	return &BackendService{db: db, storage: storage, publisher: pub, chunkTargetBytes: chunkTargetBytes, licensing: licenseVerifier}
+	return &BackendService{db: db, storage: storage, uploadBucket: uploadBucket, publisher: pub, chunkTargetBytes: chunkTargetBytes, licensing: licenseVerifier}
 }
 
 func (s *BackendService) AddRoutes(r chi.Router) {
@@ -285,29 +286,17 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		}
 	}
 
-	var (
-		s3Endpoint     = req.S3Endpoint
-		s3Region       = req.S3Region
-		sourceS3Bucket = req.SourceS3Bucket
-		s3Prefix       = req.SourceS3Prefix
-		isUpload       = false
-	)
-
-	if req.UploadId != uuid.Nil {
-		s3Endpoint = ""
-		s3Region = ""
-		sourceS3Bucket = uploadBucket
-		s3Prefix = req.UploadId.String()
-		isUpload = true
-	}
-
-	if sourceS3Bucket == "" {
-		return nil, CodedErrorf(http.StatusUnprocessableEntity, "the following fields are required: SourceS3Bucket or UploadId")
-	}
-
-	if req.UploadId == uuid.Nil {
-		if err := validateS3Access(s3Endpoint, s3Region, sourceS3Bucket, s3Prefix); err != nil {
-			return nil, err
+	var isUpload bool = req.StorageType == string(storage.UploadType)
+	// No need to check parameter validity if upload since it uses the default app storage
+	if !isUpload {
+		connectorType, err := storage.ToStorageType(req.StorageType)
+		if err != nil {
+			return nil, CodedErrorf(http.StatusBadRequest, "invalid storage type: %v", err)
+		}
+	
+		_, err = storage.NewConnector(r.Context(), connectorType, req.StorageParams)
+		if err != nil {
+			return nil, CodedErrorf(http.StatusInternalServerError, "error validating connector params: %v", err)
 		}
 	}
 
@@ -336,11 +325,8 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		Id:             uuid.New(),
 		ReportName:     req.ReportName,
 		ModelId:        req.ModelId,
-		S3Endpoint:     sql.NullString{String: s3Endpoint, Valid: s3Endpoint != ""},
-		S3Region:       sql.NullString{String: s3Region, Valid: s3Region != ""},
-		SourceS3Bucket: sourceS3Bucket,
-		SourceS3Prefix: sql.NullString{String: s3Prefix, Valid: s3Prefix != ""},
-		IsUpload:       isUpload,
+		StorageType:     req.StorageType,
+		StorageParams:   datatypes.JSON(req.StorageParams),
 		CreationTime:   time.Now().UTC(),
 	}
 
@@ -875,9 +861,8 @@ func (s *BackendService) UploadFiles(r *http.Request) (any, error) {
 			filenames = append(filenames, part.FileName())
 
 			newFilepath := filepath.Join(uploadId.String(), part.FileName())
-
-			if err := s.storage.PutObject(r.Context(), uploadBucket, newFilepath, part); err != nil {
-				slog.Error("error uploading file to S3", "error", err)
+			if err := s.storage.PutObject(r.Context(), s.uploadBucket, newFilepath, part); err != nil {
+				slog.Error("error uploading file to storage", "error", err)
 				return nil, CodedErrorf(http.StatusInternalServerError, "error saving file")
 			}
 		}
@@ -1055,27 +1040,23 @@ func (s *BackendService) GetLicense(r *http.Request) (any, error) {
 	}, nil
 }
 
-func validateS3Access(endpoint string, region string, bucket string, prefix string) error {
-	s3Client, err := storage.NewS3Provider(storage.S3ProviderConfig{
-		S3EndpointURL: endpoint,
-		S3Region:      region,
-	})
-
-	if err != nil {
-		slog.Error("error connecting to S3", "s3_endpoint", endpoint, "region", region, "error", err)
-		return CodedErrorf(http.StatusInternalServerError, "Failed to connect to S3 endpoint. %v", err)
-	}
-
-	ctx := context.Background()
-	return s3Client.ValidateAccess(ctx, bucket, prefix)
-}
-
 func (s *BackendService) ValidateS3Access(r *http.Request) (any, error) {
 	req, err := ParseRequestQueryParams[api.ValidateS3BucketRequest](r)
 	if err != nil {
 		return nil, err
 	}
-	return nil, validateS3Access(req.S3Endpoint, req.S3Region, req.SourceS3Bucket, req.SourceS3Prefix)
+
+	_, err = storage.NewS3Connector(
+		r.Context(),
+		storage.S3ConnectorParams{
+			Endpoint: req.S3Endpoint,
+			Region: req.Region,
+			Bucket: req.SourceS3Bucket,
+			Prefix: req.SourceS3Prefix,
+		},
+	)
+	
+	return nil, err
 }
 
 func (s *BackendService) StoreFileNameToPath(r *http.Request) (any, error) {

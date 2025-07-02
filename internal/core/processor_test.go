@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"ner-backend/internal/core/types"
 	"ner-backend/internal/database"
+	"ner-backend/internal/storage"
 	"ner-backend/pkg/api"
 	"regexp"
 	"strings"
@@ -68,8 +69,8 @@ func TestObjectInference(t *testing.T) {
 
 	object := "test.txt"
 
-	chunks := make(chan ParsedChunk, 1)
-	chunks <- ParsedChunk{
+	chunks := make(chan storage.Chunk, 1)
+	chunks <- storage.Chunk{
 		Text:   testDoc,
 		Offset: 0,
 	}
