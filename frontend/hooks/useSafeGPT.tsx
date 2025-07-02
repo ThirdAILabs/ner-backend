@@ -107,6 +107,7 @@ export default function useSafeGPT(chatId: string) {
     try {
       const sessions = await nerService.getChatSessions();
       return sessions
+        .filter((session) => !session.ExtensionSessionId)
         .map((session) => ({
           id: session.ID,
           title: session.Title,

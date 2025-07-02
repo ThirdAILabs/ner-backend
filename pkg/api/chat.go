@@ -15,6 +15,7 @@ type ChatSessionMetadata struct {
 	ID      uuid.UUID
 	Title   string
 	TagMap  map[string]string
+	ExtensionSessionId uuid.NullUUID `json:"ExtensionSessionId,omitempty"`
 }
 
 type GetSessionsResponse struct {

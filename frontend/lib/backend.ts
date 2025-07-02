@@ -266,7 +266,12 @@ export const nerService = {
   },
 
   getChatSessions: async (): Promise<
-    { ID: string; Title: string; TagMap: Record<string, string> }[]
+    {
+      ID: string;
+      Title: string;
+      TagMap: Record<string, string>;
+      ExtensionSessionId?: string | null;
+    }[]
   > => {
     const { data } = await axiosInstance.get('/chat/sessions');
     return data.Sessions;

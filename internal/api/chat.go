@@ -92,6 +92,7 @@ func (s *ChatService) GetSessions(r *http.Request) (any, error) {
 		apiSessions[i] = api.ChatSessionMetadata{
 			ID:      session.ID,
 			Title:   session.Title,
+			ExtensionSessionId: session.ExtensionSessionId,
 		}
 	}
 
