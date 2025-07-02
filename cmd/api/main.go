@@ -22,19 +22,20 @@ import (
 )
 
 type APIConfig struct {
-	DatabaseURL        string `env:"DATABASE_URL,notEmpty,required"`
-	RabbitMQURL        string `env:"RABBITMQ_URL,notEmpty,required"`
-	S3EndpointURL      string `env:"S3_ENDPOINT_URL"`
-	S3AccessKeyID      string `env:"INTERNAL_AWS_ACCESS_KEY_ID"`
-	S3SecretAccessKey  string `env:"INTERNAL_AWS_SECRET_ACCESS_KEY"`
-	ModelBucketName    string `env:"MODEL_BUCKET_NAME" envDefault:"ner-models"`
-	UploadBucketName   string `env:"UPLOAD_BUCKET_NAME" envDefault:"uploads"`
-	QueueNames         string `env:"QUEUE_NAMES" envDefault:"inference_queue,training_queue,shard_data_queue"`
-	WorkerConcurrency  int    `env:"CONCURRENCY" envDefault:"1"`
-	APIPort            string `env:"API_PORT" envDefault:"8001"`
-	ChunkTargetBytes   int64  `env:"S3_CHUNK_TARGET_BYTES" envDefault:"10737418240"`
-	LicenseKey         string `env:"LICENSE_KEY" envDefault:""`
-	HostModelDir       string `env:"HOST_MODEL_DIR" envDefault:"/app/models"`
+	DatabaseURL       string `env:"DATABASE_URL,notEmpty,required"`
+	RabbitMQURL       string `env:"RABBITMQ_URL,notEmpty,required"`
+	S3EndpointURL     string `env:"S3_ENDPOINT_URL"`
+	S3Region          string `env:"S3_REGION"`
+	S3AccessKeyID     string `env:"INTERNAL_AWS_ACCESS_KEY_ID"`
+	S3SecretAccessKey string `env:"INTERNAL_AWS_SECRET_ACCESS_KEY"`
+	ModelBucketName   string `env:"MODEL_BUCKET_NAME" envDefault:"ner-models"`
+	UploadBucketName  string `env:"UPLOAD_BUCKET_NAME" envDefault:"uploads"`
+	QueueNames        string `env:"QUEUE_NAMES" envDefault:"inference_queue,training_queue,shard_data_queue"`
+	WorkerConcurrency int    `env:"CONCURRENCY" envDefault:"1"`
+	APIPort           string `env:"API_PORT" envDefault:"8001"`
+	ChunkTargetBytes  int64  `env:"S3_CHUNK_TARGET_BYTES" envDefault:"10737418240"`
+	LicenseKey        string `env:"LICENSE_KEY" envDefault:""`
+	HostModelDir      string `env:"HOST_MODEL_DIR" envDefault:"/app/models"`
 }
 
 func main() {
@@ -53,7 +54,8 @@ func main() {
 	}
 
 	s3Cfg := storage.S3ClientConfig{
-		Endpoint:     cfg.S3EndpointURL,
+		Endpoint:        cfg.S3EndpointURL,
+		Region:          cfg.S3Region,
 		AccessKeyID:     cfg.S3AccessKeyID,
 		SecretAccessKey: cfg.S3SecretAccessKey,
 	}
@@ -115,7 +117,7 @@ func main() {
 		log.Fatalf("License verification failed - Info: %v, Error: %v", licenseInfo, err)
 	}
 
-	apiHandler := api.NewBackendService(db, s3ObjectStore, cfg.UploadBucketName,publisher, cfg.ChunkTargetBytes, licensing)
+	apiHandler := api.NewBackendService(db, s3ObjectStore, cfg.UploadBucketName, publisher, cfg.ChunkTargetBytes, licensing)
 
 	// Your existing API routes should be prefixed with /api to avoid conflicts
 	r.Route("/api/v1", func(r chi.Router) {

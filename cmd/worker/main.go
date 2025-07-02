@@ -19,6 +19,7 @@ type WorkerConfig struct {
 	DatabaseURL                 string `env:"DATABASE_URL,notEmpty,required"`
 	RabbitMQURL                 string `env:"RABBITMQ_URL,notEmpty,required"`
 	S3EndpointURL               string `env:"S3_ENDPOINT_URL"`
+	S3Region                    string `env:"S3_REGION"`
 	S3AccessKeyID               string `env:"INTERNAL_AWS_ACCESS_KEY_ID"`
 	S3SecretAccessKey           string `env:"INTERNAL_AWS_SECRET_ACCESS_KEY"`
 	ModelBucketName             string `env:"MODEL_BUCKET_NAME" envDefault:"ner-models"`
@@ -46,7 +47,8 @@ func main() {
 	}
 
 	s3ObjectStoreCfg := storage.S3ClientConfig{
-		Endpoint:     cfg.S3EndpointURL,
+		Endpoint:        cfg.S3EndpointURL,
+		Region:          cfg.S3Region,
 		AccessKeyID:     cfg.S3AccessKeyID,
 		SecretAccessKey: cfg.S3SecretAccessKey,
 	}
