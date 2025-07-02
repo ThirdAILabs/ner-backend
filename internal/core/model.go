@@ -3,9 +3,11 @@ package core
 import (
 	"fmt"
 	"log"
+	"ner-backend/internal/core/bolt"
 	"ner-backend/internal/core/python"
 	"ner-backend/internal/core/types"
 	"ner-backend/pkg/api"
+	"path/filepath"
 )
 
 type ModelType string
@@ -53,9 +55,9 @@ func IsStatelessModel(modelType ModelType) bool {
 
 func NewModelLoaders() map[ModelType]ModelLoader {
 	return map[ModelType]ModelLoader{
-		// BoltUdt: func(modelDir string) (Model, error) {
-		// 	return bolt.LoadNER(filepath.Join(modelDir, "model.bin"))
-		// },
+		BoltUdt: func(modelDir string) (Model, error) {
+			return bolt.LoadNER(filepath.Join(modelDir, "model.bin"))
+		},
 		PythonTransformer: func(modelDir string) (Model, error) {
 			cfgJSON := fmt.Sprintf(`{"model_path":"%s","threshold":0.5}`, modelDir)
 			return python.LoadPythonModel("python_combined_ner_model", cfgJSON)
