@@ -27,6 +27,7 @@ import { alpha } from '@mui/material/styles';
 import { useLicense } from '@/hooks/useLicense';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import useTelemetry from '@/hooks/useTelemetry';
+import { isUploadReport } from '@/lib/utils';
 
 function JobStatus({ report }: { report: ReportWithStatus }) {
   if (report.isLoadingStatus) {
@@ -101,7 +102,7 @@ function JobStatus({ report }: { report: ReportWithStatus }) {
   const failed = InferenceTaskStatuses?.FAILED?.TotalTasks || 0;
   const aborted = InferenceTaskStatuses?.ABORTED?.TotalTasks || 0;
 
-  const fileCount = report.FileCount || 1;
+  const fileCount = report.TotalFileCount || 1;
   const succeededFileCount = report.SucceededFileCount || 0;
   const failedFileCount = report.FailedFileCount || 0;
 
@@ -125,10 +126,10 @@ function JobStatus({ report }: { report: ReportWithStatus }) {
           </Tooltip>
         </Box>
       );
-    } else if (totalTasks === 0 && report.IsUpload) {
+    } else if (totalTasks === 0 && isUploadReport(report)) {
       // Local Upload
       return `Queued...`;
-    } else if (totalTasks === 0 && !report.IsUpload) {
+    } else if (totalTasks === 0 && !isUploadReport(report)) {
       // S3 Upload
       return 'Gathering Files...';
     } else if (aborted > 0) {
@@ -236,7 +237,7 @@ function Job({ initialReport, onDelete }: JobProps) {
         Errors: detailedReport.Errors || [],
         SucceededFileCount: detailedReport.SucceededFileCount,
         FailedFileCount: detailedReport.FailedFileCount,
-        FileCount: detailedReport.FileCount,
+        TotalFileCount: detailedReport.TotalFileCount,
         detailedStatus: {
           ShardDataTaskStatus: detailedReport.ShardDataTaskStatus,
           InferenceTaskStatuses: detailedReport.InferenceTaskStatuses,
@@ -247,7 +248,7 @@ function Job({ initialReport, onDelete }: JobProps) {
       const seenFileCount = detailedReport.SucceededFileCount + detailedReport.FailedFileCount;
 
       const isCompleted =
-        detailedReport.FileCount !== 0 && seenFileCount === detailedReport.FileCount;
+        detailedReport.TotalFileCount !== 0 && seenFileCount === detailedReport.TotalFileCount;
 
       return isCompleted;
     } catch (err) {
