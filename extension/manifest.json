@@ -4,23 +4,32 @@
   "version": "1.0.0",
   "description": "Extract and analyze text from web pages for Named Entity Recognition",
   
+  "declarative_net_request": {
+    "rule_resources": [{
+      "id": "ruleset_1",
+      "enabled": true,
+      "path": "rules.json"
+    }]
+  },
+
   "permissions": [
     "activeTab",
     "storage",
-    "scripting"
+    "scripting",
+    "declarativeNetRequest",
+    "declarativeNetRequestWithHostAccess"
   ],
   
   "host_permissions": [
-    "https://chatgpt.com/*"
+    "<all_urls>",
+    "http://localhost:16549/*"
   ],
   
-  "background": {
-    "service_worker": "background.js"
-  },
+
   
   "content_scripts": [
     {
-      "matches": ["https://chatgpt.com/*"],
+      "matches": ["<all_urls>"],
       "js": ["wasm/wasm-loader.js", "content.js"],
       "css": ["content.css"],
       "run_at": "document_idle"
