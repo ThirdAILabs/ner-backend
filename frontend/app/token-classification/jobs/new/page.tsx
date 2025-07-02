@@ -1173,7 +1173,7 @@ export default function NewJobPage() {
                 </div>
               </div>
 
-              {filteredCustomModels.length > 0 && (
+              {models.filter((model) => !['basic', 'advanced'].includes(model.Name.toLowerCase())).length > 0 && (
                 <div>
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="text-lg font-semibold">Custom Models</h3>
@@ -1189,32 +1189,38 @@ export default function NewJobPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {filteredCustomModels
-                      .filter((model) => model.Status !== 'TRAINING' && model.Status !== 'QUEUED')
-                      .map((model) => (
-                        <ModelOption
-                          key={model.Id}
-                          title={model.Name}
-                          description={
-                            <div className="space-y-2">
-                              {model.BaseModelId && (
-                                <p className="text-sm text-gray-600">
-                                  Base Model:{' '}
-                                  {models.find((m) => m.Id === model.BaseModelId)?.Name ||
-                                    'Unknown'}
-                                </p>
-                              )}
-                            </div>
-                          }
-                          isSelected={selectedModelId === model.Id}
-                          onClick={() => {
-                            setSelectedModelId(model.Id);
-                            setSelectedModel(model);
-                          }}
-                        />
-                      ))}
-                  </div>
+                  {filteredCustomModels.length === 0 ? (
+                    <div className="text-gray-500 py-8 text-center">
+                      No custom models found matching "{modelSearchQuery}"
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {filteredCustomModels
+                        .filter((model) => model.Status !== 'TRAINING' && model.Status !== 'QUEUED')
+                        .map((model) => (
+                          <ModelOption
+                            key={model.Id}
+                            title={model.Name}
+                            description={
+                              <div className="space-y-2">
+                                {model.BaseModelId && (
+                                  <p className="text-sm text-gray-600">
+                                    Base Model:{' '}
+                                    {models.find((m) => m.Id === model.BaseModelId)?.Name ||
+                                      'Unknown'}
+                                  </p>
+                                )}
+                              </div>
+                            }
+                            isSelected={selectedModelId === model.Id}
+                            onClick={() => {
+                              setSelectedModelId(model.Id);
+                              setSelectedModel(model);
+                            }}
+                          />
+                        ))}
+                    </div>
+                  )}
                 </div>
               )}
 
