@@ -11,7 +11,7 @@
   ],
   
   "host_permissions": [
-    "<all_urls>"
+    "https://chatgpt.com/*"
   ],
   
   "background": {
@@ -20,8 +20,8 @@
   
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
+      "matches": ["https://chatgpt.com/*"],
+      "js": ["wasm/wasm-loader.js", "content.js"],
       "css": ["content.css"],
       "run_at": "document_idle"
     }
@@ -47,8 +47,12 @@
   
   "web_accessible_resources": [
     {
-      "resources": ["popup.html"],
-      "matches": ["<all_urls>"]
+      "resources": [
+        "popup.html",
+        "wasm/build/*",
+        "wasm/wasm-loader.js"
+      ],
+      "matches": ["https://chatgpt.com/*"]
     }
   ]
 } 

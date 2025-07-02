@@ -10,14 +10,17 @@ class PromptInterceptor {
     const prompt = document.getElementById('prompt-textarea');
     if (prompt) {
       console.log("Prompt found");
-      prompt.addEventListener('keydown', (e) => {
+      prompt.addEventListener('keydown', async (e) => {
         if (
           e.key === 'Enter' && !e.shiftKey ||
           e.key === 'Enter' && e.ctrlKey
         ) {
-          prompt.childNodes.forEach(child => {
-            child.textContent = processText(child.textContent);
-          });
+          for (const child of prompt.childNodes) {
+            if (child.textContent) {
+              const processedText = await processText(child.textContent);
+              child.textContent = processedText;
+            }
+          }
         }
       }, true);
       console.log("Prompt registered");
@@ -50,44 +53,106 @@ class MessageModifier {
 
   constructor() {}
 
-  register(selector, processText) {
+  async register(selector, processText) {
     const messages = document.querySelectorAll(selector);
-    messages.forEach(message => {
-      this.recursivelyProcessText(message, processText, message.getAttribute('data-message-id'));
-    });
+    for (const message of messages) {
+      await this.recursivelyProcessText(message, processText, message.getAttribute('data-message-id'));
+    }
   }
 
-  recursivelyProcessText(node, processText, id) {
+  async recursivelyProcessText(node, processText, id) {
     // console.log("Recursively processing text", node.textContent, id, getNodeTypeName(node.nodeType), this.registeredMessages[id], node, node.childNodes);
     if (node.nodeType === Node.TEXT_NODE && !this.registeredMessages[id]) {
       // console.log("Registering message modifier for", id);
       // console.log("Before", node.textContent);
-      const after = processText(node.textContent);
+      const after = await processText(node.textContent);
       node.textContent = after;
       this.registeredMessages[id] = true;
     }
     let i = 0;
-    node.childNodes.forEach(child => {
-      this.recursivelyProcessText(child, processText, id + `-${i++}`);
-    });
+    for (const child of node.childNodes) {
+      await this.recursivelyProcessText(child, processText, id + `-${i++}`);
+    }
   }
 }
 
 const promptInterceptor = new PromptInterceptor();
 const messageModifier = new MessageModifier();
 
-const redact = (text) => {
-  return text.replace("Benito", "[REDACTED]");
+// Import WASM redactor
+let wasmRedactor = null;
+
+// Initialize WASM redactor
+async function initializeRedactor() {
+  if (wasmRedactor) {
+    return wasmRedactor;
+  }
+
+  try {
+    // Try WASM approach
+    wasmRedactor = new WasmRedactor();
+    const wasmSuccess = await wasmRedactor.initialize(chrome.runtime.getURL('wasm/build/'));
+    
+    if (wasmSuccess) {
+      console.log('Using WASM redactor');
+      return wasmRedactor;
+    } else {
+      throw new Error('WASM initialization failed');
+    }
+  } catch (error) {
+    console.warn('WASM redactor failed, using JavaScript fallback:', error);
+    
+    // Fallback to simple JavaScript implementation
+    wasmRedactor = {
+      redact: (text) => text.replace(/Benito/g, "[REDACTED]"),
+      restore: (text) => text.replace(/\[REDACTED\]/g, "Benito"),
+      clearMappings: () => {},
+      getStats: () => ({})
+    };
+    console.log('Using JavaScript fallback redactor');
+    return wasmRedactor;
+}
 }
 
-const unredact = (text) => {
-  return text.replace("[REDACTED]", "Benito");
+// Wrapper functions that use the WASM redactor
+const redact = async (text) => {
+  if (!wasmRedactor) {
+    await initializeRedactor();
+  }
+  return wasmRedactor.redact(text);
 }
 
-const observer = new MutationObserver((mutations) => {
+const unredact = async (text) => {
+  if (!wasmRedactor) {
+    await initializeRedactor();
+  }
+  return wasmRedactor.restore(text);
+}
+
+const observer = new MutationObserver(async (mutations) => {
   console.log("Mutation observer triggered", mutations);
-  promptInterceptor.register(redact);
-  messageModifier.register('[data-message-author-role="assistant"]', unredact);
+  
+  // Initialize redactor if not already done
+  if (!wasmRedactor) {
+    await initializeRedactor();
+  }
+  
+  // Register prompt interceptor with async redact
+  promptInterceptor.register(async (text) => {
+    return await redact(text);
+  });
+  
+  // Register message modifier with async unredact
+  await messageModifier.register('[data-message-author-role="assistant"]', async (text) => {
+    return await unredact(text);
+  });
+});
+
+// Initialize redactor when script loads
+initializeRedactor().then(() => {
+  console.log('Redactor initialized on page load');
+}).catch(error => {
+  console.error('Failed to initialize redactor on page load:', error);
 });
 
 observer.observe(document.body, { childList: true, subtree: true });
