@@ -273,7 +273,10 @@ export const nerService = {
   },
 
   startChatSession: async (model: string, title: string): Promise<string> => {
-    const { data } = await axiosInstance.post('/chat/sessions', { Model: model, Title: title });
+    const { data } = await axiosInstance.post('/chat/sessions', {
+      Model: model,
+      Title: title,
+    });
     return data.SessionID;
   },
 
@@ -289,7 +292,9 @@ export const nerService = {
   },
 
   renameChatSession: async (sessionId: string, title: string): Promise<void> => {
-    await axiosInstance.post(`/chat/sessions/${sessionId}/rename`, { Title: title });
+    await axiosInstance.post(`/chat/sessions/${sessionId}/rename`, {
+      Title: title,
+    });
   },
 
   sendChatMessageStream: async (
@@ -369,8 +374,18 @@ export const nerService = {
 
   storeFileNameToPath: async (uploadId: string, mapping: { [filename: string]: string }) => {
     try {
-      await axiosInstance.post(`/file-name-to-path/${uploadId}`, { Mapping: mapping });
+      console.log('Backend service - Storing file path mapping:', {
+        uploadId,
+        mapping,
+        mappingKeys: Object.keys(mapping),
+        mappingEntries: Object.entries(mapping),
+      });
+      await axiosInstance.post(`/file-name-to-path/${uploadId}`, {
+        Mapping: mapping,
+      });
+      console.log('Backend service - File path mapping stored successfully');
     } catch (error) {
+      console.error('Backend service - Error storing file path mapping:', error);
       return handleApiError(error, 'Failed to store upload path mappings');
     }
   },
