@@ -11,7 +11,7 @@ RUN npm run build
 
 
 # --- Backend Build Stage ---
-FROM ubuntu:24.04 as backend-builder
+FROM ubuntu:22.04 as backend-builder
 
 
 ARG GOLANG_VERSION=1.24.2
@@ -48,7 +48,7 @@ RUN CGO_ENABLED=1 GOOS=linux GOARCH=${TARGETARCH} go build -v -o /app/api ./cmd/
 RUN CGO_ENABLED=1 GOOS=linux GOARCH=${TARGETARCH} go build -v -o /app/worker ./cmd/worker
 
 
-FROM ubuntu:24.04
+FROM ubuntu:22.04
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
