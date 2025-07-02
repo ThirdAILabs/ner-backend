@@ -94,21 +94,42 @@ func (o *OpenAILLM) Generate(systemPrompt, prompt string, responseFormat openai.
 	tu.TotalTokens += res.Usage.TotalTokens
 
 	// write usage JSON
-	if f, err := os.Create(o.trackUsageAt); err == nil {
-		_ = json.NewEncoder(f).Encode(o.usage)
+	if f, ferr := os.Create(o.trackUsageAt); ferr == nil {
+		if jerr := json.NewEncoder(f).Encode(o.usage); jerr != nil {
+			slog.Warn("failed to write usage JSON", "error", jerr)
+		}
 		f.Close()
+	} else {
+		slog.Warn("failed to create usage file", "error", ferr)
 	}
 
-	// append full conversation to text log
-	if f, err := os.OpenFile(o.responseFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644); err == nil {
+	// Append full conversation to log
+	if f, ferr := os.OpenFile(o.responseFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644); ferr == nil {
 		for _, m := range messages {
-			f.WriteString("role: " + string(*m.GetRole()) + "\n")
-			f.WriteString("content: " + m.OfFunction.Content.Value + "\n")
+			role := string(*m.GetRole())
+			if _, werr := f.WriteString("role: " + role + "\n"); werr != nil {
+				slog.Warn("failed to write role", "error", werr)
+			}
+			content := m.OfFunction.Content.Value
+			if _, werr := f.WriteString("content: " + content + "\n"); werr != nil {
+				slog.Warn("failed to write content", "error", werr)
+			}
 		}
-		f.WriteString("Response: " + res.Choices[0].Message.Content + "\n")
-		f.WriteString(fmt.Sprintf("Usage: %+v\n", tu))
-		f.WriteString(strings.Repeat("=", 80) + "\n\n")
+		// response
+		resp := res.Choices[0].Message.Content
+		if _, werr := f.WriteString("Response: " + resp + "\n"); werr != nil {
+			slog.Warn("failed to write response", "error", werr)
+		}
+		// usage summary
+		if _, werr := f.WriteString(fmt.Sprintf("Usage: %+v\n", tu)); werr != nil {
+			slog.Warn("failed to write usage summary", "error", werr)
+		}
+		if _, werr := f.WriteString(strings.Repeat("=", 80) + "\n\n"); werr != nil {
+			slog.Warn("failed to write separator", "error", werr)
+		}
 		f.Close()
+	} else {
+		slog.Warn("failed to open response log file", "error", ferr)
 	}
 	o.mu.Unlock()
 
