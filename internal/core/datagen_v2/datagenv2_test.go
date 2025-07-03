@@ -1,3 +1,9 @@
+//go:build datagenv2
+// +build datagenv2
+
+// only run when tests are run with go test -tags=datagenv2
+// this is to avoid having too many llm calls for tests
+
 package datagenv2
 
 import (
