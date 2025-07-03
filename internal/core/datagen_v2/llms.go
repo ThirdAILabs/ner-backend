@@ -44,6 +44,21 @@ func NewOpenAILLM(model, trackUsageAt string, temp float64) *OpenAILLM {
 	// Log file for full responses
 	respLog := filepath.Join(filepath.Dir(trackUsageAt), "response.txt")
 
+	if err := os.MkdirAll(filepath.Dir(trackUsageAt), 0755); err != nil {
+		slog.Warn("could not create usage dir", "dir", filepath.Dir(trackUsageAt), "error", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(respLog), 0755); err != nil {
+		slog.Warn("could not create response log dir", "dir", filepath.Dir(respLog), "error", err)
+	}
+
+	// Optionally, create empty files so you never hit “no such file” later
+	if f, err := os.Create(trackUsageAt); err == nil {
+		f.Close()
+	}
+	if f, err := os.Create(respLog); err == nil {
+		f.Close()
+	}
+
 	return &OpenAILLM{
 		client:       openai.NewClient(),
 		trackUsageAt: trackUsageAt,
