@@ -39,19 +39,20 @@ type BackendService struct {
 	publisher        messaging.Publisher
 	chunkTargetBytes int64
 	licensing        licensing.LicenseVerifier
+	enterpriseMode   bool
 }
 
 const (
-	ErrCodeDB    = 1001 // Custom internal code for DB errors
+	ErrCodeDB = 1001 // Custom internal code for DB errors
 )
 
-func NewBackendService(db *gorm.DB, storage storage.ObjectStore, uploadBucket string, pub messaging.Publisher, chunkTargetBytes int64, licenseVerifier licensing.LicenseVerifier) *BackendService {
+func NewBackendService(db *gorm.DB, storage storage.ObjectStore, uploadBucket string, pub messaging.Publisher, chunkTargetBytes int64, licenseVerifier licensing.LicenseVerifier, enterpriseMode bool) *BackendService {
 	if err := storage.CreateBucket(context.Background(), uploadBucket); err != nil {
 		slog.Error("error creating upload bucket", "error", err)
 		panic("failed to create upload bucket")
 	}
 
-	return &BackendService{db: db, storage: storage, uploadBucket: uploadBucket, publisher: pub, chunkTargetBytes: chunkTargetBytes, licensing: licenseVerifier}
+	return &BackendService{db: db, storage: storage, uploadBucket: uploadBucket, publisher: pub, chunkTargetBytes: chunkTargetBytes, licensing: licenseVerifier, enterpriseMode: enterpriseMode}
 }
 
 func (s *BackendService) AddRoutes(r chi.Router) {
@@ -96,6 +97,8 @@ func (s *BackendService) AddRoutes(r chi.Router) {
 	})
 
 	r.Get("/license", RestHandler(s.GetLicense))
+
+	r.Get("/enterprise", RestHandler(s.GetEnterpriseInfo))
 }
 
 func (s *BackendService) ListModels(r *http.Request) (any, error) {
@@ -293,7 +296,7 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		if err != nil {
 			return nil, CodedErrorf(http.StatusBadRequest, "invalid storage type: %v", err)
 		}
-	
+
 		_, err = storage.NewConnector(r.Context(), connectorType, req.StorageParams)
 		if err != nil {
 			return nil, CodedErrorf(http.StatusInternalServerError, "error validating connector params: %v", err)
@@ -322,12 +325,12 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 	}
 
 	report := database.Report{
-		Id:             uuid.New(),
-		ReportName:     req.ReportName,
-		ModelId:        req.ModelId,
-		StorageType:     req.StorageType,
-		StorageParams:   datatypes.JSON(req.StorageParams),
-		CreationTime:   time.Now().UTC(),
+		Id:            uuid.New(),
+		ReportName:    req.ReportName,
+		ModelId:       req.ModelId,
+		StorageType:   req.StorageType,
+		StorageParams: datatypes.JSON(req.StorageParams),
+		CreationTime:  time.Now().UTC(),
 	}
 
 	for _, tag := range req.Tags {
@@ -1040,6 +1043,10 @@ func (s *BackendService) GetLicense(r *http.Request) (any, error) {
 	}, nil
 }
 
+func (s *BackendService) GetEnterpriseInfo(r *http.Request) (any, error) {
+	return s.enterpriseMode, nil
+}
+
 func (s *BackendService) ValidateS3Access(r *http.Request) (any, error) {
 	req, err := ParseRequestQueryParams[api.ValidateS3BucketRequest](r)
 	if err != nil {
@@ -1050,12 +1057,12 @@ func (s *BackendService) ValidateS3Access(r *http.Request) (any, error) {
 		r.Context(),
 		storage.S3ConnectorParams{
 			Endpoint: req.S3Endpoint,
-			Region: req.Region,
-			Bucket: req.SourceS3Bucket,
-			Prefix: req.SourceS3Prefix,
+			Region:   req.Region,
+			Bucket:   req.SourceS3Bucket,
+			Prefix:   req.SourceS3Prefix,
 		},
 	)
-	
+
 	return nil, err
 }
 

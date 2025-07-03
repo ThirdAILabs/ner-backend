@@ -36,6 +36,7 @@ type Config struct {
 	Root             string `env:"ROOT" envDefault:"./pocket-shield"`
 	Port             int    `env:"PORT" envDefault:"3001"`
 	License          string `env:"LICENSE_KEY" envDefault:""`
+	EnterpriseMode   bool   `env:"ENTERPRISE_MODE" envDefault:"false"`
 	ModelDir         string `env:"MODEL_DIR" envDefault:""`
 	ModelType        string `env:"MODEL_TYPE"`
 	UploadBucket     string `env:"UPLOAD_BUCKET" envDefault:"uploads"`
@@ -53,7 +54,7 @@ func createDatabase(root string) *gorm.DB {
 	if err != nil {
 		log.Fatalf("Failed to set default storage provider: %v", err)
 	}
-	
+
 	path := filepath.Join(root, "db", "pocket-shield.db")
 	if err := os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
 		log.Fatalf("Failed to create database directory: %v", err)
@@ -104,7 +105,7 @@ func createQueue(db *gorm.DB) *messaging.InMemoryQueue {
 	return queue
 }
 
-func createServer(db *gorm.DB, storage storage.ObjectStore, queue messaging.Publisher, port int, modelDir string, modelType core.ModelType, uploadBucket string, licensing licensing.LicenseVerifier) *http.Server {
+func createServer(db *gorm.DB, storage storage.ObjectStore, queue messaging.Publisher, port int, modelDir string, modelType core.ModelType, uploadBucket string, licensing licensing.LicenseVerifier, enterpriseMode bool) *http.Server {
 	r := chi.NewRouter()
 
 	// Middleware
@@ -121,7 +122,7 @@ func createServer(db *gorm.DB, storage storage.ObjectStore, queue messaging.Publ
 	r.Use(middleware.Recoverer)                 // Recover from panics
 	r.Use(middleware.Timeout(60 * time.Second)) // Set request timeout
 
-	apiHandler := api.NewBackendService(db, storage, uploadBucket, queue, chunkTargetBytes, licensing)
+	apiHandler := api.NewBackendService(db, storage, uploadBucket, queue, chunkTargetBytes, licensing, enterpriseMode)
 
 	loaders := core.NewModelLoaders()
 
@@ -248,7 +249,7 @@ func main() {
 	if err := objectStore.DownloadDir(context.Background(), modelBucket, basicModel.Id.String(), basicModelDir, true); err != nil {
 		log.Fatalf("failed to download model: %v", err)
 	}
-	server := createServer(db, objectStore, queue, cfg.Port, basicModelDir, core.ParseModelType(cfg.ModelType), cfg.UploadBucket, licensing)
+	server := createServer(db, objectStore, queue, cfg.Port, basicModelDir, core.ParseModelType(cfg.ModelType), cfg.UploadBucket, licensing, cfg.EnterpriseMode)
 
 	slog.Info("starting worker")
 	go worker.Start()
