@@ -22,7 +22,7 @@ type WorkerConfig struct {
 	S3Region                    string `env:"S3_REGION"`
 	S3AccessKeyID               string `env:"INTERNAL_AWS_ACCESS_KEY_ID"`
 	S3SecretAccessKey           string `env:"INTERNAL_AWS_SECRET_ACCESS_KEY"`
-	BucketName                  string `env:"bucket_name,notEmpty,required"`
+	BucketName                  string `env:"BUCKET_NAME,notEmpty,required"`
 	LicenseKey                  string `env:"LICENSE_KEY" envDefault:""`
 	PythonExecutablePath        string `env:"PYTHON_EXECUTABLE_PATH" envDefault:"python"`
 	PythonModelPluginScriptPath string `env:"PYTHON_MODEL_PLUGIN_SCRIPT_PATH" envDefault:"plugin/plugin-python/plugin.py"`
