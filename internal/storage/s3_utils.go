@@ -11,9 +11,9 @@ import (
 )
 
 type S3ClientConfig struct {
-	Endpoint string
-	Region string
-	AccessKeyID string
+	Endpoint        string
+	Region          string
+	AccessKeyID     string
 	SecretAccessKey string
 }
 
@@ -77,7 +77,7 @@ func validateParams(ctx context.Context, client *s3.Client, bucket, prefix strin
 	if bucket == "" {
 		return fmt.Errorf("bucket is required")
 	}
-	
+
 	if _, err := client.HeadBucket(ctx, &s3.HeadBucketInput{
 		Bucket: aws.String(bucket),
 	}); err != nil {
