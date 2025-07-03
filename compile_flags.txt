@@ -2,10 +2,7 @@
 wasm32-unknown-emscripten
 -DEMSCRIPTEN
 -D__EMSCRIPTEN__
--I/opt/homebrew/Cellar/emscripten/4.0.10/libexec/system/include
--I/opt/homebrew/Cellar/emscripten/4.0.10/libexec/system/include/emscripten
 -I/opt/homebrew/Cellar/emscripten/4.0.10/libexec/cache/sysroot/include
--I/opt/homebrew/Cellar/emscripten/4.0.10/libexec/cache/sysroot/include/emscripten
 -std=c17
 -Wall
 -Wextra 
