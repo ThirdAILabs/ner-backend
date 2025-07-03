@@ -14,6 +14,7 @@ import { useLicense } from '@/hooks/useLicense';
 import useTelemetry from '@/hooks/useTelemetry';
 
 import { nerBaseUrl } from '@/lib/axios.config';
+import SourceCard from '@/components/ui/cards/sourceCard';
 
 const SUPPORTED_TYPES = ['.pdf', '.txt', '.csv', '.html', '.json', '.xml'];
 
@@ -63,10 +64,9 @@ const ModelOption: React.FC<ModelOptionProps> = ({
   <div
     className={`relative p-6 border rounded-md transition-all
       ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200 border-2'}
-      ${
-        disabled
-          ? 'opacity-85 cursor-not-allowed bg-gray-50'
-          : 'cursor-pointer hover:border-blue-300'
+      ${disabled
+        ? 'opacity-85 cursor-not-allowed bg-gray-50'
+        : 'cursor-pointer hover:border-blue-300'
       }
     `}
     onClick={() => !disabled && onClick()}
@@ -117,31 +117,19 @@ const SourceOption: React.FC<SourceOptionProps> = ({
   disabled = false,
 }) => (
   <div
-    className={`relative p-6 border-2 border-dashed rounded-lg transition-colors ${
-      disabled
-        ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
-        : 'border-gray-300 hover:border-blue-400 cursor-pointer'
-    }`}
-    onClick={disabled ? () => {} : onClick}
+    // className={`relative p-6 border-2 border-dashed rounded-lg transition-colors ${disabled
+    //     ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
+    //     : 'border-gray-300 hover:border-blue-400 cursor-pointer'
+    //   }`}
+    onClick={disabled ? () => { } : onClick}
   >
     {input && input}
-    <div className="flex flex-col items-center justify-center space-y-4">
-      <div className="flex items-center justify-center w-16 h-16 rounded-full bg-blue-50">
-        <svg
-          className="w-8 h-8 text-blue-500"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          {icon}
-        </svg>
-      </div>
-      <div className="text-center">
-        <h3 className="text-base font-medium mb-1">{title}</h3>
-        <p className="text-sm text-gray-500">{description}</p>
-        <p className="text-xs text-gray-400 mt-2">{disclaimer}</p>
-      </div>
-    </div>
+    <SourceCard
+      logo={icon}
+      title={title}
+      subtitle={description}
+      info={disclaimer}
+    />
   </div>
 );
 
@@ -162,27 +150,43 @@ const FileSources: React.FC<FileSourcesProps> = ({
     <SourceOption
       onClick={() => selectSource('s3')}
       icon={
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
-        />
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-10 h-10 text-blue-500"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
+          />
+        </svg>
       }
       title="S3 Bucket"
       description="Scan files from an S3 bucket"
-      disclaimer="Public buckets only without enterprise subscription."
+      disclaimer={`Public buckets only without enterprise subscription. Email contact@thirdai.com for enterprise subscription.`}
       disabled={isLoadingFiles}
     />
   );
 
   const folderIcon = (
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-      d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-    />
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      className="w-10 h-10 text-blue-500"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+        d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+      />
+    </svg>
   );
 
   // @ts-ignore
@@ -817,20 +821,20 @@ export default function NewJobPage() {
         CustomTags: customTagsObj,
         ...(selectedSource === 's3'
           ? {
-              StorageType: 's3',
-              StorageParams: {
-                Endpoint: sourceS3Endpoint,
-                Region: sourceS3Region,
-                Bucket: sourceS3Bucket,
-                Prefix: sourceS3Prefix,
-              },
-            }
+            StorageType: 's3',
+            StorageParams: {
+              Endpoint: sourceS3Endpoint,
+              Region: sourceS3Region,
+              Bucket: sourceS3Bucket,
+              Prefix: sourceS3Prefix,
+            },
+          }
           : {
-              StorageType: 'upload',
-              StorageParams: {
-                UploadId: uploadId,
-              },
-            }),
+            StorageType: 'upload',
+            StorageParams: {
+              UploadId: uploadId,
+            },
+          }),
         Groups: groups,
         ReportName: jobName,
       });
@@ -970,9 +974,8 @@ export default function NewJobPage() {
                   validateJobName(value);
                 }}
                 onBlur={() => validateJobName(jobName)}
-                className={`w-full p-2 border ${
-                  nameError ? 'border-red-500' : 'border-gray-300'
-                } rounded`}
+                className={`w-full p-2 border ${nameError ? 'border-red-500' : 'border-gray-300'
+                  } rounded`}
                 placeholder="Enter_Scan_Name"
                 required
               />
@@ -989,7 +992,7 @@ export default function NewJobPage() {
             </div>
           </Box>
 
-          <Box sx={{ bgcolor: 'grey.100', p: 3, borderRadius: 3 }}>
+          <Box sx={{ bgcolor: 'white', p: 3, borderRadius: 3 }}>
             <h2 className="text-2xl font-medium mb-4">Source</h2>
             <div className="relative">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
@@ -1374,9 +1377,8 @@ export default function NewJobPage() {
                         value={customTagName}
                         onChange={(e) => handleTagNameChange(e.target.value)}
                         onBlur={(e) => handleTagNameChange(e.target.value)}
-                        className={`w-full p-2 border ${
-                          nameError ? 'border-red-500' : 'border-gray-300'
-                        } rounded`}
+                        className={`w-full p-2 border ${nameError ? 'border-red-500' : 'border-gray-300'
+                          } rounded`}
                         placeholder="CUSTOM_TAG_NAME"
                         required
                       />

@@ -4,7 +4,7 @@ import * as _ from 'lodash';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Box, Typography } from '@mui/material';
-import { Card, CardTitle } from '@/components/ui/card/index';
+import { Card, CardTitle } from '@/components/ui/cards/index';
 import { FileText, MessageSquare } from 'lucide-react';
 
 function Choice({

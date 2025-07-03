@@ -25,6 +25,8 @@ import { formatFileSize } from '@/lib/utils';
 
 import Tooltip from '@mui/material/Tooltip';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import CustomisableCard from '@/components/ui/cards/customisableCard';
+import StatsCards from '@/components/stats/StatsCards';
 
 const Dashboard = () => {
   const recordEvent = useTelemetry();
@@ -114,276 +116,21 @@ const Dashboard = () => {
 
   return (
     <>
-      <Card
-        sx={{
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-          bgcolor: 'white',
-          borderRadius: '12px',
-          mx: 'auto',
-          maxWidth: '1400px',
-        }}
-      >
-        <CardContent sx={{ p: 4 }}>
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              mb: 4,
-            }}
-          >
-            <Typography
-              variant="h5"
-              sx={{
-                fontWeight: 600,
-                fontSize: '1.5rem',
-                color: '#4a5568',
-              }}
-            >
-              Metrics Dashboard
-            </Typography>
-          </Box>
-
-          <Box
-            sx={{
-              display: 'flex',
-              gap: 4,
-              alignItems: 'flex-start',
-              mb: 4,
-              '& .MuiFormControl-root': {
-                bgcolor: 'white',
-                borderRadius: '8px',
-                '& .MuiSelect-select': {
-                  py: 1.5,
-                },
-              },
-            }}
-          >
-            {/* Days Filter */}
-            <Box>
-              <Typography
-                variant="subtitle2"
-                gutterBottom
-                sx={{
-                  fontWeight: 600,
-                  color: '#475569',
-                  mb: 1,
-                }}
-              >
-                Days
-              </Typography>
-              <FormControl
-                size="small"
-                sx={{
-                  minWidth: 120,
-                  '& .MuiOutlinedInput-root': {
-                    borderColor: 'grey.200',
-                    '&:hover': {
-                      borderColor: 'grey.300',
-                    },
-                  },
-                }}
-              >
-                <Select
-                  value={days}
-                  onChange={(e) => setDays(Number(e.target.value))}
-                  displayEmpty
-                  sx={{
-                    bgcolor: '#f8fafc',
-                    '&:hover': {
-                      bgcolor: '#f1f5f9',
-                    },
-                  }}
-                >
-                  <MenuItem value={1}>1 day</MenuItem>
-                  <MenuItem value={7}>7 days</MenuItem>
-                  <MenuItem value={30}>30 days</MenuItem>
-                </Select>
-              </FormControl>
-            </Box>
-
-            {/* Model Filter */}
-            <Box flex={1} sx={{ maxWidth: 300 }}>
-              <Typography
-                variant="subtitle2"
-                gutterBottom
-                sx={{
-                  fontWeight: 600,
-                  color: '#475569',
-                  mb: 1,
-                }}
-              >
-                Model
-              </Typography>
-              <FormControl
-                size="small"
-                fullWidth
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderColor: 'grey.200',
-                    '&:hover': {
-                      borderColor: 'grey.300',
-                    },
-                  },
-                }}
-              >
-                <Select
-                  value={selectedModel?.Name || ''}
-                  displayEmpty
-                  onChange={handleModelChange}
-                  renderValue={(val) =>
-                    val === ''
-                      ? 'All Models'
-                      : models.find((m) => m.Id === val)?.Name
-                        ? models
-                            .find((m) => m.Id === val)!
-                            .Name.charAt(0)
-                            .toUpperCase() + models.find((m) => m.Id === val)!.Name.slice(1)
-                        : val
-                  }
-                  sx={{
-                    bgcolor: '#f8fafc',
-                    '&:hover': {
-                      bgcolor: '#f1f5f9',
-                    },
-                  }}
-                >
-                  <MenuItem value="">
-                    <em>All Models</em>
-                  </MenuItem>
-                  {models.map((m) => (
-                    <MenuItem
-                      key={m.Id}
-                      value={m.Id}
-                      sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
-                    >
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 1,
-                          flexGrow: 1,
-                        }}
-                      >
-                        {m.Name.charAt(0).toUpperCase() + m.Name.slice(1)}
-                        {m.Status === 'TRAINING' && (
-                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <CircularProgress size={16} sx={{ ml: 1 }} />
-                            <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
-                              Training...
-                            </Typography>
-                          </Box>
-                        )}
-                        {m.Status === 'QUEUED' && (
-                          <Typography variant="caption" sx={{ ml: 1, color: 'text.secondary' }}>
-                            Queued
-                          </Typography>
-                        )}
-                      </Box>
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
-          </Box>
-
-          {/* Model Details */}
-          {selectedModel && (
-            <Box sx={{ mb: 4, ml: 4 }}>
-              {selectedModel.CreationTime && (
-                <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>
-                  Started Training: {new Date(selectedModel.CreationTime).toLocaleString()}
-                </Typography>
-              )}
-
-              {selectedModel.BaseModelId && (
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  Base Model:{' '}
-                  {(() => {
-                    const baseModel = models.find((m) => m.Id === selectedModel?.BaseModelId);
-                    if (baseModel?.Name) {
-                      return baseModel.Name.charAt(0).toUpperCase() + baseModel.Name.slice(1);
-                    }
-                    return 'Unknown';
-                  })()}
-                </Typography>
-              )}
-            </Box>
-          )}
-
-          {/* Metrics Viewer */}
-          <Box
-            sx={{
-              bgcolor: 'white',
-              borderRadius: '12px',
-              border: '1px solid',
-              borderColor: 'grey.200',
-              overflow: 'hidden',
-            }}
-          >
-            <MetricsDataViewer modelId={selectedModel?.Id || undefined} days={days} />
-          </Box>
-        </CardContent>
-      </Card>
-
-      {license && license?.LicenseInfo?.LicenseType === 'free' && (
-        <Card
-          sx={{
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            bgcolor: 'white',
-            borderRadius: '12px',
-            mx: 'auto',
-            mt: 4,
-            maxWidth: '1400px',
-          }}
-        >
-          <CardContent sx={{ p: 4 }}>
-            <Box
-              sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                mb: 4,
-              }}
-            >
-              <Typography
-                variant="h5"
-                sx={{
-                  fontWeight: 600,
-                  fontSize: '1.5rem',
-                  color: '#4a5568',
-                }}
-              >
-                Free Tier Quota
-              </Typography>
-            </Box>
-
-            <Box
-              sx={{
-                bgcolor: 'white',
-                borderRadius: '12px',
-                border: '1px solid',
-                borderColor: 'grey.200',
-                overflow: 'hidden',
-              }}
-            >
-              <div style={{ padding: '16px' }}>
-                <MetricsDataViewerCard
-                  value={`${formatFileSize(license?.LicenseInfo?.Usage.UsedBytes)} / ${formatFileSize(license?.LicenseInfo?.Usage.MaxBytes)}`}
-                  label={
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      Quota Used
-                      <Tooltip title="Resets on the 1st of each month.">
-                        <InfoOutlinedIcon fontSize="inherit" sx={{ cursor: 'pointer' }} />
-                      </Tooltip>
-                    </Box>
-                  }
-                />
-              </div>
-            </Box>
-          </CardContent>
-        </Card>
-      )}
+      {/* <CustomisableCard className="p-6 bg-white mt-5"
+        width='242px'
+        height='179.5px'
+        backgroundImage='/success.png'>
+        <div className="flex flex-col">
+          <span className="text-6xl font-bold text-blue-500">5</span>
+          <div>
+            <h3 className="text-xl font-semibold text-gray-700">Completed Scans</h3>
+            <p className="text-sm text-gray-500">Ready to review.</p>
+          </div>
+        </div>
+      </CustomisableCard> */}
+      <div className="container py-4">
+        <StatsCards />
+      </div>
     </>
   );
 };
