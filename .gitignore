@@ -64,3 +64,7 @@ main
 
 plugin/.cache
 plugin/plugin-python/.cache
+
+# Empty C files (used for CGO)
+empty.c
+empty.o

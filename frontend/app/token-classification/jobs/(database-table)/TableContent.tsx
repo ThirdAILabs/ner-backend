@@ -63,13 +63,13 @@ export function TableContent({
 
     // If not found, try extracting filename from path
     if (!fullPath) {
-      // Handle both forward slash and backslash separators
-      const parts = fileIdentifier.split(/[/\\]/);
-      const filename = parts[parts.length - 1];
+      // Use a more robust method to extract the filename
+      // This handles both forward slash and backslash separators
+      const filename = fileIdentifier.replace(/^.*[\\\/]/, '');
       fullPath = pathMap?.[filename];
 
       // If still not found and there's an uploadId prefix, try without it
-      if (!fullPath && parts.length > 1) {
+      if (!fullPath && fileIdentifier.includes('/') || fileIdentifier.includes('\\')) {
         // The format might be uploadId\filename or uploadId/filename
         fullPath = pathMap?.[filename];
       }
