@@ -132,7 +132,17 @@ func (o *OpenAILLM) Generate(systemPrompt, prompt string, responseFormat openai.
 			if _, werr := f.WriteString("role: " + role + "\n"); werr != nil {
 				slog.Warn("failed to write role", "error", werr)
 			}
-			content := m.GetContent().AsAny().(string)
+			raw := m.GetContent().AsAny()
+			var content string
+			switch v := raw.(type) {
+			case *string:
+				content = *v
+			case string:
+				content = v
+			default:
+				content = fmt.Sprint(v)
+			}
+
 			if _, werr := f.WriteString("content: " + content + "\n"); werr != nil {
 				slog.Warn("failed to write content", "error", werr)
 			}
