@@ -3,21 +3,11 @@
   "name": "NER Text Analyzer",
   "version": "1.0.0",
   "description": "Extract and analyze text from web pages for Named Entity Recognition",
-  
-  "declarative_net_request": {
-    "rule_resources": [{
-      "id": "ruleset_1",
-      "enabled": true,
-      "path": "rules.json"
-    }]
-  },
 
   "permissions": [
     "activeTab",
     "storage",
-    "scripting",
-    "declarativeNetRequest",
-    "declarativeNetRequestWithHostAccess"
+    "scripting"
   ],
   
   "host_permissions": [
