@@ -27,7 +27,7 @@ type APIConfig struct {
 	S3Region          string `env:"S3_REGION"`
 	S3AccessKeyID     string `env:"INTERNAL_AWS_ACCESS_KEY_ID"`
 	S3SecretAccessKey string `env:"INTERNAL_AWS_SECRET_ACCESS_KEY"`
-	BucketName        string `env:"bucket_name,notEmpty,required"`
+	BucketName        string `env:"BUCKET_NAME,notEmpty,required"`
 	APIPort           string `env:"API_PORT" envDefault:"8001"`
 	ChunkTargetBytes  int64  `env:"S3_CHUNK_TARGET_BYTES" envDefault:"10737418240"`
 	LicenseKey        string `env:"LICENSE_KEY" envDefault:""`
