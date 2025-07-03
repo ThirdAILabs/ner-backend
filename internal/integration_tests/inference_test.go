@@ -80,7 +80,14 @@ var expected = []string{
 	"123",
 }
 
-func createData(t *testing.T, storage storage.ObjectStore) {
+func createData(t *testing.T, minioEndpoint string) {
+	storage, err := storage.NewS3ObjectStore(dataBucket, storage.S3ClientConfig{
+		Endpoint:        minioEndpoint,
+		AccessKeyID:     minioUsername,
+		SecretAccessKey: minioPassword,
+	})
+	require.NoError(t, err)
+
 	for i := 0; i < 10; i++ {
 		phonePath := fmt.Sprintf("phone-%d.txt", i)
 		phoneData := fmt.Sprintf("this file contains a phone number %d%d%d-123-4567", i, i, i)
@@ -91,12 +98,10 @@ func createData(t *testing.T, storage storage.ObjectStore) {
 		emailPath := fmt.Sprintf("email-%d.txt", i)
 		emailData := fmt.Sprintf("this file contains a email address id-%d@email.com", i)
 
-		err = storage.PutObject(context.Background(), filepath.Join(dataBucket, emailPath), strings.NewReader(emailData))
-		require.NoError(t, err)
+		require.NoError(t, storage.PutObject(context.Background(), filepath.Join(dataBucket, emailPath), strings.NewReader(emailData)))
 	}
 
-	err := storage.PutObject(context.Background(), filepath.Join(dataBucket, "custom-token.txt"), strings.NewReader("this is a custom token a1b2c3"))
-	require.NoError(t, err)
+	require.NoError(t, storage.PutObject(context.Background(), filepath.Join(dataBucket, "custom-token.txt"), strings.NewReader("this is a custom token a1b2c3")))
 }
 
 func createReport(t *testing.T, router http.Handler, req api.CreateReportRequest) uuid.UUID {
@@ -175,7 +180,7 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 	go worker.Start()
 	defer worker.Stop()
 
-	createData(t, s3ObjectStore)
+	createData(t, minioUrl)
 
 	storageParams, _ := json.Marshal(map[string]any{"Endpoint": minioUrl, "Bucket": dataBucket})
 
