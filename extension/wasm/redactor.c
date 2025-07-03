@@ -3,6 +3,17 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+// String duplication function that works everywhere
+static char* string_duplicate(const char* s) {
+    if (!s) return NULL;
+    size_t len = strlen(s) + 1;
+    char* copy = malloc(len);
+    if (copy) {
+        memcpy(copy, s, len);
+    }
+    return copy;
+}
+
 // JavaScript interop function for HTTP requests
 EM_JS(char*, http_post_sync, (const char* url, const char* json_body), {
     var urlStr = UTF8ToString(url);
@@ -37,6 +48,66 @@ EM_JS(char*, http_post_sync, (const char* url, const char* json_body), {
         return stringOnWasmHeap;
     }
 });
+
+// Create JSON request body with proper escaping for large text
+static char* create_json_body(const char* text) {
+    if (!text) return NULL;
+    
+    size_t text_len = strlen(text);
+    
+    // Calculate maximum possible size needed:
+    // - Each character could potentially be escaped (doubled)
+    // - Add space for JSON structure: {"message":""}
+    // - Add some padding for safety
+    size_t max_escaped_len = text_len * 2;
+    size_t json_overhead = 20; // {"message":""}
+    size_t total_size = max_escaped_len + json_overhead + 1; // +1 for null terminator
+    
+    // Allocate memory for escaped text
+    char* escaped_text = malloc(max_escaped_len + 1);
+    if (!escaped_text) {
+        printf("Failed to allocate memory for escaped text\n");
+        return NULL;
+    }
+    
+    // Escape JSON characters
+    size_t j = 0;
+    for (size_t i = 0; i < text_len && j < max_escaped_len - 1; i++) {
+        if (text[i] == '"') {
+            escaped_text[j++] = '\\';
+            escaped_text[j++] = '"';
+        } else if (text[i] == '\\') {
+            escaped_text[j++] = '\\';
+            escaped_text[j++] = '\\';
+        } else if (text[i] == '\n') {
+            escaped_text[j++] = '\\';
+            escaped_text[j++] = 'n';
+        } else if (text[i] == '\r') {
+            escaped_text[j++] = '\\';
+            escaped_text[j++] = 'r';
+        } else if (text[i] == '\t') {
+            escaped_text[j++] = '\\';
+            escaped_text[j++] = 't';
+        } else {
+            escaped_text[j++] = text[i];
+        }
+    }
+    escaped_text[j] = '\0';
+    
+    // Allocate memory for final JSON body
+    char* json_body = malloc(total_size);
+    if (!json_body) {
+        printf("Failed to allocate memory for JSON body\n");
+        free(escaped_text);
+        return NULL;
+    }
+    
+    // Create JSON body
+    snprintf(json_body, total_size, "{\"message\":\"%s\"}", escaped_text);
+    
+    free(escaped_text);
+    return json_body;
+}
 
 // Parse JSON response to extract the Message field
 static char* parse_message_from_json(const char* json_response) {
@@ -92,22 +163,12 @@ char* redact(const char* session_id, const char* text) {
     char api_url[512];
     snprintf(api_url, sizeof(api_url), "http://localhost:16549/api/v1/chat/sessions/%s/redact", session_id);
     
-    // Build JSON body
-    char json_body[2048];
-    // Simple JSON escaping - replace quotes with escaped quotes
-    char escaped_text[1024];
-    int j = 0;
-    for (int i = 0; text[i] && j < sizeof(escaped_text) - 2; i++) {
-        if (text[i] == '"') {
-            escaped_text[j++] = '\\';
-            escaped_text[j++] = '"';
-        } else {
-            escaped_text[j++] = text[i];
-        }
+    // Build JSON body using helper function
+    char* json_body = create_json_body(text);
+    if (!json_body) {
+        printf("Failed to create JSON body\n");
+        return string_duplicate(text);
     }
-    escaped_text[j] = '\0';
-    
-    snprintf(json_body, sizeof(json_body), "{\"message\":\"%s\"}", escaped_text);
     
     printf("Making POST request to: %s\n", api_url);
     printf("Request body: %s\n", json_body);
@@ -115,9 +176,12 @@ char* redact(const char* session_id, const char* text) {
     // Make the HTTP request
     char* response = http_post_sync(api_url, json_body);
     
+    // Clean up JSON body
+    free(json_body);
+    
     if (!response) {
         printf("Failed to get response from server\n");
-        return strdup(text);
+        return string_duplicate(text);
     }
     
     printf("Response: %s\n", response);
@@ -128,7 +192,7 @@ char* redact(const char* session_id, const char* text) {
     
     if (!redacted_message) {
         printf("Failed to parse message from response\n");
-        return strdup(text);
+        return string_duplicate(text);
     }
     
     printf("Redacted message: %s\n", redacted_message);
@@ -138,12 +202,51 @@ char* redact(const char* session_id, const char* text) {
 
 // Simplified restore function (just returns text as-is since we use HTTP API)
 EMSCRIPTEN_KEEPALIVE
-char* restore(const char* text) {
-    if (!text) return NULL;
+char* restore(const char* session_id, const char* text) {
+    if (!text || !session_id) return NULL;
     
-    // Since we're using HTTP API for redaction, restoration would also
-    // need to go through the API. For now, just return the text as-is.
-    return strdup(text);
+    printf("Restoring text: %s\n", text);
+    printf("Restoring for session: %s\n", session_id);
+    
+    // Build the API URL
+    char api_url[512];
+    snprintf(api_url, sizeof(api_url), "http://localhost:16549/api/v1/chat/sessions/%s/restore", session_id);
+    
+    // Build JSON body using helper function
+    char* json_body = create_json_body(text);
+    if (!json_body) {
+        printf("Failed to create JSON body\n");
+        return string_duplicate(text);
+    }
+    
+    printf("Making POST request to: %s\n", api_url);
+    printf("Request body: %s\n", json_body);
+    
+    // Make the HTTP request
+    char* response = http_post_sync(api_url, json_body);
+    
+    // Clean up JSON body
+    free(json_body);
+    
+    if (!response) {
+        printf("Failed to get response from server\n");
+        return string_duplicate(text);
+    }
+    
+    printf("Response: %s\n", response);
+    
+    // Parse the response to extract the Message field
+    char* restored_message = parse_message_from_json(response);
+    free(response);
+    
+    if (!restored_message) {
+        printf("Failed to parse message from response\n");
+        return string_duplicate(text);
+    }
+    
+    printf("Restored message: %s\n", restored_message);
+    
+    return restored_message;
 }
 
 // Clear redaction mappings (simplified - no local mappings anymore)
@@ -179,60 +282,3 @@ void cleanup_redactor() {
     clear_redaction_mappings();
     printf("Redactor cleanup completed\n");
 }
-
-#ifdef TEST_BUILD
-// Test main function for native compilation
-int main() {
-    printf("Testing C redactor module...\n");
-    
-    // Initialize the redactor
-    if (!init_redactor()) {
-        printf("Failed to initialize redactor\n");
-        return 1;
-    }
-    
-    // Test text
-    const char* test_text = "Contact John Doe at john.doe@email.com or call 555-123-4567";
-    printf("Original: %s\n", test_text);
-    
-    // Test redaction
-    char* redacted = redact(test_text);
-    if (redacted) {
-        printf("Redacted: %s\n", redacted);
-        
-        // Test restoration
-        char* restored = restore(redacted);
-        if (restored) {
-            printf("Restored: %s\n", restored);
-            
-            // Check if restoration worked
-            if (strcmp(test_text, restored) == 0) {
-                printf("✓ Test passed: Redaction and restoration work correctly\n");
-            } else {
-                printf("✗ Test failed: Restoration doesn't match original\n");
-            }
-            
-            free(restored);
-        } else {
-            printf("✗ Test failed: Restoration returned NULL\n");
-        }
-        
-        free(redacted);
-    } else {
-        printf("✗ Test failed: Redaction returned NULL\n");
-    }
-    
-    // Test statistics
-    char* stats = get_redaction_stats();
-    if (stats) {
-        printf("Statistics: %s\n", stats);
-        free(stats);
-    }
-    
-    // Cleanup
-    cleanup_redactor();
-    
-    printf("Test completed\n");
-    return 0;
-}
-#endif 

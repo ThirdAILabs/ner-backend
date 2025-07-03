@@ -15,7 +15,10 @@ EMFLAGS = -s WASM=1 \
           -s EXPORTED_RUNTIME_METHODS='["ccall", "cwrap", "allocate", "intArrayFromString", "ALLOC_NORMAL", "UTF8ToString", "stringToUTF8", "lengthBytesUTF8"]' \
           -s EXPORTED_FUNCTIONS='["_redact", "_restore", "_clear_redaction_mappings", "_get_redaction_stats", "_free_string", "_init_redactor", "_cleanup_redactor", "_malloc", "_free"]' \
           -s MODULARIZE=1 \
+		  -s EXPORT_ES6=1 \
           -s EXPORT_NAME='RedactorModule' \
+          -s ENVIRONMENT=web \
+          -s SINGLE_FILE=0 \
           -s USE_PTHREADS=0 \
           -s ALLOW_MEMORY_GROWTH=1 \
           -s INITIAL_MEMORY=16777216 \
@@ -52,7 +55,18 @@ $(WASM_OUTPUT): $(SOURCES)
 # Test the C module locally (compile and run native version)
 test:
 	@echo "Testing C redactor module..."
-	@gcc -DTEST_BUILD redactor.c -o test_redactor && ./test_redactor && rm -f test_redactor || echo "Test compilation failed - this is expected without Emscripten"
+	@gcc -std=c99 -Wall test_redactor.c -o test_redactor
+	@echo "Running tests..."
+	@./test_redactor
+	@echo "Cleaning up test executable..."
+	@rm -f test_redactor
+
+# Test compilation only (useful for CI/CD)
+test-compile:
+	@echo "Testing compilation only..."
+	@gcc -std=c99 -Wall test_redactor.c -o test_redactor
+	@echo "Compilation successful!"
+	@rm -f test_redactor
 
 # Clean build artifacts
 clean:
@@ -87,7 +101,8 @@ serve:
 help:
 	@echo "Available targets:"
 	@echo "  all              - Build the WebAssembly module"
-	@echo "  test             - Test the Python module locally"
+	@echo "  test             - Test the C module locally (compile and run)"
+	@echo "  test-compile     - Test compilation only (no execution)"
 	@echo "  clean            - Clean build artifacts"
 	@echo "  install-deps     - Install general dependencies"
 	@echo "  install-deps-ubuntu - Install dependencies on Ubuntu/Debian"

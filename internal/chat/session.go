@@ -117,15 +117,15 @@ func (session *ChatSession) redact(text string, tagMetadata TagMetadata) (string
 func (session *ChatSession) Redact(text string) (string, error) {
 	tagMetadata, err := session.getTagMetadata()
 
-	slog.Info("Redacting text", "text", text)
-
 	if err != nil {
 		return "", fmt.Errorf("error getting tag metadata: %v", err)
 	}
 	
-	redactedText, _, err := session.redact(text, tagMetadata)
+	redactedText, newTagMetadata, err := session.redact(text, tagMetadata)
 
-	slog.Info("Redacting text", "text", text)
+	if err := session.updateTagMetadata(newTagMetadata); err != nil {
+		return "", fmt.Errorf("error updating tag metadata: %v", err)
+	}
 	
 	if err != nil {
 		return "", fmt.Errorf("error redacting text: %v", err)

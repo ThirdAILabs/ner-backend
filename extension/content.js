@@ -3,6 +3,7 @@ class PromptInterceptor {
 
   constructor() {}
 
+  // processText MUST be synchronous.
   register(processText) {
     if (this.registered) {
       return;
@@ -22,7 +23,7 @@ class PromptInterceptor {
             }
           }
         }
-      }, true);
+      }, /* useCapture */ true); // Use capture has to be true to catch the event before the built in handlers
       console.log("Prompt registered");
       this.registered = true;
     }
@@ -114,37 +115,47 @@ async function initializeRedactor() {
 }
 }
 
-// Wrapper functions that use the WASM redactor
-const redact = async (text) => {
-  if (!wasmRedactor) {
-    await initializeRedactor();
-  }
-  return wasmRedactor.redact(text);
+// Extract session ID from ChatGPT URL
+function getSessionId() {
+  const url = window.location.href;
+  const match = url.match(/\/c\/([a-f0-9-]+)/);
+  return match ? match[1] : 'default-session';
 }
 
-const unredact = async (text) => {
-  if (!wasmRedactor) {
-    await initializeRedactor();
-  }
-  return wasmRedactor.restore(text);
+// Wrapper functions that use the WASM redactor
+const redact = (text) => {
+  const sessionId = getSessionId();
+  console.log("🔍 About to redact:", text, "Session:", sessionId);
+  const result = wasmRedactor.redact(text, sessionId);
+  console.log("✅ Redaction result:", result);
+  return result;
+}
+
+const restore = (text) => {
+  const sessionId = getSessionId();
+  console.log("🔍 About to restore:", text, "Session:", sessionId);
+  const result = wasmRedactor.restore(text, sessionId);
+  console.log("✅ Restoration result:", result);
+  return result;
 }
 
 const observer = new MutationObserver(async (mutations) => {
-  console.log("Mutation observer triggered", mutations);
+  // console.log("Mutation observer triggered", mutations);
   
   // Initialize redactor if not already done
   if (!wasmRedactor) {
     await initializeRedactor();
   }
   
-  // Register prompt interceptor with async redact
-  promptInterceptor.register(async (text) => {
-    return await redact(text);
+  promptInterceptor.register((text) => {
+    return redact(text);
   });
   
-  // Register message modifier with async unredact
-  await messageModifier.register('[data-message-author-role="assistant"]', async (text) => {
-    return await unredact(text);
+  messageModifier.register('[data-message-author-role="assistant"]', (text) => {
+    return restore(text);
+  });
+  messageModifier.register('[data-message-author-role="user"]', (text) => {
+    return restore(text);
   });
 });
 

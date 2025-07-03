@@ -364,6 +364,7 @@ func (s *ChatService) getExtensionSession(sessionID uuid.UUID) (*chat.ChatSessio
 		if err != nil {
 			return nil, err
 		}
+		session, err = s.db.GetSession(sessionID)
 	}
 	if !session.ExtensionSessionId.Valid {
 		return nil, fmt.Errorf("this endpoint is only available for extension sessions, session %s is not an extension session", sessionID)

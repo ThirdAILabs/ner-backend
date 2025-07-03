@@ -42,13 +42,33 @@ class WasmRedactor {
     try {
       console.log('Loading WASM redactor module...');
       
-      // Load the Emscripten-generated module
-      const RedactorModule = await import(`${wasmPath}redactor.js`);
-      this.module = await RedactorModule.default();
+      const wasmDir = chrome.runtime.getURL('wasm/build/');
+      console.log("wasmDir", wasmDir);
+      const res = await fetch(wasmDir + 'redactor.js', { method: 'HEAD' });
+      console.log("res", res);
+      const importResult = (await import(`${wasmDir}redactor.js`));
+      console.log("importResult", importResult);
+      const createRedactorModule = importResult.default;
+      console.log("createRedactorModule", createRedactorModule);
+      this.module = await createRedactorModule({
+        locateFile: (path) => wasmDir + path,
+      });
+
+      console.log('WASM module loaded:', this.module);
+      
+      console.log('WASM module ready:', this.module);
+      console.log('Available functions:', Object.keys(this.module));
+      console.log('Has cwrap?', typeof this.module.cwrap);
+      console.log('Has ccall?', typeof this.module.ccall);
+
+      // Check if module is properly initialized
+      if (!this.module.cwrap || typeof this.module.cwrap !== 'function') {
+        throw new Error('Module missing cwrap function. Available functions: ' + Object.keys(this.module).join(', '));
+      }
 
       // Wrap the exported functions
-      this.redactFunc = this.module.cwrap('redact', 'string', ['string']);
-      this.restoreFunc = this.module.cwrap('restore', 'string', ['string']);
+      this.redactFunc = this.module.cwrap('redact', 'string', ['string', 'string']); // session_id, text
+      this.restoreFunc = this.module.cwrap('restore', 'string', ['string', 'string']);
       this.clearFunc = this.module.cwrap('clear_redaction_mappings', null, []);
       this.statsFunc = this.module.cwrap('get_redaction_stats', 'string', []);
       this.freeFunc = this.module.cwrap('free_string', null, ['number']);
@@ -77,16 +97,18 @@ class WasmRedactor {
   /**
    * Redact sensitive information from text
    * @param {string} text - Text to redact
+   * @param {string} sessionId - Session ID for the redaction
    * @returns {string} - Redacted text
    */
-  redact(text) {
+  redact(text, sessionId = 'default-session') {
     if (!this.initialized || !this.redactFunc) {
       console.warn('WASM redactor not initialized, returning original text');
       return text;
     }
 
     try {
-      return this.redactFunc(text);
+      console.log('🔧 WASM calling redact with session:', sessionId, 'text:', text);
+      return this.redactFunc(sessionId, text);
     } catch (error) {
       console.error('Error in WASM redact:', error);
       return text;
@@ -98,14 +120,14 @@ class WasmRedactor {
    * @param {string} text - Text to restore
    * @returns {string} - Restored text
    */
-  restore(text) {
+  restore(text, sessionId = 'default-session') {
     if (!this.initialized || !this.restoreFunc) {
       console.warn('WASM redactor not initialized, returning original text');
       return text;
     }
 
     try {
-      return this.restoreFunc(text);
+      return this.restoreFunc(sessionId, text);
     } catch (error) {
       console.error('Error in WASM restore:', error);
       return text;
