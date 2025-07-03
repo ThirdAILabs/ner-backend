@@ -64,3 +64,6 @@ main
 
 plugin/.cache
 plugin/plugin-python/.cache
+
+# Default app directory when running go run cmd/local/main.go
+pocket-shield/
