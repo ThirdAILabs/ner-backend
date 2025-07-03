@@ -108,6 +108,13 @@ func (o *OpenAILLM) Generate(systemPrompt, prompt string, responseFormat openai.
 	tu.PromptTokens += res.Usage.PromptTokens
 	tu.TotalTokens += res.Usage.TotalTokens
 
+	if err := os.MkdirAll(filepath.Dir(o.trackUsageAt), 0755); err != nil {
+		slog.Warn("could not mkdir usage dir", "dir", filepath.Dir(o.trackUsageAt), "error", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(o.responseFile), 0755); err != nil {
+		slog.Warn("could not mkdir response dir", "dir", filepath.Dir(o.responseFile), "error", err)
+	}
+
 	// write usage JSON
 	if f, ferr := os.Create(o.trackUsageAt); ferr == nil {
 		if jerr := json.NewEncoder(f).Encode(o.usage); jerr != nil {
