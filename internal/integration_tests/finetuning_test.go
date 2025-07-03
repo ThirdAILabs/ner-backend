@@ -38,9 +38,9 @@ func setupCommon(t *testing.T) (
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Minute)
 
 	minioURL := setupMinioContainer(t, ctx)
-	
+
 	s3ObjectStore, err := storage.NewS3ObjectStore(storage.S3ClientConfig{
-		Endpoint:     minioURL,
+		Endpoint:        minioURL,
 		AccessKeyID:     minioUsername,
 		SecretAccessKey: minioPassword,
 	})
@@ -50,7 +50,7 @@ func setupCommon(t *testing.T) (
 	db = createDB(t)
 	pub, sub = setupRabbitMQContainer(t, ctx)
 
-	backendSvc := backendpkg.NewBackendService(db, s3ObjectStore, "uploads", pub, 120, &DummyLicenseVerifier{})
+	backendSvc := backendpkg.NewBackendService(db, s3ObjectStore, "uploads", pub, 120, &DummyLicenseVerifier{}, true)
 	r := chi.NewRouter()
 	backendSvc.AddRoutes(r)
 
@@ -133,11 +133,11 @@ func TestFinetuning(t *testing.T) {
 	tempFile := filepath.Join(t.TempDir(), "model.json")
 	err := s3ObjectStore.DownloadObject(context.Background(), modelBucket, fmt.Sprintf("%s/model.json", model.Id), tempFile)
 	require.NoError(t, err)
-	
+
 	file, err := os.Open(tempFile)
 	require.NoError(t, err)
 	defer file.Close()
-	
+
 	var data map[string]string
 	require.NoError(t, json.NewDecoder(file).Decode(&data))
 	assert.Contains(t, data, "xyz")
@@ -361,11 +361,11 @@ func TestFinetuningOnnxModel(t *testing.T) {
 	storageParams, _ := json.Marshal(map[string]any{"UploadId": uploadId})
 
 	reportId := createReport(t, router, api.CreateReportRequest{
-		ReportName:   "test-report",
-		ModelId:      model.Id,
+		ReportName:    "test-report",
+		ModelId:       model.Id,
 		StorageType:   string(storage.UploadType),
 		StorageParams: storageParams,
-		Tags:         tags,
+		Tags:          tags,
 	})
 
 	report := waitForReport(t, router, reportId, 10)
