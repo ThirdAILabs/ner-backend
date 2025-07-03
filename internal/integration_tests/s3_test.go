@@ -1,87 +1,114 @@
-package storage
+package integrationtests
 
 import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
+	"ner-backend/internal/storage"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func setupTestObjectStore(t *testing.T) (*LocalObjectStore, string) {
+const (
+	bucketName = "test-bucket"
+	subdir     = "test-subdir"
+)
+
+func setupTestObjectStore(t *testing.T, ctx context.Context) (*storage.S3ObjectStore, string) {
 	t.Helper()
-	dir := t.TempDir()
-	objectStore, err := NewLocalObjectStore(dir)
+
+	endpoint := setupMinioContainer(t, ctx)
+
+	objectStore, err := storage.NewS3ObjectStore(bucketName, storage.S3ClientConfig{
+		Endpoint:        endpoint,
+		AccessKeyID:     minioUsername,
+		SecretAccessKey: minioPassword,
+	})
 	require.NoError(t, err)
-	return objectStore, dir
+	return objectStore, endpoint
 }
 
-func setupTestConnector(t *testing.T) (*LocalConnector, *LocalObjectStore, string) {
+func setupTestConnector(t *testing.T, ctx context.Context) (*storage.S3ObjectStore, *storage.S3Connector) {
 	t.Helper()
-	objectStore, dir := setupTestObjectStore(t)
-	connector := NewLocalConnector(
-		LocalConnectorParams{
-			BaseDir: dir,
-			SubDir:  "test-subdir",
+	objectStore, endpoint := setupTestObjectStore(t, ctx)
+
+	connector, err := storage.NewS3ConnectorWithAccessKey(
+		ctx,
+		storage.S3ConnectorParams{
+			Endpoint: endpoint,
+			Bucket:   bucketName,
+			Prefix:   subdir,
 		},
+		minioUsername,
+		minioPassword,
 	)
-	return connector, objectStore, dir
+	require.NoError(t, err)
+
+	return objectStore, connector
 }
 
-func TestLocalObjectStore_PutObject(t *testing.T) {
-	objectStore, baseDir := setupTestObjectStore(t)
+func TestS3ObjectStore_PutObject(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+
+	objectStore, _ := setupTestObjectStore(t, ctx)
 
 	key := "test-dir/test-file.txt"
 	content := []byte("Test content")
 
-	err := objectStore.PutObject(context.Background(), key, bytes.NewReader(content))
+	err := objectStore.PutObject(ctx, key, bytes.NewReader(content))
 	require.NoError(t, err)
 
-	filePath := filepath.Join(baseDir, key)
-	data, err := os.ReadFile(filePath)
+	obj, err := objectStore.GetObject(ctx, key)
+	require.NoError(t, err)
+	defer obj.Close()
+
+	data, err := io.ReadAll(obj)
 	require.NoError(t, err)
 	assert.Equal(t, content, data)
 }
 
-func TestLocalObjectStore_DeleteObjects(t *testing.T) {
-	objectStore, baseDir := setupTestObjectStore(t)
+func TestS3ObjectStore_DeleteObjects(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+
+	objectStore, _ := setupTestObjectStore(t, ctx)
 
 	prefix := "test-dir"
 
 	// Create some test files
-	files := []string{"test-dir/file1.txt", "test-dir/file2.txt", "other-dir/file3.txt"}
+	files := []string{"test-dir/file1.txt", "test-dir/subdir/file2.txt", "other-dir/file3.txt"}
 	for _, file := range files {
-		filePath := filepath.Join(baseDir, file)
-		require.NoError(t, os.MkdirAll(filepath.Dir(filePath), os.ModePerm))
-		require.NoError(t, os.WriteFile(filePath, []byte("content"), os.ModePerm))
+		require.NoError(t, objectStore.PutObject(ctx, file, bytes.NewReader([]byte("content: "+file))))
 	}
 
-	err := objectStore.DeleteObjects(context.Background(), prefix)
+	objs, err := objectStore.ListObjects(ctx, prefix)
 	require.NoError(t, err)
+	assert.Len(t, objs, 2)
 
-	// Verify files in the prefix were deleted
-	for _, file := range []string{"test-dir/file1.txt", "test-dir/file2.txt"} {
-		filePath := filepath.Join(baseDir, file)
-		_, err := os.Stat(filePath)
-		assert.True(t, os.IsNotExist(err), "File %s should not exist", file)
-	}
+	require.NoError(t, objectStore.DeleteObjects(context.Background(), prefix))
 
-	// Verify files outside the prefix still exist
-	otherFilePath := filepath.Join(baseDir, "other-dir/file3.txt")
-	_, err = os.Stat(otherFilePath)
-	assert.NoError(t, err, "File outside prefix should still exist")
+	newObjs, err := objectStore.ListObjects(ctx, prefix)
+	require.NoError(t, err)
+	assert.Len(t, newObjs, 0)
 }
 
-func TestLocalObjectStore_UploadDir(t *testing.T) {
-	objectStore, baseDir := setupTestObjectStore(t)
+func TestS3ObjectStore_UploadDir(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
 
-	dest := "uploaded"
+	objectStore, _ := setupTestObjectStore(t, ctx)
+
 	srcDir := t.TempDir()
+	dest := "uploaded"
 
 	// Create test files in the source directory
 	files := []string{"file1.txt", "file2.txt", "subdir/file3.txt"}
@@ -96,15 +123,23 @@ func TestLocalObjectStore_UploadDir(t *testing.T) {
 
 	// Verify files were uploaded by checking content
 	for _, file := range files {
-		uploadedPath := filepath.Join(baseDir, dest, file)
-		data, err := os.ReadFile(uploadedPath)
+		uploadedPath := filepath.Join(dest, file)
+
+		obj, err := objectStore.GetObject(ctx, uploadedPath)
+		require.NoError(t, err)
+		defer obj.Close()
+
+		data, err := io.ReadAll(obj)
 		require.NoError(t, err)
 		assert.Equal(t, "content: "+file, string(data))
 	}
 }
 
-func TestLocalObjectStore_DownloadDir(t *testing.T) {
-	objectStore, baseDir := setupTestObjectStore(t)
+func TestS3ObjectStore_DownloadDir(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+
+	objectStore, _ := setupTestObjectStore(t, ctx)
 
 	src := "to-download"
 	destDir := filepath.Join(t.TempDir(), "download-target")
@@ -112,9 +147,7 @@ func TestLocalObjectStore_DownloadDir(t *testing.T) {
 	// Create test files in the object store
 	files := []string{"file1.txt", "file2.txt", "subdir/file3.txt"}
 	for _, file := range files {
-		filePath := filepath.Join(baseDir, src, file)
-		require.NoError(t, os.MkdirAll(filepath.Dir(filePath), os.ModePerm))
-		require.NoError(t, os.WriteFile(filePath, []byte("content"), os.ModePerm))
+		require.NoError(t, objectStore.PutObject(ctx, filepath.Join(src, file), strings.NewReader("content: "+file)))
 	}
 
 	err := objectStore.DownloadDir(context.Background(), src, destDir, false)
@@ -125,12 +158,15 @@ func TestLocalObjectStore_DownloadDir(t *testing.T) {
 		downloadedPath := filepath.Join(destDir, file)
 		data, err := os.ReadFile(downloadedPath)
 		require.NoError(t, err)
-		assert.Equal(t, "content", string(data))
+		assert.Equal(t, "content: "+file, string(data))
 	}
 }
 
-func TestLocalObjectStore_DownloadDir_Overwrite(t *testing.T) {
-	objectStore, baseDir := setupTestObjectStore(t)
+func TestS3ObjectStore_DownloadDir_Overwrite(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+
+	objectStore, _ := setupTestObjectStore(t, ctx)
 
 	src := "to-download"
 	destDir := t.TempDir()
@@ -141,9 +177,7 @@ func TestLocalObjectStore_DownloadDir_Overwrite(t *testing.T) {
 	// Create test files in the object store
 	files := []string{"file1.txt", "file2.txt"}
 	for _, file := range files {
-		filePath := filepath.Join(baseDir, src, file)
-		require.NoError(t, os.MkdirAll(filepath.Dir(filePath), os.ModePerm))
-		require.NoError(t, os.WriteFile(filePath, []byte("new"), os.ModePerm))
+		require.NoError(t, objectStore.PutObject(ctx, filepath.Join(src, file), strings.NewReader("new content")))
 	}
 
 	// Try without overwrite first
@@ -158,49 +192,62 @@ func TestLocalObjectStore_DownloadDir_Overwrite(t *testing.T) {
 	require.NoError(t, err)
 	data, err = os.ReadFile(destFile)
 	require.NoError(t, err)
-	assert.Equal(t, "new", string(data), "File should be overwritten when overwrite=true")
+	assert.Equal(t, "new content", string(data), "File should be overwritten when overwrite=true")
 }
 
-func TestLocalObjectStore_GetUploadConnector(t *testing.T) {
-	objectStore, _ := setupTestObjectStore(t)
+func TestS3ObjectStore_GetUploadConnector(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
 
-	bucket := "test-bucket"
+	objectStore, _ := setupTestObjectStore(t, ctx)
+
+	uploadDir := "test-uploads"
 	uploadId := uuid.New()
 
-	connector, err := objectStore.GetUploadConnector(context.Background(), bucket, UploadParams{UploadId: uploadId})
+	connector, err := objectStore.GetUploadConnector(context.Background(), uploadDir, storage.UploadParams{UploadId: uploadId})
 	require.NoError(t, err)
 	require.NotNil(t, connector)
 }
 
-func TestLocalConnector_CreateInferenceTasks(t *testing.T) {
-	connector, objectStore, _ := setupTestConnector(t)
+func TestS3Connector_CreateInferenceTasks(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+
+	objectStore, connector := setupTestConnector(t, ctx)
 
 	// Create some test files
 	files := []string{"test-subdir/file1.txt", "test-subdir/file2.txt", "test-subdir/subdir/file3.txt"}
 	for _, file := range files {
-		err := objectStore.PutObject(context.Background(), file, bytes.NewReader([]byte("content")))
-		require.NoError(t, err)
+		require.NoError(t, objectStore.PutObject(ctx, file, bytes.NewReader(make([]byte, 20))))
 	}
 
-	targetBytes := int64(100) // Small target to force multiple tasks
+	targetBytes := int64(45) // Small target to force multiple tasks
 	tasks, totalObjects, err := connector.CreateInferenceTasks(context.Background(), targetBytes)
 	require.NoError(t, err)
-	assert.Greater(t, len(tasks), 0)
+	assert.Len(t, tasks, 2)
 	assert.Equal(t, int64(len(files)), totalObjects)
 
+	allChunkKeys := []string{}
 	// Verify task structure
 	for _, task := range tasks {
 		assert.Greater(t, task.TotalSize, int64(0))
 
-		var taskParams LocalConnectorTaskParams
+		var taskParams storage.S3ConnectorTaskParams
 		err := json.Unmarshal(task.Params, &taskParams)
 		require.NoError(t, err)
 		assert.Greater(t, len(taskParams.ChunkKeys), 0)
+
+		allChunkKeys = append(allChunkKeys, taskParams.ChunkKeys...)
 	}
+
+	assert.ElementsMatch(t, files, allChunkKeys)
 }
 
-func TestLocalConnector_IterTaskChunks(t *testing.T) {
-	connector, objectStore, _ := setupTestConnector(t)
+func TestS3Connector_IterTaskChunks(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+
+	objectStore, connector := setupTestConnector(t, ctx)
 
 	// Create test files with different content
 	testFiles := map[string]string{
@@ -213,7 +260,7 @@ func TestLocalConnector_IterTaskChunks(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	taskParams := LocalConnectorTaskParams{
+	taskParams := storage.S3ConnectorTaskParams{
 		ChunkKeys: []string{"test-subdir/file1.txt", "test-subdir/file2.txt"},
 	}
 	paramsBytes, err := json.Marshal(taskParams)
@@ -243,11 +290,14 @@ func TestLocalConnector_IterTaskChunks(t *testing.T) {
 	}
 }
 
-func TestLocalConnector_IterTaskChunks_WithErrors(t *testing.T) {
-	connector, _, _ := setupTestConnector(t)
+func TestS3Connector_IterTaskChunks_WithErrors(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+
+	_, connector := setupTestConnector(t, ctx)
 
 	// Create task params with non-existent files
-	taskParams := LocalConnectorTaskParams{
+	taskParams := storage.S3ConnectorTaskParams{
 		ChunkKeys: []string{"non-existent-file.txt"},
 	}
 	paramsBytes, err := json.Marshal(taskParams)
@@ -260,6 +310,11 @@ func TestLocalConnector_IterTaskChunks_WithErrors(t *testing.T) {
 	for stream := range chunkStreams {
 		if stream.Error != nil {
 			errorCount++
+		}
+		for chunk := range stream.Chunks {
+			if chunk.Error != nil {
+				errorCount++
+			}
 		}
 	}
 

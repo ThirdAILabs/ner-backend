@@ -42,16 +42,17 @@ type BackendService struct {
 }
 
 const (
-	ErrCodeDB    = 1001 // Custom internal code for DB errors
+	ErrCodeDB = 1001 // Custom internal code for DB errors
 )
 
 func NewBackendService(db *gorm.DB, storage storage.ObjectStore, uploadBucket string, pub messaging.Publisher, chunkTargetBytes int64, licenseVerifier licensing.LicenseVerifier) *BackendService {
-	if err := storage.CreateBucket(context.Background(), uploadBucket); err != nil {
-		slog.Error("error creating upload bucket", "error", err)
-		panic("failed to create upload bucket")
-	}
-
-	return &BackendService{db: db, storage: storage, uploadBucket: uploadBucket, publisher: pub, chunkTargetBytes: chunkTargetBytes, licensing: licenseVerifier}
+	return &BackendService{
+		db:               db,
+		storage:          storage,
+		uploadBucket:     uploadBucket,
+		publisher:        pub,
+		chunkTargetBytes: chunkTargetBytes,
+		licensing:        licenseVerifier}
 }
 
 func (s *BackendService) AddRoutes(r chi.Router) {
@@ -293,7 +294,7 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 		if err != nil {
 			return nil, CodedErrorf(http.StatusBadRequest, "invalid storage type: %v", err)
 		}
-	
+
 		_, err = storage.NewConnector(r.Context(), connectorType, req.StorageParams)
 		if err != nil {
 			return nil, CodedErrorf(http.StatusInternalServerError, "error validating connector params: %v", err)
@@ -322,12 +323,12 @@ func (s *BackendService) CreateReport(r *http.Request) (any, error) {
 	}
 
 	report := database.Report{
-		Id:             uuid.New(),
-		ReportName:     req.ReportName,
-		ModelId:        req.ModelId,
-		StorageType:     req.StorageType,
-		StorageParams:   datatypes.JSON(req.StorageParams),
-		CreationTime:   time.Now().UTC(),
+		Id:            uuid.New(),
+		ReportName:    req.ReportName,
+		ModelId:       req.ModelId,
+		StorageType:   req.StorageType,
+		StorageParams: datatypes.JSON(req.StorageParams),
+		CreationTime:  time.Now().UTC(),
 	}
 
 	for _, tag := range req.Tags {
@@ -861,7 +862,7 @@ func (s *BackendService) UploadFiles(r *http.Request) (any, error) {
 			filenames = append(filenames, part.FileName())
 
 			newFilepath := filepath.Join(uploadId.String(), part.FileName())
-			if err := s.storage.PutObject(r.Context(), s.uploadBucket, newFilepath, part); err != nil {
+			if err := s.storage.PutObject(r.Context(), filepath.Join(s.uploadBucket, newFilepath), part); err != nil {
 				slog.Error("error uploading file to storage", "error", err)
 				return nil, CodedErrorf(http.StatusInternalServerError, "error saving file")
 			}
@@ -1050,12 +1051,12 @@ func (s *BackendService) ValidateS3Access(r *http.Request) (any, error) {
 		r.Context(),
 		storage.S3ConnectorParams{
 			Endpoint: req.S3Endpoint,
-			Region: req.Region,
-			Bucket: req.SourceS3Bucket,
-			Prefix: req.SourceS3Prefix,
+			Region:   req.Region,
+			Bucket:   req.SourceS3Bucket,
+			Prefix:   req.SourceS3Prefix,
 		},
 	)
-	
+
 	return nil, err
 }
 

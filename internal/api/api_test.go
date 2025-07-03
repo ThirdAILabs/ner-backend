@@ -2,7 +2,6 @@ package api_test
 
 import (
 	"bytes"
-	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -41,10 +40,6 @@ func createDB(t *testing.T, create ...any) *gorm.DB {
 
 type mockStorage struct {
 	storage.ObjectStore
-}
-
-func (m *mockStorage) CreateBucket(ctx context.Context, bucket string) error {
-	return nil
 }
 
 func TestListModels(t *testing.T) {
@@ -172,12 +167,12 @@ func TestCreateReport(t *testing.T) {
 	storageParams, _ := json.Marshal(storage.S3ConnectorParams{Region: "us-east-2", Bucket: "thirdai-corp-public", Prefix: "sample-pdfs/MACH.pdf"})
 
 	payload := api.CreateReportRequest{
-		ReportName:     "test-report",
-		ModelId:        modelId,
-		StorageType:     string(storage.S3Type),
-		StorageParams:   json.RawMessage(storageParams),
-		Tags:           []string{"name", "phone"},
-		CustomTags:     map[string]string{"tag1": "pattern1", "tag2": "pattern2"},
+		ReportName:    "test-report",
+		ModelId:       modelId,
+		StorageType:   string(storage.S3Type),
+		StorageParams: json.RawMessage(storageParams),
+		Tags:          []string{"name", "phone"},
+		CustomTags:    map[string]string{"tag1": "pattern1", "tag2": "pattern2"},
 		Groups: map[string]string{
 			"group1": `label1 CONTAINS "xyz"`,
 			"group2": `COUNT(label2) > 8`,
@@ -238,12 +233,12 @@ func TestCreateReport_InvalidS3(t *testing.T) {
 	storageParams, _ := json.Marshal(storage.S3ConnectorParams{Bucket: "test-bucket", Prefix: "test-prefix"})
 
 	payload := api.CreateReportRequest{
-		ReportName:     "test-report",
-		ModelId:        modelId,
-		StorageType:     string(storage.S3Type),
-		StorageParams:   json.RawMessage(storageParams),
-		Tags:           []string{"name", "phone"},
-		CustomTags:     map[string]string{"tag1": "pattern1", "tag2": "pattern2"},
+		ReportName:    "test-report",
+		ModelId:       modelId,
+		StorageType:   string(storage.S3Type),
+		StorageParams: json.RawMessage(storageParams),
+		Tags:          []string{"name", "phone"},
+		CustomTags:    map[string]string{"tag1": "pattern1", "tag2": "pattern2"},
 		Groups: map[string]string{
 			"group1": `label1 CONTAINS "xyz"`,
 			"group2": `COUNT(label2) > 8`,
@@ -274,10 +269,10 @@ func TestGetReport(t *testing.T) {
 		&database.ModelTag{ModelId: modelId, Tag: "email"},
 		&database.ModelTag{ModelId: modelId, Tag: "phone"},
 		&database.Report{
-			Id:             reportId,
-			ModelId:        modelId,
-			StorageType:     string(storage.S3Type),
-			StorageParams:   datatypes.JSON(storageParams),
+			Id:            reportId,
+			ModelId:       modelId,
+			StorageType:   string(storage.S3Type),
+			StorageParams: datatypes.JSON(storageParams),
 			Groups: []database.Group{
 				{Id: group1, Name: "group_a", ReportId: reportId, Query: `label1 CONTAINS "xyz"`},
 				{Id: group2, Name: "group_b", ReportId: reportId, Query: `label1 = "xyz"`},
@@ -478,14 +473,14 @@ func TestReportSearch(t *testing.T) {
 	modelId, reportId := uuid.New(), uuid.New()
 
 	storageParams, _ := json.Marshal(storage.S3ConnectorParams{Bucket: "test-bucket", Prefix: "test-prefix"})
-	
+
 	db := createDB(t,
 		&database.Model{Id: modelId, Name: "Model1", Type: "regex", Status: database.ModelTrained},
 		&database.Report{
-			Id:             reportId,
-			ModelId:        modelId,
-			StorageType:     string(storage.S3Type),
-			StorageParams:   datatypes.JSON(storageParams),
+			Id:            reportId,
+			ModelId:       modelId,
+			StorageType:   string(storage.S3Type),
+			StorageParams: datatypes.JSON(storageParams),
 		},
 		&database.ObjectEntity{ReportId: reportId, Object: "object1", Start: 1, End: 2, Label: "label1", Text: "text1"},
 		&database.ObjectEntity{ReportId: reportId, Object: "object2", Start: 1, End: 1, Label: "label2", Text: "text2"},
@@ -679,13 +674,13 @@ func TestGetInferenceMetrics_WithTasks(t *testing.T) {
 
 	// A running task 30 min ago, 4 MiB, 300 tokens
 	db.Create(&database.InferenceTask{
-		ReportId:     uuid.New(),
-		TaskId:       1,
-		Status:       database.JobRunning,
-		CreationTime: now.Add(-30 * time.Minute),
-		TotalSize:    4 * 1024 * 1024,
-		TokenCount:   300,
-		StorageParams:  datatypes.JSON(json.RawMessage(`{"ChunkKeys": ["test-chunk-key"]}`)),
+		ReportId:      uuid.New(),
+		TaskId:        1,
+		Status:        database.JobRunning,
+		CreationTime:  now.Add(-30 * time.Minute),
+		TotalSize:     4 * 1024 * 1024,
+		TokenCount:    300,
+		StorageParams: datatypes.JSON(json.RawMessage(`{"ChunkKeys": ["test-chunk-key"]}`)),
 	})
 
 	svc := backend.NewBackendService(db, &mockStorage{}, "uploads", nil, 0, nil)
@@ -719,9 +714,9 @@ func TestGetInferenceMetrics_WithTasks(t *testing.T) {
 			Status: database.ModelTrained,
 		}).Error)
 		require.NoError(t, db.Create(&database.Report{
-			Id:      reportID,
-			ModelId: modelID,
-			StorageType: string(storage.S3Type),
+			Id:            reportID,
+			ModelId:       modelID,
+			StorageType:   string(storage.S3Type),
 			StorageParams: datatypes.JSON(json.RawMessage(`{"Bucket": "test-bucket", "Prefix": "test-prefix"}`)),
 		}).Error)
 

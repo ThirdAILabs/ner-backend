@@ -30,14 +30,13 @@ type TaskProcessor struct {
 	storage   storage.ObjectStore
 	publisher messaging.Publisher
 	reciever  messaging.Reciever
-	
+
 	licensing licensing.LicenseVerifier
-	
+
 	localModelDir string
 	modelBucket   string
 	uploadBucket  string
 	modelLoaders  map[ModelType]ModelLoader
-
 }
 
 const bytesPerMB = 1024 * 1024
@@ -51,15 +50,15 @@ var ExcludedTags = map[string]struct{}{
 
 func NewTaskProcessor(db *gorm.DB, storage storage.ObjectStore, publisher messaging.Publisher, reciever messaging.Reciever, licenseVerifier licensing.LicenseVerifier, localModelDir string, modelBucket string, uploadBucket string, modelLoaders map[ModelType]ModelLoader) *TaskProcessor {
 	return &TaskProcessor{
-		db:                      db,
-		storage:                 storage,
-		publisher:               publisher,
-		reciever:                reciever,
-		licensing:               licenseVerifier,
-		localModelDir:           localModelDir,
-		modelBucket:             modelBucket,
-		uploadBucket:            uploadBucket,
-		modelLoaders:            modelLoaders,
+		db:            db,
+		storage:       storage,
+		publisher:     publisher,
+		reciever:      reciever,
+		licensing:     licenseVerifier,
+		localModelDir: localModelDir,
+		modelBucket:   modelBucket,
+		uploadBucket:  uploadBucket,
+		modelLoaders:  modelLoaders,
 	}
 }
 
@@ -420,7 +419,7 @@ func (proc *TaskProcessor) loadModel(ctx context.Context, modelId uuid.UUID, mod
 		if _, err := os.Stat(localDir); os.IsNotExist(err) {
 			slog.Info("model not found locally, downloading from S3", "modelId", modelId)
 
-			if err := proc.storage.DownloadDir(ctx, proc.modelBucket, modelId.String(), localDir, false); err != nil {
+			if err := proc.storage.DownloadDir(ctx, filepath.Join(proc.modelBucket, modelId.String()), localDir, false); err != nil {
 				return nil, fmt.Errorf("failed to download model from S3: %w", err)
 			}
 		}
@@ -721,12 +720,12 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 		slog.Info("Creating inference task", "report_id", reportId, "task_id", taskId, "chunk_size", taskMetadata.TotalSize)
 
 		task := database.InferenceTask{
-			ReportId:     reportId,
-			TaskId:       taskId,
-			Status:       database.JobQueued,
-			CreationTime: time.Now().UTC(),
+			ReportId:      reportId,
+			TaskId:        taskId,
+			Status:        database.JobQueued,
+			CreationTime:  time.Now().UTC(),
 			StorageParams: taskMetadata.Params,
-			TotalSize:    taskMetadata.TotalSize,
+			TotalSize:     taskMetadata.TotalSize,
 		}
 
 		inferencePayload := messaging.InferenceTaskPayload{
@@ -862,7 +861,7 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 
 	slog.Info("finetuning completed", "model_id", payload.ModelId, "base_model_id", payload.BaseModelId)
 
-	if err := proc.storage.UploadDir(ctx, proc.modelBucket, payload.ModelId.String(), localDir); err != nil {
+	if err := proc.storage.UploadDir(ctx, localDir, filepath.Join(proc.modelBucket, payload.ModelId.String())); err != nil {
 		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint:errcheck
 		slog.Error("error uploading finetuned model to S3", "model_id", payload.ModelId, "error", err)
 		return fmt.Errorf("error uploading model to S3: %w", err)

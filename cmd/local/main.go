@@ -53,7 +53,7 @@ func createDatabase(root string) *gorm.DB {
 	if err != nil {
 		log.Fatalf("Failed to set default storage provider: %v", err)
 	}
-	
+
 	path := filepath.Join(root, "db", "pocket-shield.db")
 	if err := os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
 		log.Fatalf("Failed to create database directory: %v", err)
@@ -245,7 +245,7 @@ func main() {
 	}
 
 	basicModelDir := filepath.Join(cfg.Root, "models", basicModel.Id.String())
-	if err := objectStore.DownloadDir(context.Background(), modelBucket, basicModel.Id.String(), basicModelDir, true); err != nil {
+	if err := objectStore.DownloadDir(context.Background(), filepath.Join(modelBucket, basicModel.Id.String()), basicModelDir, true); err != nil {
 		log.Fatalf("failed to download model: %v", err)
 	}
 	server := createServer(db, objectStore, queue, cfg.Port, basicModelDir, core.ParseModelType(cfg.ModelType), cfg.UploadBucket, licensing)
