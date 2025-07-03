@@ -4,14 +4,19 @@ class PromptInterceptor {
   constructor() {}
 
   // processText MUST be synchronous.
-  register(processText) {
+  register(processText, force) {
+    if (force) {
+      this.registered = false;
+    }
     if (this.registered) {
       return;
     }
     const prompt = document.getElementById('prompt-textarea');
     if (prompt) {
       console.log("Prompt found");
+      console.log(prompt)
       prompt.addEventListener('keydown', async (e) => {
+        console.log("Prompt keydown", e.key);
         if (
           e.key === 'Enter' && !e.shiftKey ||
           e.key === 'Enter' && e.ctrlKey
@@ -62,10 +67,7 @@ class MessageModifier {
   }
 
   async recursivelyProcessText(node, processText, id) {
-    // console.log("Recursively processing text", node.textContent, id, getNodeTypeName(node.nodeType), this.registeredMessages[id], node, node.childNodes);
     if (node.nodeType === Node.TEXT_NODE && !this.registeredMessages[id]) {
-      // console.log("Registering message modifier for", id);
-      // console.log("Before", node.textContent);
       const after = await processText(node.textContent);
       node.textContent = after;
       this.registeredMessages[id] = true;
@@ -115,41 +117,64 @@ async function initializeRedactor() {
 }
 }
 
+var placeholderSessionId = null;
+
+// Custom UUID generator to avoid bundling dependencies. This is going to be ephemeral anyway;
+// it will be discarded when the page redirects to chatgpt/c/new-session-id.
+function generateUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
 // Extract session ID from ChatGPT URL
-function getSessionId() {
-  const url = window.location.href;
+function getSessionId(url) {
   const match = url.match(/\/c\/([a-f0-9-]+)/);
-  return match ? match[1] : 'default-session';
+  return match ? match[1] : null;
 }
 
 // Wrapper functions that use the WASM redactor
 const redact = (text) => {
-  const sessionId = getSessionId();
-  console.log("🔍 About to redact:", text, "Session:", sessionId);
+  console.log("Redacting", text);
+  var sessionId = getSessionId(document.location.href);
+  if (!sessionId) {
+    sessionId = generateUUID();
+    placeholderSessionId = sessionId;
+  }
   const result = wasmRedactor.redact(text, sessionId);
-  console.log("✅ Redaction result:", result);
   return result;
 }
 
 const restore = (text) => {
-  const sessionId = getSessionId();
-  console.log("🔍 About to restore:", text, "Session:", sessionId);
+  const sessionId = getSessionId(document.location.href);
   const result = wasmRedactor.restore(text, sessionId);
-  console.log("✅ Restoration result:", result);
   return result;
 }
 
+var oldHref = document.location.href;
+
 const observer = new MutationObserver(async (mutations) => {
-  // console.log("Mutation observer triggered", mutations);
-  
+  const locationChanged = document.location.href !== oldHref;
+  if (locationChanged) {
+    const oldHrefSessionId = getSessionId(oldHref);
+    const newHrefSessionId = getSessionId(document.location.href);
+    if (!oldHrefSessionId && !!placeholderSessionId && !!newHrefSessionId) {
+      wasmRedactor.updateExtensionId(placeholderSessionId, newHrefSessionId);
+      placeholderSessionId = null;
+    }
+    oldHref = document.location.href;
+  }
+
   // Initialize redactor if not already done
   if (!wasmRedactor) {
     await initializeRedactor();
   }
-  
+
   promptInterceptor.register((text) => {
     return redact(text);
-  });
+  }, /* force */ locationChanged);
   
   messageModifier.register('[data-message-author-role="assistant"]', (text) => {
     return restore(text);

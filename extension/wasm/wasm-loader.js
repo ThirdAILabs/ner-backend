@@ -10,6 +10,7 @@ class WasmRedactor {
     this.loading = false;
     
     // Function wrappers
+    this.updateExtensionIdFunc = null;
     this.redactFunc = null;
     this.restoreFunc = null;
     this.clearFunc = null;
@@ -67,6 +68,7 @@ class WasmRedactor {
       }
 
       // Wrap the exported functions
+      this.updateExtensionIdFunc = this.module.cwrap('update_extension_id', null, ['string', 'string']);
       this.redactFunc = this.module.cwrap('redact', 'string', ['string', 'string']); // session_id, text
       this.restoreFunc = this.module.cwrap('restore', 'string', ['string', 'string']);
       this.clearFunc = this.module.cwrap('clear_redaction_mappings', null, []);
@@ -94,6 +96,19 @@ class WasmRedactor {
     }
   }
 
+  updateExtensionId(oldSessionId, newSessionId) {
+    if (!this.initialized || !this.updateExtensionIdFunc) {
+      console.warn('WASM redactor not initialized, skipping update');
+      return;
+    }
+
+    try {
+      this.updateExtensionIdFunc(oldSessionId, newSessionId);
+    } catch (error) {
+      console.error('Error in WASM updateExtensionId:', error);
+    }
+  }
+  
   /**
    * Redact sensitive information from text
    * @param {string} text - Text to redact

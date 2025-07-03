@@ -74,6 +74,7 @@ func (s *ChatService) AddRoutes(r chi.Router) {
 		r.Get("/sessions/{session_id}/history", RestHandler(s.GetHistory))
 		r.Post("/sessions/{session_id}/redact", RestHandler(s.RedactMessage))
 		r.Post("/sessions/{session_id}/restore", RestHandler(s.RestoreMessage))
+		r.Post("/sessions/{session_id}/update-extension-id", RestHandler(s.UpdateExtensionId))
 		r.Get("/api-key", RestHandler(s.GetOpenAIApiKey))
 		r.Post("/api-key", RestHandler(s.SetOpenAIApiKey))
 		r.Delete("/api-key", RestHandler(s.DeleteOpenAIApiKey))
@@ -316,7 +317,7 @@ func (s *ChatService) RedactMessage(r *http.Request) (any, error) {
 		return nil, err
 	}
 
-	session, err := s.getExtensionSession(sessionID)
+	session, err := s.getExtensionSession(sessionID, true)
 	if err != nil {		
 		return nil, err
 	}
@@ -340,7 +341,7 @@ func (s *ChatService) RestoreMessage(r *http.Request) (any, error) {
 		return nil, err
 	}
 	
-	session, err := s.getExtensionSession(sessionID)
+	session, err := s.getExtensionSession(sessionID, false)
 	if err != nil {		
 		return nil, err
 	}
@@ -353,23 +354,41 @@ func (s *ChatService) RestoreMessage(r *http.Request) (any, error) {
 	return api.ChatMessage{Message: restoredText}, nil
 }
 
-func (s *ChatService) getExtensionSession(sessionID uuid.UUID) (*chat.ChatSession, error) {
-	session, err := s.db.GetSession(sessionID)
+func (s *ChatService) getExtensionSession(extensionID uuid.UUID, makeIfNotFound bool) (*chat.ChatSession, error) {
+	session, err := s.db.GetSessionByExtensionId(extensionID)
 	if err != nil {
-		if !errors.Is(err, gorm.ErrRecordNotFound) {
+		if !errors.Is(err, gorm.ErrRecordNotFound) || !makeIfNotFound {
 			return nil, err
 		}
 
-		err = s.db.CreateSession(sessionID, "Extension-" + sessionID.String(), uuid.NullUUID{UUID: sessionID, Valid: true})
+		err = s.db.CreateSession(uuid.New(), "Extension-" + extensionID.String(), uuid.NullUUID{UUID: extensionID, Valid: true})
 		if err != nil {
 			return nil, err
 		}
-		session, err = s.db.GetSession(sessionID)
+		session, err = s.db.GetSessionByExtensionId(extensionID)
 	}
 	if !session.ExtensionSessionId.Valid {
-		return nil, fmt.Errorf("this endpoint is only available for extension sessions, session %s is not an extension session", sessionID)
+		return nil, fmt.Errorf("this endpoint is only available for extension sessions, session %s is not an extension session", extensionID)
 	}
 
-	extensionSession := chat.NewExtensionChatSession(s.db, sessionID, s.model)
+	extensionSession := chat.NewExtensionChatSession(s.db, session.ID, s.model)
 	return &extensionSession, nil
+}
+
+func (s *ChatService) UpdateExtensionId(r *http.Request) (any, error) {
+	sessionID, err := URLParamUUID(r, "session_id")
+	if err != nil {
+		return nil, err
+	}
+	
+	req, err := ParseRequest[api.UpdateExtensionIdRequest](r)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.db.UpdateSessionExtensionId(sessionID, uuid.MustParse(req.ExtensionId)); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
 }

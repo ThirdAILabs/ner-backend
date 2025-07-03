@@ -50,17 +50,14 @@ EM_JS(char*, http_post_sync, (const char* url, const char* json_body), {
 });
 
 // Create JSON request body with proper escaping for large text
-static char* create_json_body(const char* text) {
+static char* create_json_body(const char* key, const char* text) {
     if (!text) return NULL;
     
     size_t text_len = strlen(text);
     
     // Calculate maximum possible size needed:
-    // - Each character could potentially be escaped (doubled)
-    // - Add space for JSON structure: {"message":""}
-    // - Add some padding for safety
     size_t max_escaped_len = text_len * 2;
-    size_t json_overhead = 20; // {"message":""}
+    size_t json_overhead = 10 + strlen(key); // {"key":""}
     size_t total_size = max_escaped_len + json_overhead + 1; // +1 for null terminator
     
     // Allocate memory for escaped text
@@ -103,10 +100,61 @@ static char* create_json_body(const char* text) {
     }
     
     // Create JSON body
-    snprintf(json_body, total_size, "{\"message\":\"%s\"}", escaped_text);
+    snprintf(json_body, total_size, "{\"%s\":\"%s\"}", key, escaped_text);
     
     free(escaped_text);
     return json_body;
+}
+
+// Unescape JSON characters - reverse of what create_json_body does
+static char* unescape_json_text(const char* escaped_text) {
+    if (!escaped_text) return NULL;
+    printf("Escaped text: %s\n", escaped_text);
+    size_t escaped_len = strlen(escaped_text);
+    char* unescaped = malloc(escaped_len + 1); // Unescaped will be same size or smaller
+    
+    if (!unescaped) {
+        printf("Failed to allocate memory for unescaping\n");
+        return NULL;
+    }
+    
+    size_t j = 0;
+    for (size_t i = 0; i < escaped_len; i++) {
+        if (escaped_text[i] == '\\' && i + 1 < escaped_len) {
+            // Handle escape sequences
+            switch (escaped_text[i + 1]) {
+                case '"':
+                    unescaped[j++] = '"';
+                    i++; // Skip the next character
+                    break;
+                case '\\':
+                    unescaped[j++] = '\\';
+                    i++; // Skip the next character
+                    break;
+                case 'n':
+                    unescaped[j++] = '\n';
+                    i++; // Skip the next character
+                    break;
+                case 'r':
+                    unescaped[j++] = '\r';
+                    i++; // Skip the next character
+                    break;
+                case 't':
+                    unescaped[j++] = '\t';
+                    i++; // Skip the next character
+                    break;
+                default:
+                    // If it's not a recognized escape sequence, keep the backslash
+                    unescaped[j++] = escaped_text[i];
+                    break;
+            }
+        } else {
+            unescaped[j++] = escaped_text[i];
+        }
+    }
+    
+    unescaped[j] = '\0';
+    return unescaped;
 }
 
 // Parse JSON response to extract the Message field
@@ -128,20 +176,47 @@ static char* parse_message_from_json(const char* json_response) {
     // Move past the key to the value
     message_start += strlen(message_key);
     
-    // Find the closing quote
-    const char* message_end = strchr(message_start, '"');
-    if (!message_end) return NULL;
+    // Find the closing quote, but skip over escaped quotes
+    const char* message_end = message_start;
+    while (*message_end) {
+        if (*message_end == '"') {
+            // Found a quote, check if it's escaped
+            // Count the number of preceding backslashes
+            int backslash_count = 0;
+            const char* temp = message_end - 1;
+            while (temp >= message_start && *temp == '\\') {
+                backslash_count++;
+                temp--;
+            }
+            
+            // If even number of backslashes (including 0), the quote is not escaped
+            if (backslash_count % 2 == 0) {
+                // This is the actual closing quote
+                break;
+            }
+        }
+        message_end++;
+    }
+    
+    if (!*message_end) return NULL; // Reached end of string without finding closing quote
     
     // Calculate length and allocate memory
     int message_length = message_end - message_start;
-    char* message = malloc(message_length + 1);
+    char* escaped_message = malloc(message_length + 1);
     
-    if (message) {
-        strncpy(message, message_start, message_length);
-        message[message_length] = '\0';
+    if (!escaped_message) {
+        printf("Failed to allocate memory for escaped message\n");
+        return NULL;
     }
     
-    return message;
+    strncpy(escaped_message, message_start, message_length);
+    escaped_message[message_length] = '\0';
+    
+    // Unescape the JSON-escaped text
+    char* unescaped_message = unescape_json_text(escaped_message);
+    free(escaped_message);
+    
+    return unescaped_message;
 }
 
 // Initialize redactor (simplified since we're using HTTP API)
@@ -149,6 +224,20 @@ EMSCRIPTEN_KEEPALIVE
 int init_redactor() {
     printf("Redactor initialized for HTTP API mode\n");
     return 1;
+}
+
+EMSCRIPTEN_KEEPALIVE
+void update_extension_id(const char* old_session_id, const char* new_session_id) {
+    printf("Updating extension ID from %s to %s\n", old_session_id, new_session_id);
+    char api_url[512];
+    snprintf(api_url, sizeof(api_url), "http://localhost:16549/api/v1/chat/sessions/%s/update-extension-id", old_session_id);
+    char* json_body = create_json_body("ExtensionId", new_session_id);
+    if (!json_body) {
+        printf("Failed to create JSON body\n");
+        return;
+    }
+    http_post_sync(api_url, json_body);
+    free(json_body);
 }
 
 // Main redaction function using HTTP API
@@ -164,7 +253,7 @@ char* redact(const char* session_id, const char* text) {
     snprintf(api_url, sizeof(api_url), "http://localhost:16549/api/v1/chat/sessions/%s/redact", session_id);
     
     // Build JSON body using helper function
-    char* json_body = create_json_body(text);
+    char* json_body = create_json_body("Message", text);
     if (!json_body) {
         printf("Failed to create JSON body\n");
         return string_duplicate(text);
@@ -213,7 +302,7 @@ char* restore(const char* session_id, const char* text) {
     snprintf(api_url, sizeof(api_url), "http://localhost:16549/api/v1/chat/sessions/%s/restore", session_id);
     
     // Build JSON body using helper function
-    char* json_body = create_json_body(text);
+    char* json_body = create_json_body("Message", text);
     if (!json_body) {
         printf("Failed to create JSON body\n");
         return string_duplicate(text);

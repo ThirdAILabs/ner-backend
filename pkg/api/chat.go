@@ -55,3 +55,7 @@ type ApiKey struct {
 type ChatMessage struct {
 	Message string
 }
+
+type UpdateExtensionIdRequest struct {
+	ExtensionId string
+}

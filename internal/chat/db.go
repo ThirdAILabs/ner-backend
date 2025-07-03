@@ -2,6 +2,7 @@ package chat
 
 import (
 	"encoding/json"
+	"log/slog"
 	"ner-backend/internal/database"
 	"sync"
 
@@ -55,6 +56,14 @@ func (c *ChatDB) GetSession(sessionID uuid.UUID) (database.ChatSession, error) {
 	return session, err
 }
 
+func (c *ChatDB) GetSessionByExtensionId(extensionID uuid.UUID) (database.ChatSession, error) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	var session database.ChatSession
+	err := c.db.First(&session, "extension_session_id = ?", extensionID).Error
+	return session, err
+}
+
 func (c *ChatDB) UpdateSessionTitle(sessionID uuid.UUID, title string) error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -88,4 +97,11 @@ func (c *ChatDB) SaveChatMessage(message *database.ChatHistory) error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	return c.db.Create(message).Error
+}
+
+func (c *ChatDB) UpdateSessionExtensionId(oldExtensionID uuid.UUID, newExtensionID uuid.UUID) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	slog.Info("Updating session extension ID", "oldExtensionID", oldExtensionID, "newExtensionID", newExtensionID)
+	return c.db.Model(&database.ChatSession{}).Where("extension_session_id = ?", uuid.NullUUID{UUID: oldExtensionID, Valid: true}).Update("extension_session_id", uuid.NullUUID{UUID: newExtensionID, Valid: true}).Error
 }
