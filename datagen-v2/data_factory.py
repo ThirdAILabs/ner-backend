@@ -11,8 +11,17 @@ from prompts import context_prompt as context_prompt_template
 from prompts import (
     annoated_data_generation_prompt as annotated_data_generation_prompt_template,
 )
+from prompts import (
+    annotated_text_verification_prompt as annotated_text_verification_prompt_template,
+)
 
-from utils import write_to_csv, requirements
+from utils import (
+    write_to_csv,
+    contextual_example_requirements,
+    required_requirements,
+    additional_requirements,
+    find_most_similar,
+)
 
 env = Environment()
 env.filters["random_sample"] = lambda lst, n: random.sample(lst, min(n, len(lst)))
@@ -98,13 +107,14 @@ class DataFactory:
         model: str = "gpt-4o",
         response_format: Optional[dict] = None,
         parallelize: bool = True,
-    ) -> str:
+        tqdm_desc: str = "Generating annotated data: ",
+    ) -> List[str]:
         responses = []
         if parallelize:
             from concurrent.futures import ThreadPoolExecutor, as_completed
 
             with ThreadPoolExecutor() as executor, tqdm.tqdm(
-                total=len(messages), desc="Generating annotated data: "
+                total=len(messages), desc=tqdm_desc, leave=False
             ) as pbar:
                 futures = []
 
@@ -126,7 +136,7 @@ class DataFactory:
                     except Exception as e:
                         print(f"Error processing message: {e}")
         else:
-            for message in tqdm.tqdm(messages, desc="Generating annotated data: "):
+            for message in tqdm.tqdm(messages, desc=tqdm_desc, leave=False):
                 try:
                     response = self.llm.completion(
                         model=model, messages=message, response_format=response_format
@@ -142,6 +152,7 @@ class DataFactory:
         tags_info: List[TagInfo],
         k: int = 1000,
         user_instructions: List[str] = [],
+        feedback: List[str] = [],
         write_batch_size: int = 200,
         generate_per_llm_call: int = 25,
     ):
@@ -160,7 +171,11 @@ class DataFactory:
 
         # ---------- (2) Generate Annotated Data ----------
         num_llm_calls_per_batch = write_batch_size // generate_per_llm_call
-        for i in range(0, k, write_batch_size):
+        total_batches = (k + write_batch_size - 1) // write_batch_size
+        for batch_idx, i in enumerate(
+            tqdm.tqdm(range(0, k, write_batch_size), desc="Generating batches")
+        ):
+            tqdm.tqdm.write(f"Generating batch: {batch_idx + 1}/{total_batches}")
             messages = []
             user_content_template = env.from_string(
                 annotated_data_generation_prompt_template.user_prompt
@@ -176,7 +191,15 @@ class DataFactory:
                         "content": user_content_template.render(
                             k=min(generate_per_llm_call, k - i),
                             tagInfo=tags_info,
-                            requirements=requirements,
+                            feedback=feedback,
+                            requirements=(
+                                contextual_example_requirements
+                                if feedback
+                                else [
+                                    required_requirements
+                                    + random.sample(additional_requirements, k=4)
+                                ]
+                            ),
                             user_instructions=user_instructions,
                         ),
                     },
@@ -188,18 +211,79 @@ class DataFactory:
                 model="gpt-4o",
                 response_format=annotated_data_generation_prompt_template.response_format_json,
                 parallelize=True,
+                tqdm_desc="Generating annotated data: ",
+            )
+
+            resp_annotated_texts = []
+            annotated_text_verification_messages = []
+            text_verification_template = env.from_string(
+                annotated_text_verification_prompt_template.user_prompt
+            )
+            for resp in responses:
+                try:
+                    temp = annotated_data_generation_prompt_template.AnnotatedData.model_validate_json(
+                        resp
+                    )
+                    temp.clean()
+                except Exception as e:
+                    continue
+
+                if not temp.sentences:
+                    continue
+
+                resp_annotated_texts.append(temp)
+                annotated_text_verification_messages.append(
+                    [
+                        {
+                            "role": "system",
+                            "content": annotated_text_verification_prompt_template.system_prompt,
+                        },
+                        {
+                            "role": "user",
+                            "content": text_verification_template.render(
+                                annotated_texts=temp.sentences,
+                                tagInfo=tags_info,
+                            ),
+                        },
+                    ]
+                )
+
+            # Run the verification prompt to check correctness of the generated annotated text
+            verification_responses = self.run_and_collect(
+                annotated_text_verification_messages,
+                model="gpt-4o",
+                response_format=annotated_text_verification_prompt_template.response_format_json,
+                parallelize=True,
+                tqdm_desc="Verifying annotated text: ",
             )
 
             annotated_text = []
-            for resp in responses:
+            for generated_annotated_texts, resp in zip(
+                resp_annotated_texts, verification_responses
+            ):
                 try:
-                    annotated_text.extend(
-                        annotated_data_generation_prompt_template.AnnotatedData.model_validate_json(
-                            resp
-                        ).sentences
+                    verified_texts = annotated_text_verification_prompt_template.AnnotatedTextSamples.model_validate_json(
+                        resp
                     )
+                    verification_responses.clean()
                 except Exception as e:
-                    pass
+                    continue
+
+                if not verified_texts.annotated_texts:
+                    # no corrections needed, so we can directly use the generated annotated texts
+                    annotated_text.extend(generated_annotated_texts.sentences)
+                    continue
+
+                for verified_text in verified_texts.annotated_texts:
+                    most_similar_text, sim_score = find_most_similar(
+                        verified_text, generated_annotated_texts.sentences
+                    )
+                    if sim_score > 0.9:
+                        annotated_text.append(verified_text)
+                        generated_annotated_texts.sentences.remove(most_similar_text)
+
+                # Add remaining generated annotated texts because they didn't required corrections.
+                annotated_text.extend(generated_annotated_texts.sentences)
 
             data_points = self.transform(
                 annotated_text,
@@ -215,17 +299,36 @@ class DataFactory:
                     fieldnames=["source", "target"],
                 )
 
+    def validate_sentence(self, source: str, target: str, tags_name: List[str]):
+        source_tokens = source.strip().split()
+        target_tokens = target.strip().split()
+
+        if len(source_tokens) != len(target_tokens):
+            raise ValueError(
+                f"Source and target lengths do not match: {len(source_tokens)} vs {len(target_tokens)}"
+            )
+
+        if "#" in source:
+            raise ValueError("text contains '#' character, which shouldn't exist.")
+
+        if all(token == "O" for token in target_tokens):
+            raise ValueError(
+                "All target tokens are 'O', which probably indicates mistagging."
+            )
+
+        return True
+
     def transform_sentence(
         self, annotated_text: str, tags_name: List[str], source_col, target_col: str
     ) -> Dict[str, str]:
-        annotated_text = annotated_text.strip()
+        source_tokens, target_tokens = [], []
         try:
+            annotated_text = annotated_text.strip()
             pattern = re.compile(
                 r"(?P<before>[^\w\s#]*)"
                 r"#+(?P<entity>[^#]+?)#+(?P<tag>[A-Z_]+)#+"
                 r"(?P<after>[^\w\s#']*[\w']*)?"
             )
-            source_tokens, target_tokens = [], []
 
             last_idx = 0
             for match in pattern.finditer(annotated_text):
@@ -262,13 +365,17 @@ class DataFactory:
                 source_tokens.extend(suffix_tokens)
                 target_tokens.extend(["O"] * len(suffix_tokens))
 
+            # Validate the sentence
+            source_text = " ".join(source_tokens)
+            target_text = " ".join(target_tokens)
+            self.validate_sentence(source_text, target_text, tags_name)
             return {
-                source_col: " ".join(source_tokens),
-                target_col: " ".join(target_tokens),
+                source_col: source_text,
+                target_col: target_text,
             }
-
         except Exception as e:
             pass
+
         return {
             source_col: " ".join(source_tokens),
             target_col: " ".join(target_tokens),
