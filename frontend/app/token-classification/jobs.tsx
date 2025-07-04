@@ -411,7 +411,7 @@ export default function Jobs() {
       Page: 'Reports Dashboard Page',
     });
   }, []);
-  console.log('license', license, 'isLicenseValid', isLicenseValid);
+
   useEffect(() => {
     let licenceValidityCheck = true;
     if (license && license.LicenseError) {
