@@ -6,7 +6,7 @@ system_prompt = """# You are a data generation assistant specialized in creating
 Your goal is to generate natural sentences where multiple types of entities (tags) appear in varied and realistic linguistic contexts. 
 """
 
-user_prompt = """## Task: Generate {{ k }} diverse and realistic sentences containing tokens labeled with the following tags.
+user_prompt = """## Task: Generate {{ k }} diverse and realistic sentences containing tokens labeled for the following tags.
 
 ### Tags information:
 {%- for tag in tagInfo %}
@@ -21,26 +21,27 @@ user_prompt = """## Task: Generate {{ k }} diverse and realistic sentences conta
 {% endfor %}
 
 > Token-Tag pair should be enclosed in this tagging format : ##tokens##TAG##
-{% if feedback -%}
+{%- if feedback -%}
 # Below are some Contextual examples.
 {%- for example in feedback | random_sample(4) %}
 - {{- example }}
 {% endfor %}
 {% else %}
+# Below are some examples of sentences with tokens and their tags:
 - "##Karun naiyar##NAME## lives at ##123 Main St, Springfield##ADDRESS##, and his birthday is ##January 1, 1990##DATE##."
-- "Working at Acme Corp, located in ##Los Angeles##ADDRESS##, and ##Maria Gomez##NAME## was born on ##March 15, 1985##DATE##."
-{% endif -%}
+- "Working at an unknown company, located in ##Los Angeles##ADDRESS##, and ##Maria Gomez##NAME## was born on ##March 15, 1985##DATE##."
+{% endif %}
 
 ## Requirements:
 {%- for req in requirements %}
-- {{ req -}}
-{% endfor %}
+- {{ req }}
+{%- endfor %}
 
 {% if user_instructions -%}
 ### Additional user instructions:
 {%- for req in user_instructions %}
-- {{ req -}}
-{% endfor -%}
+- {{ req }}
+{%- endfor %}
 {% endif -%}"""
 
 response_format_json = {

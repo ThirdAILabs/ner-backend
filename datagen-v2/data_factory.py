@@ -116,10 +116,8 @@ class DataFactory:
             with ThreadPoolExecutor() as executor, tqdm.tqdm(
                 total=len(messages), desc=tqdm_desc, leave=False
             ) as pbar:
-                futures = []
-
-                # Submit arguments to the executor
-                for msg in messages:
+                futures = {}
+                for i, msg in enumerate(messages):
                     future = executor.submit(
                         self.llm.completion,
                         model=model,
@@ -127,14 +125,17 @@ class DataFactory:
                         response_format=response_format,
                     )
                     future.add_done_callback(lambda p: pbar.update())
-                    futures.append(future)
+                    futures[future] = i
+
+                responses = [None] * len(messages)
 
                 for future in as_completed(futures):
+                    i = futures[future]
                     try:
                         response = future.result()
-                        responses.append(response.choices[0].message.content)
+                        responses[i] = response.choices[0].message.content
                     except Exception as e:
-                        print(f"Error processing message: {e}")
+                        print(f"Error processing message {i}: {e}")
         else:
             for message in tqdm.tqdm(messages, desc=tqdm_desc, leave=False):
                 try:
@@ -162,7 +163,7 @@ class DataFactory:
         output_file = os.path.join(self.out_dir, "generated_data.csv")
 
         # -----------(1) Extend the tag description, examples and get the tag contexts---------------
-        for tag in tqdm.tqdm(tags_info, desc="Enhancing tag information: "):
+        for tag in tqdm.tqdm(tags_info, desc="Enhancing tag information: ", leave=False):
             extended_desc = self.extend_description(tag)
             tag["desc"] = extended_desc
             tag["examples"].extend(self.extend_examples(tag, k=20))
@@ -173,9 +174,8 @@ class DataFactory:
         num_llm_calls_per_batch = write_batch_size // generate_per_llm_call
         total_batches = (k + write_batch_size - 1) // write_batch_size
         for batch_idx, i in enumerate(
-            tqdm.tqdm(range(0, k, write_batch_size), desc="Generating batches")
+            tqdm.tqdm(range(0, k, write_batch_size), desc="Generating batches" , total = total_batches)
         ):
-            tqdm.tqdm.write(f"Generating batch: {batch_idx + 1}/{total_batches}")
             messages = []
             user_content_template = env.from_string(
                 annotated_data_generation_prompt_template.user_prompt
@@ -195,10 +195,9 @@ class DataFactory:
                             requirements=(
                                 contextual_example_requirements
                                 if feedback
-                                else [
+                                else 
                                     required_requirements
                                     + random.sample(additional_requirements, k=4)
-                                ]
                             ),
                             user_instructions=user_instructions,
                         ),
@@ -265,7 +264,7 @@ class DataFactory:
                     verified_texts = annotated_text_verification_prompt_template.AnnotatedTextSamples.model_validate_json(
                         resp
                     )
-                    verification_responses.clean()
+                    verified_texts.clean()
                 except Exception as e:
                     continue
 
@@ -278,7 +277,7 @@ class DataFactory:
                     most_similar_text, sim_score = find_most_similar(
                         verified_text, generated_annotated_texts.sentences
                     )
-                    if sim_score > 0.9:
+                    if sim_score > 0.7:
                         annotated_text.append(verified_text)
                         generated_annotated_texts.sentences.remove(most_similar_text)
 
