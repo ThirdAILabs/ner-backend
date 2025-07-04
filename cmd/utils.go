@@ -174,8 +174,6 @@ func initializeModel(
 		return fmt.Errorf("local model dir %s is not a directory", localDir)
 	}
 
-	slog.Info("uploading model to S3", "model_id", model.Id, "local_dir", localDir, "bucket", bucket)
-
 	if err := s3p.UploadDir(ctx, bucket, model.Id.String(), localDir); err != nil {
 		database.UpdateModelStatus(ctx, db, model.Id, database.ModelFailed) // nolint:errcheck
 		slog.Warn("failed to upload model to S3", "model_id", model.Id, "error", err)
