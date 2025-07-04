@@ -53,8 +53,8 @@ class ExistingMessageModifier {
   setup() {
     for (const message of document.querySelectorAll('[data-message-author-role]')) {
       if (!this.seen.has(message.getAttribute("data-message-id"))) {
-        this.recursivelyProcessMessage(message, this.processText);
       }
+      this.recursivelyProcessMessage(message, this.processText);
       this.seen.add(message.getAttribute("data-message-id"));
     }
   }
@@ -110,6 +110,7 @@ function modifyParent(node, processText) {
 }
 
 function handleTextChange(node, processText) {
+  console.log("handleTextChange", node);
   if (!isMessage(node)) {
     return;
   }
@@ -127,7 +128,8 @@ function setupPage(redact, restore) {
   });
   const existingMessageModifier = new ExistingMessageModifier(restore);
   
-  let elementObserver = new MutationObserver(async () => {
+  let elementObserver = new MutationObserver(async (mut) => {
+    console.log("elementObserver", mut);
     promptInterceptor.setup();
     existingMessageModifier.setup();
   });
@@ -135,14 +137,15 @@ function setupPage(redact, restore) {
 
 
   doneWithInitialElements = () => {
-    elementObserver.disconnect();
-    elementObserver = null;
+    // elementObserver.disconnect();
+    // elementObserver = null;
 
     // Restore sensitive data in new messages as they come.
     newMessageObserver = new MutationObserver(async (mutations) => {
-      mutations.forEach(mutation => {
-        handleTextChange(mutation.target, restore);
-      })
+      console.log("newMessageObserver", mutations);
+      // mutations.forEach(mutation => {
+      //   handleTextChange(mutation.target, restore);
+      // })
     });
     newMessageObserver.observe(document.body, { characterData: true, subtree: true });
   }
