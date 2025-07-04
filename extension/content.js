@@ -1,8 +1,7 @@
 class PromptInterceptor {
-  constructor(processText, onSendPrompt) {
+  constructor(processText) {
     this.processText = processText;
     this.cleanupFn = null;
-    this.onSendPrompt = onSendPrompt;
   }
 
   setup() {
@@ -24,7 +23,6 @@ class PromptInterceptor {
               child.textContent = processedText;
             }
           }
-          this.onSendPrompt();
         }
       }
 
@@ -43,7 +41,7 @@ class PromptInterceptor {
   }
 }
 
-class ExistingMessageModifier {
+class MessageModifier {
   constructor(processText) {
     this.processText = processText;
     this.previousMessageId = null;
@@ -74,101 +72,22 @@ class ExistingMessageModifier {
     }
   }
 
-  // handleSendPrompt() {
-  //   this.hasSentOnce = true;
-  //   this.seenAfterLastSend.forEach(item => {
-  //     console.log("adding", item);
-  //     this.seenBeforeLastSend.add(item);
-  //   });
-  //   this.seenAfterLastSend.clear();
-  // }
-}
-
-function isMessage(node) {
-  let parent = node.parentElement;
-
-  while (parent !== null) {
-    if (parent.getAttribute('data-message-author-role')) {
-      return true;
-    }
-    parent = parent.parentElement;
-  }
-  return false;
-}
-
-function modifyParent(node, processText) {
-  let children = [];
-  node.childNodes.forEach(child => {
-    const lastChild = children[children.length - 1];
-    if (lastChild && lastChild.nodeType === Node.TEXT_NODE) {
-      lastChild.textContent = lastChild.textContent + child.textContent;
-    } else {
-      children.push(child);
-    }
-  });
-  let changed = false;
-  children.forEach(child => {
-    if (child.nodeType === Node.TEXT_NODE) {
-      const processed = processText(child.textContent);
-      if (processed !== child.textContent) {
-        child.textContent = processed;
-        changed = true;
-      }
-    }
-  });
-  if (changed) {
-    node.replaceChildren(...children);
-  }
-}
-
-function handleTextChange(node, processText) {
-  console.log("handleTextChange", node);
-  if (!isMessage(node)) {
-    return;
-  }
-  modifyParent(node.parentElement, processText);
 }
 
 function setupPage(redact, restore) {
-  let newMessageObserver = null;
-  let doneWithInitialElements = null;
-
-  const existingMessageModifier = new ExistingMessageModifier(restore);
-  const promptInterceptor = new PromptInterceptor(redact, () => {
-    if (doneWithInitialElements) {
-      doneWithInitialElements();
-    }
-  });
+  const promptInterceptor = new PromptInterceptor(redact);
+  const existingMessageModifier = new MessageModifier(restore);
   
   let elementObserver = new MutationObserver(async (mut) => {
-    console.log("elementObserver", mut);
     promptInterceptor.setup();
     existingMessageModifier.setup();
   });
   elementObserver.observe(document.body, { childList: true, subtree: true });
 
-
-  doneWithInitialElements = () => {
-    // elementObserver.disconnect();
-    // elementObserver = null;
-
-    // Restore sensitive data in new messages as they come.
-    // newMessageObserver = new MutationObserver(async (mutations) => {
-    //   console.log("newMessageObserver", mutations);
-      // mutations.forEach(mutation => {
-      //   handleTextChange(mutation.target, restore);
-      // })
-    // });
-    // newMessageObserver.observe(document.body, { characterData: true, subtree: true });
-  }
-
   return () => {
     promptInterceptor.cleanup();
     if (elementObserver) {
       elementObserver.disconnect();
-    }
-    if (newMessageObserver) {
-      newMessageObserver.disconnect();
     }
   }
 }
