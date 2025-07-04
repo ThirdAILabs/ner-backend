@@ -3,7 +3,7 @@ from torchcrf import CRF
 from torch.utils.data import Dataset, DataLoader
 import os
 from transformers import AutoTokenizer
-from typing import List, Any, Tuple
+from typing import List, Any, Tuple, Optional
 from ..model_interface import (
     BatchPredictions,
     Entity,
@@ -14,6 +14,67 @@ from ..model_interface import (
 import sys
 from ..utils import clean_text_with_spans
 import json
+import base64
+import os
+from Crypto.Cipher import AES
+from Crypto.Random import get_random_bytes
+
+
+def decrypt_model(enc_path: str, dec_path: str, key_b64: str):
+    try:
+        key = base64.b64decode(key_b64)
+    except Exception as e:
+        raise ValueError(f"Invalid MODEL_KEY: {e}")
+
+    if len(key) != 32:
+        raise ValueError("MODEL_KEY must be 32 bytes")
+
+    try:
+        with open(enc_path, "rb") as f:
+            ct = f.read()
+    except Exception as e:
+        raise IOError(f"Error reading encrypted model: {e}")
+
+    if len(ct) < 12:
+        raise ValueError("Ciphertext too short")
+
+    nonce, ciphertext = ct[:12], ct[12:]
+
+    try:
+        cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
+        plaintext = cipher.decrypt(ciphertext)
+        with open(dec_path, "wb") as f:
+            f.write(plaintext)
+    except Exception as e:
+        raise ValueError(f"AES-GCM decrypt failed: {e}")
+
+
+def encrypt_model(dec_path: str, enc_path: str, key_b64: str):
+    try:
+        key = base64.b64decode(key_b64)
+    except Exception as e:
+        raise ValueError(f"Invalid MODEL_KEY: {e}")
+
+    if len(key) != 32:
+        raise ValueError("MODEL_KEY must be 32 bytes")
+
+    try:
+        with open(dec_path, "rb") as f:
+            plaintext = f.read()
+    except Exception as e:
+        raise IOError(f"Error reading plaintext model: {e}")
+    finally:
+        os.remove(dec_path)
+
+    try:
+        nonce = get_random_bytes(12)
+        cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
+        ciphertext, tag = cipher.encrypt_and_digest(plaintext)
+
+        with open(enc_path, "wb") as f:
+            f.write(nonce + ciphertext + tag)
+    except Exception as e:
+        raise ValueError(f"AES-GCM encrypt failed: {e}")
 
 
 def manual_word_ids(text: str, offsets: list[tuple[int, int]]) -> list[int | None]:
@@ -87,6 +148,7 @@ class CnnModel(Model):
         model_path: str,
         tokenizer_name: str = "Qwen/Qwen2.5-0.5B",
         tokenizer_path: str = None,
+        key_b64: Optional[str] = None,
     ):
         if tokenizer_path and os.path.exists(tokenizer_path):
             self.tokenizer = AutoTokenizer.from_pretrained(
@@ -95,8 +157,17 @@ class CnnModel(Model):
         else:
             self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
 
-        self.model = torch.jit.load(os.path.join(model_path, "model.pt"))
+        enc_model_path = os.path.join(model_path, "model.pt.enc")
+        dec_model_path = os.path.join(model_path, "model.pt")
+        if key_b64:
+            decrypt_model(
+                enc_path=enc_model_path, dec_path=dec_model_path, key_b64=key_b64
+            )
+        self.model = torch.jit.load(dec_model_path)
         self.model.eval()
+
+        if key_b64:
+            os.remove(dec_model_path)
 
         self.crf = CRF(num_tags=len(IDX_TO_TAG), batch_first=True)
         state_dict = torch.load(
@@ -107,6 +178,8 @@ class CnnModel(Model):
         self.crf.eval()
 
         self.batch_size = 16
+
+        self.key_b64 = key_b64
 
     def preprocess_text(self, texts: List[str]):
         enc = self.tokenizer(
@@ -256,15 +329,26 @@ class CnnModel(Model):
     def save(self, save_dir: str) -> None:
         os.makedirs(save_dir, exist_ok=True)
 
-        torch.jit.save(self.model, os.path.join(save_dir, "model.pt"))
+        dec_torch_model_path = os.path.join(save_dir, "model.pt")
+        enc_torch_model_path = os.path.join(save_dir, "model.pt.enc")
+        torch.jit.save(self.model, dec_torch_model_path)
+        if self.key_b64:
+            encrypt_model(
+                dec_path=dec_torch_model_path,
+                enc_path=enc_torch_model_path,
+                key_b64=self.key_b64,
+            )
+
         torch.save(self.crf.state_dict(), os.path.join(save_dir, "crf.pth"))
 
         dummy_input = torch.zeros(1, 128, dtype=torch.long, device=torch.device("cpu"))
 
+        dec_onnx_model_path = os.path.join(save_dir, "model.onnx")
+        enc_onnx_model_path = os.path.join(save_dir, "model.onnx.enc")
         torch.onnx.export(
             self.model,
             dummy_input,
-            os.path.join(save_dir, "model.onnx"),
+            dec_onnx_model_path,
             input_names=["input_ids"],
             output_names=["emissions"],
             dynamic_axes={
@@ -274,6 +358,12 @@ class CnnModel(Model):
             opset_version=13,
             do_constant_folding=True,
         )
+        if self.key_b64:
+            encrypt_model(
+                dec_path=dec_onnx_model_path,
+                enc_path=enc_onnx_model_path,
+                key_b64=self.key_b64,
+            )
 
         transitions = self.crf.transitions.detach().cpu().numpy().tolist()
 
