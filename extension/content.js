@@ -1,8 +1,8 @@
 class PromptInterceptor {
-  constructor(processText, doneWithInitialElements) {
+  constructor(processText, onSendPrompt) {
     this.processText = processText;
     this.cleanupFn = null;
-    this.doneWithInitialElements = doneWithInitialElements;
+    this.onSendPrompt = onSendPrompt;
   }
 
   setup() {
@@ -18,14 +18,13 @@ class PromptInterceptor {
           e.key === 'Enter' && !e.shiftKey ||
           e.key === 'Enter' && e.ctrlKey
         ) {
-          // We assume that the initial elements have been processed by the time the user has submitted the prompt.
-          this.doneWithInitialElements();
           for (const child of prompt.childNodes) {
             if (child.textContent) {
               const processedText = await this.processText(child.textContent);
               child.textContent = processedText;
             }
           }
+          this.onSendPrompt();
         }
       }
 
@@ -47,15 +46,20 @@ class PromptInterceptor {
 class ExistingMessageModifier {
   constructor(processText) {
     this.processText = processText;
+    this.previousMessageId = null;
     this.seen = new Set();
   }
 
   setup() {
     for (const message of document.querySelectorAll('[data-message-author-role]')) {
-      if (!this.seen.has(message.getAttribute("data-message-id"))) {
+      const messageId = message.getAttribute("data-message-id");
+      if (!this.seen.has(messageId) || (this.previousMessageId && this.previousMessageId === messageId)) {
+        this.recursivelyProcessMessage(message, this.processText);
+        this.seen.add(messageId);
+        // We assume that changes for the same messageId come together.
+        // Multiple mutations to the same message ID is an indication that ChatGPT is streaming the response.
+        this.previousMessageId = messageId;
       }
-      this.recursivelyProcessMessage(message, this.processText);
-      this.seen.add(message.getAttribute("data-message-id"));
     }
   }
 
@@ -70,6 +74,14 @@ class ExistingMessageModifier {
     }
   }
 
+  // handleSendPrompt() {
+  //   this.hasSentOnce = true;
+  //   this.seenAfterLastSend.forEach(item => {
+  //     console.log("adding", item);
+  //     this.seenBeforeLastSend.add(item);
+  //   });
+  //   this.seenAfterLastSend.clear();
+  // }
 }
 
 function isMessage(node) {
@@ -121,12 +133,12 @@ function setupPage(redact, restore) {
   let newMessageObserver = null;
   let doneWithInitialElements = null;
 
+  const existingMessageModifier = new ExistingMessageModifier(restore);
   const promptInterceptor = new PromptInterceptor(redact, () => {
     if (doneWithInitialElements) {
       doneWithInitialElements();
     }
   });
-  const existingMessageModifier = new ExistingMessageModifier(restore);
   
   let elementObserver = new MutationObserver(async (mut) => {
     console.log("elementObserver", mut);
@@ -141,13 +153,13 @@ function setupPage(redact, restore) {
     // elementObserver = null;
 
     // Restore sensitive data in new messages as they come.
-    newMessageObserver = new MutationObserver(async (mutations) => {
-      console.log("newMessageObserver", mutations);
+    // newMessageObserver = new MutationObserver(async (mutations) => {
+    //   console.log("newMessageObserver", mutations);
       // mutations.forEach(mutation => {
       //   handleTextChange(mutation.target, restore);
       // })
-    });
-    newMessageObserver.observe(document.body, { characterData: true, subtree: true });
+    // });
+    // newMessageObserver.observe(document.body, { characterData: true, subtree: true });
   }
 
   return () => {
