@@ -41,26 +41,13 @@ class WasmRedactor {
     this.loading = true;
 
     try {
-      console.log('Loading WASM redactor module...');
-      
       const wasmDir = chrome.runtime.getURL('wasm/build/');
-      console.log("wasmDir", wasmDir);
       const res = await fetch(wasmDir + 'redactor.js', { method: 'HEAD' });
-      console.log("res", res);
       const importResult = (await import(`${wasmDir}redactor.js`));
-      console.log("importResult", importResult);
       const createRedactorModule = importResult.default;
-      console.log("createRedactorModule", createRedactorModule);
       this.module = await createRedactorModule({
         locateFile: (path) => wasmDir + path,
       });
-
-      console.log('WASM module loaded:', this.module);
-      
-      console.log('WASM module ready:', this.module);
-      console.log('Available functions:', Object.keys(this.module));
-      console.log('Has cwrap?', typeof this.module.cwrap);
-      console.log('Has ccall?', typeof this.module.ccall);
 
       // Check if module is properly initialized
       if (!this.module.cwrap || typeof this.module.cwrap !== 'function') {
@@ -122,10 +109,8 @@ class WasmRedactor {
     }
 
     try {
-      console.log('🔧 WASM calling redact with session:', sessionId, 'text:', text);
       return this.redactFunc(sessionId, text);
     } catch (error) {
-      console.error('Error in WASM redact:', error);
       return text;
     }
   }

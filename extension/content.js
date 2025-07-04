@@ -13,10 +13,7 @@ class PromptInterceptor {
     }
     const prompt = document.getElementById('prompt-textarea');
     if (prompt) {
-      console.log("Prompt found");
-      console.log(prompt)
       prompt.addEventListener('keydown', async (e) => {
-        console.log("Prompt keydown", e.key);
         if (
           e.key === 'Enter' && !e.shiftKey ||
           e.key === 'Enter' && e.ctrlKey
@@ -29,7 +26,6 @@ class PromptInterceptor {
           }
         }
       }, /* useCapture */ true); // Use capture has to be true to catch the event before the built in handlers
-      console.log("Prompt registered");
       this.registered = true;
     }
   }
@@ -143,7 +139,6 @@ if (!window.__MY_EXTENSION_ALREADY_INJECTED__) {
   
   // Wrapper functions that use the WASM redactor
   const redact = (text) => {
-    console.log("Redacting", text);
     var sessionId = getSessionId(document.location.href);
     if (!sessionId) {
       sessionId = generateUUID();
