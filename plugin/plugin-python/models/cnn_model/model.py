@@ -16,8 +16,7 @@ from ..utils import clean_text_with_spans
 import json
 import base64
 import os
-from Crypto.Cipher import AES
-from Crypto.Random import get_random_bytes
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 
 def decrypt_model(enc_path: str, dec_path: str, key_b64: str):
@@ -41,8 +40,8 @@ def decrypt_model(enc_path: str, dec_path: str, key_b64: str):
     nonce, ciphertext = ct[:12], ct[12:]
 
     try:
-        cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
-        plaintext = cipher.decrypt(ciphertext)
+        cipher = AESGCM(key)
+        plaintext = cipher.decrypt(nonce=nonce, data=ciphertext, associated_data=None)
         with open(dec_path, "wb") as f:
             f.write(plaintext)
     except Exception as e:
@@ -67,12 +66,12 @@ def encrypt_model(dec_path: str, enc_path: str, key_b64: str):
         os.remove(dec_path)
 
     try:
-        nonce = get_random_bytes(12)
-        cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
-        ciphertext, tag = cipher.encrypt_and_digest(plaintext)
+        nonce = os.urandom(12)
+        cipher = AESGCM(key)
+        ciphertext = cipher.encrypt(nonce=nonce, data=plaintext, associated_data=None)
 
         with open(enc_path, "wb") as f:
-            f.write(nonce + ciphertext + tag)
+            f.write(nonce + ciphertext)
     except Exception as e:
         raise ValueError(f"AES-GCM encrypt failed: {e}")
 
