@@ -5,6 +5,7 @@ class PromptInterceptor {
   }
 
   setup() {
+    // Means that we've already set up the prompt interceptor.
     if (this.cleanupFn) {
       return;
     }
