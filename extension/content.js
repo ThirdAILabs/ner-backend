@@ -79,116 +79,125 @@ class MessageModifier {
   }
 }
 
-const promptInterceptor = new PromptInterceptor();
-const messageModifier = new MessageModifier();
+if (!window.__MY_EXTENSION_ALREADY_INJECTED__) {
+  window.__MY_EXTENSION_ALREADY_INJECTED__ = true;
 
-// Import WASM redactor
-let wasmRedactor = null;
-
-// Initialize WASM redactor
-async function initializeRedactor() {
-  if (wasmRedactor) {
-    return wasmRedactor;
-  }
-
-  try {
-    // Try WASM approach
-    wasmRedactor = new WasmRedactor();
-    const wasmSuccess = await wasmRedactor.initialize(chrome.runtime.getURL('wasm/build/'));
-    
-    if (wasmSuccess) {
-      console.log('Using WASM redactor');
-      return wasmRedactor;
-    } else {
-      throw new Error('WASM initialization failed');
-    }
-  } catch (error) {
-    console.warn('WASM redactor failed, using JavaScript fallback:', error);
-    
-    // Fallback to simple JavaScript implementation
-    wasmRedactor = {
-      redact: (text) => text.replace(/Benito/g, "[REDACTED]"),
-      restore: (text) => text.replace(/\[REDACTED\]/g, "Benito"),
-      clearMappings: () => {},
-      getStats: () => ({})
-    };
-    console.log('Using JavaScript fallback redactor');
-    return wasmRedactor;
-}
-}
-
-var placeholderSessionId = null;
-
-// Custom UUID generator to avoid bundling dependencies. This is going to be ephemeral anyway;
-// it will be discarded when the page redirects to chatgpt/c/new-session-id.
-function generateUUID() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-}
-
-// Extract session ID from ChatGPT URL
-function getSessionId(url) {
-  const match = url.match(/\/c\/([a-f0-9-]+)/);
-  return match ? match[1] : null;
-}
-
-// Wrapper functions that use the WASM redactor
-const redact = (text) => {
-  console.log("Redacting", text);
-  var sessionId = getSessionId(document.location.href);
-  if (!sessionId) {
-    sessionId = generateUUID();
-    placeholderSessionId = sessionId;
-  }
-  const result = wasmRedactor.redact(text, sessionId);
-  return result;
-}
-
-const restore = (text) => {
-  const sessionId = getSessionId(document.location.href);
-  const result = wasmRedactor.restore(text, sessionId);
-  return result;
-}
-
-var oldHref = document.location.href;
-
-const observer = new MutationObserver(async (mutations) => {
-  const locationChanged = document.location.href !== oldHref;
-  if (locationChanged) {
-    const oldHrefSessionId = getSessionId(oldHref);
-    const newHrefSessionId = getSessionId(document.location.href);
-    if (!oldHrefSessionId && !!placeholderSessionId && !!newHrefSessionId) {
-      wasmRedactor.updateExtensionId(placeholderSessionId, newHrefSessionId);
-      placeholderSessionId = null;
-    }
-    oldHref = document.location.href;
-  }
-
-  // Initialize redactor if not already done
-  if (!wasmRedactor) {
-    await initializeRedactor();
-  }
-
-  promptInterceptor.register((text) => {
-    return redact(text);
-  }, /* force */ locationChanged);
+  console.log("Injected content script");
   
-  messageModifier.register('[data-message-author-role="assistant"]', (text) => {
-    return restore(text);
+  const promptInterceptor = new PromptInterceptor();
+  const messageModifier = new MessageModifier();
+  
+  // Import WASM redactor
+  let wasmRedactor = null;
+  
+  // Initialize WASM redactor
+  async function initializeRedactor() {
+    if (wasmRedactor) {
+      return wasmRedactor;
+    }
+  
+    try {
+      // Try WASM approach
+      wasmRedactor = new WasmRedactor();
+      const wasmSuccess = await wasmRedactor.initialize(chrome.runtime.getURL('wasm/build/'));
+      
+      if (wasmSuccess) {
+        console.log('Using WASM redactor');
+        return wasmRedactor;
+      } else {
+        throw new Error('WASM initialization failed');
+      }
+    } catch (error) {
+      // TODO: Cleanup
+      console.warn('WASM redactor failed, using JavaScript fallback:', error);
+      
+      // Fallback to simple JavaScript implementation
+      wasmRedactor = {
+        redact: (text) => text.replace(/Benito/g, "[REDACTED]"),
+        restore: (text) => text.replace(/\[REDACTED\]/g, "Benito"),
+        clearMappings: () => {},
+        getStats: () => ({})
+      };
+      console.log('Using JavaScript fallback redactor');
+      return wasmRedactor;
+  }
+  }
+  
+  var placeholderSessionId = null;
+  
+  // Custom UUID generator to avoid bundling dependencies. This is going to be ephemeral anyway;
+  // it will be discarded when the page redirects to chatgpt/c/new-session-id.
+  function generateUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+  
+  // Extract session ID from ChatGPT URL
+  function getSessionId(url) {
+    const match = url.match(/\/c\/([a-f0-9-]+)/);
+    return match ? match[1] : null;
+  }
+  
+  // Wrapper functions that use the WASM redactor
+  const redact = (text) => {
+    console.log("Redacting", text);
+    var sessionId = getSessionId(document.location.href);
+    if (!sessionId) {
+      sessionId = generateUUID();
+      placeholderSessionId = sessionId;
+    }
+    const result = wasmRedactor.redact(text, sessionId);
+    return result;
+  }
+  
+  const restore = (text) => {
+    const sessionId = getSessionId(document.location.href);
+    const result = wasmRedactor.restore(text, sessionId);
+    return result;
+  }
+  
+  var oldHref = document.location.href;
+  
+  const observer = new MutationObserver(async (mutations) => {
+    const locationChanged = document.location.href !== oldHref;
+    if (locationChanged) {
+      const oldHrefSessionId = getSessionId(oldHref);
+      const newHrefSessionId = getSessionId(document.location.href);
+      if (!oldHrefSessionId && !!placeholderSessionId && !!newHrefSessionId) {
+        wasmRedactor.updateExtensionId(placeholderSessionId, newHrefSessionId);
+        placeholderSessionId = null;
+      }
+      oldHref = document.location.href;
+    }
+  
+    // Initialize redactor if not already done
+    if (!wasmRedactor) {
+      await initializeRedactor();
+    }
+  
+    promptInterceptor.register((text) => {
+      return redact(text);
+    }, /* force */ locationChanged);
+    
+    messageModifier.register('[data-message-author-role="assistant"]', (text) => {
+      return restore(text);
+    });
+    messageModifier.register('[data-message-author-role="user"]', (text) => {
+      return restore(text);
+    });
   });
-  messageModifier.register('[data-message-author-role="user"]', (text) => {
-    return restore(text);
+  
+  // Initialize redactor when script loads
+  initializeRedactor().then(() => {
+    console.log('Redactor initialized on page load');
+  }).catch(error => {
+    console.error('Failed to initialize redactor on page load:', error);
   });
-});
-
-// Initialize redactor when script loads
-initializeRedactor().then(() => {
-  console.log('Redactor initialized on page load');
-}).catch(error => {
-  console.error('Failed to initialize redactor on page load:', error);
-});
-
-observer.observe(document.body, { childList: true, subtree: true });
+  
+  observer.observe(document.body, { childList: true, subtree: true });
+} else {
+  console.log("Script already injected, skipping.");
+}
