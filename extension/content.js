@@ -73,11 +73,13 @@ class ExistingMessageModifier {
 }
 
 function isMessage(node) {
-  let parent = node.parentNode;
-  while (parent !== document.body) {
+  let parent = node.parentElement;
+
+  while (parent !== null) {
     if (parent.getAttribute('data-message-author-role')) {
       return true;
     }
+    parent = parent.parentElement;
   }
   return false;
 }
@@ -89,6 +91,7 @@ function handleTextChange(node, processText) {
   const newContent = processText(node.textContent);
   console.log("handleTextChange", node.textContent, newContent);
   if (newContent === node.textContent) {
+    console.log("no change", node.textContent, newContent);
     return;
   }
   node.textContent = newContent;
@@ -96,55 +99,40 @@ function handleTextChange(node, processText) {
 
 function setupPage(redact, restore) {
   let newMessageObserver = null;
-  // let doneWithInitialElements = null;
+  let doneWithInitialElements = null;
 
-  // const promptInterceptor = new PromptInterceptor(redact, () => {
-  //   console.log("calling doneWithInitialElements", doneWithInitialElements);
-  //   if (doneWithInitialElements) {
-  //     doneWithInitialElements();
-  //   }
-  // });
-  // const existingMessageModifier = new ExistingMessageModifier(restore);
-  
-  // let elementObserver = new MutationObserver(async () => {
-  //   console.log("elementObserver");
-  //   promptInterceptor.setup();
-  //   existingMessageModifier.setup();
-  // });
-  // elementObserver.observe(document.body, { childList: true, subtree: true });
-
-
-  // doneWithInitialElements = () => {
-  //   console.log("doneWithInitialElements");
-  //   elementObserver.disconnect();
-  //   elementObserver = null;
-
-  //   console.log("B")
-  //   // Restore sensitive data in new messages as they come.
-  //   newMessageObserver = new MutationObserver(async (mutations) => {
-  //     console.log("newMessageObserver", mutations);
-  //     mutations.forEach(mutation => {
-  //       handleTextChange(mutation.target, restore);
-  //     })
-  //   });
-  //   console.log("C")
-  //   newMessageObserver.observe(document.body, { characterData: true, subtree: true });
-  //   console.log("D")
-  // }
-
-  newMessageObserver = new MutationObserver(async (mutations) => {
-    console.log("newMessageObserver", mutations);
-    mutations.forEach(mutation => {
-      handleTextChange(mutation.target, restore);
-    })
+  const promptInterceptor = new PromptInterceptor(redact, () => {
+    if (doneWithInitialElements) {
+      doneWithInitialElements();
+    }
   });
-  newMessageObserver.observe(document.body, { characterData: true, subtree: true });
+  const existingMessageModifier = new ExistingMessageModifier(restore);
   
+  let elementObserver = new MutationObserver(async () => {
+    promptInterceptor.setup();
+    existingMessageModifier.setup();
+  });
+  elementObserver.observe(document.body, { childList: true, subtree: true });
+
+
+  doneWithInitialElements = () => {
+    elementObserver.disconnect();
+    elementObserver = null;
+
+    // Restore sensitive data in new messages as they come.
+    newMessageObserver = new MutationObserver(async (mutations) => {
+      mutations.forEach(mutation => {
+        handleTextChange(mutation.target, restore);
+      })
+    });
+    newMessageObserver.observe(document.body, { characterData: true, subtree: true });
+  }
+
   return () => {
-    // promptInterceptor.cleanup();
-    // if (elementObserver) {
-    //   elementObserver.disconnect();
-    // }
+    promptInterceptor.cleanup();
+    if (elementObserver) {
+      elementObserver.disconnect();
+    }
     if (newMessageObserver) {
       newMessageObserver.disconnect();
     }
