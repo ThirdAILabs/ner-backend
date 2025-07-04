@@ -8,12 +8,9 @@ from typing import Optional, List, Dict, TypedDict
 from prompts import extend_description_prompt as extend_description_template
 from prompts import extend_examples_prompt as extend_examples_template
 from prompts import context_prompt as context_prompt_template
-from prompts import (
-    annoated_data_generation_prompt as annotated_data_generation_prompt_template,
-)
-from prompts import (
-    annotated_text_verification_prompt as annotated_text_verification_prompt_template,
-)
+from prompts import annoated_data_generation_prompt as annotated_data_generation_prompt_template
+from prompts import annotated_text_verification_prompt as annotated_text_verification_prompt_template
+
 
 from utils import (
     write_to_csv,
@@ -163,7 +160,9 @@ class DataFactory:
         output_file = os.path.join(self.out_dir, "generated_data.csv")
 
         # -----------(1) Extend the tag description, examples and get the tag contexts---------------
-        for tag in tqdm.tqdm(tags_info, desc="Enhancing tag information: ", leave=False):
+        for tag in tqdm.tqdm(
+            tags_info, desc="Enhancing tag information: ", leave=False
+        ):
             extended_desc = self.extend_description(tag)
             tag["desc"] = extended_desc
             tag["examples"].extend(self.extend_examples(tag, k=20))
@@ -174,7 +173,11 @@ class DataFactory:
         num_llm_calls_per_batch = write_batch_size // generate_per_llm_call
         total_batches = (k + write_batch_size - 1) // write_batch_size
         for batch_idx, i in enumerate(
-            tqdm.tqdm(range(0, k, write_batch_size), desc="Generating batches" , total = total_batches)
+            tqdm.tqdm(
+                range(0, k, write_batch_size),
+                desc="Generating batches",
+                total=total_batches,
+            )
         ):
             messages = []
             user_content_template = env.from_string(
@@ -195,9 +198,8 @@ class DataFactory:
                             requirements=(
                                 contextual_example_requirements
                                 if feedback
-                                else 
-                                    required_requirements
-                                    + random.sample(additional_requirements, k=4)
+                                else required_requirements
+                                + random.sample(additional_requirements, k=4)
                             ),
                             user_instructions=user_instructions,
                         ),
@@ -387,7 +389,6 @@ class DataFactory:
         source_col: str = "source",
         target_col: str = "target",
     ) -> List[Dict[str, str]]:
-
         transformed_data = list(
             map(
                 lambda x: self.transform_sentence(x, tags_name, source_col, target_col),
