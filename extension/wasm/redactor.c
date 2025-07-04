@@ -109,7 +109,6 @@ static char* create_json_body(const char* key, const char* text) {
 // Unescape JSON characters - reverse of what create_json_body does
 static char* unescape_json_text(const char* escaped_text) {
     if (!escaped_text) return NULL;
-    printf("Escaped text: %s\n", escaped_text);
     size_t escaped_len = strlen(escaped_text);
     char* unescaped = malloc(escaped_len + 1); // Unescaped will be same size or smaller
     
@@ -228,7 +227,6 @@ int init_redactor() {
 
 EMSCRIPTEN_KEEPALIVE
 void update_extension_id(const char* old_session_id, const char* new_session_id) {
-    printf("Updating extension ID from %s to %s\n", old_session_id, new_session_id);
     char api_url[512];
     snprintf(api_url, sizeof(api_url), "http://localhost:16549/api/v1/chat/sessions/%s/update-extension-id", old_session_id);
     char* json_body = create_json_body("ExtensionId", new_session_id);
@@ -245,9 +243,6 @@ EMSCRIPTEN_KEEPALIVE
 char* redact(const char* session_id, const char* text) {
     if (!text || !session_id) return NULL;
     
-    printf("Redacting text: %s\n", text);
-    printf("Redacting for session: %s\n", session_id);
-    
     // Build the API URL
     char api_url[512];
     snprintf(api_url, sizeof(api_url), "http://localhost:16549/api/v1/chat/sessions/%s/redact", session_id);
@@ -258,9 +253,6 @@ char* redact(const char* session_id, const char* text) {
         printf("Failed to create JSON body\n");
         return string_duplicate(text);
     }
-    
-    printf("Making POST request to: %s\n", api_url);
-    printf("Request body: %s\n", json_body);
     
     // Make the HTTP request
     char* response = http_post_sync(api_url, json_body);
@@ -273,8 +265,6 @@ char* redact(const char* session_id, const char* text) {
         return string_duplicate(text);
     }
     
-    printf("Response: %s\n", response);
-    
     // Parse the response to extract the Message field
     char* redacted_message = parse_message_from_json(response);
     free(response);
@@ -284,8 +274,6 @@ char* redact(const char* session_id, const char* text) {
         return string_duplicate(text);
     }
     
-    printf("Redacted message: %s\n", redacted_message);
-    
     return redacted_message;
 }
 
@@ -293,9 +281,6 @@ char* redact(const char* session_id, const char* text) {
 EMSCRIPTEN_KEEPALIVE
 char* restore(const char* session_id, const char* text) {
     if (!text || !session_id) return NULL;
-    
-    printf("Restoring text: %s\n", text);
-    printf("Restoring for session: %s\n", session_id);
     
     // Build the API URL
     char api_url[512];
@@ -308,9 +293,6 @@ char* restore(const char* session_id, const char* text) {
         return string_duplicate(text);
     }
     
-    printf("Making POST request to: %s\n", api_url);
-    printf("Request body: %s\n", json_body);
-    
     // Make the HTTP request
     char* response = http_post_sync(api_url, json_body);
     
@@ -322,8 +304,6 @@ char* restore(const char* session_id, const char* text) {
         return string_duplicate(text);
     }
     
-    printf("Response: %s\n", response);
-    
     // Parse the response to extract the Message field
     char* restored_message = parse_message_from_json(response);
     free(response);
@@ -332,8 +312,6 @@ char* restore(const char* session_id, const char* text) {
         printf("Failed to parse message from response\n");
         return string_duplicate(text);
     }
-    
-    printf("Restored message: %s\n", restored_message);
     
     return restored_message;
 }

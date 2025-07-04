@@ -25,7 +25,7 @@ class WasmRedactor {
    * @param {string} wasmPath - Path to the WASM module files
    * @returns {Promise<boolean>} - Success status
    */
-  async initialize(wasmPath = './build/') {
+  async initialize(wasmPath) {
     if (this.initialized) {
       return true;
     }
@@ -41,8 +41,7 @@ class WasmRedactor {
     this.loading = true;
 
     try {
-      const wasmDir = chrome.runtime.getURL('wasm/build/');
-      const res = await fetch(wasmDir + 'redactor.js', { method: 'HEAD' });
+      const wasmDir = chrome.runtime.getURL(wasmPath);
       const importResult = (await import(`${wasmDir}redactor.js`));
       const createRedactorModule = importResult.default;
       this.module = await createRedactorModule({
@@ -102,7 +101,7 @@ class WasmRedactor {
    * @param {string} sessionId - Session ID for the redaction
    * @returns {string} - Redacted text
    */
-  redact(text, sessionId = 'default-session') {
+  redact(text, sessionId) {
     if (!this.initialized || !this.redactFunc) {
       console.warn('WASM redactor not initialized, returning original text');
       return text;
@@ -120,7 +119,7 @@ class WasmRedactor {
    * @param {string} text - Text to restore
    * @returns {string} - Restored text
    */
-  restore(text, sessionId = 'default-session') {
+  restore(text, sessionId) {
     if (!this.initialized || !this.restoreFunc) {
       console.warn('WASM redactor not initialized, returning original text');
       return text;
@@ -193,11 +192,15 @@ class WasmRedactor {
   }
 }
 
-
+async function newWasmRedactor(wasmPath) {
+  const wasmRedactor = new WasmRedactor();
+  await wasmRedactor.initialize(wasmPath);
+  return wasmRedactor;
+}
 
 // Export classes for use in extension
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { WasmRedactor };
+  module.exports = { newWasmRedactor };
 } else {
-  window.WasmRedactor = WasmRedactor;
+  window.newWasmRedactor = newWasmRedactor;
 } 
