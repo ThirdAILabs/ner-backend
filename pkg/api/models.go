@@ -36,10 +36,10 @@ type TaskStatusCategory struct {
 type Report struct {
 	Id uuid.UUID
 
-	Model          Model
-	ReportName     string
-	StorageType     string
-	StorageParams   json.RawMessage
+	Model         Model
+	ReportName    string
+	StorageType   string
+	StorageParams json.RawMessage
 
 	Stopped            bool
 	CreationTime       time.Time
@@ -74,9 +74,9 @@ type Entity struct {
 type CreateReportRequest struct {
 	ModelId uuid.UUID
 
-	ReportName      string
-	StorageType     string
-	StorageParams   json.RawMessage
+	ReportName    string
+	StorageType   string
+	StorageParams json.RawMessage
 
 	Tags       []string
 	CustomTags map[string]string
@@ -144,13 +144,17 @@ type GetLicenseResponse struct {
 	LicenseError string
 }
 
+type GetEnterpriseInfoResponse struct {
+	IsEnterpriseMode bool `json:"IsEnterpriseMode"`
+}
+
 type ValidateGroupDefinitionRequest struct {
 	GroupQuery string
 }
 
 type ValidateS3BucketRequest struct {
 	S3Endpoint     string
-	Region       string
+	Region         string
 	SourceS3Bucket string
 	SourceS3Prefix string
 }
