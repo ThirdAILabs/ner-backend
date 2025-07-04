@@ -1044,7 +1044,9 @@ func (s *BackendService) GetLicense(r *http.Request) (any, error) {
 }
 
 func (s *BackendService) GetEnterpriseInfo(r *http.Request) (any, error) {
-	return s.enterpriseMode, nil
+	return api.GetEnterpriseInfoResponse{
+		IsEnterpriseMode: s.enterpriseMode,
+	}, nil
 }
 
 func (s *BackendService) ValidateS3Access(r *http.Request) (any, error) {

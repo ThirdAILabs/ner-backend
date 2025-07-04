@@ -865,10 +865,10 @@ func TestGetEnterpriseInfo_IsFalse(t *testing.T) {
 	router.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusOK, rec.Code)
-	var response bool
+	var response api.GetEnterpriseInfoResponse
 	err := json.Unmarshal(rec.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	assert.False(t, response)
+	assert.False(t, response.IsEnterpriseMode)
 }
 
 func TestGetEnterpriseInfo_IsTrue(t *testing.T) {
@@ -887,8 +887,8 @@ func TestGetEnterpriseInfo_IsTrue(t *testing.T) {
 	router.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusOK, rec.Code)
-	var response bool
+	var response api.GetEnterpriseInfoResponse
 	err := json.Unmarshal(rec.Body.Bytes(), &response)
 	assert.NoError(t, err)
-	assert.True(t, response)
+	assert.True(t, response.IsEnterpriseMode)
 }
