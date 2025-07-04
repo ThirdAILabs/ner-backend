@@ -84,17 +84,36 @@ function isMessage(node) {
   return false;
 }
 
+function modifyParent(node, processText) {
+  let children = [];
+  node.childNodes.forEach(child => {
+    const lastChild = children[children.length - 1];
+    if (lastChild && lastChild.nodeType === Node.TEXT_NODE) {
+      lastChild.textContent = lastChild.textContent + child.textContent;
+    } else {
+      children.push(child);
+    }
+  });
+  let changed = false;
+  children.forEach(child => {
+    if (child.nodeType === Node.TEXT_NODE) {
+      const processed = processText(child.textContent);
+      if (processed !== child.textContent) {
+        child.textContent = processed;
+        changed = true;
+      }
+    }
+  });
+  if (changed) {
+    node.replaceChildren(...children);
+  }
+}
+
 function handleTextChange(node, processText) {
   if (!isMessage(node)) {
     return;
   }
-  const newContent = processText(node.textContent);
-  console.log("handleTextChange", node.textContent, newContent);
-  if (newContent === node.textContent) {
-    console.log("no change", node.textContent, newContent);
-    return;
-  }
-  node.textContent = newContent;
+  modifyParent(node.parentElement, processText);
 }
 
 function setupPage(redact, restore) {
