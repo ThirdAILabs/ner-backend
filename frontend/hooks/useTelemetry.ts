@@ -72,17 +72,17 @@ export default function useTelemetry() {
         (window as any).electron.sendTelemetry(telemetryPackage);
       } else {
         // Use API route for web/dev mode
-        const response = await fetch('/api/telemetry', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(telemetryPackage),
-        });
+        //   const response = await fetch('/api/telemetry', {
+        //     method: 'POST',
+        //     headers: {
+        //       'Content-Type': 'application/json',
+        //     },
+        //     body: JSON.stringify(telemetryPackage),
+        //   });
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        //   if (!response.ok) {
+        //     throw new Error(`HTTP error! status: ${response.status}`);
+        //   }
       }
     } catch (error) {
       console.error('Telemetry insert error:', error);

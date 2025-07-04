@@ -117,8 +117,8 @@ const SourceOption: React.FC<SourceOptionProps> = ({
 }) => (
   <div
     className={`relative p-6 border-2 border-dashed rounded-lg transition-colors ${disabled
-        ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
-        : 'border-gray-300 hover:border-blue-400 cursor-pointer'
+      ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
+      : 'border-gray-300 hover:border-blue-400 cursor-pointer'
       }`}
     onClick={disabled ? () => { } : onClick}
   >
@@ -316,6 +316,7 @@ export default function NewJobPage() {
   const recordEvent = useTelemetry();
 
   const { isEnterprise } = useLicense();
+  const isElectron = typeof window !== 'undefined' && (window as any).electron !== undefined;
 
   // Essential state
   const [selectedSource, setSelectedSource] = useState<'s3' | 'files' | 'directory' | ''>('files');
@@ -363,6 +364,14 @@ export default function NewJobPage() {
   }, [models, modelSearchQuery]);
 
   const defaultModels = useMemo(() => {
+    if (isEnterprise && !isElectron) {
+      return [{
+        Id: models.find((model) => model.Name === 'basic')?.Id || 'basic',
+        Name: 'Base-Model',
+        Disabled: false,
+        Description: 'Fast and lightweight AI model, does not allow customization of the fields with user feedback, gives basic usage statistics.',
+      }]
+    }
     return [
       {
         Id: models.find((model) => model.Name === 'basic')?.Id || 'basic',
