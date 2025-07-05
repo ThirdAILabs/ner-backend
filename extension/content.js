@@ -46,18 +46,16 @@ class MessageModifier {
   constructor(processText) {
     this.processText = processText;
     this.previousMessageId = null;
-    this.seen = new Set();
+    this.seen = {}
   }
 
   setup() {
     for (const message of document.querySelectorAll('[data-message-author-role]')) {
       const messageId = message.getAttribute("data-message-id");
-      if (!this.seen.has(messageId) || (this.previousMessageId && this.previousMessageId === messageId)) {
+      const messageText = message.textContent;
+      if (!this.seen[messageId] || this.seen[messageId] != messageText) {
         this.recursivelyProcessMessage(message, this.processText);
-        this.seen.add(messageId);
-        // We assume that changes for the same messageId come together.
-        // Multiple mutations to the same message ID is an indication that ChatGPT is streaming the response.
-        this.previousMessageId = messageId;
+        this.seen[messageId] = messageText;
       }
     }
   }
@@ -79,7 +77,7 @@ function setupPage(redact, restore) {
   const promptInterceptor = new PromptInterceptor(redact);
   const existingMessageModifier = new MessageModifier(restore);
   
-  let elementObserver = new MutationObserver(async (mut) => {
+  let elementObserver = new MutationObserver(async (mutations) => {
     promptInterceptor.setup();
     existingMessageModifier.setup();
   });
