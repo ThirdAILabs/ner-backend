@@ -1,43 +1,56 @@
 class PromptInterceptor {
   constructor(processText) {
     this.processText = processText;
-    this.cleanupFn = null;
+    this.cleanupEnterListener = null;
+    this.cleanupButtonListener = null;
   }
 
   setup() {
-    // Means that we've already set up the prompt interceptor.
-    if (this.cleanupFn) {
-      return;
-    }
-
-    const prompt = document.getElementById('prompt-textarea');
-
-    if (prompt) { 
-      const listener = async (e) => {
-        if (
-          e.key === 'Enter' && !e.shiftKey ||
-          e.key === 'Enter' && e.ctrlKey
-        ) {
-          for (const child of prompt.childNodes) {
-            if (child.textContent) {
-              const processedText = await this.processText(child.textContent);
-              child.textContent = processedText;
-            }
-          }
+    const handleSendPrompt = () => {
+      for (const child of prompt.childNodes) {
+        if (child.textContent) {
+          const processedText = this.processText(child.textContent);
+          child.textContent = processedText;
         }
       }
+    }
 
-      prompt.addEventListener('keydown', listener, /* useCapture */ true);
-      this.cleanupFn = () => {
-        prompt.removeEventListener('keydown', listener, /* useCapture */ true);
+    const enterListener = (e) => {
+      if (
+        e.key === 'Enter' && !e.shiftKey ||
+        e.key === 'Enter' && e.ctrlKey
+      ) {
+        handleSendPrompt();
+      }
+    }
+    
+    const prompt = document.getElementById('prompt-textarea');
+    if (prompt) {
+      // addEventListener is idempotent, so we don't need to check if the listener is already added.
+      prompt.addEventListener('keydown', enterListener, /* useCapture */ true);
+      this.cleanupEnterListener = () => {
+        prompt.removeEventListener('keydown', enterListener, /* useCapture */ true);
+      }
+    }
+
+    const button = document.getElementById('composer-submit-button');
+    if (button) {
+      // addEventListener is idempotent, so we don't need to check if the listener is already added.
+      button.addEventListener('click', handleSendPrompt, /* useCapture */ true);
+      this.cleanupButtonListener = () => {
+        button.removeEventListener('click', handleSendPrompt, /* useCapture */ true);
       }
     }
   }
 
   cleanup() {
-    if (this.cleanupFn) {
-      this.cleanupFn();
-      this.cleanupFn = null;
+    if (this.cleanupEnterListener) {
+      this.cleanupEnterListener();
+      this.cleanupEnterListener = null;
+    }
+    if (this.cleanupButtonListener) {
+      this.cleanupButtonListener();
+      this.cleanupButtonListener = null;
     }
   }
 }
@@ -76,9 +89,18 @@ class MessageModifier {
 function setupPage(redact, restore) {
   const promptInterceptor = new PromptInterceptor(redact);
   const existingMessageModifier = new MessageModifier(restore);
+
+  promptInterceptor.setup();
+  existingMessageModifier.setup();
   
   let elementObserver = new MutationObserver(async (mutations) => {
-    promptInterceptor.setup();
+    if (mutations.reduce((acc, mutation) => {
+      const hasButton = mutation.target.id === 'composer-submit-button' || !!mutation.target.querySelector('#composer-submit-button');
+      const hasPrompt = !!mutation.target.getAttribute("data-message-author-role");
+      return acc || hasPrompt || hasButton
+    }, false)) {
+      promptInterceptor.setup();
+    }
     existingMessageModifier.setup();
   });
   elementObserver.observe(document.body, { childList: true, subtree: true });
