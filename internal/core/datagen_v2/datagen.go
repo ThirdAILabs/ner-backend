@@ -12,8 +12,9 @@ import (
 	"strings"
 	"sync"
 
+	"math/rand"
+
 	"github.com/schollz/progressbar/v3"
-	"golang.org/x/exp/rand"
 
 	openai "github.com/openai/openai-go"
 )
@@ -148,7 +149,7 @@ func (d *DataFactory) runAndCollect(
 			defer wg.Done()
 			res, err := d.LLM.Generate(systemPrompt, p, responseFormat)
 			out[i], errs[i] = res, err
-			bar.Add(1)
+			_ = bar.Add(1)
 		}
 		if parallel {
 			wg.Add(1)
