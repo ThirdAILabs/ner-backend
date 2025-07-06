@@ -12,27 +12,35 @@ Your goal is to generate natural sentences where multiple types of entities (tag
 `
 
 // AnnotatedDataUser is the template for the user message.
-const AnnotatedDataUser = `## Task: Generate {{ .K }} diverse and realistic sentences containing tokens labeled with the following tags.
+const AnnotatedDataUser = `## Task: Generate {{ .K }} diverse and realistic sentences containing tokens labeled for the following tags.
 
 ### Tags information:
 {{- range .TagInfo }}
 **Tag name:** {{ .Name }}
 **Tag description:** {{ .Desc }}
+{{- if gt (len .Examples) 0 }}
 **Tag examples:** {{ join (randomSample .Examples 10) ", " }}
-**Tag contexts:** {{ join (randomSample .Contexts 10) ", " }}
+{{- end }}
+{{- if and (not .Feedback) (gt (len .Contexts) 0) }}
+**Tag context:** {{ join (randomSample .Contexts 4) ", " }}
+{{- end }}
 {{- end }}
 
-> Tagging format: ##entity text##TAG##
-> Example sentences for tags NAME, ADDRESS, and DATE:
-1. "##Karun naiyar##NAME## lives at ##123 Main St, Springfield##ADDRESS##, and his birthday is ##January 1, 1990##DATE##."
-2. "Working at Acme Corp, located in ##Los Angeles##ADDRESS##, and ##Maria Gomez##NAME## was born on ##March 15, 1985##DATE##."
+> Token-Tag pair should be enclosed in this tagging format : ##tokens##TAG##
 
-### Requirements:
-- Use varying sentence lengths: short (2–10 words), medium (10–30 words), and long (30+ words, preferred).
-- Preferably try to include many tags in each sentence, but also allow for less-tag sentences.
-- Include data from multiple contexts as specified in the tag information but not limited to those contexts.
-- Where appropriate, simulate misspellings, slang, or typos.
-{{- range randomSample .Requirements 5 }}
+{{- if .Feedback }}
+# Below are some Contextual examples.
+{{- range randomSample .Feedback 4 }}
+- {{ . }}
+{{- end }}
+{{- else }}
+# Below are some examples of sentences with tokens and their tags:
+- "##Karun naiyar##NAME## lives at ##123 Main St, Springfield##ADDRESS##, and his birthday is ##January 1, 1990##DATE##."
+- "Working at an unknown company, located in ##Los Angeles##ADDRESS##, and ##Maria Gomez##NAME## was born on ##March 15, 1985##DATE##."
+{{- end }}
+
+## Requirements:
+{{- range .Requirements }}
 - {{ . }}
 {{- end }}
 
@@ -71,3 +79,18 @@ var AnnotatedDataTmpl = template.Must(template.New("annotatedData").
 		"join":         strings.Join,
 	}).
 	Parse(AnnotatedDataUser))
+
+type AnnotatedData struct {
+	Sentences []string `json:"sentences"`
+}
+
+func (a *AnnotatedData) Clean() *AnnotatedData {
+	cleaned := make([]string, 0, len(a.Sentences))
+	for _, s := range a.Sentences {
+		if t := strings.TrimSpace(s); t != "" {
+			cleaned = append(cleaned, t)
+		}
+	}
+	a.Sentences = cleaned
+	return a
+}

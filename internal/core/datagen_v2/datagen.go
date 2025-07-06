@@ -12,6 +12,9 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/schollz/progressbar/v3"
+	"golang.org/x/exp/rand"
+
 	openai "github.com/openai/openai-go"
 )
 
@@ -131,6 +134,11 @@ func (d *DataFactory) runAndCollect(
 	responseFormat openai.ChatCompletionNewParamsResponseFormatUnion,
 	parallel bool,
 ) ([]string, error) {
+	bar := progressbar.NewOptions(len(batch),
+		progressbar.OptionSetDescription("⏳ processing"),
+		progressbar.OptionSetWidth(30),
+		progressbar.OptionClearOnFinish(),
+	)
 	out := make([]string, len(batch))
 	errs := make([]error, len(batch))
 	var wg sync.WaitGroup
@@ -140,6 +148,7 @@ func (d *DataFactory) runAndCollect(
 			defer wg.Done()
 			res, err := d.LLM.Generate(systemPrompt, p, responseFormat)
 			out[i], errs[i] = res, err
+			bar.Add(1)
 		}
 		if parallel {
 			wg.Add(1)
@@ -167,58 +176,59 @@ type GenerateOptions struct {
 	TestSplit          float32      // fraction to reserve for test
 	UserInstructions   []string     // extra LLM instructions
 	WriteBatchSize     int          // batch size for LLM calls
+	Feedback           []string     // contextual examples for feedback (optional)
 }
 
 // Generate runs the full pipeline: enrich tags, then generate & write annotated data.
-func (d *DataFactory) Generate(
-	opts GenerateOptions,
-) ([]api.Sample, []api.Sample, error) {
-	// 1) Enrich tags with description, examples, and contexts
-	tags := opts.TagsInfo
-	for i := range tags {
-		// Description
-		ed, err := d.ExtendDescription(&tags[i])
+func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample, error) {
+	// 1) Enrich tags
+	for i := range opts.TagsInfo {
+		tag := &opts.TagsInfo[i]
+
+		ed, err := d.ExtendDescription(tag)
 		if err != nil {
 			return nil, nil, fmt.Errorf("extend description: %w", err)
 		}
-		tags[i].Desc = ed
+		tag.Desc = ed
 
-		// Examples
-		exs, err := d.ExtendExamples(&tags[i], 20)
+		exs, err := d.ExtendExamples(tag, 20)
 		if err != nil {
 			return nil, nil, fmt.Errorf("extend examples: %w", err)
 		}
-		tags[i].Examples = append(tags[i].Examples, exs...)
+		tag.Examples = append(tag.Examples, exs...)
 
-		// Contexts
-		if tags[i].Contexts == nil {
-			ctxs, err := d.GetTagContext(&tags[i], 25)
+		if tag.Contexts == nil {
+			ctxs, err := d.GetTagContext(tag, rand.Intn(11)+20)
 			if err != nil {
 				return nil, nil, fmt.Errorf("get contexts: %w", err)
 			}
-			tags[i].Contexts = ctxs
+			tag.Contexts = ctxs
 		}
 	}
 
-	// 2) Compute batch parameters
 	total := opts.RecordsToGenerate
 	perCall := opts.RecordsPerTemplate
-	batchSize := opts.WriteBatchSize
-	if batchSize <= 0 {
-		batchSize = total
-	}
-	if perCall <= 0 {
+	if perCall <= 0 || perCall > total {
 		perCall = total
 	}
+	batchSize := opts.WriteBatchSize
+	if batchSize <= 0 || batchSize > total {
+		batchSize = total
+	}
 	callsPerBatch := batchSize / perCall
-
-	// 3) Prepare JSON-schema response format
-	annotFmt, err := prompts.ToResponseFormatUnion(prompts.AnnotatedDataFormat)
-	if err != nil {
-		return nil, nil, fmt.Errorf("convert annotated_data format: %w", err)
+	if callsPerBatch == 0 {
+		callsPerBatch = 1
 	}
 
-	// 4) Annotate in batches
+	genFmt, err := prompts.ToResponseFormatUnion(prompts.AnnotatedDataFormat)
+	if err != nil {
+		return nil, nil, fmt.Errorf("convert generation format: %w", err)
+	}
+	verifFmt, err := prompts.ToResponseFormatUnion(prompts.AnnotatedTextSamplesFormat)
+	if err != nil {
+		return nil, nil, fmt.Errorf("convert verification format: %w", err)
+	}
+
 	var allSentences []string
 	for offset := 0; offset < total; offset += batchSize {
 		n := perCall
@@ -226,40 +236,115 @@ func (d *DataFactory) Generate(
 			n = rem
 		}
 
-		// Build prompt batch
-		batch := make([]string, callsPerBatch)
+		// build generation prompts
+		genPrompts := make([]string, callsPerBatch)
 		for i := 0; i < callsPerBatch; i++ {
 			var buf bytes.Buffer
-			if err := prompts.AnnotatedDataTmpl.Execute(&buf, map[string]interface{}{
-				"TagInfo":          tags,
-				"K":                n,
-				"Requirements":     Requirements,
-				"UserInstructions": opts.UserInstructions,
-			}); err != nil {
-				return nil, nil, fmt.Errorf("render prompt: %w", err)
+			var reqs []string
+			if len(opts.Feedback) > 0 {
+				reqs = ContextualExampleRequirements
+			} else {
+				reqs = append([]string{}, RequiredRequirements...)
+				perm := rand.Perm(len(AdditionalRequirements))
+				for j := 0; j < 4 && j < len(perm); j++ {
+					reqs = append(reqs, AdditionalRequirements[perm[j]])
+				}
 			}
-			batch[i] = buf.String()
+			if err := prompts.AnnotatedDataTmpl.Execute(&buf, map[string]interface{}{
+				"K":                n,
+				"TagInfo":          opts.TagsInfo,
+				"Requirements":     reqs,
+				"UserInstructions": opts.UserInstructions,
+				"Feedback":         opts.Feedback,
+			}); err != nil {
+				return nil, nil, fmt.Errorf("render gen prompt: %w", err)
+			}
+			genPrompts[i] = buf.String()
 		}
 
-		raws, err := d.runAndCollect(batch, prompts.AnnotatedDataSystem, annotFmt, true)
+		// call LLM for generation
+		rawGen, err := d.runAndCollect(genPrompts, prompts.AnnotatedDataSystem, genFmt, true)
 		if err != nil {
 			return nil, nil, fmt.Errorf("batch generate: %w", err)
 		}
 
-		for _, r := range raws {
-			var tmp struct {
-				Sentences []string `json:"sentences"`
+		// parse and collect sentences to verify
+		type genResp struct {
+			Sentences []string `json:"sentences"`
+		}
+		var toVerify [][]string
+		for _, r := range rawGen {
+			var gr genResp
+			if err := json.Unmarshal([]byte(r), &gr); err == nil && len(gr.Sentences) > 0 {
+				var cleaned []string
+				for _, s := range gr.Sentences {
+					if t := strings.TrimSpace(s); t != "" {
+						cleaned = append(cleaned, t)
+					}
+				}
+				toVerify = append(toVerify, cleaned)
 			}
-			if jerr := json.Unmarshal([]byte(r), &tmp); jerr == nil {
-				allSentences = append(allSentences, tmp.Sentences...)
+		}
+
+		// build and call verification prompts
+		verifPrompts := make([]string, len(toVerify))
+		for i, sentences := range toVerify {
+			var buf bytes.Buffer
+			if err := prompts.AnnotatedTextSamplesTmpl.Execute(&buf, map[string]interface{}{
+				"TagInfo":        opts.TagsInfo,
+				"AnnotatedTexts": sentences,
+			}); err != nil {
+				return nil, nil, fmt.Errorf("render verif prompt: %w", err)
+			}
+			verifPrompts[i] = buf.String()
+		}
+		rawVerif, err := d.runAndCollect(verifPrompts, prompts.AnnotatedTextCorrectionSystem, verifFmt, true)
+		if err != nil {
+			return nil, nil, fmt.Errorf("batch verify: %w", err)
+		}
+
+		// merge generated + verified
+		type verifResp struct {
+			AnnotatedTexts []string `json:"annotated_texts"`
+		}
+		for i, orig := range toVerify {
+			var vr verifResp
+			if err := json.Unmarshal([]byte(rawVerif[i]), &vr); err == nil {
+				var cleaned []string
+				for _, s := range vr.AnnotatedTexts {
+					if t := strings.TrimSpace(s); t != "" {
+						cleaned = append(cleaned, t)
+					}
+				}
+				if len(cleaned) == 0 {
+					allSentences = append(allSentences, orig...)
+				} else {
+					remaining := append([]string{}, orig...)
+					for _, corr := range cleaned {
+						ms, score := FindMostSimilar(corr, remaining)
+						if score > 0.7 {
+							allSentences = append(allSentences, corr)
+							for j, v := range remaining {
+								if v == ms {
+									remaining = append(remaining[:j], remaining[j+1:]...)
+									break
+								}
+							}
+						}
+					}
+					allSentences = append(allSentences, remaining...)
+				}
 			}
 		}
 	}
 
-	// 5) Transform sentences to api.Sample
-	allSamples := make([]api.Sample, 0, len(allSentences))
+	// transform into api.Sample using validated transformSentence
+	var allSamples []api.Sample
 	for _, s := range allSentences {
-		src, tgt := transformSentence(s, tags)
+		src, tgt, err := d.transformSentence(s, opts.TagsInfo)
+		if err != nil {
+			continue // skip invalid
+		}
 		toks := strings.Fields(src)
 		lbls := strings.Fields(tgt)
 		if len(toks) == len(lbls) {
@@ -267,17 +352,14 @@ func (d *DataFactory) Generate(
 		}
 	}
 
-	// 6) Split into train/test
-	splitIdx := int(float32(len(allSamples)) * (1 - opts.TestSplit))
-	if splitIdx < 0 {
-		splitIdx = 0
-	} else if splitIdx > len(allSamples) {
-		splitIdx = len(allSamples)
+	// split train/test
+	split := int(float32(len(allSamples)) * (1 - opts.TestSplit))
+	if split < 0 {
+		split = 0
+	} else if split > len(allSamples) {
+		split = len(allSamples)
 	}
-	train := allSamples[:splitIdx]
-	test := allSamples[splitIdx:]
-
-	return train, test, nil
+	return allSamples[:split], allSamples[split:], nil
 }
 
 var (
@@ -285,13 +367,35 @@ var (
 	annotRe = regexp.MustCompile(`(?P<before>[^\w\s#]*)#+(?P<entity>[^#]+?)#+(?P<tag>[A-Z_]+)#+(?P<after>[^\w\s#']*[\w']*)?`)
 )
 
+func (d *DataFactory) ValidateSentence(src, tgt string, tags []TagInfo) error {
+	srcToks := strings.Fields(src)
+	tgtToks := strings.Fields(tgt)
+	if len(srcToks) != len(tgtToks) {
+		return fmt.Errorf("token count mismatch %d vs %d", len(srcToks), len(tgtToks))
+	}
+	if strings.Contains(src, "#") {
+		return fmt.Errorf("source contains invalid '#' character")
+	}
+	allO := true
+	for _, t := range tgtToks {
+		if t != "O" {
+			allO = false
+			break
+		}
+	}
+	if allO {
+		return fmt.Errorf("all target tokens are 'O'")
+	}
+	return nil
+}
+
 // transformSentence applies your Python‐style regex tagging to a single sentence.
-func transformSentence(text string, tags []TagInfo) (string, string) {
-	var (
-		srcTokens []string
-		tgtTokens []string
-		last      = 0
-	)
+func (d *DataFactory) transformSentence(
+	text string,
+	tags []TagInfo,
+) (string, string, error) {
+	var srcTokens, tgtTokens []string
+	last := 0
 	matches := annotRe.FindAllStringSubmatchIndex(text, -1)
 
 	for _, m := range matches {
@@ -299,13 +403,11 @@ func transformSentence(text string, tags []TagInfo) (string, string) {
 
 		// prefix
 		if last < start {
-			pref := strings.Fields(text[last:start])
-			for _, w := range pref {
+			for _, w := range strings.Fields(text[last:start]) {
 				srcTokens = append(srcTokens, w)
 				tgtTokens = append(tgtTokens, "O")
 			}
 		}
-
 		entity := strings.TrimSpace(text[m[2]:m[3]])
 		tag := strings.ToUpper(text[m[4]:m[5]])
 		toks := strings.Fields(entity)
@@ -321,18 +423,24 @@ func transformSentence(text string, tags []TagInfo) (string, string) {
 			srcTokens = append(srcTokens, w)
 			tgtTokens = append(tgtTokens, mark)
 		}
-
 		last = end
 	}
 
 	// suffix
 	if last < len(text) {
-		suf := strings.Fields(text[last:])
-		for _, w := range suf {
+		for _, w := range strings.Fields(text[last:]) {
 			srcTokens = append(srcTokens, w)
 			tgtTokens = append(tgtTokens, "O")
 		}
 	}
 
-	return strings.Join(srcTokens, " "), strings.Join(tgtTokens, " ")
+	src := strings.Join(srcTokens, " ")
+	tgt := strings.Join(tgtTokens, " ")
+
+	// **Validate here** before returning
+	if err := d.ValidateSentence(src, tgt, tags); err != nil {
+		return src, tgt, fmt.Errorf("validation failed for '%s': %w", text, err)
+	}
+
+	return src, tgt, nil
 }
