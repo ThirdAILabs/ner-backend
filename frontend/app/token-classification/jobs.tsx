@@ -26,7 +26,7 @@ import { useHealth } from '@/contexts/HealthProvider';
 import { alpha } from '@mui/material/styles';
 import { useLicense } from '@/hooks/useLicense';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import useTelemetry from '@/hooks/useTelemetry';
+import { useConditionalTelemetry } from '@/hooks/useConditionalTelemetry';
 import { isUploadReport } from '@/lib/utils';
 import { useEnterprise } from '@/hooks/useEnterprise';
 
@@ -423,7 +423,7 @@ function Job({ initialReport, onDelete }: JobProps) {
 }
 
 export default function Jobs() {
-  const recordEvent = useTelemetry();
+  const recordEvent = useConditionalTelemetry();
   const [reports, setReports] = useState<ReportWithStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

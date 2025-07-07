@@ -3,6 +3,7 @@ import { nerService } from '@/lib/backend';
 
 export function useEnterprise() {
   const [isEnterprise, setIsEnterprise] = useState<boolean>(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     nerService
@@ -18,13 +19,9 @@ export function useEnterprise() {
           setIsEnterprise(enterprise === true);
         }
       })
-      .catch((err) => {
-        console.log('Failed to load enterprise information:', err);
-        setIsEnterprise(false);
-      });
+      .catch(() => setIsEnterprise(false))
+      .finally(() => setLoading(false));
   }, []);
 
-  return {
-    isEnterprise,
-  };
+  return { isEnterprise, loading };
 }

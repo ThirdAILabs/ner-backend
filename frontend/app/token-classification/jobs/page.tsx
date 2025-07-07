@@ -16,7 +16,7 @@ import { floor } from 'lodash';
 import { FeedbackPanel } from '@/components/feedback/FeedbackPanel';
 import useFeedbackState from '@/components/feedback/useFeedbackState';
 import { useFinetuning } from '@/hooks/useFinetuning';
-import useTelemetry from '@/hooks/useTelemetry';
+import { useConditionalTelemetry } from '@/hooks/useConditionalTelemetry';
 import { isUploadReport } from '@/lib/utils';
 
 const calculateProgress = (report: Report | null): number => {
@@ -84,7 +84,7 @@ interface CustomTag {
 function JobDetail() {
   const { isFinetuningEnabled } = useFinetuning();
 
-  const recordEvent = useTelemetry();
+  const recordEvent = useConditionalTelemetry();
   const searchParams = useSearchParams();
   const reportId: string = searchParams.get('jobId') as string;
   const [tabValue, setTabValue] = useState('summary');

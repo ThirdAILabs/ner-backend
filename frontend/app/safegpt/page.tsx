@@ -14,7 +14,7 @@ import ChatTitle from '@/components/chat/Title';
 import Sidebar from '@/components/chat/Sidebar';
 import Toggle from '@/components/chat/Toggle';
 import useSafeGPT, { NEW_CHAT_ID } from '@/hooks/useSafeGPT';
-import useTelemetry from '@/hooks/useTelemetry';
+import { useConditionalTelemetry } from '@/hooks/useConditionalTelemetry';
 
 const SIDEBAR_WIDTH = 250;
 
@@ -77,7 +77,7 @@ function SidebarToggle({ collapsed, onClick }: { collapsed: boolean; onClick: ()
 
 function SafeGPTContent() {
   const router = useRouter();
-  const recordEvent = useTelemetry();
+  const recordEvent = useConditionalTelemetry();
 
   const searchParams = useSearchParams();
   const selectedId = searchParams.get('id');

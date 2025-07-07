@@ -11,7 +11,7 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import Dashboard from '../dashboard';
 import Jobs from '../jobs';
-import useTelemetry from '@/hooks/useTelemetry';
+import { useConditionalTelemetry } from '@/hooks/useConditionalTelemetry';
 import ModelCustomization from './ModelCustomization';
 import { useFinetuning } from '@/hooks/useFinetuning';
 
@@ -21,10 +21,11 @@ function PageContents() {
   const searchParams = useSearchParams();
   const defaultTab = searchParams.get('tab') || 'jobs';
   const [tabValue, setTabValue] = useState(defaultTab);
-  const recordEvent = useTelemetry();
+  const recordEvent = useConditionalTelemetry();
 
   // Record initial page load
   useEffect(() => {
+    console.log(`function: recordEvent: ${recordEvent}`);
     recordEvent({
       UserAction: 'View Report Dashboard',
       UIComponent: 'Report Dashboard',

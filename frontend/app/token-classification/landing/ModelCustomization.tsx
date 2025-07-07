@@ -24,7 +24,7 @@ import { Toaster, toast } from 'react-hot-toast';
 import { nerService, SavedFeedback } from '@/lib/backend';
 import { useHealth } from '@/contexts/HealthProvider';
 import { TokenHighlighter } from '@/components/feedback/TokenHighlighter';
-import useTelemetry from '@/hooks/useTelemetry';
+import { useConditionalTelemetry } from '@/hooks/useConditionalTelemetry';
 import { ChevronRight } from 'lucide-react';
 import { ApiKeyDialog } from './ApiKeyDialog';
 
@@ -272,7 +272,7 @@ export function UserFeedbackSection({
 }
 
 const ModelCustomization: React.FC = () => {
-  const recordEvent = useTelemetry();
+  const recordEvent = useConditionalTelemetry();
   useEffect(() => {
     recordEvent({
       UserAction: 'view',

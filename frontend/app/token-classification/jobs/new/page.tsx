@@ -10,7 +10,7 @@ import { nerService } from '@/lib/backend';
 import { NO_GROUP, uniqueFileNames, getFilesFromElectron } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { SearchIcon } from '@heroicons/react/solid';
-import useTelemetry from '@/hooks/useTelemetry';
+import { useConditionalTelemetry } from '@/hooks/useConditionalTelemetry';
 import { useEnterprise } from '@/hooks/useEnterprise';
 
 import { nerBaseUrl } from '@/lib/axios.config';
@@ -315,7 +315,7 @@ interface CustomTag {
 
 export default function NewJobPage() {
   const router = useRouter();
-  const recordEvent = useTelemetry();
+  const recordEvent = useConditionalTelemetry();
 
   const { isEnterprise } = useEnterprise();
 
@@ -381,7 +381,8 @@ export default function NewJobPage() {
         Id: models.find((model) => model.Name === 'basic')?.Id || 'basic',
         Name: 'Basic',
         Disabled: false,
-        Description: 'Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.'
+        Description:
+          'Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.',
       },
       {
         Id: 'advanced',
