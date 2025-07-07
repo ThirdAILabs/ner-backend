@@ -3,6 +3,7 @@ class PromptInterceptor {
     this.processText = processText;
     this.cleanupEnterListener = null;
     this.cleanupButtonListener = null;
+    this.cache = {};
   }
 
   setup() {
@@ -58,101 +59,128 @@ class PromptInterceptor {
 class MessageModifier {
   constructor(processText) {
     this.processText = processText;
-    this.previousMessageId = null;
-    this.seen = {}
+    this.seen = {};
+    this.latestTimestamp = {};
+    this.cache = {};
   }
 
-  setup() {
-    for (const message of document.querySelectorAll('[data-message-author-role]')) {
-      const messageId = message.getAttribute("data-message-id");
-      const messageText = message.textContent;
-      if (!this.seen[messageId] || this.seen[messageId] != messageText) {
-        this.recursivelyProcessMessage(message, this.processText);
-        this.seen[messageId] = messageText;
+  handleMutations(mutations, timestamp) {
+    let affectedMessageIds = new Set();
+    mutations.forEach(mutation => {
+      let affectedAncestorMessageId = this.affectedMessageAncestor(mutation);
+      if (affectedAncestorMessageId) {
+        affectedMessageIds.add(affectedAncestorMessageId);
+      }
+      let affectedDescendantMessageIds = this.affectedMessageDescendants(mutation);
+      affectedDescendantMessageIds.forEach(messageId => affectedMessageIds.add(messageId));
+    })
+    affectedMessageIds = Array.from(affectedMessageIds);
+    affectedMessageIds = affectedMessageIds.filter(id => !id.includes('-modified'));
+    for (const messageId of affectedMessageIds) {
+      this.latestTimestamp[messageId] = this.latestTimestamp[messageId] ? Math.max(this.latestTimestamp[messageId], timestamp) : timestamp;
+      let message = document.querySelector(`[data-message-id="${messageId}"]`);
+      this.modifyMessage(message, timestamp, true);
+    }
+  }
+
+  async modifyMessage(messageNode, timestamp, delay = false) {
+    // Add a small delay to allow for any pending DOM updates
+    if (delay) {
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+    let messageId = messageNode.getAttribute('data-message-id');
+    if (timestamp < this.latestTimestamp[messageId]) {
+      console.log("Skipping due to updates")
+      return;
+    }
+    
+    let messageChanged = !this.seen[messageId] || this.seen[messageId] !== messageNode.innerText.length;
+    let messageMayHaveRedactions = messageNode.innerText.match(/\[.*?\]/g) !== null;
+    if (!messageChanged || !messageMayHaveRedactions) {
+      console.log("Skipping due to no changes")
+      return;
+    }
+    
+    this.seen[messageId] = messageNode.innerText.length;
+    
+    let modifiedId = messageId + '-modified';
+    let previous = document.querySelector(`[data-message-id="${modifiedId}"]`);
+    let modified = messageNode.cloneNode(true);
+    modified.style.display = previous ? previous.style.display : messageNode.style.display;
+    modified.setAttribute('data-message-id', modifiedId);
+    modified.setAttribute('data-timestamp', timestamp);
+    await this.recursivelyProcessMessage(modified, timestamp, messageId);
+  
+    // Query again because asynchronous processing may have modified the DOM.
+    let allPrevious = document.querySelectorAll(`[data-message-id="${modifiedId}"]`);
+    let existsNewer = false;
+    for (const node of allPrevious) {
+      if (node.getAttribute('data-timestamp') < timestamp) {
+        node.remove();
+      } else {
+        existsNewer = true;
       }
     }
+    if (existsNewer) {
+      return;
+    }
+    
+    messageNode.parentElement.prepend(modified);
+    
+    // So we don't unnecessarily trigger a mutation event.
+    if (messageNode.style.display !== 'none') {
+      messageNode.style.display = 'none';
+    }
   }
 
-  recursivelyProcessMessage(node, processText) {
+  async recursivelyProcessMessage(node, timestamp, messageId) {
     if (node.nodeType === Node.TEXT_NODE) {
-      const after = processText(node.textContent);
-      node.textContent = after;
+      if (!this.cache[messageId]) {
+        this.cache[messageId] = {};
+      }
+      if (!this.cache[messageId][node.textContent]) {
+        this.cache[messageId][node.textContent] = await this.processText(node.textContent, timestamp);
+      }
+      node.textContent = this.cache[messageId][node.textContent];
     }
-    let i = 0;
     for (const child of node.childNodes) {
-      this.recursivelyProcessMessage(child, processText);
+      await this.recursivelyProcessMessage(child, timestamp, messageId);
     }
   }
-}
 
-function affectedMessageAncestor(mutation) {
-  let target = mutation.target;
-  while (target && !target.hasAttribute('data-message-id')) {
-    if (target == document.body) {
-      return null;
+  affectedMessageAncestor(mutation) {
+    let target = mutation.target;
+    while (target && !target.hasAttribute('data-message-id')) {
+      if (target == document.body) {
+        return null;
+      }
+      target = target.parentElement;
     }
-    target = target.parentElement;
+    return target.getAttribute('data-message-id');
   }
-  return target.getAttribute('data-message-id');
-}
 
-function affectedMessageDescendants(mutation) {
-  let addedNodes = Array.from(mutation.addedNodes).filter(node => node.nodeType === Node.ELEMENT_NODE);
-  let removedNodes = Array.from(mutation.removedNodes).filter(node => node.nodeType === Node.ELEMENT_NODE);
-  let descendants = [...addedNodes, ...removedNodes].map(node => {
-    return Array.from(node.querySelectorAll('[data-message-id]'))
-  }).flat();
-  return descendants.map(node => node.getAttribute('data-message-id'));
-}
-
-function recursivelyProcessMessage(node, processText) {
-  if (node.nodeType === Node.TEXT_NODE) {
-    const after = processText(node.textContent);
-    node.textContent = after;
-  }
-  let i = 0;
-  for (const child of node.childNodes) {
-    recursivelyProcessMessage(child, processText);
+  affectedMessageDescendants(mutation) {
+    let addedNodes = Array.from(mutation.addedNodes).filter(node => node.nodeType === Node.ELEMENT_NODE);
+    let removedNodes = Array.from(mutation.removedNodes).filter(node => node.nodeType === Node.ELEMENT_NODE);
+    let descendants = [...addedNodes, ...removedNodes].map(node => {
+      return Array.from(node.querySelectorAll('[data-message-id]'))
+    }).flat();
+    return descendants.map(node => node.getAttribute('data-message-id'));
   }
 }
 
-function modifyMessage(messageNode, processText) {
-  let modifiedId = messageNode.getAttribute('data-message-id') + '-modified';
-  let previous = document.querySelector(`[data-message-id="${modifiedId}"]`);
-
-  if (processText(messageNode.innerText) === messageNode.innerText || (previous && processText(previous.innerText) === messageNode.innerText)) {
-    console.log("Skipped");
-    return;
-  }
-  
-  let modified = messageNode.cloneNode(true);
-  modified.style.display = previous ? previous.style.display : messageNode.style.display;
-  modified.setAttribute('data-message-id', modifiedId);
-  recursivelyProcessMessage(modified, processText);
-
-  if (previous) {
-    previous.remove();
-  }
-  messageNode.parentElement.prepend(modified);
-  if (messageNode.style.display !== 'none') {
-    messageNode.style.display = 'none';
-  }
-  // messageNode.style.height = '0px';
-  // messageNode.style.overflow = 'hidden';
-}
-
-function setupPage(redact, restore) {
+async function setupPage(redact, restore) {
   const promptInterceptor = new PromptInterceptor(redact);
-  // const existingMessageModifier = new MessageModifier(restore);
+  const messageModifier = new MessageModifier(restore);
 
   promptInterceptor.setup();
-  document.querySelectorAll('[data-message-id]').forEach(message => {
-    console.log(message);
-    modifyMessage(message, restore);
-  });
-  // existingMessageModifier.setup();
+  for (const message of document.querySelectorAll('[data-message-id]')) {
+    if (!message.getAttribute('data-message-id').includes('-modified')) {
+      await messageModifier.modifyMessage(message, Date.now());
+    }
+  }
   
-  let elementObserver = new MutationObserver(async (mutations) => {
+  let elementObserver = new MutationObserver((mutations) => {
     if (mutations.reduce((acc, mutation) => {
       const hasButton = mutation.target.id === 'composer-submit-button' || !!mutation.target.querySelector('#composer-submit-button');
       const hasPrompt = mutation.target.id === 'prompt-textarea';
@@ -160,44 +188,7 @@ function setupPage(redact, restore) {
     }, false)) {
       promptInterceptor.setup();
     }
-    // console.log(document.querySelectorAll('[data-message-id]'));
-    // for (const message of document.querySelectorAll('[data-message-id]')) {
-    //   // if (!message.getAttribute('data-message-id').includes('-modified')) {
-    //   //   modifyMessage(message, restore);
-    //   // }
-    // }
-    // existingMessageModifier.setup();
-    let mutationMessages = mutations.map(mutation => {
-      let message = {};
-      let ancestor = affectedMessageAncestor(mutation);
-      if (ancestor) {
-        message.ancestor = ancestor;
-      }
-      let descendants = affectedMessageDescendants(mutation);
-      if (descendants.length > 0) {
-        message.descendants = descendants;
-      }
-      let self = mutation.target.getAttribute('data-message-id');
-      if (self) {
-        message.self = self;
-      }
-      return [mutation, message];
-    }).filter(([mutation, message]) => Object.keys(message).length > 0);
-    if (mutationMessages.length > 0) {
-      console.log(mutations)
-      console.log(mutationMessages);
-      let allAffectedMessageIds = mutationMessages.map(([mutation, message]) => {
-        return [message.ancestor, ...(message.descendants || []), message.self].filter(id => id);
-      }).flat();
-      allAffectedMessageIds = Array.from(new Set(allAffectedMessageIds));
-      allAffectedMessageIds = allAffectedMessageIds.filter(id => !id.includes('-modified'));
-      console.log(allAffectedMessageIds);
-      let allAffectedMessages = allAffectedMessageIds.map(messageId => document.querySelector(`[data-message-id="${messageId}"]`));
-      console.log(allAffectedMessages);
-      allAffectedMessages.forEach(message => {
-        modifyMessage(message, restore);
-      });
-    }
+    messageModifier.handleMutations(mutations, Date.now());
   });
   elementObserver.observe(document.body, { childList: true, subtree: true });
 
@@ -243,18 +234,23 @@ function getSessionId(url) {
 }
 
 
-
 async function initialize() {
   const locationTracker = new LocationTracker();
   let wasmRedactor = await newWasmRedactor('wasm/build/');
   const makeRedact = (sessionId) => (text) => wasmRedactor.redact(text, sessionId);
   // TODO: Can we reduce initial loading time by running restore asynchronously?
-  const makeRestore = (sessionId) => (text) => wasmRedactor.restore(text, sessionId);
+  const makeRestore = (sessionId) => async (text) => {
+    const response = await fetch(`http://localhost:16549/api/v1/chat/sessions/${sessionId}/restore`, {
+      method: 'POST',
+      body: JSON.stringify({ Message: text }),
+    }).then(response => response.json()).then(data => data.Message);
+    return response;
+  }
 
   let sessionId = getSessionId(document.location.href) || generateUUID();
-  let cleanupPage = setupPage(makeRedact(sessionId), makeRestore(sessionId));
+  let cleanupPage = await setupPage(makeRedact(sessionId), makeRestore(sessionId));
 
-  locationTracker.onLocationChange((oldLocation, newLocation) => {
+  locationTracker.onLocationChange(async (oldLocation, newLocation) => {
     cleanupPage();
     const oldSessionId = getSessionId(oldLocation);
     const newSessionId = getSessionId(newLocation);
@@ -264,7 +260,7 @@ async function initialize() {
       wasmRedactor.updateExtensionId(sessionId, newSessionId);
     }
     sessionId = newSessionId || generateUUID();
-    cleanupPage = setupPage(makeRedact(sessionId), makeRestore(sessionId));
+    cleanupPage = await setupPage(makeRedact(sessionId), makeRestore(sessionId));
   });
 }
 
