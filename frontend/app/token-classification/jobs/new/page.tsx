@@ -317,7 +317,7 @@ export default function NewJobPage() {
   const router = useRouter();
   const recordEvent = useTelemetry();
 
-  const { isEnterprise } = useLicense();
+  const { isFreeVersion } = useLicense();
 
   // Essential state
   const [selectedSource, setSelectedSource] = useState<'s3' | 'files' | 'directory' | ''>('files');
@@ -370,7 +370,7 @@ export default function NewJobPage() {
         Id: models.find((model) => model.Name === 'basic')?.Id || 'basic',
         Name: 'Basic',
         Disabled: false,
-        Description: !isEnterprise
+        Description: isFreeVersion
           ? 'Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.'
           : 'Fast and lightweight AI model, does not allow customization of the fields with user feedback, gives basic usage statistics.',
       },

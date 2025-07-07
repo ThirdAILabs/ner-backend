@@ -13,10 +13,10 @@ import Dashboard from '../dashboard';
 import Jobs from '../jobs';
 import useTelemetry from '@/hooks/useTelemetry';
 import ModelCustomization from './ModelCustomization';
-import { useLicense } from '@/hooks/useLicense';
+import { useFinetuning } from '@/hooks/useFinetuning';
 
 function PageContents() {
-  const { isEnterprise } = useLicense();
+  const { isFinetuningEnabled } = useFinetuning();
 
   const searchParams = useSearchParams();
   const defaultTab = searchParams.get('tab') || 'jobs';
@@ -138,13 +138,13 @@ function PageContents() {
           >
             <Tab label="Scans Dashboard" value="jobs" />
             <Tab label="Usage Stats" value="monitoring" />
-            {isEnterprise && <Tab label="Model Customization" value="customization" />}
+            {isFinetuningEnabled && <Tab label="Model Customization" value="customization" />}
           </Tabs>
         </Box>
 
         {tabValue === 'monitoring' && <Dashboard />}
         {tabValue === 'jobs' && <Jobs />}
-        {isEnterprise && tabValue === 'customization' && <ModelCustomization />}
+        {isFinetuningEnabled && tabValue === 'customization' && <ModelCustomization />}
       </main>
     </div>
   );
