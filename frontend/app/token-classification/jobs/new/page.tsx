@@ -1173,7 +1173,8 @@ export default function NewJobPage() {
                 </div>
               </div>
 
-              {models.filter((model) => !['basic', 'advanced'].includes(model.Name.toLowerCase())).length > 0 && (
+              {models.filter((model) => !['basic', 'advanced'].includes(model.Name.toLowerCase()))
+                .length > 0 && (
                 <div>
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="text-lg font-semibold">Custom Models</h3>
@@ -1192,7 +1193,9 @@ export default function NewJobPage() {
                   {filteredCustomModels.length === 0 ? (
                     <div className="text-gray-500 py-8 text-center">
                       <FileSearch className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                      <p className="text-sm">No custom models found matching "{modelSearchQuery}"</p>
+                      <p className="text-sm">
+                        No custom models found matching "{modelSearchQuery}"
+                      </p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
