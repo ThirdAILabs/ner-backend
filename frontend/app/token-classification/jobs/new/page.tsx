@@ -14,6 +14,7 @@ import { useLicense } from '@/hooks/useLicense';
 import useTelemetry from '@/hooks/useTelemetry';
 
 import { nerBaseUrl } from '@/lib/axios.config';
+import { set } from 'lodash';
 
 const SUPPORTED_TYPES = ['.pdf', '.txt', '.csv', '.html', '.json', '.xml'];
 
@@ -433,6 +434,8 @@ export default function NewJobPage() {
       try {
         const modelData = await nerService.listModels();
         const trainedModels = modelData.filter((model) => model.Status === 'TRAINED');
+        const basicModel = trainedModels.find((model) => model.Name === 'basic');
+        setSelectedModelId(basicModel ? basicModel.Id : null);
         setModels(trainedModels.reverse());
       } catch (err) {
         console.error('Error fetching models:', err);
