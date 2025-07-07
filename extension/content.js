@@ -264,11 +264,16 @@ async function initialize() {
   });
 }
 
-if (!window.__MY_EXTENSION_ALREADY_INJECTED__) {
-  window.__MY_EXTENSION_ALREADY_INJECTED__ = true;
+const INJECTION_MARKER_ID = "__my_extension_root__";
+
+if (!document.getElementById(INJECTION_MARKER_ID)) {
+  const marker = document.createElement("div");
+  marker.id = INJECTION_MARKER_ID;
+  marker.style.display = "none";
+  document.documentElement.appendChild(marker);
 
   console.log("Injected content script");
-  
+
   initialize();
 } else {
   console.log("Script already injected, skipping.");
