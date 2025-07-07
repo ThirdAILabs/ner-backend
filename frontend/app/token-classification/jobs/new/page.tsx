@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Box } from '@mui/material';
-import { ArrowLeft, Plus, RefreshCw, Edit } from 'lucide-react';
+import { ArrowLeft, Plus, RefreshCw, Edit, FileSearch } from 'lucide-react';
 import { nerService } from '@/lib/backend';
 import { NO_GROUP, uniqueFileNames, getFilesFromElectron } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
@@ -1191,7 +1191,8 @@ export default function NewJobPage() {
 
                   {filteredCustomModels.length === 0 ? (
                     <div className="text-gray-500 py-8 text-center">
-                      No custom models found matching "{modelSearchQuery}"
+                      <FileSearch className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                      <p className="text-sm">No custom models found matching "{modelSearchQuery}"</p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
