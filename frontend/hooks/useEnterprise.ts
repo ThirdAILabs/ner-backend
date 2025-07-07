@@ -23,5 +23,5 @@ export function useEnterprise() {
       .finally(() => setLoading(false));
   }, []);
 
-  return { isEnterprise, loading };
+  return { isEnterprise, enterpriseLoading: loading };
 }

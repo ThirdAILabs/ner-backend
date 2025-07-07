@@ -220,13 +220,15 @@ function JobStatus({ report }: { report: ReportWithStatus }) {
 function LicenseErrorBanner({
   license,
   isEnterprise,
+  enterpriseLoading,
   isLicenseValid,
 }: {
   license: any;
   isEnterprise: boolean;
+  enterpriseLoading: boolean;
   isLicenseValid: boolean;
 }) {
-  if (!isLicenseValid && isEnterprise) {
+  if (!enterpriseLoading && !isLicenseValid && isEnterprise) {
     return (
       <div
         className={`
@@ -429,7 +431,7 @@ export default function Jobs() {
   const [error, setError] = useState<string | null>(null);
   const { healthStatus } = useHealth();
   const { license } = useLicense();
-  const { isEnterprise } = useEnterprise();
+  const { isEnterprise, enterpriseLoading } = useEnterprise();
   const [isLicenseValid, setIsLicenseValid] = useState<boolean>(true);
 
   useEffect(() => {
@@ -500,6 +502,7 @@ export default function Jobs() {
         <LicenseErrorBanner
           license={license}
           isEnterprise={isEnterprise}
+          enterpriseLoading={enterpriseLoading}
           isLicenseValid={isLicenseValid}
         />
         {typeof quotaUsedPercentage === 'number' && quotaUsedPercentage > 75 && (
@@ -703,6 +706,7 @@ export default function Jobs() {
         <LicenseErrorBanner
           license={license}
           isEnterprise={isEnterprise}
+          enterpriseLoading={enterpriseLoading}
           isLicenseValid={isLicenseValid}
         />
 
@@ -754,6 +758,7 @@ export default function Jobs() {
       <LicenseErrorBanner
         license={license}
         isEnterprise={isEnterprise}
+        enterpriseLoading={enterpriseLoading}
         isLicenseValid={isLicenseValid}
       />
 
