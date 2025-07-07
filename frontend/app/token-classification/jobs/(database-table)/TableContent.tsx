@@ -69,7 +69,7 @@ export function TableContent({
       fullPath = pathMap?.[filename];
 
       // If still not found and there's an uploadId prefix, try without it
-      if (!fullPath && fileIdentifier.includes('/') || fileIdentifier.includes('\\')) {
+      if ((!fullPath && fileIdentifier.includes('/')) || fileIdentifier.includes('\\')) {
         // The format might be uploadId\filename or uploadId/filename
         fullPath = pathMap?.[filename];
       }
