@@ -17,11 +17,12 @@ import { FeedbackPanel } from '@/components/feedback/FeedbackPanel';
 import useFeedbackState from '@/components/feedback/useFeedbackState';
 import { useLicense } from '@/hooks/useLicense';
 import useTelemetry from '@/hooks/useTelemetry';
+import { isUploadReport } from '@/lib/utils';
 
 const calculateProgress = (report: Report | null): number => {
   const successfulFiles = report?.SucceededFileCount || 0;
   const failedFiles = report?.FailedFileCount || 0;
-  const totalFiles = report?.FileCount || 1;
+  const totalFiles = report?.TotalFileCount || 1;
 
   return floor(((successfulFiles + failedFiles) / totalFiles) * 100);
 };
@@ -87,7 +88,7 @@ function JobDetail() {
   const searchParams = useSearchParams();
   const reportId: string = searchParams.get('jobId') as string;
   const [tabValue, setTabValue] = useState('summary');
-  const [selectedSource, setSelectedSource] = useState<'s3' | 'local'>('s3');
+  const [selectedSource, setSelectedSource] = useState<StorageType>('s3');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
   // Remove selectedTags state, just keep availableTags
@@ -130,10 +131,13 @@ function JobDetail() {
 
       setTimeTaken((report.TotalInferenceTimeSeconds || 0) + (report.ShardDataTimeSeconds || 0));
 
-      if (report.IsUpload) {
+      // Set selectedSource based on IsUpload field
+      // Here, "local" refers to the fact that the files are uploaded from the user's machine to the backend.
+      // It does not reflect where the backend ends up storing the files.
+      if (isUploadReport(report)) {
         setSelectedSource('local');
       } else {
-        setSelectedSource('s3');
+        setSelectedSource(report.StorageType);
       }
 
       if (report.Tags) {
@@ -256,7 +260,7 @@ function JobDetail() {
           <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3 }}>
             <h2 className="text-2xl font-medium mb-4">Source</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {selectedSource === 's3' && reportData?.SourceS3Bucket && (
+              {selectedSource === 's3' && reportData?.StorageParams && (
                 <Box
                   sx={{
                     p: 2,
@@ -266,22 +270,22 @@ function JobDetail() {
                   }}
                 >
                   <h3 className="text-lg font-medium mb-1">S3 Bucket</h3>
-                  {reportData.S3Endpoint && (
+                  {reportData.StorageParams.Endpoint && (
                     <p className="text-sm text-gray-600">
-                      <b>Endpoint:</b> {reportData.S3Endpoint}
+                      <b>Endpoint:</b> {reportData.StorageParams.Endpoint}
                     </p>
                   )}
-                  {reportData.S3Region && (
+                  {reportData.StorageParams.Region && (
                     <p className="text-sm text-gray-600">
-                      <b>Region:</b> {reportData.S3Region}
+                      <b>Region:</b> {reportData.StorageParams.Region}
                     </p>
                   )}
                   <p className="text-sm text-gray-600">
-                    <b>Bucket:</b> {reportData.SourceS3Bucket}
+                    <b>Bucket:</b> {reportData.StorageParams.Bucket}
                   </p>
-                  {reportData.SourceS3Prefix && (
+                  {reportData.StorageParams.Prefix && (
                     <p className="text-sm text-gray-600">
-                      <b>Prefix:</b> {reportData.SourceS3Prefix}
+                      <b>Prefix:</b> {reportData.StorageParams.Prefix}
                     </p>
                   )}
                 </Box>
@@ -380,7 +384,7 @@ function JobDetail() {
             timeTaken={timeTaken}
             succeededFileCount={reportData?.SucceededFileCount || 0}
             failedFileCount={reportData?.FailedFileCount || 0}
-            totalFileCount={reportData?.FileCount || 1}
+            totalFileCount={reportData?.TotalFileCount || 1}
             dataProcessed={dataProcessed || 0}
             setTab={(val) => {
               tabChangeByGraph.current = true;
@@ -397,7 +401,9 @@ function JobDetail() {
             groups={reportData?.Groups?.map((g) => g.Name) || []}
             tags={availableTagsCount}
             customTagNames={customTags.map((t) => t.name)}
-            uploadId={reportData?.IsUpload ? reportData?.SourceS3Prefix : ''}
+            uploadId={
+              reportData && isUploadReport(reportData) ? reportData?.StorageParams.Prefix : ''
+            }
             addFeedback={addFeedback}
             initialSelectedTag={selectedTag}
           />

@@ -73,6 +73,8 @@ When installed, the app will automatically find and use the backend without any 
 
 `ENABLE_PYTHON` defaults to false. It needs to be true to enable finetuning, which is a paid-license-only feature.
 
+`ENTERPRISE_MODE` default to false. It needs to be true to enable enterprise-mode-only features. 
+
 `LICENSE_KEY` is only required for the paid version, which includes finetuning capabilities. You can exclude the flag to run / build the free version, which does not include finetuning.
 
 #### Where can you obtain these model subdirectories?

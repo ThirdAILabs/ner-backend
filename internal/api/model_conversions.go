@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"ner-backend/internal/core"
 	"ner-backend/internal/core/python"
 	"ner-backend/internal/database"
@@ -67,11 +68,8 @@ func convertReport(r database.Report) api.Report {
 		Id:                 r.Id,
 		Model:              convertModel(*r.Model),
 		ReportName:         r.ReportName,
-		SourceS3Bucket:     r.SourceS3Bucket,
-		SourceS3Prefix:     r.SourceS3Prefix.String,
-		S3Endpoint:         r.S3Endpoint.String,
-		S3Region:           r.S3Region.String,
-		IsUpload:           r.IsUpload,
+		StorageType:        r.StorageType,
+		StorageParams:      json.RawMessage(r.StorageParams),
 		Stopped:            r.Stopped,
 		CreationTime:       r.CreationTime,
 		Groups:             convertGroups(r.Groups),

@@ -1,0 +1,12 @@
+azure:
+  branches:
+    main:
+      pull_credentials:
+        password: LiX2XTsZ6hMVzHDMI0UOJuCcrsXkMnzLqp3cP73cM1+ACRAWkkgi
+        username: pocketshield-pull-main
+      push_credentials:
+        password: Fun2eFhCYOL1sEHQkbntapDvxLLIvc5jCtwf9ghBsn+ACRAjwW5W
+        username: pocketshield-push-main
+      version: 0.0.1
+  registry: pocketshield.azurecr.io
+provider: azure

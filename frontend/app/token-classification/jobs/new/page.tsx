@@ -192,17 +192,23 @@ const FileSources: React.FC<FileSourcesProps> = ({
         <SourceOption
           onClick={async () => {
             selectSource('files');
-            setIsLoadingFiles(true);
             try {
               const { allFilesMeta, totalSize, error } =
                 await getFilesFromElectron(SUPPORTED_TYPES);
               if (error) {
                 addFilesMeta([]);
-              } else {
-                addFilesMeta(allFilesMeta || []);
+              } else if (allFilesMeta && allFilesMeta.length > 0) {
+                setIsLoadingFiles(true);
+                try {
+                  // Add a small delay to show loading state
+                  await new Promise((resolve) => setTimeout(resolve, 100));
+                  addFilesMeta(allFilesMeta);
+                } finally {
+                  setIsLoadingFiles(false);
+                }
               }
-            } finally {
-              setIsLoadingFiles(false);
+            } catch (err) {
+              console.error('Error selecting files:', err);
             }
           }}
           icon={isLoadingFiles ? <RefreshCw className="w-8 h-8 animate-spin" /> : folderIcon}
@@ -218,7 +224,7 @@ const FileSources: React.FC<FileSourcesProps> = ({
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files) {
+    if (files && files.length > 0) {
       setIsLoadingFiles(true);
       try {
         // Add a small delay to show loading state for quick file selections
@@ -811,16 +817,22 @@ export default function NewJobPage() {
         CustomTags: customTagsObj,
         ...(selectedSource === 's3'
           ? {
-              S3Endpoint: sourceS3Endpoint,
-              S3Region: sourceS3Region,
-              SourceS3Bucket: sourceS3Bucket,
-              SourceS3Prefix: sourceS3Prefix || undefined,
+              StorageType: 's3',
+              StorageParams: {
+                Endpoint: sourceS3Endpoint,
+                Region: sourceS3Region,
+                Bucket: sourceS3Bucket,
+                Prefix: sourceS3Prefix,
+              },
             }
           : {
-              UploadId: uploadId as string,
+              StorageType: 'upload',
+              StorageParams: {
+                UploadId: uploadId,
+              },
             }),
         Groups: groups,
-        report_name: jobName,
+        ReportName: jobName,
       });
 
       setSuccess(true);
