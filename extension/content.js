@@ -1,3 +1,94 @@
+let showRedaction = false;
+
+function addToggleButton() {
+  if (document.querySelector('#toggle-redaction-slider')) {
+    return;
+  }
+
+  const onToggle = () => {
+    showRedaction = !showRedaction;
+    for (const message of document.querySelectorAll('[data-message-id]')) {
+      if (message.getAttribute('data-message-id').includes('-modified')) {
+        message.style.display = showRedaction ? 'none' : '';
+      } else {
+        message.style.display = showRedaction ? '' : 'none';
+      }
+    }
+  }
+  
+  // Create slider container
+  const sliderContainer = document.createElement('div');
+  sliderContainer.setAttribute("id", "toggle-redaction-slider");
+  sliderContainer.style.cssText = `
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px;
+  `;
+  
+  // Create label text
+  const label = document.createElement('span');
+  label.textContent = 'Show Redaction';
+  label.style.cssText = `
+    font-size: 14px;
+    color: rgb(255, 255, 255);
+    font-family: ui-sans-serif, -apple-system, system-ui, Segoe UI, Helvetica, Apple Color Emoji, Arial, sans-serif, Segoe UI Emoji, Segoe UI Symbol;
+  `;
+  
+  // Create slider input
+  const slider = document.createElement('input');
+  slider.type = 'checkbox';
+  slider.id = 'redaction-slider-input';
+  slider.style.display = 'none';
+  slider.checked = showRedaction;
+  
+  // Create slider visual
+  const sliderVisual = document.createElement('label');
+  sliderVisual.htmlFor = 'redaction-slider-input';
+  sliderVisual.style.cssText = `
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 20px;
+    background-color: ${showRedaction ? '#4CAF50' : '#ccc'};
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  `;
+  
+  // Create slider handle
+  const sliderHandle = document.createElement('span');
+  sliderHandle.style.cssText = `
+    position: absolute;
+    top: 2px;
+    left: ${showRedaction ? '22px' : '2px'};
+    width: 16px;
+    height: 16px;
+    background-color: white;
+    border-radius: 50%;
+    transition: left 0.3s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  `;
+  
+  sliderVisual.appendChild(sliderHandle);
+  
+  // Add event listener
+  slider.addEventListener('change', () => {
+    onToggle();
+    sliderVisual.style.backgroundColor = showRedaction ? '#4CAF50' : '#ccc';
+    sliderHandle.style.left = showRedaction ? '22px' : '2px';
+  });
+  
+  // Assemble the slider
+  sliderContainer.appendChild(label);
+  sliderContainer.appendChild(slider);
+  sliderContainer.appendChild(sliderVisual);
+  
+  const container = document.querySelector('[data-testid="composer-footer-actions"]')
+  if (container) {
+    container.appendChild(sliderContainer);
+  }
+}
 class PromptInterceptor {
   constructor(processText) {
     this.processText = processText;
@@ -104,14 +195,12 @@ class MessageModifier {
     this.seen[messageId] = messageNode.innerText.length;
     
     let modifiedId = messageId + '-modified';
-    let previous = document.querySelector(`[data-message-id="${modifiedId}"]`);
     let modified = messageNode.cloneNode(true);
-    modified.style.display = previous ? previous.style.display : messageNode.style.display;
+    modified.style.display = '';
     modified.setAttribute('data-message-id', modifiedId);
     modified.setAttribute('data-timestamp', timestamp);
     await this.recursivelyProcessMessage(modified, timestamp, messageId);
   
-    // Query again because asynchronous processing may have modified the DOM.
     let allPrevious = document.querySelectorAll(`[data-message-id="${modifiedId}"]`);
     let existsNewer = false;
     for (const node of allPrevious) {
@@ -128,7 +217,7 @@ class MessageModifier {
     messageNode.parentElement.prepend(modified);
     
     // So we don't unnecessarily trigger a mutation event.
-    if (messageNode.style.display !== 'none') {
+    if (messageNode.style.display !== 'none' && !showRedaction) {
       messageNode.style.display = 'none';
     }
   }
@@ -172,6 +261,7 @@ class MessageModifier {
 async function setupPage(redact, restore) {
   const promptInterceptor = new PromptInterceptor(redact);
   const messageModifier = new MessageModifier(restore);
+  addToggleButton();
 
   promptInterceptor.setup();
   for (const message of document.querySelectorAll('[data-message-id]')) {
@@ -189,6 +279,7 @@ async function setupPage(redact, restore) {
       promptInterceptor.setup();
     }
     messageModifier.handleMutations(mutations, Date.now());
+    addToggleButton();
   });
   elementObserver.observe(document.body, { childList: true, subtree: true });
 
