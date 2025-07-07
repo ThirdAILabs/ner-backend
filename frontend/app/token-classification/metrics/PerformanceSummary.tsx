@@ -63,7 +63,13 @@ export const PerformanceSummary: React.FC<PerformanceSummaryProps> = ({
       );
     } else {
       return (
-        <Box sx={{ display: 'flex', alignItems: 'center', color: 'text.secondary' }}>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            color: 'text.secondary',
+          }}
+        >
           <RemoveIcon fontSize="small" sx={{ mr: 0.5 }} />
           <Typography variant="body2" sx={{ fontWeight: 500 }}>
             No change

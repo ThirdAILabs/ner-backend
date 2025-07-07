@@ -86,7 +86,14 @@ export function UserFeedbackSection({
 
   return (
     <Box sx={{ mt: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 2,
+        }}
+      >
         <Typography
           variant="h6"
           sx={{
@@ -509,7 +516,12 @@ const ModelCustomization: React.FC = () => {
         <CardContent sx={{ p: 4 }}>
           <Typography
             variant="h5"
-            sx={{ fontWeight: 600, fontSize: '1.5rem', color: '#4a5568', mb: 4 }}
+            sx={{
+              fontWeight: 600,
+              fontSize: '1.5rem',
+              color: '#4a5568',
+              mb: 4,
+            }}
           >
             Model Customization
           </Typography>
@@ -546,7 +558,14 @@ const ModelCustomization: React.FC = () => {
                     value={m.Id}
                     sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
                   >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1 }}>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        flexGrow: 1,
+                      }}
+                    >
                       {m.Name.charAt(0).toUpperCase() + m.Name.slice(1)}
                       {m.Status === 'TRAINING' && (
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>

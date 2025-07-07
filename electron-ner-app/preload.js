@@ -16,9 +16,13 @@ window.addEventListener('DOMContentLoaded', () => {
 contextBridge.exposeInMainWorld('electron', {
   sendTelemetry: (data) => ipcRenderer.invoke('telemetry', data),
   getUserId: () => ipcRenderer.invoke('get-user-id'),
-  openFileChooser: (supportedTypes) => ipcRenderer.invoke('open-file-chooser', supportedTypes),
+  openFileChooser: (supportedTypes, isDirectoryMode, isCombinedMode) => ipcRenderer.invoke('open-file-chooser', supportedTypes, isDirectoryMode, isCombinedMode),
   openFile: (filePath) => ipcRenderer.invoke('open-file', filePath),
   showFileInFolder: (filePath) => ipcRenderer.invoke('show-file-in-folder', filePath),
   openLinkExternally: (url) => ipcRenderer.invoke('open-external-link', url),
+  // Window controls
+  minimizeWindow: () => ipcRenderer.invoke('minimize-window'),
+  maximizeWindow: () => ipcRenderer.invoke('maximize-window'),
+  closeWindow: () => ipcRenderer.invoke('close-window'),
   uploadFiles: (files) => ipcRenderer.invoke('upload-files', files),
 }); 

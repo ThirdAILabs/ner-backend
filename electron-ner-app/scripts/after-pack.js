@@ -3,12 +3,16 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
+import { createRequire } from 'module';
+
+// Create require for CommonJS modules
+const require = createRequire(import.meta.url);
+const { getExecutableName, getWindowsDependencies } = require('./platform-utils.cjs');
 
 const execAsync = promisify(exec);
 
 // Get __dirname equivalent in ESM
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 /**
  * This hook runs after Electron Builder packs the app but before it creates the installer
@@ -17,7 +21,7 @@ const __dirname = path.dirname(__filename);
 export async function afterPack(context) {
   const { appOutDir, packager, electronPlatformName } = context;
   const appDir = packager.info._appDir;
-  const sourceBackend = path.join(appDir, '..', 'main');
+  const sourceBackend = path.join(appDir, '..', getExecutableName('main'));
   let targetResourcesPath;
   
   console.log('After pack hook running...');
@@ -56,13 +60,28 @@ export async function afterPack(context) {
   }
   
   // Copy backend binary to the bin directory
-  const targetBackendPath = path.join(targetBinDir, 'main');
+  const targetBackendPath = path.join(targetBinDir, getExecutableName('main'));
   console.log(`Copying backend from ${sourceBackend} to ${targetBackendPath}`);
   
   try {
     fs.copyFileSync(sourceBackend, targetBackendPath);
     fs.chmodSync(targetBackendPath, '755'); // Make executable
     console.log('✅ Backend binary successfully copied to:', targetBackendPath);
+    
+    // Copy Windows dependencies if on Windows
+    if (electronPlatformName === 'win32') {
+      const windowsDeps = getWindowsDependencies();
+      for (const dep of windowsDeps) {
+        const sourcePath = path.join(appDir, '..', dep);
+        const targetPath = path.join(targetBinDir, dep);
+        if (fs.existsSync(sourcePath)) {
+          console.log(`Copying Windows dependency: ${dep}`);
+          fs.copyFileSync(sourcePath, targetPath);
+        } else {
+          console.warn(`Windows dependency not found: ${sourcePath}`);
+        }
+      }
+    }
     
     // Verify the file exists and has the correct permissions
     const stats = fs.statSync(targetBackendPath);
@@ -78,7 +97,6 @@ export async function afterPack(context) {
       const appPath = path.join(appOutDir, `${packager.appInfo.productName}.app`);
       const frameworksPath = path.join(appPath, 'Contents', 'Frameworks');
       const libompPath = path.join(frameworksPath, 'libomp.dylib');
-      const onnxPath      = path.join(frameworksPath, 'libonnxruntime.dylib');
 
       
       if (fs.existsSync(libompPath)) {
