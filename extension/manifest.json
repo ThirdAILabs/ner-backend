@@ -51,7 +51,8 @@
       "resources": [
         "popup.html",
         "wasm/build/*",
-        "wasm/wasm-loader.js"
+        "wasm/wasm-loader.js",
+        "logo-shield.png"
       ],
       "matches": ["https://chatgpt.com/*"]
     }

@@ -2,7 +2,7 @@ let showRedaction = false;
 
 // Global popup dimensions
 const POPUP_WIDTH = 300;
-const POPUP_HEIGHT = 200;
+const POPUP_HEIGHT = 300;
 
 function addToggleButton() {
   if (document.querySelector('#toggle-redaction-slider')) {
@@ -146,13 +146,7 @@ function createPopupOverlay(id, content) {
 function showInitializingPopup() {
   const content = `
     <div style="display: flex; flex-direction: column; align-items: center; gap: 16px;">
-      <div style="width: 64px; height: 64px; background-image: url('data:image/svg+xml;base64,${btoa(`
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 2L3 7V17L12 22L21 17V7L12 2Z" fill="#4A90E2"/>
-          <path d="M12 6L6 9.5V14.5L12 18L18 14.5V9.5L12 6Z" fill="#1E3A8A"/>
-          <circle cx="12" cy="12" r="3" fill="white"/>
-        </svg>
-      `)}'); background-size: contain; background-repeat: no-repeat; animation: pulse 2s ease-in-out infinite;"></div>
+      <div style="width: 96px; height: 96px; background-image: url('${chrome.runtime.getURL('logo-shield.png')}'); background-size: contain; background-repeat: no-repeat; animation: pulse 2s ease-in-out infinite;"></div>
       <div style="color: white; font-size: 16px; font-weight: 500; text-align: center; animation: pulse 2s ease-in-out infinite;">
         Initializing PocketShield
       </div>
@@ -177,14 +171,23 @@ function hideInitializingPopup() {
 
 function showDownloadPocketshieldPopup() {
   const content = `
-    <div style="display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center;">
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; height: 100%; gap: 24px;">
       <div style="color: white; font-size: 14px; line-height: 1.4; max-width: 260px;">
         It seems like the PocketShield app isn't running. If you haven't, 
         <a href="https://www.thirdai.com/pocketshield/" 
            style="color: #4A90E2; text-decoration: underline;" 
            target="_blank">download the app</a> and open it.
       </div>
+      <div style="color: #AAA; font-size: 16px; animation: pulse 2s ease-in-out infinite;">
+        waiting
+      </div>
     </div>
+    <style>
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.4; }
+      }
+    </style>
   `;
   
   createPopupOverlay('pocketshield-download-popup', content);
@@ -200,33 +203,33 @@ function hideDownloadPocketshieldPopup() {
 function showLoadSuccessPopup() {
   const content = `
     <div style="display: flex; flex-direction: column; align-items: center; gap: 16px;">
-      <div style="width: 64px; height: 64px; background-image: url('data:image/svg+xml;base64,${btoa(`
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 2L3 7V17L12 22L21 17V7L12 2Z" fill="#4A90E2"/>
-          <path d="M12 6L6 9.5V14.5L12 18L18 14.5V9.5L12 6Z" fill="#1E3A8A"/>
-          <circle cx="12" cy="12" r="3" fill="white"/>
-        </svg>
-      `)}'); background-size: contain; background-repeat: no-repeat;"></div>
-      <div style="color: white; font-size: 16px; font-weight: 500; text-align: center; margin-bottom: 8px;">
-        We're ready to go!
-      </div>
-      <button onclick="hideLoadSuccessPopup()" style="
-        background-color: #4A90E2;
-        color: white;
-        border: none;
-        padding: 8px 24px;
-        border-radius: 20px;
-        font-size: 14px;
-        font-weight: bold;
-        cursor: pointer;
-        transition: background-color 0.3s;
-      " onmouseover="this.style.backgroundColor='#357ABD'" onmouseout="this.style.backgroundColor='#4A90E2'">
-        Let's go!
-      </button>
-    </div>
-  `;
-  
-  createPopupOverlay('pocketshield-success-popup', content);
+       <div style="width: 96px; height: 96px; background-image: url('${chrome.runtime.getURL('logo-shield.png')}'); background-size: contain; background-repeat: no-repeat;"></div>
+       <div style="color: white; font-size: 16px; font-weight: 500; text-align: center; margin-bottom: 8px;">
+         Your chat is secured.
+       </div>
+       <button id="success-popup-button" style="
+         background-color: #4A90E2;
+         color: white;
+         border: none;
+         padding: 8px 24px;
+         border-radius: 20px;
+         font-size: 14px;
+         font-weight: bold;
+         cursor: pointer;
+         transition: background-color 0.3s;
+       " onmouseover="this.style.backgroundColor='#357ABD'" onmouseout="this.style.backgroundColor='#4A90E2'">
+         Let's go!
+       </button>
+     </div>
+   `;
+   
+   const popup = createPopupOverlay('pocketshield-success-popup', content);
+   
+   // Add event listener programmatically
+   const button = popup.querySelector('#success-popup-button');
+   if (button) {
+     button.addEventListener('click', hideLoadSuccessPopup);
+   }
 }
 
 function hideLoadSuccessPopup() {
@@ -474,29 +477,51 @@ function getSessionId(url) {
   return match ? match[1] : null;
 }
 
+async function backendIsHealthy() {
+  return (await fetch('http://localhost:16549/api/v1/health').then(() => ({ok: true})).catch(() => ({ ok: false }))).ok;
+}
+
 async function healthCheck() {
   showInitializingPopup();
-  const response = await fetch('http://localhost:16549/api/v1/health');
-  if (response.ok) {
+  let healthy = await backendIsHealthy();
+  if (healthy) {
     hideInitializingPopup();
     showLoadSuccessPopup();
-  } else {
-    hideInitializingPopup();
+    return;
+  }
+  hideInitializingPopup();
+  
+  while (!healthy) {
     showDownloadPocketshieldPopup();
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    healthy = await backendIsHealthy();
+    console.log("health check done", healthy)
+  }
+  hideDownloadPocketshieldPopup();
+  showLoadSuccessPopup();
+  
+}
 
-    let healthy = false;
-    while (!healthy) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      const response = await fetch('http://localhost:16549/api/v1/health');
-      healthy = response.ok;
+async function constantHealthCheck() {
+  let lastHealthy = true;
+  while (true) {
+    if (!(await backendIsHealthy())) {
+      showDownloadPocketshieldPopup();
+      lastHealthy = false;
+    } else {
+      if (!lastHealthy) {
+        hideDownloadPocketshieldPopup();
+        showLoadSuccessPopup();
+        lastHealthy = true;
+      }
     }
-    hideDownloadPocketshieldPopup();
-    showLoadSuccessPopup();
+    await new Promise(resolve => setTimeout(resolve, 1000));
   }
 }
 
 async function initialize() {
   await healthCheck();
+  constantHealthCheck();
 
   const locationTracker = new LocationTracker();
   let wasmRedactor = await newWasmRedactor('wasm/build/');
