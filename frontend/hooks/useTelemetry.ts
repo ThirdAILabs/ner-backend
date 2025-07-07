@@ -79,7 +79,6 @@ export default function useTelemetry() {
         //     },
         //     body: JSON.stringify(telemetryPackage),
         //   });
-
         //   if (!response.ok) {
         //     throw new Error(`HTTP error! status: ${response.status}`);
         //   }

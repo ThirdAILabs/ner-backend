@@ -64,9 +64,10 @@ const ModelOption: React.FC<ModelOptionProps> = ({
   <div
     className={`relative p-6 border rounded-md transition-all
       ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200 border-2'}
-      ${disabled
-        ? 'opacity-85 cursor-not-allowed bg-gray-50'
-        : 'cursor-pointer hover:border-blue-300'
+      ${
+        disabled
+          ? 'opacity-85 cursor-not-allowed bg-gray-50'
+          : 'cursor-pointer hover:border-blue-300'
       }
     `}
     onClick={() => !disabled && onClick()}
@@ -117,11 +118,12 @@ const SourceOption: React.FC<SourceOptionProps> = ({
   disabled = false,
 }) => (
   <div
-    className={`relative p-6 border-2 border-dashed rounded-lg transition-colors ${disabled
-      ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
-      : 'border-gray-300 hover:border-blue-400 cursor-pointer'
-      }`}
-    onClick={disabled ? () => { } : onClick}
+    className={`relative p-6 border-2 border-dashed rounded-lg transition-colors ${
+      disabled
+        ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
+        : 'border-gray-300 hover:border-blue-400 cursor-pointer'
+    }`}
+    onClick={disabled ? () => {} : onClick}
   >
     {input && input}
     <div className="flex flex-col items-center justify-center space-y-4">
@@ -366,12 +368,15 @@ export default function NewJobPage() {
 
   const defaultModels = useMemo(() => {
     if (isEnterprise && !isElectron) {
-      return [{
-        Id: models.find((model) => model.Name === 'basic')?.Id || 'basic',
-        Name: 'Base-Model',
-        Disabled: false,
-        Description: 'Fast and lightweight AI model, does not allow customization of the fields with user feedback, gives basic usage statistics.',
-      }]
+      return [
+        {
+          Id: models.find((model) => model.Name === 'basic')?.Id || 'basic',
+          Name: 'Base-Model',
+          Disabled: false,
+          Description:
+            'Fast and lightweight AI model, does not allow customization of the fields with user feedback, gives basic usage statistics.',
+        },
+      ];
     }
     return [
       {
@@ -826,20 +831,20 @@ export default function NewJobPage() {
         CustomTags: customTagsObj,
         ...(selectedSource === 's3'
           ? {
-            StorageType: 's3',
-            StorageParams: {
-              Endpoint: sourceS3Endpoint,
-              Region: sourceS3Region,
-              Bucket: sourceS3Bucket,
-              Prefix: sourceS3Prefix,
-            },
-          }
+              StorageType: 's3',
+              StorageParams: {
+                Endpoint: sourceS3Endpoint,
+                Region: sourceS3Region,
+                Bucket: sourceS3Bucket,
+                Prefix: sourceS3Prefix,
+              },
+            }
           : {
-            StorageType: 'upload',
-            StorageParams: {
-              UploadId: uploadId,
-            },
-          }),
+              StorageType: 'upload',
+              StorageParams: {
+                UploadId: uploadId,
+              },
+            }),
         Groups: groups,
         ReportName: jobName,
       });
@@ -979,8 +984,9 @@ export default function NewJobPage() {
                   validateJobName(value);
                 }}
                 onBlur={() => validateJobName(jobName)}
-                className={`w-full p-2 border ${nameError ? 'border-red-500' : 'border-gray-300'
-                  } rounded`}
+                className={`w-full p-2 border ${
+                  nameError ? 'border-red-500' : 'border-gray-300'
+                } rounded`}
                 placeholder="Enter_Scan_Name"
                 required
               />
@@ -1382,8 +1388,9 @@ export default function NewJobPage() {
                         value={customTagName}
                         onChange={(e) => handleTagNameChange(e.target.value)}
                         onBlur={(e) => handleTagNameChange(e.target.value)}
-                        className={`w-full p-2 border ${nameError ? 'border-red-500' : 'border-gray-300'
-                          } rounded`}
+                        className={`w-full p-2 border ${
+                          nameError ? 'border-red-500' : 'border-gray-300'
+                        } rounded`}
                         placeholder="CUSTOM_TAG_NAME"
                         required
                       />
