@@ -5,5 +5,5 @@ export function useConditionalTelemetry() {
   const { isEnterprise, loading } = useEnterprise();
   const recordEvent = useTelemetry();
 
-  return (loading || isEnterprise) ? () => {} : recordEvent;
+  return loading || isEnterprise ? () => {} : recordEvent;
 }
