@@ -10,8 +10,8 @@ import { nerService } from '@/lib/backend';
 import { NO_GROUP, uniqueFileNames, getFilesFromElectron } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { SearchIcon } from '@heroicons/react/solid';
-import { useLicense } from '@/hooks/useLicense';
 import useTelemetry from '@/hooks/useTelemetry';
+import { useEnterprise } from '@/hooks/useEnterprise';
 
 import { nerBaseUrl } from '@/lib/axios.config';
 
@@ -317,7 +317,7 @@ export default function NewJobPage() {
   const router = useRouter();
   const recordEvent = useTelemetry();
 
-  const { isFreeVersion } = useLicense();
+  const { isEnterprise } = useEnterprise();
 
   // Essential state
   const [selectedSource, setSelectedSource] = useState<'s3' | 'files' | 'directory' | ''>('files');
@@ -365,14 +365,23 @@ export default function NewJobPage() {
   }, [models, modelSearchQuery]);
 
   const defaultModels = useMemo(() => {
+    if (isEnterprise) {
+      return [
+        {
+          Id: models.find((model) => model.Name === 'basic')?.Id || 'basic',
+          Name: 'Base',
+          Disabled: false,
+          Description:
+            'Fast and lightweight AI model. Allows users to perpetually customize fields with user feedback, includes advanced monitoring features.',
+        },
+      ];
+    }
     return [
       {
         Id: models.find((model) => model.Name === 'basic')?.Id || 'basic',
         Name: 'Basic',
         Disabled: false,
-        Description: isFreeVersion
-          ? 'Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.'
-          : 'Fast and lightweight AI model, does not allow customization of the fields with user feedback, gives basic usage statistics.',
+        Description: 'Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.'
       },
       {
         Id: 'advanced',
@@ -382,7 +391,7 @@ export default function NewJobPage() {
           'Our most advanced AI model, available on enterprise platform. Allows users to perpetually customize fields with user feedback, includes advanced monitoring features.',
       },
     ];
-  }, [models]);
+  }, [models, isEnterprise]);
 
   // Tags handling
   const [availableTags, setAvailableTags] = useState<string[]>([]);

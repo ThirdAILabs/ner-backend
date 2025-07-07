@@ -7,7 +7,17 @@ export function useEnterprise() {
   useEffect(() => {
     nerService
       .getEnterprise()
-      .then((isEnterpriseMode) => setIsEnterprise(Boolean(isEnterpriseMode)))
+      .then((enterprise) => {
+        if (
+          typeof enterprise === 'object' &&
+          enterprise !== null &&
+          'IsEnterpriseMode' in enterprise
+        ) {
+          setIsEnterprise(Boolean((enterprise as any).IsEnterpriseMode));
+        } else {
+          setIsEnterprise(enterprise === true);
+        }
+      })
       .catch((err) => {
         console.log('Failed to load enterprise information:', err);
         setIsEnterprise(false);
