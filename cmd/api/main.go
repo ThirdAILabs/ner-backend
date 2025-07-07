@@ -23,10 +23,11 @@ import (
 type APIConfig struct {
 	DatabaseURL       string `env:"DATABASE_URL,notEmpty,required"`
 	RabbitMQURL       string `env:"RABBITMQ_URL,notEmpty,required"`
-	S3EndpointURL     string `env:"S3_ENDPOINT_URL,notEmpty,required"`
-	S3AccessKeyID     string `env:"INTERNAL_AWS_ACCESS_KEY_ID,notEmpty,required"`
-	S3SecretAccessKey string `env:"INTERNAL_AWS_SECRET_ACCESS_KEY,notEmpty,required"`
-	BucketName        string `env:"bucket_name,notEmpty,required"`
+	S3EndpointURL     string `env:"S3_ENDPOINT_URL"`
+	S3Region          string `env:"S3_REGION"`
+	S3AccessKeyID     string `env:"INTERNAL_AWS_ACCESS_KEY_ID"`
+	S3SecretAccessKey string `env:"INTERNAL_AWS_SECRET_ACCESS_KEY"`
+	BucketName        string `env:"BUCKET_NAME,notEmpty,required"`
 	APIPort           string `env:"API_PORT" envDefault:"8001"`
 	ChunkTargetBytes  int64  `env:"S3_CHUNK_TARGET_BYTES" envDefault:"10737418240"`
 	LicenseKey        string `env:"LICENSE_KEY" envDefault:""`
@@ -50,6 +51,7 @@ func main() {
 
 	s3Cfg := storage.S3ClientConfig{
 		Endpoint:        cfg.S3EndpointURL,
+		Region:          cfg.S3Region,
 		AccessKeyID:     cfg.S3AccessKeyID,
 		SecretAccessKey: cfg.S3SecretAccessKey,
 	}
