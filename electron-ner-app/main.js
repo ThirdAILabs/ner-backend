@@ -56,6 +56,25 @@ let isUpdateInstall = false;
 
 ipcMain.handle('open-external-link', async (_, url) => await shell.openExternal(url));
 
+// Window control handlers
+ipcMain.handle('minimize-window', () => {
+    if (mainWindow) mainWindow.minimize();
+});
+
+ipcMain.handle('maximize-window', () => {
+    if (mainWindow) {
+        if (mainWindow.isMaximized()) {
+            mainWindow.unmaximize();
+        } else {
+            mainWindow.maximize();
+        }
+    }
+});
+
+ipcMain.handle('close-window', () => {
+    if (mainWindow) mainWindow.close();
+});
+
 function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1200,
@@ -149,7 +168,7 @@ autoUpdater.on('update-downloaded', async (info) => {
 
     const result = await dialog.showMessageBox(mainWindow, {
         type: 'question',
-        buttons: ['Install & Restart Now', 'Later'],
+        buttons: ['Install && Restart Now', 'Later'],
         defaultId: 0,
         cancelId: 1,
         title: 'Update Ready',
@@ -173,7 +192,7 @@ autoUpdater.on('download-progress', (progress) => {
 
 ipcMain.handle('telemetry', async (_, data) => await insertTelemetryEvent(data));
 ipcMain.handle('get-user-id', async () => getCurrentUserId());
-ipcMain.handle('open-file-chooser', async (_, types) => openFileChooser(types));
+ipcMain.handle('open-file-chooser', async (_, types, isDirectoryMode, isCombinedMode) => openFileChooser(types, isDirectoryMode, isCombinedMode));
 ipcMain.handle('open-file', async (_, filePath) => openFile(filePath));
 ipcMain.handle('show-file-in-folder', async (_, filePath) => { showFileInFolder(filePath); });
 ipcMain.handle('upload-files', async (event, { filePaths, uploadUrl, uniqueNames, originalNames }) => {

@@ -57,11 +57,45 @@ export function TableContent({
   };
 
   const handleFullPath = (fileIdentifier: string) => {
-    const fullPath = pathMap?.[fileIdentifier.split('/').slice(-1).join('')];
+    // The fileIdentifier might be the uniqueName directly or a path containing it
+    // First try direct lookup
+    let fullPath = pathMap?.[fileIdentifier];
 
+    // If not found, try extracting filename from path
+    if (!fullPath) {
+      // Handle both forward slash and backslash separators
+      const parts = fileIdentifier.split(/[/\\]/);
+      const filename = parts[parts.length - 1];
+      fullPath = pathMap?.[filename];
+
+      // If still not found and there's an uploadId prefix, try without it
+      if (!fullPath && parts.length > 1) {
+        // The format might be uploadId\filename or uploadId/filename
+        fullPath = pathMap?.[filename];
+      }
+    }
+
+    console.log('handleFullPath:', {
+      fileIdentifier,
+      directLookup: pathMap?.[fileIdentifier],
+      parts: fileIdentifier.split(/[/\\]/),
+      extractedFilename: fileIdentifier.split(/[/\\]/).slice(-1).join(''),
+      fullPath,
+      pathMap: Object.keys(pathMap || {}).length,
+      pathMapKeys: Object.keys(pathMap || {}),
+      pathMapEntries: Object.entries(pathMap || {}),
+    });
     const openFile = () => {
+      if (!fullPath) {
+        console.error('No full path found for file:', fileIdentifier);
+        alert(`Cannot open file: Path not found for ${fileIdentifier}`);
+        return;
+      }
       // @ts-ignore
-      window.electron?.openFile?.(fullPath);
+      window.electron?.openFile?.(fullPath).catch((err: any) => {
+        console.error('Error opening file:', err);
+        alert(`Failed to open file: ${err.message || err}`);
+      });
     };
 
     const showFileInFolder = () => {
@@ -126,7 +160,7 @@ export function TableContent({
                           return (
                             <div className="flex items-center justify-between w-full">
                               {/* Left: File path */}
-                              <span title={fileIdentifier.split('/').slice(-1).join('')}>
+                              <span title={fileIdentifier.split(/[/\\]/).slice(-1).join('')}>
                                 {truncateFilePath(fullPath)}
                               </span>
                               {/* Right: Icons */}
@@ -189,9 +223,9 @@ export function TableContent({
                           return (
                             <span
                               style={{ color: 'inherit' }}
-                              title={fileIdentifier.split('/').slice(-1).join('')}
+                              title={fileIdentifier.split(/[/\\]/).slice(-1).join('')}
                             >
-                              {fileIdentifier.split('/').slice(-1)}
+                              {fileIdentifier.split(/[/\\]/).slice(-1).join('')}
                             </span>
                           );
                         }
@@ -293,7 +327,7 @@ export function TableContent({
                       className="font-semibold"
                       style={{ color: 'inherit', userSelect: 'none' }}
                     >
-                      {fileIdentifier.split('/').slice(-1)}
+                      {fileIdentifier.split(/[/\\]/).slice(-1).join('')}
                     </span>
                   )}
                 </div>
