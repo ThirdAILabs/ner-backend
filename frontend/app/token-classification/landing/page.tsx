@@ -25,7 +25,6 @@ function PageContents() {
 
   // Record initial page load
   useEffect(() => {
-    console.log(`function: recordEvent: ${recordEvent}`);
     recordEvent({
       UserAction: 'View Report Dashboard',
       UIComponent: 'Report Dashboard',
