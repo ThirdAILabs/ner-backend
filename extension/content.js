@@ -474,8 +474,30 @@ function getSessionId(url) {
   return match ? match[1] : null;
 }
 
+async function healthCheck() {
+  showInitializingPopup();
+  const response = await fetch('http://localhost:16549/api/v1/health');
+  if (response.ok) {
+    hideInitializingPopup();
+    showLoadSuccessPopup();
+  } else {
+    hideInitializingPopup();
+    showDownloadPocketshieldPopup();
+
+    let healthy = false;
+    while (!healthy) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await fetch('http://localhost:16549/api/v1/health');
+      healthy = response.ok;
+    }
+    hideDownloadPocketshieldPopup();
+    showLoadSuccessPopup();
+  }
+}
 
 async function initialize() {
+  await healthCheck();
+
   const locationTracker = new LocationTracker();
   let wasmRedactor = await newWasmRedactor('wasm/build/');
   const makeRedact = (sessionId) => (text) => wasmRedactor.redact(text, sessionId);
