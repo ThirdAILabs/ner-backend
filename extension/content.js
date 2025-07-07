@@ -1,5 +1,9 @@
 let showRedaction = false;
 
+// Global popup dimensions
+const POPUP_WIDTH = 300;
+const POPUP_HEIGHT = 200;
+
 function addToggleButton() {
   if (document.querySelector('#toggle-redaction-slider')) {
     return;
@@ -89,6 +93,152 @@ function addToggleButton() {
     container.appendChild(sliderContainer);
   }
 }
+
+function createPopupOverlay(id, content) {
+  // Remove existing popup if it exists
+  const existing = document.getElementById(id);
+  if (existing) {
+    existing.remove();
+  }
+
+  // Create overlay
+  const overlay = document.createElement('div');
+  overlay.id = id;
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    font-family: ui-sans-serif, -apple-system, system-ui, Segoe UI, Helvetica, Apple Color Emoji, Arial, sans-serif, Segoe UI Emoji, Segoe UI Symbol;
+  `;
+
+  // Create popup container
+  const popup = document.createElement('div');
+  popup.style.cssText = `
+    width: ${POPUP_WIDTH}px;
+    height: ${POPUP_HEIGHT}px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    box-sizing: border-box;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  `;
+
+  popup.innerHTML = content;
+  overlay.appendChild(popup);
+  document.body.appendChild(overlay);
+  
+  return overlay;
+}
+
+function showInitializingPopup() {
+  const content = `
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 16px;">
+      <div style="width: 64px; height: 64px; background-image: url('data:image/svg+xml;base64,${btoa(`
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2L3 7V17L12 22L21 17V7L12 2Z" fill="#4A90E2"/>
+          <path d="M12 6L6 9.5V14.5L12 18L18 14.5V9.5L12 6Z" fill="#1E3A8A"/>
+          <circle cx="12" cy="12" r="3" fill="white"/>
+        </svg>
+      `)}'); background-size: contain; background-repeat: no-repeat; animation: pulse 2s ease-in-out infinite;"></div>
+      <div style="color: white; font-size: 16px; font-weight: 500; text-align: center; animation: pulse 2s ease-in-out infinite;">
+        Initializing PocketShield
+      </div>
+    </div>
+    <style>
+      @keyframes pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.7; transform: scale(0.95); }
+      }
+    </style>
+  `;
+  
+  createPopupOverlay('pocketshield-initializing-popup', content);
+}
+
+function hideInitializingPopup() {
+  const popup = document.getElementById('pocketshield-initializing-popup');
+  if (popup) {
+    popup.remove();
+  }
+}
+
+function showDownloadPocketshieldPopup() {
+  const content = `
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center;">
+      <div style="color: white; font-size: 14px; line-height: 1.4; max-width: 260px;">
+        It seems like the PocketShield app isn't running. If you haven't, 
+        <a href="https://www.thirdai.com/pocketshield/" 
+           style="color: #4A90E2; text-decoration: underline;" 
+           target="_blank">download the app</a> and open it.
+      </div>
+    </div>
+  `;
+  
+  createPopupOverlay('pocketshield-download-popup', content);
+}
+
+function hideDownloadPocketshieldPopup() {
+  const popup = document.getElementById('pocketshield-download-popup');
+  if (popup) {
+    popup.remove();
+  }
+}
+
+function showLoadSuccessPopup() {
+  const content = `
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 16px;">
+      <div style="width: 64px; height: 64px; background-image: url('data:image/svg+xml;base64,${btoa(`
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2L3 7V17L12 22L21 17V7L12 2Z" fill="#4A90E2"/>
+          <path d="M12 6L6 9.5V14.5L12 18L18 14.5V9.5L12 6Z" fill="#1E3A8A"/>
+          <circle cx="12" cy="12" r="3" fill="white"/>
+        </svg>
+      `)}'); background-size: contain; background-repeat: no-repeat;"></div>
+      <div style="color: white; font-size: 16px; font-weight: 500; text-align: center; margin-bottom: 8px;">
+        We're ready to go!
+      </div>
+      <button onclick="hideLoadSuccessPopup()" style="
+        background-color: #4A90E2;
+        color: white;
+        border: none;
+        padding: 8px 24px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      " onmouseover="this.style.backgroundColor='#357ABD'" onmouseout="this.style.backgroundColor='#4A90E2'">
+        Let's go!
+      </button>
+    </div>
+  `;
+  
+  createPopupOverlay('pocketshield-success-popup', content);
+}
+
+function hideLoadSuccessPopup() {
+  const popup = document.getElementById('pocketshield-success-popup');
+  if (popup) {
+    popup.remove();
+  }
+}
+
+// Make hideLoadSuccessPopup available globally
+window.hideLoadSuccessPopup = hideLoadSuccessPopup;
+
 class PromptInterceptor {
   constructor(processText) {
     this.processText = processText;
