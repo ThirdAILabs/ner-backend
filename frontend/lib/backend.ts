@@ -16,8 +16,10 @@ export interface Feedback {
 
 export interface SavedFeedback {
   Id: string;
-  Tokens: string[];
-  Labels: string[];
+  Tokens?: string[];
+  Labels?: string[];
+  tokens?: string[];
+  labels?: string[];
 }
 
 export interface TagInfo {
@@ -29,6 +31,7 @@ export interface TagInfo {
 export interface FinetuneRequest {
   Name: string;
   TaskPrompt?: string;
+  GenerateData?: boolean;
   Tags?: TagInfo[];
   Samples?: Feedback[];
 }
@@ -364,7 +367,16 @@ export const nerService = {
   },
 
   setOpenAIApiKey: async (apiKey: string): Promise<void> => {
-    await axiosInstance.post('/chat/api-key', { ApiKey: apiKey });
+    try {
+      await axiosInstance.post('/chat/api-key', { ApiKey: apiKey });
+    } catch (error) {
+      return handleApiError(error, 'Failed to save OpenAI API key');
+    }
+  },
+
+  validateOpenAIApiKey: async (apiKey: string): Promise<{ Valid: boolean; Message: string }> => {
+    const response = await axiosInstance.post('/chat/api-key/validate', { ApiKey: apiKey });
+    return response.data;
   },
 
   storeFileNameToPath: async (uploadId: string, mapping: { [filename: string]: string }) => {
@@ -408,7 +420,8 @@ export const nerService = {
       const { data } = await axiosInstance.post(`/models/${modelId}/finetune`, request);
       return data;
     } catch (error) {
-      return handleApiError(error, `Failed to start finetuning for model ${modelId}`);
+      // Don't use custom message for fine-tuning errors so we can see the actual backend error
+      return handleApiError(error);
     }
   },
 };
