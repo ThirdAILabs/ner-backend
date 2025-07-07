@@ -43,6 +43,7 @@ func GetMigrator(db *gorm.DB) *gormigrate.Gormigrate {
 		{
 			ID:       "5",
 			Migrate:  migration_5.Migration,
+			Rollback: migration_5.Rollback,
 		},
 		{
 			ID:       "6",

@@ -41,8 +41,8 @@ Name: Chloé Dubois 🎨 | SSN: 987-65-4321 🔐 | City: Marseille 🇫🇷
 Name: Иван Иванов 📚 | Phone: +7 495 123-45-67 ☎️ | City: Москва (Moscow) 🇷🇺
 Name: 李小龍 (Bruce Lee) 🐉 | Email: brucelee@kungfu.cn 📩 | Province: 廣東 (Guangdong) 🏯
 Name: Amelia O’Connell 🍀 | Address: 1 Abbey Rd, Dublin 🇮🇪 | PPSN: 1234567TA 🗃️`
-	phoneText  = "this is a test file with a phone number 123-456-7890"
-	emailText  = "this is a test file with an email address abc@email.com"
+	phoneText = "this is a test file with a phone number 123-456-7890"
+	emailText = "this is a test file with an email address abc@email.com"
 )
 
 var expected = []string{
@@ -150,7 +150,7 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 	minioUrl := setupMinioContainer(t, ctx)
 
 	s3ObjectStore, err := storage.NewS3ObjectStore(storage.S3ClientConfig{
-		Endpoint:     minioUrl,
+		Endpoint:        minioUrl,
 		AccessKeyID:     minioUsername,
 		SecretAccessKey: minioPassword,
 	})
@@ -163,7 +163,7 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 
 	publisher, reciever := setupRabbitMQContainer(t, ctx)
 
-	backend := backendapi.NewBackendService(db, s3ObjectStore, uploadBucket, publisher, 120, &DummyLicenseVerifier{})
+	backend := backendapi.NewBackendService(db, s3ObjectStore, uploadBucket, publisher, 120, &DummyLicenseVerifier{}, false)
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
@@ -181,12 +181,12 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 	storageParams, _ := json.Marshal(map[string]any{"Endpoint": minioUrl, "Bucket": dataBucket})
 
 	reportId := createReport(t, router, api.CreateReportRequest{
-		ReportName:     "test-report",
-		ModelId:        modelId,
-		StorageType:     string(storage.S3Type),
-		StorageParams:   storageParams,
-		Tags:           []string{"phone", "email"},
-		CustomTags:     map[string]string{"custom_token": `(\w\d){3}`},
+		ReportName:    "test-report",
+		ModelId:       modelId,
+		StorageType:   string(storage.S3Type),
+		StorageParams: storageParams,
+		Tags:          []string{"phone", "email"},
+		CustomTags:    map[string]string{"custom_token": `(\w\d){3}`},
 		Groups: map[string]string{
 			"phone": `COUNT(phone) > 0`,
 			"email": `COUNT(email) > 0`,
@@ -263,7 +263,7 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 	minioUrl := setupMinioContainer(t, ctx)
 
 	s3ObjectStore, err := storage.NewS3ObjectStore(storage.S3ClientConfig{
-		Endpoint:     minioUrl,
+		Endpoint:        minioUrl,
 		AccessKeyID:     minioUsername,
 		SecretAccessKey: minioPassword,
 	})
@@ -273,7 +273,7 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 
 	publisher, reciever := setupRabbitMQContainer(t, ctx)
 
-	backend := backendapi.NewBackendService(db, s3ObjectStore, uploadBucket, publisher, 120, &DummyLicenseVerifier{})
+	backend := backendapi.NewBackendService(db, s3ObjectStore, uploadBucket, publisher, 120, &DummyLicenseVerifier{}, false)
 	router := chi.NewRouter()
 	backend.AddRoutes(router)
 
@@ -291,11 +291,11 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 	storageParams, _ := json.Marshal(map[string]any{"UploadId": uploadId})
 
 	reportId := createReport(t, router, api.CreateReportRequest{
-		ReportName:   "test-report",
-		ModelId:      modelId,
+		ReportName:    "test-report",
+		ModelId:       modelId,
 		StorageType:   string(storage.UploadType),
 		StorageParams: storageParams,
-		Tags:         []string{"phone", "email"},
+		Tags:          []string{"phone", "email"},
 	})
 
 	report := waitForReport(t, router, reportId, 10)
@@ -321,7 +321,7 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 	minioURL := setupMinioContainer(t, ctx)
 
 	s3ObjectStore, err := storage.NewS3ObjectStore(storage.S3ClientConfig{
-		Endpoint:     minioURL,
+		Endpoint:        minioURL,
 		AccessKeyID:     minioUsername,
 		SecretAccessKey: minioPassword,
 	})
@@ -333,7 +333,7 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 
 	publisher, receiver := setupRabbitMQContainer(t, ctx)
 
-	backendSvc := backendapi.NewBackendService(db, s3ObjectStore, uploadBucket, publisher, 120, &DummyLicenseVerifier{})
+	backendSvc := backendapi.NewBackendService(db, s3ObjectStore, uploadBucket, publisher, 120, &DummyLicenseVerifier{}, false)
 	router := chi.NewRouter()
 	backendSvc.AddRoutes(router)
 
@@ -389,9 +389,9 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 			storageParams, _ := json.Marshal(map[string]any{"UploadId": uploadID})
 
 			reportID := createReport(t, router, api.CreateReportRequest{
-				ReportName: fmt.Sprintf("test-report-%s", m.tag),
-				ModelId:    model.Id,
-				StorageType: string(storage.UploadType),
+				ReportName:    fmt.Sprintf("test-report-%s", m.tag),
+				ModelId:       model.Id,
+				StorageType:   string(storage.UploadType),
 				StorageParams: storageParams,
 				Tags: []string{"ADDRESS", "CARD_NUMBER", "COMPANY", "CREDIT_SCORE", "DATE",
 					"EMAIL", "ID_NUMBER", "LICENSE_PLATE",

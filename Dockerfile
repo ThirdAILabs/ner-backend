@@ -1,12 +1,12 @@
 # --- Frontend Build Stage ---
 FROM node:22-alpine AS frontend-builder
 WORKDIR /frontend
-    
-COPY ../frontend/package*.json ./
+
+COPY frontend/package*.json ./
 RUN npm install --force
-    
-COPY ../frontend .
-    
+
+COPY frontend .
+
 RUN npm run build
 
 
@@ -69,9 +69,7 @@ WORKDIR /app
 
 COPY plugin/plugin-python/requirements.txt ./requirements.txt
 
-RUN --mount=type=cache,id=pip_cache,target=/root/.cache/pip \
-    pip install --no-cache-dir \
-    -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Downloading the model here to avoid grpc plugin emitting download logs
 RUN python -m spacy download en_core_web_lg
