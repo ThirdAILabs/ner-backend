@@ -91,15 +91,10 @@ const SourceOption: React.FC<SourceOptionProps> = ({
     //     ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
     //     : 'border-gray-300 hover:border-blue-400 cursor-pointer'
     //   }`}
-    onClick={disabled ? () => { } : onClick}
+    onClick={disabled ? () => {} : onClick}
   >
     {input && input}
-    <SourceCard
-      logo={icon}
-      title={title}
-      subtitle={description}
-      info={disclaimer}
-    />
+    <SourceCard logo={icon} title={title} subtitle={description} info={disclaimer} />
   </div>
 );
 
@@ -791,20 +786,20 @@ export default function NewJobPage() {
         CustomTags: customTagsObj,
         ...(selectedSource === 's3'
           ? {
-            StorageType: 's3',
-            StorageParams: {
-              Endpoint: sourceS3Endpoint,
-              Region: sourceS3Region,
-              Bucket: sourceS3Bucket,
-              Prefix: sourceS3Prefix,
-            },
-          }
+              StorageType: 's3',
+              StorageParams: {
+                Endpoint: sourceS3Endpoint,
+                Region: sourceS3Region,
+                Bucket: sourceS3Bucket,
+                Prefix: sourceS3Prefix,
+              },
+            }
           : {
-            StorageType: 'upload',
-            StorageParams: {
-              UploadId: uploadId,
-            },
-          }),
+              StorageType: 'upload',
+              StorageParams: {
+                UploadId: uploadId,
+              },
+            }),
         Groups: groups,
         ReportName: jobName,
       });
@@ -944,8 +939,9 @@ export default function NewJobPage() {
                   validateJobName(value);
                 }}
                 onBlur={() => validateJobName(jobName)}
-                className={`w-full p-2 border ${nameError ? 'border-red-500' : 'border-gray-300'
-                  } rounded`}
+                className={`w-full p-2 border ${
+                  nameError ? 'border-red-500' : 'border-gray-300'
+                } rounded`}
                 placeholder="Enter_Scan_Name"
                 required
               />
@@ -1347,8 +1343,9 @@ export default function NewJobPage() {
                         value={customTagName}
                         onChange={(e) => handleTagNameChange(e.target.value)}
                         onBlur={(e) => handleTagNameChange(e.target.value)}
-                        className={`w-full p-2 border ${nameError ? 'border-red-500' : 'border-gray-300'
-                          } rounded`}
+                        className={`w-full p-2 border ${
+                          nameError ? 'border-red-500' : 'border-gray-300'
+                        } rounded`}
                         placeholder="CUSTOM_TAG_NAME"
                         required
                       />
