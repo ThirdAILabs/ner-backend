@@ -223,17 +223,148 @@ function showLoadSuccessPopup() {
      </div>
    `;
    
-   const popup = createPopupOverlay('pocketshield-success-popup', content);
-   
-   // Add event listener programmatically
-   const button = popup.querySelector('#success-popup-button');
-   if (button) {
-     button.addEventListener('click', hideLoadSuccessPopup);
-   }
+  const popup = createPopupOverlay('pocketshield-success-popup', content);
+  
+  // Add event listener programmatically
+  const button = popup.querySelector('#success-popup-button');
+  if (button) {
+    button.addEventListener('click', hideLoadSuccessPopup);
+  }
 }
 
 function hideLoadSuccessPopup() {
   const popup = document.getElementById('pocketshield-success-popup');
+  if (popup) {
+    popup.remove();
+  }
+}
+
+DO_NOT_SHOW_FILE_NOT_SANITIZED_WARNING = false;
+
+function showFileNotSanitizedWarningPopup() {
+  if (DO_NOT_SHOW_FILE_NOT_SANITIZED_WARNING) {
+    return;
+  }
+
+  const content = `
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; height: 100%; gap: 20px;">
+      <div style="color: white; font-size: 14px; line-height: 1.4; max-width: 260px;">
+        PocketShield does not redact sensitive information from files. Please copy relevant text into the prompt area instead.
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 16px;">
+        <button id="file-warning-understand-button" style="
+          background-color: #4A90E2;
+          color: white;
+          border: none;
+          padding: 8px 24px;
+          border-radius: 20px;
+          font-size: 14px;
+          font-weight: bold;
+          cursor: pointer;
+          transition: background-color 0.3s;
+        " onmouseover="this.style.backgroundColor='#357ABD'" onmouseout="this.style.backgroundColor='#4A90E2'">
+          I understand
+        </button>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <input type="checkbox" id="dont-show-again-checkbox" style="display: none;">
+          <label for="dont-show-again-checkbox" style="
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #AAA;
+            font-size: 12px;
+            cursor: pointer;
+            user-select: none;
+          ">
+            <div style="
+              width: 16px;
+              height: 16px;
+              border: 2px solid #AAA;
+              border-radius: 3px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              background-color: transparent;
+              transition: all 0.3s ease;
+            " class="custom-checkbox">
+              <div style="
+                width: 8px;
+                height: 8px;
+                background-color: #4A90E2;
+                border-radius: 1px;
+                opacity: 0;
+                transform: scale(0);
+                transition: all 0.3s ease;
+              " class="checkbox-check"></div>
+            </div>
+            Don't show this again
+          </label>
+        </div>
+
+      </div>
+    </div>
+  `;
+  
+  const popup = createPopupOverlay('pocketshield-file-warning-popup', content);
+  
+  // Add event listeners
+  const button = popup.querySelector('#file-warning-understand-button');
+  const checkbox = popup.querySelector('#dont-show-again-checkbox');
+  const checkboxLabel = popup.querySelector('label[for="dont-show-again-checkbox"]');
+  const customCheckbox = popup.querySelector('.custom-checkbox');
+  const checkboxCheck = popup.querySelector('.checkbox-check');
+  
+  if (button) {
+    button.addEventListener('click', () => {
+      if (checkbox && checkbox.checked) {
+        DO_NOT_SHOW_FILE_NOT_SANITIZED_WARNING = true;
+      }
+      hideFileNotSanitizedWarningPopup();
+    });
+  }
+  
+  // Function to update checkbox appearance
+  const updateCheckboxAppearance = (isChecked) => {
+    if (customCheckbox && checkboxCheck) {
+      if (isChecked) {
+        customCheckbox.style.borderColor = '#4A90E2';
+        customCheckbox.style.backgroundColor = 'rgba(74, 144, 226, 0.1)';
+        checkboxCheck.style.opacity = '1';
+        checkboxCheck.style.transform = 'scale(1)';
+      } else {
+        customCheckbox.style.borderColor = '#AAA';
+        customCheckbox.style.backgroundColor = 'transparent';
+        checkboxCheck.style.opacity = '0';
+        checkboxCheck.style.transform = 'scale(0)';
+      }
+    }
+  };
+  
+  // Make the custom checkbox clickable
+  if (checkboxLabel && checkbox) {
+    checkboxLabel.addEventListener('click', (e) => {
+      e.preventDefault();
+      checkbox.checked = !checkbox.checked;
+      updateCheckboxAppearance(checkbox.checked);
+    });
+    
+    // Add hover effect
+    checkboxLabel.addEventListener('mouseenter', () => {
+      if (customCheckbox) {
+        customCheckbox.style.borderColor = '#4A90E2';
+      }
+    });
+    
+    checkboxLabel.addEventListener('mouseleave', () => {
+      if (customCheckbox) {
+        customCheckbox.style.borderColor = checkbox.checked ? '#4A90E2' : '#AAA';
+      }
+    });
+  }
+}
+
+function hideFileNotSanitizedWarningPopup() {
+  const popup = document.getElementById('pocketshield-file-warning-popup');
   if (popup) {
     popup.remove();
   }
@@ -412,6 +543,8 @@ class MessageModifier {
 }
 
 async function setupPage(redact, restore) {
+  const file = document.querySelector('input[type="file"]');
+  
   const promptInterceptor = new PromptInterceptor(redact);
   const messageModifier = new MessageModifier(restore);
   addToggleButton();
@@ -424,6 +557,20 @@ async function setupPage(redact, restore) {
   }
   
   let elementObserver = new MutationObserver((mutations) => {
+    const file = document.querySelector('input[type="file"]');
+    if (file) {
+      file.addEventListener('change', (e) => {
+        showFileNotSanitizedWarningPopup();
+      });
+    }
+
+    const dropArea = document.querySelector("div[role='presentation']");
+    if (dropArea) {
+      dropArea.addEventListener('drop', (e) => {
+        showFileNotSanitizedWarningPopup();
+      });
+    }
+
     if (mutations.reduce((acc, mutation) => {
       const hasButton = mutation.target.id === 'composer-submit-button' || !!mutation.target.querySelector('#composer-submit-button');
       const hasPrompt = mutation.target.id === 'prompt-textarea';
@@ -433,6 +580,8 @@ async function setupPage(redact, restore) {
     }
     messageModifier.handleMutations(mutations, Date.now());
     addToggleButton();
+
+
   });
   elementObserver.observe(document.body, { childList: true, subtree: true });
 
