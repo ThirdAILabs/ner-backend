@@ -16,6 +16,6 @@ export function useLicense() {
 
   return {
     license,
-    isEnterprise: license?.LicenseInfo.LicenseType !== 'free' || false,
+    isFreeVersion: license?.LicenseInfo.LicenseType === 'free' || false,
   };
 }

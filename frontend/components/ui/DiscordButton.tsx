@@ -1,10 +1,10 @@
 'use client';
 
-import useTelemetry from '@/hooks/useTelemetry';
+import { useConditionalTelemetry } from '@/hooks/useConditionalTelemetry';
 
 const handleClick = async (
   e: React.MouseEvent<HTMLButtonElement>,
-  recordEvent: ReturnType<typeof useTelemetry>
+  recordEvent: ReturnType<typeof useConditionalTelemetry>
 ) => {
   e.preventDefault();
   recordEvent({
@@ -29,7 +29,7 @@ const handleClick = async (
 };
 
 export function DiscordButton() {
-  const recordEvent = useTelemetry();
+  const recordEvent = useConditionalTelemetry();
 
   return (
     <div className="absolute bottom-4 left-4 z-50">

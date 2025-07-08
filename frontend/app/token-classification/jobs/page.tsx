@@ -15,8 +15,8 @@ import { Suspense } from 'react';
 import { floor } from 'lodash';
 import { FeedbackPanel } from '@/components/feedback/FeedbackPanel';
 import useFeedbackState from '@/components/feedback/useFeedbackState';
-import { useLicense } from '@/hooks/useLicense';
-import useTelemetry from '@/hooks/useTelemetry';
+import { useFinetuning } from '@/hooks/useFinetuning';
+import { useConditionalTelemetry } from '@/hooks/useConditionalTelemetry';
 import { isUploadReport } from '@/lib/utils';
 
 const calculateProgress = (report: Report | null): number => {
@@ -82,9 +82,9 @@ interface CustomTag {
 }
 
 function JobDetail() {
-  const { isEnterprise } = useLicense();
+  const { isFinetuningEnabled } = useFinetuning();
 
-  const recordEvent = useTelemetry();
+  const recordEvent = useConditionalTelemetry();
   const searchParams = useSearchParams();
   const reportId: string = searchParams.get('jobId') as string;
   const [tabValue, setTabValue] = useState('summary');
@@ -407,7 +407,7 @@ function JobDetail() {
             addFeedback={addFeedback}
             initialSelectedTag={selectedTag}
           />
-          {isEnterprise && (
+          {isFinetuningEnabled && (
             <div className="fixed bottom-[30px] right-[30px] z-50 w-[300px] flex flex-col">
               <FeedbackPanel
                 feedbacks={displayedFeedback}
