@@ -263,7 +263,7 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 				tag.Contexts = ctxs
 			}
 		}
-		bar.Add(1)
+		_ = bar.Add(1)
 	}
 
 	callsPerBatch := batchSize / perCall
@@ -357,7 +357,7 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 				allSentences = append(allSentences, mergeWithCorrections(orig, cleaned)...)
 			}
 		}
-		bar.Add(1)
+		_ = bar.Add(1)
 	}
 
 	var allSamples []api.Sample
