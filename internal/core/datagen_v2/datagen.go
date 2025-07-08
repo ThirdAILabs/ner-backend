@@ -129,7 +129,6 @@ func (d *DataFactory) runAndCollect(
 ) ([]string, error) {
 	bar := progressbar.NewOptions(len(batch),
 		progressbar.OptionSetDescription("⏳ processing"),
-		progressbar.OptionSetWidth(30),
 		progressbar.OptionClearOnFinish(),
 	)
 	out := make([]string, len(batch))
@@ -170,6 +169,22 @@ type GenerateOptions struct {
 	WriteBatchSize    int          // batch size for LLM calls
 }
 
+func (opts *GenerateOptions) Validate() error {
+	if opts.RecordsToGenerate < 0 {
+		return fmt.Errorf("invalid RecordsToGenerate: %d", opts.RecordsToGenerate)
+	}
+	if opts.RecordsPerLlmCall < 0 {
+		return fmt.Errorf("invalid RecordsPerLlmCall: %d", opts.RecordsPerLlmCall)
+	}
+	if opts.WriteBatchSize < 0 {
+		return fmt.Errorf("invalid WriteBatchSize: %d", opts.WriteBatchSize)
+	}
+	if opts.TestSplit < 0.0 || opts.TestSplit > 1.0 {
+		return fmt.Errorf("invalid TestSplit: %f", opts.TestSplit)
+	}
+	return nil
+}
+
 func mergeWithCorrections(orig, cleaned []string) []string {
 	n, m := len(orig), len(cleaned)
 	merged := make([]string, 0, n)
@@ -202,21 +217,12 @@ func mergeWithCorrections(orig, cleaned []string) []string {
 }
 
 func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample, error) {
+	if err := opts.Validate(); err != nil {
+		return nil, nil, fmt.Errorf("invalid options: %w", err)
+	}
 	total := opts.RecordsToGenerate
-	if total < 0 {
-		return nil, nil, fmt.Errorf("invalid RecordsToGenerate: %d", total)
-	}
 	perCall := opts.RecordsPerLlmCall
-	if perCall < 0 {
-		return nil, nil, fmt.Errorf("invalid RecordsPerLlmCall: %d", perCall)
-	}
 	batchSize := opts.WriteBatchSize
-	if batchSize < 0 {
-		return nil, nil, fmt.Errorf("invalid WriteBatchSize: %d", batchSize)
-	}
-	if opts.TestSplit < 0.0 || opts.TestSplit > 1.0 {
-		return nil, nil, fmt.Errorf("invalid TestSplit: %f", opts.TestSplit)
-	}
 
 	if perCall > total {
 		perCall = total
@@ -227,6 +233,10 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 
 	feedback := SamplesToAnnotatedStrings(opts.Samples)
 
+	bar := progressbar.NewOptions(len(opts.TagsInfo),
+		progressbar.OptionSetDescription("⏳ Enhancing tags"),
+	)
+	defer bar.Close()
 	for i := range opts.TagsInfo {
 		tag := &opts.TagsInfo[i]
 
@@ -244,7 +254,7 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 
 		if tag.Contexts == nil {
 			if len(opts.Samples) > 0 {
-				tag.Contexts = feedback
+				tag.Contexts = make([]string, 0)
 			} else {
 				ctxs, err := d.GetTagContext(tag, rand.Intn(11)+20)
 				if err != nil {
@@ -253,6 +263,7 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 				tag.Contexts = ctxs
 			}
 		}
+		bar.Add(1)
 	}
 
 	callsPerBatch := batchSize / perCall
@@ -270,6 +281,9 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 	}
 
 	var allSentences []string
+	bar = progressbar.NewOptions((total+batchSize-1)/batchSize,
+		progressbar.OptionSetDescription("⏳ Generating sentences"),
+	)
 	for offset := 0; offset < total; offset += batchSize {
 		n := perCall
 		if rem := total - offset; rem < perCall {
@@ -343,6 +357,7 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 				allSentences = append(allSentences, mergeWithCorrections(orig, cleaned)...)
 			}
 		}
+		bar.Add(1)
 	}
 
 	var allSamples []api.Sample
@@ -359,10 +374,6 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 	split := int(float32(len(allSamples)) * (1 - opts.TestSplit))
 	return allSamples[:split], allSamples[split:], nil
 }
-
-var (
-	annotRe = regexp.MustCompile(`(?P<before>[^\w\s#]*)#+(?P<entity>[^#]+?)#+(?P<tag>[A-Z_]+)#+(?P<after>[^\w\s#']*[\w']*)?`)
-)
 
 func (d *DataFactory) ValidateSentence(src, tgt string, tags []TagInfo) error {
 	srcToks := strings.Fields(src)
@@ -386,6 +397,10 @@ func (d *DataFactory) ValidateSentence(src, tgt string, tags []TagInfo) error {
 	return nil
 }
 
+var (
+	annotRe = regexp.MustCompile(`(?P<before>[^\s#])?#+(?P<entity>[^#]+?)#+(?P<tag>[A-Z_]+)#+(?P<after>[^\s#])?`)
+)
+
 func (d *DataFactory) transformSentence(
 	text string,
 	tags []TagInfo,
@@ -403,9 +418,17 @@ func (d *DataFactory) transformSentence(
 				tgtTokens = append(tgtTokens, "O")
 			}
 		}
-		entity := strings.TrimSpace(text[m[2]:m[3]])
-		tag := strings.ToUpper(text[m[4]:m[5]])
-		toks := strings.Fields(entity)
+		before := ""
+		if m[2] >= 0 {
+			before = text[m[2]:m[3]]
+		}
+		entity := strings.TrimSpace(text[m[4]:m[5]])
+		tag := text[m[6]:m[7]]
+		after := ""
+		if m[8] >= 0 {
+			after = text[m[8]:m[9]]
+		}
+		toks := strings.Fields(before + entity + after)
 
 		mark := "O"
 		for _, t := range tags {

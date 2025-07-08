@@ -19,7 +19,7 @@ const AnnotatedDataUser = `## Task: Generate {{ .K }} diverse and realistic sent
 {{- if gt (len .Examples) 0 }}
 **Tag examples:** {{ join (randomSample .Examples 10) ", " }}
 {{- end }}
-{{- if and (not .Feedback) (gt (len .Contexts) 0) }}
+{{- if gt (len .Contexts) 0 }}
 **Tag context:** {{ join (randomSample .Contexts 4) ", " }}
 {{- end }}
 {{- end }}
