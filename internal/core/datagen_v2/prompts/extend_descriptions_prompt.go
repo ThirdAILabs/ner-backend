@@ -5,7 +5,6 @@ import (
 	"strings"
 )
 
-// ExtendDescriptionSystem frames the LLM for description extension.
 const ExtendDescriptionSystem = `You are a specialist in semantic definition writing and taxonomy development.
 ## Task
 Generate a clearer and more informative version of the tag description using the it's name and examples. Keep the description under 60 words.
@@ -16,7 +15,6 @@ Generate a clearer and more informative version of the tag description using the
 Keep the tone concise, objective, and suitable for use in a tagging guideline or labeling system.
 `
 
-// ExtendDescriptionUser is the user‐role template.
 const ExtendDescriptionUser = `Please generate a **clarified description** for the following tag:
 **Tag Name:** {{ .Tag.Name }}
 **Basic Description:** {{ .Tag.Desc }}
@@ -25,7 +23,6 @@ const ExtendDescriptionUser = `Please generate a **clarified description** for t
 The output should be a paragraph that expands on the original description and makes it clearer when and how this tag should be applied in real-world text.
 `
 
-// ExtendDescriptionFormat is the JSON‐schema directive to the API.
 var ExtendDescriptionFormat = map[string]interface{}{
 	"type": "json_schema",
 	"json_schema": map[string]interface{}{
@@ -44,7 +41,6 @@ var ExtendDescriptionFormat = map[string]interface{}{
 	},
 }
 
-// ExtendDescriptionTmpl is the compiled user template.
 var ExtendDescriptionTmpl = template.Must(template.New("extendDescription").
 	Funcs(template.FuncMap{
 		"randomSample": RandomSample,

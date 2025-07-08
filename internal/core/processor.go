@@ -872,7 +872,6 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 			}
 		}
 
-		// instantiate new factory
 		genDir := filepath.Join(proc.localModelDir, payload.ModelId.String(), "generated")
 		factory, err := datagenv2.NewDataFactory(genDir)
 		if err != nil {
@@ -880,7 +879,6 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 			return fmt.Errorf("creating DataFactory: %w", err)
 		}
 
-		// prepare GenerateOptions
 		opts := datagenv2.GenerateOptions{
 			TagsInfo:          tagsInfo,
 			Samples:           payload.Samples,

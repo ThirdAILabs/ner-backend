@@ -5,7 +5,6 @@ import (
 	"strings"
 )
 
-// ExtendExamplesSystem frames the LLM for example extension.
 const ExtendExamplesSystem = `## You are a specialist in applied linguistics and example curation for annotation systems.
 ## Task
 Generate a diverse and representative examples of the tag using the tag’s name, description, and any initial examples provided.
@@ -15,14 +14,12 @@ Your examples should include:
 Keep the tone concise, objective, and suitable for use in a tagging guideline or labeling system.
 `
 
-// ExtendExamplesUser is the user‐role template.
 const ExtendExamplesUser = `Please generate {{ .K }} **diverse examples** for the following tag:
 **Tag Name:** {{ .Tag.Name }}
 **Description:** {{ .Tag.Desc }}
 **Basic examples:** {{ join (randomSample .Tag.Examples 3) ", " }}
 `
 
-// ExtendExamplesFormat is the JSON‐schema directive to the API.
 var ExtendExamplesFormat = map[string]interface{}{
 	"type": "json_schema",
 	"json_schema": map[string]interface{}{
@@ -42,7 +39,6 @@ var ExtendExamplesFormat = map[string]interface{}{
 	},
 }
 
-// ExtendExamplesTmpl is the compiled user template.
 var ExtendExamplesTmpl = template.Must(template.New("extendExamples").
 	Funcs(template.FuncMap{
 		"randomSample": RandomSample,

@@ -19,7 +19,6 @@ import (
 	openai "github.com/openai/openai-go"
 )
 
-// TagInfo mirrors your Python TypedDict.
 type TagInfo struct {
 	Name     string   // maps to tag["name"]
 	Desc     string   // maps to tag["desc"]
@@ -27,13 +26,11 @@ type TagInfo struct {
 	Contexts []string // maps to tag["contexts"], may be nil initially
 }
 
-// DataFactory drives the end-to-end generation.
 type DataFactory struct {
 	OutDir string
 	LLM    *OpenAILLM
 }
 
-// NewDataFactory creates the output directory and LLM wrapper.
 func NewDataFactory(outDir string) (*DataFactory, error) {
 	if err := os.MkdirAll(outDir, 0755); err != nil {
 		return nil, err
@@ -43,7 +40,6 @@ func NewDataFactory(outDir string) (*DataFactory, error) {
 	return &DataFactory{OutDir: outDir, LLM: llm}, nil
 }
 
-// ExtendDescription calls the LLM to get an expanded tag description.
 func (d *DataFactory) ExtendDescription(tag *TagInfo) (string, error) {
 	var buf bytes.Buffer
 	if err := prompts.ExtendDescriptionTmpl.Execute(&buf, map[string]interface{}{
@@ -71,7 +67,6 @@ func (d *DataFactory) ExtendDescription(tag *TagInfo) (string, error) {
 	return resp.ExtendedDescription, nil
 }
 
-// ExtendExamples calls the LLM to get additional examples.
 func (d *DataFactory) ExtendExamples(tag *TagInfo, k int) ([]string, error) {
 	var buf bytes.Buffer
 	if err := prompts.ExtendExamplesTmpl.Execute(&buf, map[string]interface{}{
@@ -99,7 +94,6 @@ func (d *DataFactory) ExtendExamples(tag *TagInfo, k int) ([]string, error) {
 	return resp.ExtendedExamples, nil
 }
 
-// GetTagContext calls the LLM to get context labels for a tag.
 func (d *DataFactory) GetTagContext(tag *TagInfo, k int) ([]string, error) {
 	var buf bytes.Buffer
 	if err := prompts.ContextTmpl.Execute(&buf, map[string]interface{}{
@@ -127,8 +121,6 @@ func (d *DataFactory) GetTagContext(tag *TagInfo, k int) ([]string, error) {
 	return resp.Scenarios, nil
 }
 
-// runAndCollect fires off multiple prompts (in parallel if desired)
-// and returns the raw JSON replies.
 func (d *DataFactory) runAndCollect(
 	batch []string,
 	systemPrompt string,
@@ -209,7 +201,6 @@ func mergeWithCorrections(orig, cleaned []string) []string {
 	return merged
 }
 
-// Generate runs the full pipeline: enrich tags, then generate & write annotated data.
 func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample, error) {
 	total := opts.RecordsToGenerate
 	if total < 0 {
@@ -227,7 +218,6 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 		return nil, nil, fmt.Errorf("invalid TestSplit: %f", opts.TestSplit)
 	}
 
-	// 1) Normalize values to not exceed total
 	if perCall > total {
 		perCall = total
 	}
@@ -237,7 +227,6 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 
 	feedback := SamplesToAnnotatedStrings(opts.Samples)
 
-	// 1) Enrich tags
 	for i := range opts.TagsInfo {
 		tag := &opts.TagsInfo[i]
 
@@ -287,7 +276,6 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 			n = rem
 		}
 
-		// build generation prompts
 		genPrompts := make([]string, callsPerBatch)
 		for i := 0; i < callsPerBatch; i++ {
 			var buf bytes.Buffer
@@ -310,7 +298,6 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 			genPrompts[i] = buf.String()
 		}
 
-		// call LLM for generation
 		rawGen, err := d.runAndCollect(genPrompts, prompts.AnnotatedDataSystem, genFmt, true)
 		if err != nil {
 			return nil, nil, fmt.Errorf("batch generate: %w", err)
@@ -328,7 +315,6 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 			}
 		}
 
-		// build and call verification prompts
 		verifPrompts := make([]string, len(toVerify))
 		for i, sentences := range toVerify {
 			var buf bytes.Buffer
@@ -359,25 +345,22 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 		}
 	}
 
-	// transform into api.Sample using validated transformSentence
 	var allSamples []api.Sample
 	for _, s := range allSentences {
 		src, tgt, err := d.transformSentence(s, opts.TagsInfo)
 		if err != nil {
-			continue // skip invalid
+			continue
 		}
 		toks := strings.Fields(src)
 		lbls := strings.Fields(tgt)
 		allSamples = append(allSamples, api.Sample{Tokens: toks, Labels: lbls})
 	}
 
-	// split train/test
 	split := int(float32(len(allSamples)) * (1 - opts.TestSplit))
 	return allSamples[:split], allSamples[split:], nil
 }
 
 var (
-	// compile once
 	annotRe = regexp.MustCompile(`(?P<before>[^\w\s#]*)#+(?P<entity>[^#]+?)#+(?P<tag>[A-Z_]+)#+(?P<after>[^\w\s#']*[\w']*)?`)
 )
 
@@ -403,7 +386,6 @@ func (d *DataFactory) ValidateSentence(src, tgt string, tags []TagInfo) error {
 	return nil
 }
 
-// transformSentence applies your Python‐style regex tagging to a single sentence.
 func (d *DataFactory) transformSentence(
 	text string,
 	tags []TagInfo,
@@ -415,7 +397,6 @@ func (d *DataFactory) transformSentence(
 	for _, m := range matches {
 		start, end := m[0], m[1]
 
-		// prefix
 		if last < start {
 			for _, w := range strings.Fields(text[last:start]) {
 				srcTokens = append(srcTokens, w)
@@ -440,7 +421,6 @@ func (d *DataFactory) transformSentence(
 		last = end
 	}
 
-	// suffix
 	if last < len(text) {
 		for _, w := range strings.Fields(text[last:]) {
 			srcTokens = append(srcTokens, w)
@@ -451,7 +431,6 @@ func (d *DataFactory) transformSentence(
 	src := strings.Join(srcTokens, " ")
 	tgt := strings.Join(tgtTokens, " ")
 
-	// **Validate here** before returning
 	if err := d.ValidateSentence(src, tgt, tags); err != nil {
 		return src, tgt, fmt.Errorf("validation failed for '%s': %w", text, err)
 	}

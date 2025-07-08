@@ -15,12 +15,10 @@ import (
 )
 
 func TestGenerate(t *testing.T) {
-	// Create a temporary output directory
 	outDir := t.TempDir()
 	factory, err := NewDataFactory(outDir)
 	require.NoError(t, err)
 
-	// Define the initial tag and sample
 	tags := []TagInfo{
 		{
 			Name:     "phone_number",
@@ -35,7 +33,6 @@ func TestGenerate(t *testing.T) {
 		},
 	}
 
-	// Configure generation options: generate 2 records, annotate 2 per template, split 50/50
 	opts := GenerateOptions{
 		TagsInfo:           tags,
 		Samples:            samples,
@@ -44,11 +41,9 @@ func TestGenerate(t *testing.T) {
 		TestSplit:          0.5,
 	}
 
-	// Execute generation
 	train, test, err := factory.Generate(opts)
 	require.NoError(t, err)
 
-	// Expect one sample in train and one in test
 	require.Len(t, train, 1)
 	require.Len(t, test, 1)
 }

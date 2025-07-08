@@ -5,13 +5,11 @@ import (
 	"strings"
 )
 
-// AnnotatedDataSystem frames the LLM for annotated data generation.
 const AnnotatedDataSystem = `# You are a data generation assistant specialized in creating high-quality, diverse, and realistic text samples for token classification tasks.
 ## Goal:
 Your goal is to generate natural sentences where multiple types of entities (tags) appear in varied and realistic linguistic contexts. 
 `
 
-// AnnotatedDataUser is the template for the user message.
 const AnnotatedDataUser = `## Task: Generate {{ .K }} diverse and realistic sentences containing tokens labeled for the following tags.
 
 ### Tags information:
@@ -52,7 +50,6 @@ const AnnotatedDataUser = `## Task: Generate {{ .K }} diverse and realistic sent
 {{- end }}
 `
 
-// AnnotatedDataFormat is the JSON‐schema directive to the API.
 var AnnotatedDataFormat = map[string]interface{}{
 	"type": "json_schema",
 	"json_schema": map[string]interface{}{
@@ -72,7 +69,6 @@ var AnnotatedDataFormat = map[string]interface{}{
 	},
 }
 
-// AnnotatedDataTmpl is the compiled user template.
 var AnnotatedDataTmpl = template.Must(template.New("annotatedData").
 	Funcs(template.FuncMap{
 		"randomSample": RandomSample,

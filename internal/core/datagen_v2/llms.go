@@ -29,7 +29,6 @@ type OpenAILLM struct {
 }
 
 func NewOpenAILLM(model, trackUsageAt string, temp float64) *OpenAILLM {
-	// Default usage file
 	if trackUsageAt == "" {
 		trackUsageAt = filepath.Join(".", "usage.json")
 	}
@@ -38,7 +37,6 @@ func NewOpenAILLM(model, trackUsageAt string, temp float64) *OpenAILLM {
 		slog.Warn("could not create usage dir", "dir", filepath.Dir(trackUsageAt), "error", err)
 	}
 
-	// Optionally, create empty files so you never hit “no such file” later
 	if f, err := os.Create(trackUsageAt); err == nil {
 		f.Close()
 	}
@@ -75,7 +73,6 @@ func (o *OpenAILLM) Generate(systemPrompt, prompt string, responseFormat openai.
 		return "", fmt.Errorf("openai generation failed: %w", err)
 	}
 
-	// update usage
 	o.mu.Lock()
 	tu, ok := o.usage[o.model]
 	if !ok {
@@ -86,7 +83,6 @@ func (o *OpenAILLM) Generate(systemPrompt, prompt string, responseFormat openai.
 	tu.PromptTokens += res.Usage.PromptTokens
 	tu.TotalTokens += res.Usage.TotalTokens
 
-	// write usage JSON
 	if f, ferr := os.Create(o.trackUsageAt); ferr == nil {
 		if jerr := json.NewEncoder(f).Encode(o.usage); jerr != nil {
 			slog.Warn("failed to write usage JSON", "error", jerr)
