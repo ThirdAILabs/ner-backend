@@ -117,7 +117,7 @@ func TestFinetuning(t *testing.T) {
 	ftReq := api.FinetuneRequest{
 		Name:       "finetuned-model",
 		TaskPrompt: &tp,
-		Tags:       []api.TagInfo{{Name: "xyz"}},
+		Tags:       []api.TagInfo{{Name: "URL", Description: "uniform resource locators (URLs), which are references to web resources or pages on the internet", Examples: []string{"https://example.com", "http://thirdai.com"}}},
 	}
 	_, model := finetune(t, router, baseID.String(), ftReq, 10, 100*time.Millisecond)
 
