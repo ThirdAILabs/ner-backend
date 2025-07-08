@@ -267,7 +267,7 @@ function showFileNotSanitizedWarningPopup() {
         </button>
         <div style="display: flex; align-items: center; gap: 8px;">
           <input type="checkbox" id="dont-show-again-checkbox" style="display: none;">
-          <label for="dont-show-again-checkbox" style="
+          <label for="dont-show-again-checkbox" class="checkbox-label" style="
             display: flex;
             align-items: center;
             gap: 8px;
@@ -276,7 +276,7 @@ function showFileNotSanitizedWarningPopup() {
             cursor: pointer;
             user-select: none;
           ">
-            <div style="
+            <div class="custom-checkbox" style="
               width: 16px;
               height: 16px;
               border: 2px solid #AAA;
@@ -286,8 +286,8 @@ function showFileNotSanitizedWarningPopup() {
               justify-content: center;
               background-color: transparent;
               transition: all 0.3s ease;
-            " class="custom-checkbox">
-              <div style="
+            ">
+              <div class="checkbox-check" style="
                 width: 8px;
                 height: 8px;
                 background-color: #4A90E2;
@@ -295,11 +295,24 @@ function showFileNotSanitizedWarningPopup() {
                 opacity: 0;
                 transform: scale(0);
                 transition: all 0.3s ease;
-              " class="checkbox-check"></div>
+              "></div>
             </div>
             Don't show this again
           </label>
         </div>
+        <style>
+          #dont-show-again-checkbox:checked + .checkbox-label .custom-checkbox {
+            border-color: #4A90E2 !important;
+            background-color: rgba(74, 144, 226, 0.1) !important;
+          }
+          #dont-show-again-checkbox:checked + .checkbox-label .checkbox-check {
+            opacity: 1 !important;
+            transform: scale(1) !important;
+          }
+          .checkbox-label:hover .custom-checkbox {
+            border-color: #4A90E2 !important;
+          }
+        </style>
 
       </div>
     </div>
@@ -310,9 +323,7 @@ function showFileNotSanitizedWarningPopup() {
   // Add event listeners
   const button = popup.querySelector('#file-warning-understand-button');
   const checkbox = popup.querySelector('#dont-show-again-checkbox');
-  const checkboxLabel = popup.querySelector('label[for="dont-show-again-checkbox"]');
-  const customCheckbox = popup.querySelector('.custom-checkbox');
-  const checkboxCheck = popup.querySelector('.checkbox-check');
+  const checkboxLabel = popup.querySelector('.checkbox-label');
   
   if (button) {
     button.addEventListener('click', () => {
@@ -323,42 +334,11 @@ function showFileNotSanitizedWarningPopup() {
     });
   }
   
-  // Function to update checkbox appearance
-  const updateCheckboxAppearance = (isChecked) => {
-    if (customCheckbox && checkboxCheck) {
-      if (isChecked) {
-        customCheckbox.style.borderColor = '#4A90E2';
-        customCheckbox.style.backgroundColor = 'rgba(74, 144, 226, 0.1)';
-        checkboxCheck.style.opacity = '1';
-        checkboxCheck.style.transform = 'scale(1)';
-      } else {
-        customCheckbox.style.borderColor = '#AAA';
-        customCheckbox.style.backgroundColor = 'transparent';
-        checkboxCheck.style.opacity = '0';
-        checkboxCheck.style.transform = 'scale(0)';
-      }
-    }
-  };
-  
   // Make the custom checkbox clickable
   if (checkboxLabel && checkbox) {
     checkboxLabel.addEventListener('click', (e) => {
       e.preventDefault();
       checkbox.checked = !checkbox.checked;
-      updateCheckboxAppearance(checkbox.checked);
-    });
-    
-    // Add hover effect
-    checkboxLabel.addEventListener('mouseenter', () => {
-      if (customCheckbox) {
-        customCheckbox.style.borderColor = '#4A90E2';
-      }
-    });
-    
-    checkboxLabel.addEventListener('mouseleave', () => {
-      if (customCheckbox) {
-        customCheckbox.style.borderColor = checkbox.checked ? '#4A90E2' : '#AAA';
-      }
     });
   }
 }
