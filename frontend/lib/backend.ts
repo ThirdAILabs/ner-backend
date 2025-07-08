@@ -16,8 +16,10 @@ export interface Feedback {
 
 export interface SavedFeedback {
   Id: string;
-  Tokens: string[];
-  Labels: string[];
+  Tokens?: string[];
+  Labels?: string[];
+  tokens?: string[];
+  labels?: string[];
 }
 
 export interface TagInfo {
@@ -29,6 +31,7 @@ export interface TagInfo {
 export interface FinetuneRequest {
   Name: string;
   TaskPrompt?: string;
+  GenerateData?: boolean;
   Tags?: TagInfo[];
   Samples?: Feedback[];
 }
@@ -36,6 +39,7 @@ export interface FinetuneRequest {
 export interface FinetuneResponse {
   ModelId: string;
 }
+
 // Add a utility function to handle API errors with custom messages
 const handleApiError = (error: unknown, customMessage?: string): never => {
   console.error('API Error:', error);
@@ -272,7 +276,10 @@ export const nerService = {
   },
 
   startChatSession: async (model: string, title: string): Promise<string> => {
-    const { data } = await axiosInstance.post('/chat/sessions', { Model: model, Title: title });
+    const { data } = await axiosInstance.post('/chat/sessions', {
+      Model: model,
+      Title: title,
+    });
     return data.SessionID;
   },
 
@@ -288,7 +295,9 @@ export const nerService = {
   },
 
   renameChatSession: async (sessionId: string, title: string): Promise<void> => {
-    await axiosInstance.post(`/chat/sessions/${sessionId}/rename`, { Title: title });
+    await axiosInstance.post(`/chat/sessions/${sessionId}/rename`, {
+      Title: title,
+    });
   },
 
   sendChatMessageStream: async (
@@ -363,13 +372,32 @@ export const nerService = {
   },
 
   setOpenAIApiKey: async (apiKey: string): Promise<void> => {
-    await axiosInstance.post('/chat/api-key', { ApiKey: apiKey });
+    try {
+      await axiosInstance.post('/chat/api-key', { ApiKey: apiKey });
+    } catch (error) {
+      return handleApiError(error, 'Failed to save OpenAI API key');
+    }
+  },
+
+  validateOpenAIApiKey: async (apiKey: string): Promise<{ Valid: boolean; Message: string }> => {
+    const response = await axiosInstance.post('/chat/api-key/validate', { ApiKey: apiKey });
+    return response.data;
   },
 
   storeFileNameToPath: async (uploadId: string, mapping: { [filename: string]: string }) => {
     try {
-      await axiosInstance.post(`/file-name-to-path/${uploadId}`, { Mapping: mapping });
+      console.log('Backend service - Storing file path mapping:', {
+        uploadId,
+        mapping,
+        mappingKeys: Object.keys(mapping),
+        mappingEntries: Object.entries(mapping),
+      });
+      await axiosInstance.post(`/file-name-to-path/${uploadId}`, {
+        Mapping: mapping,
+      });
+      console.log('Backend service - File path mapping stored successfully');
     } catch (error) {
+      console.error('Backend service - Error storing file path mapping:', error);
       return handleApiError(error, 'Failed to store upload path mappings');
     }
   },
@@ -407,7 +435,8 @@ export const nerService = {
       const { data } = await axiosInstance.post(`/models/${modelId}/finetune`, request);
       return data;
     } catch (error) {
-      return handleApiError(error, `Failed to start finetuning for model ${modelId}`);
+      // Don't use custom message for fine-tuning errors so we can see the actual backend error
+      return handleApiError(error);
     }
   },
 };

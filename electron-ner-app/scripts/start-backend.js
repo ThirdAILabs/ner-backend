@@ -3,9 +3,14 @@ import { app } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'module';
 import { FIXED_PORT, ensurePortIsFree } from './check-port.js';
 import log from 'electron-log';
 import { get } from 'node:http';
+
+// Create require for CommonJS modules
+const require = createRequire(import.meta.url);
+const { getExecutableName, getOnnxRuntimePath } = require('./platform-utils.cjs');
 
 log.transports.file.level = 'debug';
 log.transports.file.resolvePath = () => {
@@ -82,7 +87,7 @@ function getBinPath() {
 
 function getBackendPath() {
   const binPath = getBinPath();
-  return binPath ? path.join(binPath, 'main') : null;
+  return binPath ? path.join(binPath, getExecutableName('main')) : null;
 }
 
 function getModelConfigPath() {
@@ -113,11 +118,7 @@ export async function startBackend() {
   }
 
   try {
-    const stats = fs.statSync(backendPath);
-    if (!(stats.mode & parseInt('111', 8))) {
-      log.error(`Backend executable is not executable: ${backendPath}`);
-      return null;
-    }
+    fs.accessSync(backendPath, fs.constants.X_OK);
   } catch (error) {
     log.error(`Cannot check backend executable permissions: ${error.message}`);
     return null;
@@ -150,21 +151,12 @@ export async function startBackend() {
   // Get the plugin executable path
   const pluginPath = path.join(backendDir, 'plugin', 'plugin');
 
-  // Determine the correct path for libonnxruntime.dylib based on environment
-  let onnxRuntimePath;
+  // Determine the correct path for ONNX Runtime library based on platform and environment
   const isProduction = process.env.NODE_ENV === 'production' || (process.execPath && process.execPath.includes('Applications'));
+  const onnxRuntimePath = getOnnxRuntimePath(isProduction, getBinPath());
   
-  if (isProduction) {
-    // In production, the library is in the Frameworks directory
-    const frameworksDir = process.platform === 'darwin' 
-      ? path.join(path.dirname(process.execPath), '..', 'Frameworks')
-      : path.join(path.dirname(process.execPath), '..', 'resources');
-    onnxRuntimePath = path.join(frameworksDir, 'libonnxruntime.dylib');
-  } else {
-    // In development, the library is in the resources directory
-    onnxRuntimePath = path.join(__dirname, '..', 'resources', 'libonnxruntime.dylib');
-  }
-  
+  log.debug('Platform detection:', process.platform);
+  log.debug('Is production:', isProduction);
   log.debug('ONNX Runtime library path:', onnxRuntimePath);
     
   const proc = spawn(

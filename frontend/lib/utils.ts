@@ -28,12 +28,16 @@ export const formatFileSize = (bytes: number, space: boolean = false): string =>
 };
 
 export const getFilesFromElectron = async (
-  supportedTypes: string[]
+  supportedTypes: string[],
+  isDirectoryMode: boolean = false,
+  isCombinedMode: boolean = false
 ): Promise<{ allFilesMeta: any[]; totalSize: number; error?: string }> => {
   // @ts-ignore
   const results = await window.electron.openFileChooser(
     // Electron API does not expect '.' in the file extension
-    supportedTypes.map((t) => t.replace('.', ''))
+    supportedTypes.map((t) => t.replace('.', '')),
+    isDirectoryMode,
+    isCombinedMode
   );
   if (results.error) {
     return { allFilesMeta: [], totalSize: 0, error: results.error };
@@ -61,4 +65,8 @@ export const uniqueFileNames = (fileNames: string[]): string[] => {
     return newFileName;
   });
   return newFileNames;
+};
+
+export const isUploadReport = (report: Report): boolean => {
+  return report.StorageType === 'upload';
 };

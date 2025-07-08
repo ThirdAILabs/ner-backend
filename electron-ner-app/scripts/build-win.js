@@ -1,8 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { exec } from 'node:child_process';
+import { exec, execSync } from 'node:child_process';
 import { promisify } from 'node:util';
+import { createRequire } from 'module';
+
+// Create require for CommonJS modules
+const require = createRequire(import.meta.url);
+const { getExecutableName, getWindowsDependencies } = require('./platform-utils.cjs');
 
 const execAsync = promisify(exec);
 
@@ -21,7 +26,7 @@ console.log('Go project directory:', goProjectDir);
 // Step 1: Check/Build the Go backend executable for Windows
 console.log('\n=== Checking Go backend ===');
 try {
-  const backendExecutable = path.join(goProjectDir, 'main.exe');
+  const backendExecutable = path.join(goProjectDir, getExecutableName('main'));
   const backendLinuxExecutable = path.join(goProjectDir, 'main');
   
   if (!fs.existsSync(backendExecutable)) {
@@ -60,9 +65,9 @@ try {
 // Step 2: Copy the backend to bin directory
 console.log('\n=== Copying backend to electron app ===');
 try {
-  const backendExecutable = path.join(goProjectDir, 'main.exe');
+  const backendExecutable = path.join(goProjectDir, getExecutableName('main'));
   const binDir = path.join(rootDir, 'bin');
-  const targetExecutable = path.join(binDir, 'main.exe');
+  const targetExecutable = path.join(binDir, getExecutableName('main'));
   
   // Ensure bin directory exists
   if (!fs.existsSync(binDir)) {
@@ -73,7 +78,20 @@ try {
   console.log(`Copying from ${backendExecutable} to ${targetExecutable}`);
   fs.copyFileSync(backendExecutable, targetExecutable);
   
-  console.log('Backend copied successfully!');
+  // Copy Windows dependencies
+  const windowsDeps = getWindowsDependencies();
+  for (const dep of windowsDeps) {
+    const sourcePath = path.join(goProjectDir, dep);
+    const targetPath = path.join(binDir, dep);
+    if (fs.existsSync(sourcePath)) {
+      console.log(`Copying Windows dependency: ${dep}`);
+      fs.copyFileSync(sourcePath, targetPath);
+    } else {
+      console.warn(`Windows dependency not found: ${sourcePath}`);
+    }
+  }
+  
+  console.log('Backend and dependencies copied successfully!');
 } catch (error) {
   console.error('Failed to copy backend:', error.message);
   process.exit(1);

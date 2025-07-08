@@ -13,12 +13,14 @@ import (
 	"ner-backend/internal/core"
 	"ner-backend/internal/core/python"
 	"ner-backend/internal/database"
+	"ner-backend/internal/database/versions/migration_6"
 	"ner-backend/internal/licensing"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/storage"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -35,8 +37,10 @@ type Config struct {
 	Root             string `env:"ROOT" envDefault:"./pocket-shield"`
 	Port             int    `env:"PORT" envDefault:"3001"`
 	License          string `env:"LICENSE_KEY" envDefault:""`
+	EnterpriseMode   bool   `env:"ENTERPRISE_MODE" envDefault:"false"`
 	ModelDir         string `env:"MODEL_DIR" envDefault:""`
 	ModelType        string `env:"MODEL_TYPE"`
+	UploadBucket     string `env:"UPLOAD_BUCKET" envDefault:"uploads"`
 	AppDataDir       string `env:"APP_DATA_DIR" envDefault:"./pocket-shield"`
 	OnnxRuntimeDylib string `env:"ONNX_RUNTIME_DYLIB"`
 	EnablePython     bool   `env:"ENABLE_PYTHON" envDefault:"false"`
@@ -47,6 +51,11 @@ const (
 )
 
 func createDatabase(root string) *gorm.DB {
+	err := migration_6.SetDefaultStorageProvider(string(storage.LocalType))
+	if err != nil {
+		log.Fatalf("Failed to set default storage provider: %v", err)
+	}
+
 	path := filepath.Join(root, "db", "pocket-shield.db")
 	if err := os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
 		log.Fatalf("Failed to create database directory: %v", err)
@@ -97,7 +106,7 @@ func createQueue(db *gorm.DB) *messaging.InMemoryQueue {
 	return queue
 }
 
-func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publisher, port int, modelDir string, modelType core.ModelType, licensing licensing.LicenseVerifier) *http.Server {
+func createServer(db *gorm.DB, storage storage.ObjectStore, queue messaging.Publisher, port int, modelDir string, modelType core.ModelType, uploadBucket string, licensing licensing.LicenseVerifier, enterpriseMode bool) *http.Server {
 	r := chi.NewRouter()
 
 	// Middleware
@@ -114,7 +123,7 @@ func createServer(db *gorm.DB, storage storage.Provider, queue messaging.Publish
 	r.Use(middleware.Recoverer)                 // Recover from panics
 	r.Use(middleware.Timeout(60 * time.Second)) // Set request timeout
 
-	apiHandler := api.NewBackendService(db, storage, queue, chunkTargetBytes, licensing)
+	apiHandler := api.NewBackendService(db, storage, uploadBucket, queue, chunkTargetBytes, licensing, enterpriseMode)
 
 	loaders := core.NewModelLoaders()
 
@@ -176,6 +185,8 @@ func main() {
 
 	slog.Info("starting backend", "root", cfg.Root, "port", cfg.Port, "app_data_dir", cfg.AppDataDir, "model_dir", cfg.ModelDir, "model_type", cfg.ModelType)
 
+	localBaseDir := filepath.Join(cfg.Root, "storage")
+
 	db := createDatabase(cfg.AppDataDir)
 
 	if err := db.
@@ -194,7 +205,7 @@ func main() {
 		log.Fatalf("failed to abort stale inference tasks: %v", err)
 	}
 
-	storage, err := storage.NewLocalProvider(filepath.Join(cfg.Root, "storage"))
+	objectStore, err := storage.NewLocalObjectStore(localBaseDir)
 	if err != nil {
 		log.Fatalf("Worker: Failed to create storage client: %v", err)
 	}
@@ -202,15 +213,15 @@ func main() {
 	if cfg.ModelDir != "" {
 		switch core.ParseModelType(cfg.ModelType) {
 		case core.BoltUdt:
-			if err := cmd.InitializeBoltUdtModel(context.Background(), db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
+			if err := cmd.InitializeBoltUdtModel(context.Background(), db, objectStore, modelBucket, "basic", cfg.ModelDir); err != nil {
 				log.Fatalf("Failed to init & upload bolt model: %v", err)
 			}
 		case core.PythonCnn:
-			if err := cmd.InitializePythonCnnModel(context.Background(), db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
+			if err := cmd.InitializePythonCnnModel(context.Background(), db, objectStore, modelBucket, "basic", cfg.ModelDir); err != nil {
 				log.Fatalf("Failed to init & upload python CNN model: %v", err)
 			}
 		case core.OnnxCnn:
-			if err := cmd.InitializeOnnxCnnModel(context.Background(), db, storage, modelBucket, "basic", cfg.ModelDir); err != nil {
+			if err := cmd.InitializeOnnxCnnModel(context.Background(), db, objectStore, modelBucket, "basic", cfg.ModelDir); err != nil {
 				log.Fatalf("failed to init ONNX model: %v", err)
 			}
 		default:
@@ -228,7 +239,7 @@ func main() {
 
 	licensing := cmd.CreateLicenseVerifier(db, cfg.License)
 
-	worker := core.NewTaskProcessor(db, storage, queue, queue, licensing, filepath.Join(cfg.Root, "models"), modelBucket, core.NewModelLoaders())
+	worker := core.NewTaskProcessor(db, objectStore, queue, queue, licensing, filepath.Join(cfg.Root, "models"), modelBucket, cfg.UploadBucket, core.NewModelLoaders())
 
 	var basicModel database.Model
 	if err := db.Where("name = ?", "basic").First(&basicModel).Error; err != nil {
@@ -236,10 +247,19 @@ func main() {
 	}
 
 	basicModelDir := filepath.Join(cfg.Root, "models", basicModel.Id.String())
-	if err := storage.DownloadDir(context.Background(), modelBucket, basicModel.Id.String(), basicModelDir, true); err != nil {
+	if err := objectStore.DownloadDir(context.Background(), modelBucket, basicModel.Id.String(), basicModelDir, true); err != nil {
 		log.Fatalf("failed to download model: %v", err)
 	}
-	server := createServer(db, storage, queue, cfg.Port, basicModelDir, core.ParseModelType(cfg.ModelType), licensing)
+	server := createServer(db, objectStore, queue, cfg.Port, basicModelDir, core.ParseModelType(cfg.ModelType), cfg.UploadBucket, licensing, cfg.EnterpriseMode)
+
+	// Read OpenAI API key from file and set as environment variable for worker
+	if apiKeyData, err := os.ReadFile("api-key.txt"); err == nil {
+		apiKey := strings.TrimSpace(string(apiKeyData))
+		if apiKey != "" {
+			os.Setenv("OPENAI_API_KEY", apiKey)
+			slog.Info("loaded OpenAI API key for worker")
+		}
+	}
 
 	slog.Info("starting worker")
 	go worker.Start()

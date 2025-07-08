@@ -38,11 +38,13 @@ func TestFreeLicensing(t *testing.T) {
 		ReportId:     uuid.New(),
 		TotalSize:    200,
 		CreationTime: mayTime,
+		StorageParams: []byte(`{"ChunkKeys": ["chunk1", "chunk2"]}`),
 	}).Error)
 	require.NoError(t, db.Create(&database.InferenceTask{
 		ReportId:     uuid.New(),
 		TotalSize:    50,
 		CreationTime: mayTime,
+		StorageParams: []byte(`{"ChunkKeys": ["chunk3", "chunk4"]}`),
 	}).Error)
 
 	_, err = verifier.VerifyLicense(context.Background())
@@ -52,6 +54,7 @@ func TestFreeLicensing(t *testing.T) {
 		ReportId:     uuid.New(),
 		TotalSize:    100,
 		CreationTime: mayTime,
+		StorageParams: []byte(`{"ChunkKeys": ["chunk5", "chunk6"]}`),
 	}).Error)
 
 	// Should exceed quota in May
@@ -67,6 +70,7 @@ func TestFreeLicensing(t *testing.T) {
 		ReportId:     uuid.New(),
 		TotalSize:    300,
 		CreationTime: juneTime,
+		StorageParams: []byte(`{"ChunkKeys": ["chunk7", "chunk8"]}`),
 	}).Error)
 
 	// Should not exceed quota since we're only counting June's tasks
@@ -78,6 +82,7 @@ func TestFreeLicensing(t *testing.T) {
 		ReportId:     uuid.New(),
 		TotalSize:    1,
 		CreationTime: juneTime,
+		StorageParams: []byte(`{"ChunkKeys": ["chunk9", "chunk10"]}`),
 	}).Error)
 
 	// License check should fail because quota is exceeded in June
