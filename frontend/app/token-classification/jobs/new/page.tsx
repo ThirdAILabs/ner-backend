@@ -167,7 +167,7 @@ const FileSources: React.FC<FileSourcesProps> = ({
       }
       title="S3 Bucket"
       description="Scan files from an S3 bucket"
-      disclaimer={`Public buckets only without enterprise subscription. Email contact@thirdai.com for enterprise subscription.`}
+      disclaimer={`Public buckets only without enterprise subscription.`}
       disabled={isLoadingFiles}
     />
   );
