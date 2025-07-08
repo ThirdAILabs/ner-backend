@@ -55,7 +55,7 @@ func TestListModels(t *testing.T) {
 		&database.Model{Id: id2, Name: "Model2", Type: "bolt_udt", Status: database.ModelTraining, CreationTime: fixedTime},
 	)
 
-	service := backend.NewBackendService(db, &mockStorage{}, "uploads", messaging.NewInMemoryQueue(), 1024, nil)
+	service := backend.NewBackendService(db, &mockStorage{}, "uploads", messaging.NewInMemoryQueue(), 1024, nil, false)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -83,7 +83,7 @@ func TestGetModel(t *testing.T) {
 		&database.ModelTag{ModelId: modelId, Tag: "phone"},
 	)
 
-	service := backend.NewBackendService(db, &mockStorage{}, "uploads", messaging.NewInMemoryQueue(), 1024, nil)
+	service := backend.NewBackendService(db, &mockStorage{}, "uploads", messaging.NewInMemoryQueue(), 1024, nil, false)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -105,7 +105,7 @@ func TestFinetuneModel(t *testing.T) {
 		&database.Model{Id: modelId, Name: "Model1", Type: "regex", Status: database.ModelTrained},
 	)
 
-	service := backend.NewBackendService(db, &mockStorage{}, "uploads", messaging.NewInMemoryQueue(), 1024, nil)
+	service := backend.NewBackendService(db, &mockStorage{}, "uploads", messaging.NewInMemoryQueue(), 1024, nil, true)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -165,19 +165,19 @@ func TestCreateReport(t *testing.T) {
 		&database.ModelTag{ModelId: modelId, Tag: "phone"},
 	)
 
-	service := backend.NewBackendService(db, &mockStorage{}, "uploads", messaging.NewInMemoryQueue(), 1024, nil)
+	service := backend.NewBackendService(db, &mockStorage{}, "uploads", messaging.NewInMemoryQueue(), 1024, nil, false)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
 	storageParams, _ := json.Marshal(storage.S3ConnectorParams{Region: "us-east-2", Bucket: "thirdai-corp-public", Prefix: "sample-pdfs/MACH.pdf"})
 
 	payload := api.CreateReportRequest{
-		ReportName:     "test-report",
-		ModelId:        modelId,
-		StorageType:     string(storage.S3Type),
-		StorageParams:   json.RawMessage(storageParams),
-		Tags:           []string{"name", "phone"},
-		CustomTags:     map[string]string{"tag1": "pattern1", "tag2": "pattern2"},
+		ReportName:    "test-report",
+		ModelId:       modelId,
+		StorageType:   string(storage.S3Type),
+		StorageParams: json.RawMessage(storageParams),
+		Tags:          []string{"name", "phone"},
+		CustomTags:    map[string]string{"tag1": "pattern1", "tag2": "pattern2"},
 		Groups: map[string]string{
 			"group1": `label1 CONTAINS "xyz"`,
 			"group2": `COUNT(label2) > 8`,
@@ -231,19 +231,19 @@ func TestCreateReport_InvalidS3(t *testing.T) {
 		&database.ModelTag{ModelId: modelId, Tag: "phone"},
 	)
 
-	service := backend.NewBackendService(db, &mockStorage{}, "uploads", messaging.NewInMemoryQueue(), 1024, nil)
+	service := backend.NewBackendService(db, &mockStorage{}, "uploads", messaging.NewInMemoryQueue(), 1024, nil, false)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
 	storageParams, _ := json.Marshal(storage.S3ConnectorParams{Bucket: "test-bucket", Prefix: "test-prefix"})
 
 	payload := api.CreateReportRequest{
-		ReportName:     "test-report",
-		ModelId:        modelId,
-		StorageType:     string(storage.S3Type),
-		StorageParams:   json.RawMessage(storageParams),
-		Tags:           []string{"name", "phone"},
-		CustomTags:     map[string]string{"tag1": "pattern1", "tag2": "pattern2"},
+		ReportName:    "test-report",
+		ModelId:       modelId,
+		StorageType:   string(storage.S3Type),
+		StorageParams: json.RawMessage(storageParams),
+		Tags:          []string{"name", "phone"},
+		CustomTags:    map[string]string{"tag1": "pattern1", "tag2": "pattern2"},
 		Groups: map[string]string{
 			"group1": `label1 CONTAINS "xyz"`,
 			"group2": `COUNT(label2) > 8`,
@@ -274,10 +274,10 @@ func TestGetReport(t *testing.T) {
 		&database.ModelTag{ModelId: modelId, Tag: "email"},
 		&database.ModelTag{ModelId: modelId, Tag: "phone"},
 		&database.Report{
-			Id:             reportId,
-			ModelId:        modelId,
-			StorageType:     string(storage.S3Type),
-			StorageParams:   datatypes.JSON(storageParams),
+			Id:            reportId,
+			ModelId:       modelId,
+			StorageType:   string(storage.S3Type),
+			StorageParams: datatypes.JSON(storageParams),
 			Groups: []database.Group{
 				{Id: group1, Name: "group_a", ReportId: reportId, Query: `label1 CONTAINS "xyz"`},
 				{Id: group2, Name: "group_b", ReportId: reportId, Query: `label1 = "xyz"`},
@@ -298,7 +298,7 @@ func TestGetReport(t *testing.T) {
 		&database.ObjectEntity{ReportId: reportId, Object: "object1", Start: 2, End: 3, Label: "label3", Text: "text3"},
 	)
 
-	service := backend.NewBackendService(db, &mockStorage{}, "uploads", messaging.NewInMemoryQueue(), 1024, nil)
+	service := backend.NewBackendService(db, &mockStorage{}, "uploads", messaging.NewInMemoryQueue(), 1024, nil, false)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -402,7 +402,7 @@ func TestDeleteReport(t *testing.T) {
 		&database.Report{Id: reportId, ModelId: modelId, StorageType: string(storage.S3Type), StorageParams: datatypes.JSON(json.RawMessage(`{"Bucket": "test-bucket", "Prefix": "test-prefix"}`))},
 	)
 
-	service := backend.NewBackendService(db, &mockStorage{}, "uploads", messaging.NewInMemoryQueue(), 1024, nil)
+	service := backend.NewBackendService(db, &mockStorage{}, "uploads", messaging.NewInMemoryQueue(), 1024, nil, false)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -446,7 +446,7 @@ func TestStopReport(t *testing.T) {
 		&database.Report{Id: reportId, ModelId: modelId, StorageType: string(storage.S3Type), StorageParams: datatypes.JSON(json.RawMessage(`{"Bucket": "test-bucket", "Prefix": "test-prefix"}`))},
 	)
 
-	service := backend.NewBackendService(db, &mockStorage{}, "uploads", messaging.NewInMemoryQueue(), 1024, nil)
+	service := backend.NewBackendService(db, &mockStorage{}, "uploads", messaging.NewInMemoryQueue(), 1024, nil, false)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -478,14 +478,14 @@ func TestReportSearch(t *testing.T) {
 	modelId, reportId := uuid.New(), uuid.New()
 
 	storageParams, _ := json.Marshal(storage.S3ConnectorParams{Bucket: "test-bucket", Prefix: "test-prefix"})
-	
+
 	db := createDB(t,
 		&database.Model{Id: modelId, Name: "Model1", Type: "regex", Status: database.ModelTrained},
 		&database.Report{
-			Id:             reportId,
-			ModelId:        modelId,
-			StorageType:     string(storage.S3Type),
-			StorageParams:   datatypes.JSON(storageParams),
+			Id:            reportId,
+			ModelId:       modelId,
+			StorageType:   string(storage.S3Type),
+			StorageParams: datatypes.JSON(storageParams),
 		},
 		&database.ObjectEntity{ReportId: reportId, Object: "object1", Start: 1, End: 2, Label: "label1", Text: "text1"},
 		&database.ObjectEntity{ReportId: reportId, Object: "object2", Start: 1, End: 1, Label: "label2", Text: "text2"},
@@ -496,7 +496,7 @@ func TestReportSearch(t *testing.T) {
 		&database.ObjectEntity{ReportId: reportId, Object: "object4", Start: 4, End: 5, Label: "label3", Text: "12xyz34"},
 	)
 
-	service := backend.NewBackendService(db, &mockStorage{}, "uploads", messaging.NewInMemoryQueue(), 1024, nil)
+	service := backend.NewBackendService(db, &mockStorage{}, "uploads", messaging.NewInMemoryQueue(), 1024, nil, false)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -568,7 +568,7 @@ func TestGetReportPreviews(t *testing.T) {
 
 	db := createDB(t, p1, p2, p3, e1, e2, e3)
 
-	service := backend.NewBackendService(db, &mockStorage{}, "uploads", messaging.NewInMemoryQueue(), 1024, nil)
+	service := backend.NewBackendService(db, &mockStorage{}, "uploads", messaging.NewInMemoryQueue(), 1024, nil, false)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -641,7 +641,7 @@ func TestGetReportPreviews(t *testing.T) {
 func TestGetInferenceMetrics_NoTasks(t *testing.T) {
 	db := createDB(t)
 
-	svc := backend.NewBackendService(db, &mockStorage{}, "uploads", nil /*chunkTargetBytes*/, 0, nil)
+	svc := backend.NewBackendService(db, &mockStorage{}, "uploads", nil /*chunkTargetBytes*/, 0, nil, false)
 	router := chi.NewRouter()
 	svc.AddRoutes(router)
 
@@ -679,16 +679,16 @@ func TestGetInferenceMetrics_WithTasks(t *testing.T) {
 
 	// A running task 30 min ago, 4 MiB, 300 tokens
 	db.Create(&database.InferenceTask{
-		ReportId:     uuid.New(),
-		TaskId:       1,
-		Status:       database.JobRunning,
-		CreationTime: now.Add(-30 * time.Minute),
-		TotalSize:    4 * 1024 * 1024,
-		TokenCount:   300,
-		StorageParams:  datatypes.JSON(json.RawMessage(`{"ChunkKeys": ["test-chunk-key"]}`)),
+		ReportId:      uuid.New(),
+		TaskId:        1,
+		Status:        database.JobRunning,
+		CreationTime:  now.Add(-30 * time.Minute),
+		TotalSize:     4 * 1024 * 1024,
+		TokenCount:    300,
+		StorageParams: datatypes.JSON(json.RawMessage(`{"ChunkKeys": ["test-chunk-key"]}`)),
 	})
 
-	svc := backend.NewBackendService(db, &mockStorage{}, "uploads", nil, 0, nil)
+	svc := backend.NewBackendService(db, &mockStorage{}, "uploads", nil, 0, nil, false)
 	router := chi.NewRouter()
 	svc.AddRoutes(router)
 
@@ -719,9 +719,9 @@ func TestGetInferenceMetrics_WithTasks(t *testing.T) {
 			Status: database.ModelTrained,
 		}).Error)
 		require.NoError(t, db.Create(&database.Report{
-			Id:      reportID,
-			ModelId: modelID,
-			StorageType: string(storage.S3Type),
+			Id:            reportID,
+			ModelId:       modelID,
+			StorageType:   string(storage.S3Type),
 			StorageParams: datatypes.JSON(json.RawMessage(`{"Bucket": "test-bucket", "Prefix": "test-prefix"}`)),
 		}).Error)
 
@@ -756,7 +756,7 @@ func TestGetInferenceMetrics_WithTasks(t *testing.T) {
 }
 
 func TestValidateGroupDefinition_ValidDefinition(t *testing.T) {
-	service := backend.NewBackendService(nil, &mockStorage{}, "uploads", messaging.NewInMemoryQueue(), 1024, nil)
+	service := backend.NewBackendService(nil, &mockStorage{}, "uploads", messaging.NewInMemoryQueue(), 1024, nil, false)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -770,7 +770,7 @@ func TestValidateGroupDefinition_ValidDefinition(t *testing.T) {
 }
 
 func TestValidateGroupDefinition_InvalidDefinition(t *testing.T) {
-	service := backend.NewBackendService(nil, &mockStorage{}, "uploads", messaging.NewInMemoryQueue(), 1024, nil)
+	service := backend.NewBackendService(nil, &mockStorage{}, "uploads", messaging.NewInMemoryQueue(), 1024, nil, false)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -785,7 +785,7 @@ func TestValidateGroupDefinition_InvalidDefinition(t *testing.T) {
 }
 
 func TestValidateS3Bucket_PublicBucket(t *testing.T) {
-	service := backend.NewBackendService(nil, &mockStorage{}, "uploads", messaging.NewInMemoryQueue(), 1024, nil)
+	service := backend.NewBackendService(nil, &mockStorage{}, "uploads", messaging.NewInMemoryQueue(), 1024, nil, false)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -799,7 +799,7 @@ func TestValidateS3Bucket_PublicBucket(t *testing.T) {
 }
 
 func TestValidateS3Bucket_InvalidBucket(t *testing.T) {
-	service := backend.NewBackendService(nil, &mockStorage{}, "uploads", messaging.NewInMemoryQueue(), 1024, nil)
+	service := backend.NewBackendService(nil, &mockStorage{}, "uploads", messaging.NewInMemoryQueue(), 1024, nil, false)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -815,7 +815,7 @@ func TestValidateS3Bucket_InvalidBucket(t *testing.T) {
 
 func TestStoreAndGetFileNameToPath(t *testing.T) {
 	db := createDB(t)
-	service := backend.NewBackendService(db, &mockStorage{}, "uploads", messaging.NewInMemoryQueue(), 1024, nil)
+	service := backend.NewBackendService(db, &mockStorage{}, "uploads", messaging.NewInMemoryQueue(), 1024, nil, false)
 	router := chi.NewRouter()
 	service.AddRoutes(router)
 
@@ -847,4 +847,48 @@ func TestStoreAndGetFileNameToPath(t *testing.T) {
 	err = json.Unmarshal(rec.Body.Bytes(), &resp)
 	assert.NoError(t, err)
 	assert.Equal(t, testMap, resp.Mapping)
+}
+
+func TestGetEnterpriseInfo_IsFalse(t *testing.T) {
+	modelId := uuid.New()
+	db := createDB(t,
+		&database.Model{Id: modelId, Name: "Model1", Type: "regex", Status: database.ModelTrained},
+	)
+
+	service := backend.NewBackendService(db, &mockStorage{}, "uploads", messaging.NewInMemoryQueue(), 1024, nil, false)
+	router := chi.NewRouter()
+	service.AddRoutes(router)
+
+	req := httptest.NewRequest(http.MethodGet, "/enterprise", nil)
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	var response api.GetEnterpriseInfoResponse
+	err := json.Unmarshal(rec.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.False(t, response.IsEnterpriseMode)
+}
+
+func TestGetEnterpriseInfo_IsTrue(t *testing.T) {
+	modelId := uuid.New()
+	db := createDB(t,
+		&database.Model{Id: modelId, Name: "Model1", Type: "regex", Status: database.ModelTrained},
+	)
+
+	service := backend.NewBackendService(db, &mockStorage{}, "uploads", messaging.NewInMemoryQueue(), 1024, nil, true)
+	router := chi.NewRouter()
+	service.AddRoutes(router)
+
+	req := httptest.NewRequest(http.MethodGet, "/enterprise", nil)
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	var response api.GetEnterpriseInfoResponse
+	err := json.Unmarshal(rec.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.True(t, response.IsEnterpriseMode)
 }

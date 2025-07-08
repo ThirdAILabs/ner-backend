@@ -262,9 +262,21 @@ const ExamplesVisualizer: React.FC<ExamplesVisualizerProps> = ({ report = mockRe
   const [selectedType, setSelectedType] = useState<'tp' | 'fp' | 'fn'>('tp');
 
   const predictionTypes = [
-    { id: 'tp', label: 'True Positives', color: 'bg-green-100 hover:bg-green-200' },
-    { id: 'fp', label: 'False Positives', color: 'bg-red-100 hover:bg-red-200' },
-    { id: 'fn', label: 'False Negatives', color: 'bg-yellow-100 hover:bg-yellow-200' },
+    {
+      id: 'tp',
+      label: 'True Positives',
+      color: 'bg-green-100 hover:bg-green-200',
+    },
+    {
+      id: 'fp',
+      label: 'False Positives',
+      color: 'bg-red-100 hover:bg-red-200',
+    },
+    {
+      id: 'fn',
+      label: 'False Negatives',
+      color: 'bg-yellow-100 hover:bg-yellow-200',
+    },
   ] as const;
 
   const getExamples = () => {

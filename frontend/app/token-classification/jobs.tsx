@@ -402,7 +402,7 @@ export default function Jobs() {
   const [error, setError] = useState<string | null>(null);
   const { healthStatus } = useHealth();
   const { license } = useLicense();
-  const [isLicenseValid, setIsLicenseValid] = useState<boolean | null>(true);
+  const [isLicenseValid, setIsLicenseValid] = useState<boolean>(true);
 
   useEffect(() => {
     recordEvent({
@@ -413,11 +413,12 @@ export default function Jobs() {
   }, []);
 
   useEffect(() => {
-    setIsLicenseValid(
-      license &&
-        license.LicenseError !== 'expired license' &&
-        license.LicenseError !== 'invalid license'
-    );
+    let licenceValidityCheck = true;
+    if (license && license.LicenseError) {
+      licenceValidityCheck =
+        license.LicenseError !== 'expired license' && license.LicenseError !== 'invalid license';
+    }
+    setIsLicenseValid(licenceValidityCheck);
   }, [license]);
 
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);

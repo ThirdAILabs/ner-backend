@@ -263,7 +263,9 @@ function SafeGPTContent() {
         </div>
         <div
           className="transition-all duration-100"
-          style={{ width: isSidebarCollapsed ? '100vw' : 'calc(100vw - 250px)' }}
+          style={{
+            width: isSidebarCollapsed ? '100vw' : 'calc(100vw - 250px)',
+          }}
         >
           <ChatInterface
             messages={messages}

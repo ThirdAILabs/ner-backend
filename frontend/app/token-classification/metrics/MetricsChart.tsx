@@ -39,7 +39,14 @@ export const MetricsChart: React.FC<MetricsChartProps> = ({
   }));
 
   return (
-    <Box sx={{ p: 2, border: '1px solid #eaeaea', borderRadius: 1, height: '100%' }}>
+    <Box
+      sx={{
+        p: 2,
+        border: '1px solid #eaeaea',
+        borderRadius: 1,
+        height: '100%',
+      }}
+    >
       <Typography variant="subtitle1" sx={{ fontWeight: 500, mb: 2 }}>
         {title}
       </Typography>
@@ -57,7 +64,13 @@ export const MetricsChart: React.FC<MetricsChartProps> = ({
 
               {showImprovement && (
                 <Tooltip title={`${improvement.toFixed(1)}% improvement`}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', color: 'success.main' }}>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      color: 'success.main',
+                    }}
+                  >
                     <ArrowUpwardIcon fontSize="small" sx={{ fontSize: 14, mr: 0.5 }} />
                     <Typography variant="caption">{improvement.toFixed(1)}%</Typography>
                   </Box>
