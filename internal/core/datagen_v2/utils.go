@@ -3,6 +3,8 @@ package datagenv2
 import (
 	"encoding/csv"
 	"errors"
+	"fmt"
+	"ner-backend/pkg/api"
 	"os"
 	"strings"
 )
@@ -119,4 +121,33 @@ func FindMostSimilar(text string, sentences []string) (best string, score float6
 		}
 	}
 	return best, score
+}
+
+func formatAnnotated(tokens, labels []string) (string, error) {
+	if len(tokens) != len(labels) {
+		return "", fmt.Errorf("tokens/labels length mismatch: %d vs %d", len(tokens), len(labels))
+	}
+
+	parts := make([]string, len(tokens))
+	for i, tok := range tokens {
+		lbl := labels[i]
+		if lbl != "O" {
+			parts[i] = fmt.Sprintf("##%s##%s##", tok, lbl)
+		} else {
+			parts[i] = tok
+		}
+	}
+	return strings.Join(parts, " "), nil
+}
+
+func SamplesToAnnotatedStrings(samples []api.Sample) []string {
+	out := make([]string, 0, len(samples))
+	for _, s := range samples {
+		str, err := formatAnnotated(s.Tokens, s.Labels)
+		if err != nil {
+			continue
+		}
+		out = append(out, str)
+	}
+	return out
 }

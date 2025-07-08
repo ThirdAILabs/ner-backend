@@ -151,11 +151,10 @@ func (d *DataFactory) runAndCollect(
 			out[i], errs[i] = res, err
 			_ = bar.Add(1)
 		}
+		wg.Add(1)
 		if parallel {
-			wg.Add(1)
 			go call(i, userPrompt)
 		} else {
-			wg.Add(1)
 			call(i, userPrompt)
 		}
 	}
@@ -170,18 +169,74 @@ func (d *DataFactory) runAndCollect(
 }
 
 type GenerateOptions struct {
-	TagsInfo           []TagInfo    // built from api.TagInfo
-	Samples            []api.Sample // initial seed samples (optional)
-	RecordsToGenerate  int          // total sentences to generate
-	RecordsPerTemplate int          // sentences per LLM call
-	TestSplit          float32      // fraction to reserve for test
-	UserInstructions   []string     // extra LLM instructions
-	WriteBatchSize     int          // batch size for LLM calls
-	Feedback           []string     // contextual examples for feedback (optional)
+	TagsInfo          []TagInfo    // built from api.TagInfo
+	Samples           []api.Sample // initial seed samples (optional)
+	RecordsToGenerate int          // total sentences to generate
+	RecordsPerLlmCall int          // sentences per LLM call
+	TestSplit         float32      // fraction to reserve for test
+	UserInstructions  []string     // extra LLM instructions
+	WriteBatchSize    int          // batch size for LLM calls
+}
+
+func mergeWithCorrections(orig, cleaned []string) []string {
+	n, m := len(orig), len(cleaned)
+	merged := make([]string, 0, n)
+	used := make([]bool, m)
+	const threshold = 0.7
+
+	for _, o := range orig {
+		bestIdx, bestScore := -1, 0.0
+
+		for i, c := range cleaned {
+			if used[i] {
+				continue
+			}
+			_, score := FindMostSimilar(c, []string{o})
+			if score > bestScore {
+				bestScore = score
+				bestIdx = i
+			}
+		}
+
+		if bestIdx >= 0 && bestScore > threshold {
+			merged = append(merged, cleaned[bestIdx])
+			used[bestIdx] = true
+		} else {
+			merged = append(merged, o)
+		}
+	}
+
+	return merged
 }
 
 // Generate runs the full pipeline: enrich tags, then generate & write annotated data.
 func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample, error) {
+	total := opts.RecordsToGenerate
+	if total < 0 {
+		return nil, nil, fmt.Errorf("invalid RecordsToGenerate: %d", total)
+	}
+	perCall := opts.RecordsPerLlmCall
+	if perCall < 0 {
+		return nil, nil, fmt.Errorf("invalid RecordsPerLlmCall: %d", perCall)
+	}
+	batchSize := opts.WriteBatchSize
+	if batchSize < 0 {
+		return nil, nil, fmt.Errorf("invalid WriteBatchSize: %d", batchSize)
+	}
+	if opts.TestSplit < 0.0 || opts.TestSplit > 1.0 {
+		return nil, nil, fmt.Errorf("invalid TestSplit: %f", opts.TestSplit)
+	}
+
+	// 1) Normalize values to not exceed total
+	if perCall > total {
+		perCall = total
+	}
+	if batchSize > total {
+		batchSize = total
+	}
+
+	feedback := SamplesToAnnotatedStrings(opts.Samples)
+
 	// 1) Enrich tags
 	for i := range opts.TagsInfo {
 		tag := &opts.TagsInfo[i]
@@ -199,23 +254,18 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 		tag.Examples = append(tag.Examples, exs...)
 
 		if tag.Contexts == nil {
-			ctxs, err := d.GetTagContext(tag, rand.Intn(11)+20)
-			if err != nil {
-				return nil, nil, fmt.Errorf("get contexts: %w", err)
+			if len(opts.Samples) > 0 {
+				tag.Contexts = feedback
+			} else {
+				ctxs, err := d.GetTagContext(tag, rand.Intn(11)+20)
+				if err != nil {
+					return nil, nil, fmt.Errorf("get contexts: %w", err)
+				}
+				tag.Contexts = ctxs
 			}
-			tag.Contexts = ctxs
 		}
 	}
 
-	total := opts.RecordsToGenerate
-	perCall := opts.RecordsPerTemplate
-	if perCall <= 0 || perCall > total {
-		perCall = total
-	}
-	batchSize := opts.WriteBatchSize
-	if batchSize <= 0 || batchSize > total {
-		batchSize = total
-	}
 	callsPerBatch := batchSize / perCall
 	if callsPerBatch == 0 {
 		callsPerBatch = 1
@@ -242,21 +292,18 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 		for i := 0; i < callsPerBatch; i++ {
 			var buf bytes.Buffer
 			var reqs []string
-			if len(opts.Feedback) > 0 {
+			if len(opts.Samples) > 0 {
 				reqs = ContextualExampleRequirements
 			} else {
 				reqs = append([]string{}, RequiredRequirements...)
-				perm := rand.Perm(len(AdditionalRequirements))
-				for j := 0; j < 4 && j < len(perm); j++ {
-					reqs = append(reqs, AdditionalRequirements[perm[j]])
-				}
+				reqs = append(reqs, prompts.RandomSample(AdditionalRequirements, 4)...)
 			}
 			if err := prompts.AnnotatedDataTmpl.Execute(&buf, map[string]interface{}{
 				"K":                n,
 				"TagInfo":          opts.TagsInfo,
 				"Requirements":     reqs,
 				"UserInstructions": opts.UserInstructions,
-				"Feedback":         opts.Feedback,
+				"Feedback":         feedback,
 			}); err != nil {
 				return nil, nil, fmt.Errorf("render gen prompt: %w", err)
 			}
@@ -269,20 +316,14 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 			return nil, nil, fmt.Errorf("batch generate: %w", err)
 		}
 
-		// parse and collect sentences to verify
-		type genResp struct {
-			Sentences []string `json:"sentences"`
-		}
 		var toVerify [][]string
 		for _, r := range rawGen {
-			var gr genResp
-			if err := json.Unmarshal([]byte(r), &gr); err == nil && len(gr.Sentences) > 0 {
-				var cleaned []string
-				for _, s := range gr.Sentences {
-					if t := strings.TrimSpace(s); t != "" {
-						cleaned = append(cleaned, t)
-					}
-				}
+			var ad prompts.AnnotatedData
+			if err := json.Unmarshal([]byte(r), &ad); err != nil {
+				continue
+			}
+			cleaned := ad.Clean().Sentences
+			if len(cleaned) > 0 {
 				toVerify = append(toVerify, cleaned)
 			}
 		}
@@ -304,37 +345,16 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 			return nil, nil, fmt.Errorf("batch verify: %w", err)
 		}
 
-		// merge generated + verified
-		type verifResp struct {
-			AnnotatedTexts []string `json:"annotated_texts"`
-		}
 		for i, orig := range toVerify {
-			var vr verifResp
-			if err := json.Unmarshal([]byte(rawVerif[i]), &vr); err == nil {
-				var cleaned []string
-				for _, s := range vr.AnnotatedTexts {
-					if t := strings.TrimSpace(s); t != "" {
-						cleaned = append(cleaned, t)
-					}
-				}
-				if len(cleaned) == 0 {
-					allSentences = append(allSentences, orig...)
-				} else {
-					remaining := append([]string{}, orig...)
-					for _, corr := range cleaned {
-						ms, score := FindMostSimilar(corr, remaining)
-						if score > 0.7 {
-							allSentences = append(allSentences, corr)
-							for j, v := range remaining {
-								if v == ms {
-									remaining = append(remaining[:j], remaining[j+1:]...)
-									break
-								}
-							}
-						}
-					}
-					allSentences = append(allSentences, remaining...)
-				}
+			var ats prompts.AnnotatedTextSamples
+			if err := json.Unmarshal([]byte(rawVerif[i]), &ats); err != nil {
+				return nil, nil, fmt.Errorf("unmarshal verification response: %w", err)
+			}
+			cleaned := ats.Clean().AnnotatedTexts
+			if len(cleaned) == 0 {
+				allSentences = append(allSentences, orig...)
+			} else {
+				allSentences = append(allSentences, mergeWithCorrections(orig, cleaned)...)
 			}
 		}
 	}
@@ -348,18 +368,11 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 		}
 		toks := strings.Fields(src)
 		lbls := strings.Fields(tgt)
-		if len(toks) == len(lbls) {
-			allSamples = append(allSamples, api.Sample{Tokens: toks, Labels: lbls})
-		}
+		allSamples = append(allSamples, api.Sample{Tokens: toks, Labels: lbls})
 	}
 
 	// split train/test
 	split := int(float32(len(allSamples)) * (1 - opts.TestSplit))
-	if split < 0 {
-		split = 0
-	} else if split > len(allSamples) {
-		split = len(allSamples)
-	}
 	return allSamples[:split], allSamples[split:], nil
 }
 

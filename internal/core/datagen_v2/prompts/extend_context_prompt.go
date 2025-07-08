@@ -6,9 +6,9 @@ import (
 )
 
 // ContextSystem frames the LLM for generating tag contexts.
-const ContextSystem = `## You are an expert in text classification and annotation. 
+const ContextSystem = `##You are a specialist in linguistic context modeling and applied taxonomy design.
 ## Task
-Help users understand the appropriate contexts where a given tag should be applied. Based on the tag's name, description, and examples, generate a diverse and realistic set of **brief scenario labels**—such as types of text, formats, or communication settings—where this tag is commonly used. Each output should be concise, ideally just a few words (e.g., “Conversation transcripts”, “Social media posts”).`
+Assist user understand the appropriate contexts where a given tag should be applied. Based on the tag's name, description, and examples, generate a diverse and realistic set of **brief scenario labels**—such as types of text, formats, or communication settings—where this tag is commonly used. Each output should be concise, ideally just a few words (e.g., “Conversation transcripts”, “Social media posts”).`
 
 // ContextUser is the user‐role template.
 const ContextUser = `Here is the tag information:

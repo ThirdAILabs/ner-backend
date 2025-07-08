@@ -6,18 +6,17 @@ import (
 )
 
 // ExtendExamplesSystem frames the LLM for example extension.
-const ExtendExamplesSystem = `## You are an expert in data labeling and language annotation. Your job is to generate clear and diverse tag examples.
-When a tag has minimal or vague examples, you should generate more complete examples using the tag’s name, desc, and initial examples.
-
-Your expanded examples should include:
-### A variety of formats and contexts where the tag applies
-### Different linguistic styles (formal, informal, technical, etc.)
-
+const ExtendExamplesSystem = `## You are a specialist in applied linguistics and example curation for annotation systems.
+## Task
+Generate a diverse and representative examples of the tag using the tag’s name, description, and any initial examples provided.
+Your examples should include:
+- A range of formats and communication contexts where the tag applies
+- Variation in linguistic style (e.g., formal, informal, technical, conversational)
 Keep the tone concise, objective, and suitable for use in a tagging guideline or labeling system.
 `
 
 // ExtendExamplesUser is the user‐role template.
-const ExtendExamplesUser = `Please generate {{ .K }} **descriptive examples** for the following tag:
+const ExtendExamplesUser = `Please generate {{ .K }} **diverse examples** for the following tag:
 **Tag Name:** {{ .Tag.Name }}
 **Description:** {{ .Tag.Desc }}
 **Basic examples:** {{ join (randomSample .Tag.Examples 3) ", " }}
