@@ -15,6 +15,7 @@ import useTelemetry from '@/hooks/useTelemetry';
 
 import { nerBaseUrl } from '@/lib/axios.config';
 import SourceCard from '@/components/ui/cards/sourceCard';
+import ModelOption from '@/components/ui/cards/modelCard';
 
 const SUPPORTED_TYPES = ['.pdf', '.txt', '.csv', '.html', '.json', '.xml'];
 
@@ -44,37 +45,6 @@ const Tag: React.FC<TagProps> = ({
     </div>
   );
 };
-
-// Source option card component - reused from the detail page
-interface ModelOptionProps {
-  title: string;
-  description: React.ReactNode;
-  isSelected?: boolean;
-  disabled?: boolean;
-  onClick: () => void;
-}
-
-const ModelOption: React.FC<ModelOptionProps> = ({
-  title,
-  description,
-  isSelected = false,
-  disabled = false,
-  onClick,
-}) => (
-  <div
-    className={`relative p-6 border rounded-md transition-all
-      ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200 border-2'}
-      ${disabled
-        ? 'opacity-85 cursor-not-allowed bg-gray-50'
-        : 'cursor-pointer hover:border-blue-300'
-      }
-    `}
-    onClick={() => !disabled && onClick()}
-  >
-    <h3 className="text-base font-medium">{title}</h3>
-    <div className="text-sm text-gray-500 mt-1">{description}</div>
-  </div>
-);
 
 // Group card component
 interface GroupProps {
@@ -993,9 +963,9 @@ export default function NewJobPage() {
           </Box>
 
           <Box sx={{ bgcolor: 'white', p: 3, borderRadius: 3 }}>
-            <h2 className="text-2xl font-medium mb-4">Source</h2>
+            <h2 className="text-xl font-medium mb-4">Source</h2>
             <div className="relative">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-4">
                 <FileSources
                   selectSource={setSelectedSource}
                   isLoadingFiles={isLoadingFiles}
@@ -1154,7 +1124,7 @@ export default function NewJobPage() {
           </Box>
 
           {/* Model Selection */}
-          <Box className="bg-muted/60" sx={{ p: 3, borderRadius: 3 }}>
+          <Box className="bg-white" sx={{ p: 3, borderRadius: 3 }}>
             <h2 className="text-2xl font-medium mb-4">Model</h2>
             <div className="space-y-6">
               <div>
