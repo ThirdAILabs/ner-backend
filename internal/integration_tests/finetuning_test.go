@@ -130,7 +130,7 @@ func TestFinetuning(t *testing.T) {
 	require.NoError(t, err)
 	var data map[string]string
 	require.NoError(t, json.NewDecoder(stream).Decode(&data))
-	assert.Contains(t, data, "xyz")
+	assert.Contains(t, data, "URL")
 }
 
 func finetuningTestHelper(t *testing.T, modelInit func(ctx context.Context, db *gorm.DB, s3p storage.Provider, bucket, name, hostModelDir string) error) {
