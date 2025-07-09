@@ -39,20 +39,16 @@ type BackendService struct {
 	publisher        messaging.Publisher
 	chunkTargetBytes int64
 	licensing        licensing.LicenseVerifier
+	enterpriseMode   bool
 }
 
 const (
 	ErrCodeDB = 1001 // Custom internal code for DB errors
 )
 
-func NewBackendService(db *gorm.DB, storage storage.ObjectStore, uploadBucket string, pub messaging.Publisher, chunkTargetBytes int64, licenseVerifier licensing.LicenseVerifier) *BackendService {
-	return &BackendService{
-		db:               db,
-		storage:          storage,
-		uploadBucket:     uploadBucket,
-		publisher:        pub,
-		chunkTargetBytes: chunkTargetBytes,
-		licensing:        licenseVerifier}
+func NewBackendService(db *gorm.DB, storage storage.ObjectStore, uploadBucket string, pub messaging.Publisher, chunkTargetBytes int64, licenseVerifier licensing.LicenseVerifier, enterpriseMode bool) *BackendService {
+
+	return &BackendService{db: db, storage: storage, uploadBucket: uploadBucket, publisher: pub, chunkTargetBytes: chunkTargetBytes, licensing: licenseVerifier, enterpriseMode: enterpriseMode}
 }
 
 func (s *BackendService) AddRoutes(r chi.Router) {
@@ -97,6 +93,8 @@ func (s *BackendService) AddRoutes(r chi.Router) {
 	})
 
 	r.Get("/license", RestHandler(s.GetLicense))
+
+	r.Get("/enterprise", RestHandler(s.GetEnterpriseInfo))
 }
 
 func (s *BackendService) ListModels(r *http.Request) (any, error) {
@@ -1038,6 +1036,12 @@ func (s *BackendService) GetLicense(r *http.Request) (any, error) {
 	return api.GetLicenseResponse{
 		LicenseInfo:  licenseInfo,
 		LicenseError: fmt.Sprintf("%v", err),
+	}, nil
+}
+
+func (s *BackendService) GetEnterpriseInfo(r *http.Request) (any, error) {
+	return api.GetEnterpriseInfoResponse{
+		IsEnterpriseMode: s.enterpriseMode,
 	}, nil
 }
 

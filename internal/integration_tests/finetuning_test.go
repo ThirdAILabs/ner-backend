@@ -50,7 +50,7 @@ func setupCommon(t *testing.T) (
 	db = createDB(t)
 	pub, sub = setupRabbitMQContainer(t, ctx)
 
-	backendSvc := backendpkg.NewBackendService(db, s3ObjectStore, "uploads", pub, 120, &DummyLicenseVerifier{})
+	backendSvc := backendpkg.NewBackendService(db, s3ObjectStore, "uploads", pub, 120, &DummyLicenseVerifier{}, true)
 	r := chi.NewRouter()
 	backendSvc.AddRoutes(r)
 
@@ -120,7 +120,7 @@ func TestFinetuning(t *testing.T) {
 	ftReq := api.FinetuneRequest{
 		Name:       "finetuned-model",
 		TaskPrompt: &tp,
-		Tags:       []api.TagInfo{{Name: "xyz"}},
+		Tags:       []api.TagInfo{{Name: "URL", Description: "uniform resource locators (URLs), which are references to web resources or pages on the internet", Examples: []string{"https://example.com", "http://thirdai.com"}}},
 	}
 	_, model := finetune(t, router, baseID.String(), ftReq, 10, 100*time.Millisecond)
 
@@ -135,7 +135,7 @@ func TestFinetuning(t *testing.T) {
 
 	var data map[string]string
 	require.NoError(t, json.NewDecoder(objData).Decode(&data))
-	assert.Contains(t, data, "xyz")
+	assert.Contains(t, data, "URL")
 }
 
 func finetuningTestHelper(t *testing.T, modelInit func(ctx context.Context, db *gorm.DB, s3p storage.ObjectStore, bucket, name, hostModelDir string) error) {

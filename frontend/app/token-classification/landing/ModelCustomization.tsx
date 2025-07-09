@@ -15,13 +15,18 @@ import {
   DialogActions,
   TextField,
   Button,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
+  Alert,
 } from '@mui/material';
 import { Toaster, toast } from 'react-hot-toast';
 import { nerService, SavedFeedback } from '@/lib/backend';
 import { useHealth } from '@/contexts/HealthProvider';
 import { TokenHighlighter } from '@/components/feedback/TokenHighlighter';
-import useTelemetry from '@/hooks/useTelemetry';
+import { useConditionalTelemetry } from '@/hooks/useConditionalTelemetry';
 import { ChevronRight } from 'lucide-react';
+import { ApiKeyDialog } from './ApiKeyDialog';
 
 export interface UserFeedbackSectionProps {
   feedbackData: SavedFeedback[];
@@ -37,6 +42,16 @@ export interface UserFeedbackSectionProps {
   handleFinetuneSubmit: () => void;
   handleFinetuneCancel: () => void;
   availableTags: string[];
+  generateData: 'yes' | 'no';
+  setGenerateData: (value: 'yes' | 'no') => void;
+  apiKeyError: string | null;
+  showApiKeyDialog: boolean;
+  setShowApiKeyDialog: (show: boolean) => void;
+  apiKeyInput: string;
+  setApiKeyInput: (input: string) => void;
+  validatingApiKey: boolean;
+  setValidatingApiKey: (validating: boolean) => void;
+  setApiKeyError: (error: string | null) => void;
 }
 
 export function UserFeedbackSection({
@@ -53,10 +68,32 @@ export function UserFeedbackSection({
   handleFinetuneSubmit,
   handleFinetuneCancel,
   availableTags,
+  generateData,
+  setGenerateData,
+  apiKeyError,
+  showApiKeyDialog,
+  setShowApiKeyDialog,
+  apiKeyInput,
+  setApiKeyInput,
+  validatingApiKey,
+  setValidatingApiKey,
+  setApiKeyError,
 }: UserFeedbackSectionProps) {
+  const handleDeleteClick = (feedbackId: string) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    handleDeleteFeedback(feedbackId);
+  };
+
   return (
     <Box sx={{ mt: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          mb: 2,
+        }}
+      >
         <Typography
           variant="h6"
           sx={{
@@ -96,13 +133,15 @@ export function UserFeedbackSection({
           </Box>
         ) : (
           <div className="divide-y">
-            {feedbackData.map((feedback, index) => {
-              const tokens = feedback.Tokens.map((token: string, tokenIndex: number) => {
-                return {
-                  text: token,
-                  tag: feedback.Labels[tokenIndex],
-                };
-              });
+            {feedbackData.map((feedback: SavedFeedback, index) => {
+              const tokens = (feedback.tokens || feedback.Tokens || []).map(
+                (token: string, tokenIndex: number) => {
+                  return {
+                    text: token,
+                    tag: (feedback.labels || feedback.Labels)?.[tokenIndex] || 'O',
+                  };
+                }
+              );
               return (
                 <details key={index} className="group text-sm leading-relaxed bg-white">
                   <summary className="p-3 cursor-pointer bg-gray-100 flex items-center justify-between">
@@ -112,10 +151,7 @@ export function UserFeedbackSection({
                     </div>
                     <button
                       className="text-gray-700 hover:text-gray-700 transition-colors"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handleDeleteFeedback(feedback.Id);
-                      }}
+                      onClick={handleDeleteClick(feedback.Id)}
                       title="Delete feedback"
                     >
                       ✕
@@ -166,7 +202,38 @@ export function UserFeedbackSection({
               onChange={(e) => setFinetuneTaskPrompt(e.target.value)}
               helperText="Optional custom prompt to guide the finetuning process"
               placeholder="e.g., Focus on improving accuracy for person names and locations..."
+              sx={{ mb: 3 }}
             />
+            <Typography variant="body2" sx={{ mb: 1, fontWeight: 500 }}>
+              Synthetic Data Generation
+            </Typography>
+            <RadioGroup
+              value={generateData}
+              onChange={(e) => setGenerateData(e.target.value as 'yes' | 'no')}
+              sx={{ mb: 2 }}
+            >
+              <FormControlLabel
+                value="yes"
+                control={<Radio />}
+                label="Generate Synthetic Data"
+                sx={{ '& .MuiFormControlLabel-label': { fontSize: '0.875rem' } }}
+              />
+              <FormControlLabel
+                value="no"
+                control={<Radio />}
+                label="Do not generate synthetic data"
+                sx={{ '& .MuiFormControlLabel-label': { fontSize: '0.875rem' } }}
+              />
+            </RadioGroup>
+            {generateData === 'yes' && (
+              <Typography
+                variant="caption"
+                sx={{ color: 'text.secondary', display: 'block', mb: 2 }}
+              >
+                Synthetic data generation will use OpenAI to create additional training examples
+                based on your feedback samples.
+              </Typography>
+            )}
           </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -194,12 +261,25 @@ export function UserFeedbackSection({
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* API Key Dialog */}
+      <ApiKeyDialog
+        open={showApiKeyDialog}
+        onClose={() => setShowApiKeyDialog(false)}
+        apiKeyInput={apiKeyInput}
+        setApiKeyInput={setApiKeyInput}
+        apiKeyError={apiKeyError}
+        setApiKeyError={setApiKeyError}
+        validatingApiKey={validatingApiKey}
+        setValidatingApiKey={setValidatingApiKey}
+        onSuccess={handleFinetuneSubmit}
+      />
     </Box>
   );
 }
 
 const ModelCustomization: React.FC = () => {
-  const recordEvent = useTelemetry();
+  const recordEvent = useConditionalTelemetry();
   useEffect(() => {
     recordEvent({
       UserAction: 'view',
@@ -221,7 +301,7 @@ const ModelCustomization: React.FC = () => {
         .listModels()
         .then((ms: any[]) => setModels(ms))
         .catch((err: any) => {
-          console.error('Failed to load models:', err);
+          // Failed to load models
         });
     };
     fetchModels();
@@ -234,10 +314,13 @@ const ModelCustomization: React.FC = () => {
     setLoadingFeedback(true);
     nerService
       .getFeedbackSamples(selectedModel.Id)
-      .then((feedback: any[]) => setFeedbackData(feedback))
+      .then((feedback: any[]) => {
+        // Feedback data received
+        setFeedbackData(feedback);
+      })
       .catch((e: any) => {
         setFeedbackData([]);
-        console.error('Failed to load feedback data:', e);
+        // Failed to load feedback data
       })
       .finally(() => setLoadingFeedback(false));
   }, [selectedModel]);
@@ -257,6 +340,11 @@ const ModelCustomization: React.FC = () => {
   const [finetuneModelName, setFinetuneModelName] = useState('');
   const [finetuneTaskPrompt, setFinetuneTaskPrompt] = useState('');
   const [finetuning, setFinetuning] = useState(false);
+  const [generateData, setGenerateData] = useState<'yes' | 'no'>('no');
+  const [apiKeyError, setApiKeyError] = useState<string | null>(null);
+  const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [validatingApiKey, setValidatingApiKey] = useState(false);
 
   const handleDeleteFeedback = async (id: string) => {
     if (!selectedModel) return;
@@ -264,7 +352,7 @@ const ModelCustomization: React.FC = () => {
       await nerService.deleteModelFeedback(selectedModel.Id, id);
       setFeedbackData(feedbackData.filter((feedback) => feedback.Id !== id));
     } catch (error) {
-      console.error('Failed to delete feedback:', error);
+      // Failed to delete feedback
     }
   };
 
@@ -273,22 +361,83 @@ const ModelCustomization: React.FC = () => {
     const timestamp = new Date().toISOString().slice(0, 16).replace('T', '_').replace(':', '-');
     setFinetuneModelName(`finetuned_${timestamp}`);
     setFinetuneTaskPrompt('');
+    setGenerateData('no');
+    setApiKeyError(null);
     setShowFinetuneDialog(true);
   };
 
   const handleFinetuneSubmit = async () => {
     if (!selectedModel || !finetuneModelName.trim()) return;
+
+    // Check if synthetic data generation is enabled
+    if (generateData === 'yes') {
+      // First check if we have an API key stored
+      try {
+        // Check for stored API key
+        const storedKey = await nerService.getOpenAIApiKey();
+
+        if (!storedKey || storedKey.trim() === '') {
+          setApiKeyError('OpenAI API key is required for synthetic data generation.');
+          setShowApiKeyDialog(true);
+          return;
+        }
+
+        // Validate the stored API key
+        const validation = await nerService.validateOpenAIApiKey(storedKey);
+
+        if (!validation.Valid) {
+          setApiKeyError(`Invalid API key: ${validation.Message}`);
+          setShowApiKeyDialog(true);
+          return;
+        }
+      } catch (error: any) {
+        // Error checking API key
+        setApiKeyError('Failed to validate OpenAI API key.');
+        setShowApiKeyDialog(true);
+        return;
+      }
+    }
+
     setFinetuning(true);
+    setApiKeyError(null);
+
     try {
+      // Extract unique tags from feedback data
+      const uniqueTags = new Set<string>();
+      feedbackData.forEach((f) => {
+        const labels = f.labels || f.Labels || [];
+        labels.forEach((label) => {
+          if (label && label !== 'O') {
+            uniqueTags.add(label);
+          }
+        });
+      });
+
+      // Create tag info array for synthetic data generation
+      const tags = Array.from(uniqueTags).map((tag) => ({
+        name: tag,
+        description: `Entity of type ${tag}`,
+        examples: [], // Backend will extract examples from the samples
+      }));
+
       const request = {
         Name: finetuneModelName.trim(),
         TaskPrompt: finetuneTaskPrompt.trim() || undefined,
-        Samples: feedbackData.length > 0 ? feedbackData : undefined,
+        GenerateData: generateData === 'yes',
+        Tags: generateData === 'yes' ? tags : undefined,
+        Samples:
+          feedbackData.length > 0
+            ? feedbackData.map((f) => ({
+                Tokens: f.tokens || f.Tokens || [],
+                Labels: f.labels || f.Labels || [],
+              }))
+            : undefined,
       };
-      const response = await nerService.finetuneModel(selectedModel.Id, request);
+      await nerService.finetuneModel(selectedModel.Id, request);
       setShowFinetuneDialog(false);
       setFinetuneModelName('');
       setFinetuneTaskPrompt('');
+      setGenerateData('no');
       toast.success('Finetuning started successfully!', {
         duration: 3000,
         style: {
@@ -299,8 +448,39 @@ const ModelCustomization: React.FC = () => {
         },
         icon: '✓',
       });
-    } catch (error) {
-      console.error('Finetuning failed:', error);
+    } catch (error: any) {
+      // Finetuning failed
+      // Check if the error is related to OpenAI API key
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.response?.data ||
+        error?.message ||
+        'Finetuning failed';
+      const errorString =
+        typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage);
+
+      // Check for OpenAI-related errors with various patterns
+      const isOpenAIError =
+        errorString.toLowerCase().includes('openai') ||
+        errorString.toLowerCase().includes('api key') ||
+        errorString.toLowerCase().includes('api_key') ||
+        errorString.toLowerCase().includes('unauthorized') ||
+        errorString.toLowerCase().includes('invalid key');
+
+      if (isOpenAIError && generateData === 'yes') {
+        setApiKeyError(errorString);
+      } else {
+        toast.error(errorString, {
+          duration: 5000,
+          style: {
+            background: '#f44336',
+            color: '#fff',
+            padding: '10px',
+            borderRadius: '8px',
+          },
+        });
+        setShowFinetuneDialog(false);
+      }
     } finally {
       setFinetuning(false);
     }
@@ -310,6 +490,8 @@ const ModelCustomization: React.FC = () => {
     setShowFinetuneDialog(false);
     setFinetuneModelName('');
     setFinetuneTaskPrompt('');
+    setGenerateData('no');
+    setApiKeyError(null);
   };
 
   if (!healthStatus) {
@@ -334,7 +516,12 @@ const ModelCustomization: React.FC = () => {
         <CardContent sx={{ p: 4 }}>
           <Typography
             variant="h5"
-            sx={{ fontWeight: 600, fontSize: '1.5rem', color: '#4a5568', mb: 4 }}
+            sx={{
+              fontWeight: 600,
+              fontSize: '1.5rem',
+              color: '#4a5568',
+              mb: 4,
+            }}
           >
             Model Customization
           </Typography>
@@ -371,7 +558,14 @@ const ModelCustomization: React.FC = () => {
                     value={m.Id}
                     sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
                   >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexGrow: 1 }}>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        flexGrow: 1,
+                      }}
+                    >
                       {m.Name.charAt(0).toUpperCase() + m.Name.slice(1)}
                       {m.Status === 'TRAINING' && (
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -406,7 +600,20 @@ const ModelCustomization: React.FC = () => {
               finetuning={finetuning}
               handleFinetuneSubmit={handleFinetuneSubmit}
               handleFinetuneCancel={handleFinetuneCancel}
-              availableTags={feedbackData.map((f) => f.Labels).flat()}
+              availableTags={feedbackData
+                .map((f) => f.labels || f.Labels || [])
+                .flat()
+                .filter((tag): tag is string => tag !== undefined)}
+              generateData={generateData}
+              setGenerateData={setGenerateData}
+              apiKeyError={apiKeyError}
+              showApiKeyDialog={showApiKeyDialog}
+              setShowApiKeyDialog={setShowApiKeyDialog}
+              apiKeyInput={apiKeyInput}
+              setApiKeyInput={setApiKeyInput}
+              validatingApiKey={validatingApiKey}
+              setValidatingApiKey={setValidatingApiKey}
+              setApiKeyError={setApiKeyError}
             />
           )}
         </CardContent>

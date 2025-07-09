@@ -48,7 +48,7 @@ const pathToFile = async (filePath) => {
   };
 };
 
-export const openFileChooser = async (supportedTypes) => {
+export const openFileChooser = async (supportedTypes, isDirectoryMode = false, isCombinedMode = false) => {
   const result = {
     directlySelected: [],
     allFilePaths: [],
@@ -56,17 +56,47 @@ export const openFileChooser = async (supportedTypes) => {
     totalSize: 0,
   }
 
-  const dialogResult = await dialog.showOpenDialog({
-    filters: [
-      { name: 'Supported Files', extensions: supportedTypes },
-    ],
-    properties: [
-      // Note: we cannot both have openFile and openDirectory on Windows.
-      'openFile',
-      'openDirectory',
-      'multiSelections',
-    ]
-  });
+  // Separate dialogs for file vs directory selection
+  let dialogProperties;
+  let dialogResult;
+
+  if (isCombinedMode && process.platform === 'darwin') {
+    // macOS combined mode - allows selecting both files and folders
+    dialogProperties = ['openFile', 'openDirectory', 'multiSelections', 'treatPackageAsDirectory'];
+    dialogResult = await dialog.showOpenDialog({
+      filters: [
+        {
+          name: 'Supported Files',
+          extensions: supportedTypes
+        },
+      ],
+      properties: dialogProperties,
+      buttonLabel: 'Select Files or Folders',
+      title: 'Select files or folders to scan'
+    });
+  } else if (isDirectoryMode) {
+    // Directory selection mode
+    dialogProperties = ['openDirectory'];
+    dialogResult = await dialog.showOpenDialog({
+      properties: dialogProperties,
+      buttonLabel: 'Select Folder',
+      title: 'Select a folder to scan'
+    });
+  } else {
+    // File selection mode
+    dialogProperties = ['openFile', 'multiSelections'];
+    dialogResult = await dialog.showOpenDialog({
+      filters: [
+        {
+          name: 'Supported Files',
+          extensions: supportedTypes
+        },
+      ],
+      properties: dialogProperties,
+      buttonLabel: 'Select Files',
+      title: 'Select files to scan'
+    });
+  }
 
   if (dialogResult.canceled) return result;
 
@@ -74,6 +104,17 @@ export const openFileChooser = async (supportedTypes) => {
   // Deduplicate allFiles and sort alphabetically
   // Only deduplicates by the file path
   allFilePaths = [...new Set(allFilePaths)].sort();
+
+  // If no supported files found in directory, show a warning
+  if (isDirectoryMode && allFilePaths.length === 0) {
+    dialog.showMessageBox({
+      type: 'warning',
+      title: 'No supported files found',
+      message: `No files with supported extensions (${supportedTypes.join(', ')}) were found in the selected directory.`,
+      buttons: ['OK']
+    });
+    return result;
+  }
 
   let allFilesMeta = await Promise.all(
     allFilePaths.map(async (filePath) => {
@@ -96,9 +137,27 @@ export const openFileChooser = async (supportedTypes) => {
 }
 
 export const openFile = async (filePath) => {
-  const error = await shell.openPath(filePath);
-  if (error) {
-    throw new Error(error);
+  try {
+    // Normalize path for Windows
+    const normalizedPath = process.platform === 'win32' 
+      ? filePath.replace(/\//g, '\\') 
+      : filePath;
+    
+    console.log('Opening file:', normalizedPath);
+    
+    // Check if file exists before trying to open
+    if (!fs.existsSync(normalizedPath)) {
+      throw new Error(`File not found: ${normalizedPath}`);
+    }
+    
+    const error = await shell.openPath(normalizedPath);
+    if (error) {
+      console.error('Error opening file:', error);
+      throw new Error(error);
+    }
+  } catch (err) {
+    console.error('Failed to open file:', err);
+    throw err;
   }
 }
 

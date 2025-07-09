@@ -50,3 +50,8 @@ type ChatHistoryItem struct {
 type ApiKey struct {
 	ApiKey string
 }
+
+type ValidationResponse struct {
+	Valid   bool
+	Message string
+}

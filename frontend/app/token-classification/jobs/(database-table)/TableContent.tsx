@@ -5,7 +5,7 @@ import { NO_GROUP } from '@/lib/utils';
 import { TokenHighlighter } from '@/components/feedback/TokenHighlighter';
 import * as _ from 'lodash';
 import type { TableContentProps } from '@/types/analyticsTypes';
-import { useLicense } from '@/hooks/useLicense';
+import { useFinetuning } from '@/hooks/useFinetuning';
 import { environment } from '@/lib/environment';
 
 const PASTELS = ['#E5A49C', '#F6C886', '#FBE7AA', '#99E3B5', '#A6E6E7', '#A5A1E1', '#D8A4E2'];
@@ -33,7 +33,7 @@ export function TableContent({
   pathMap,
   addFeedback,
 }: TableContentProps) {
-  const { isEnterprise } = useLicense();
+  const { isFinetuningEnabled } = useFinetuning();
 
   const tagColors = useMemo(() => {
     const colors: Record<string, HighlightColor> = {};
@@ -57,11 +57,45 @@ export function TableContent({
   };
 
   const handleFullPath = (fileIdentifier: string) => {
-    const fullPath = pathMap?.[fileIdentifier.split('/').slice(-1).join('')];
+    // The fileIdentifier might be the uniqueName directly or a path containing it
+    // First try direct lookup
+    let fullPath = pathMap?.[fileIdentifier];
 
+    // If not found, try extracting filename from path
+    if (!fullPath) {
+      // Use a more robust method to extract the filename
+      // This handles both forward slash and backslash separators
+      const filename = fileIdentifier.replace(/^.*[\\\/]/, '');
+      fullPath = pathMap?.[filename];
+
+      // If still not found and there's an uploadId prefix, try without it
+      if ((!fullPath && fileIdentifier.includes('/')) || fileIdentifier.includes('\\')) {
+        // The format might be uploadId\filename or uploadId/filename
+        fullPath = pathMap?.[filename];
+      }
+    }
+
+    console.log('handleFullPath:', {
+      fileIdentifier,
+      directLookup: pathMap?.[fileIdentifier],
+      parts: fileIdentifier.split(/[/\\]/),
+      extractedFilename: fileIdentifier.split(/[/\\]/).slice(-1).join(''),
+      fullPath,
+      pathMap: Object.keys(pathMap || {}).length,
+      pathMapKeys: Object.keys(pathMap || {}),
+      pathMapEntries: Object.entries(pathMap || {}),
+    });
     const openFile = () => {
+      if (!fullPath) {
+        console.error('No full path found for file:', fileIdentifier);
+        alert(`Cannot open file: Path not found for ${fileIdentifier}`);
+        return;
+      }
       // @ts-ignore
-      window.electron?.openFile?.(fullPath);
+      window.electron?.openFile?.(fullPath).catch((err: any) => {
+        console.error('Error opening file:', err);
+        alert(`Failed to open file: ${err.message || err}`);
+      });
     };
 
     const showFileInFolder = () => {
@@ -126,7 +160,7 @@ export function TableContent({
                           return (
                             <div className="flex items-center justify-between w-full">
                               {/* Left: File path */}
-                              <span title={fileIdentifier.split('/').slice(-1).join('')}>
+                              <span title={fileIdentifier.split(/[/\\]/).slice(-1).join('')}>
                                 {truncateFilePath(fullPath)}
                               </span>
                               {/* Right: Icons */}
@@ -189,9 +223,9 @@ export function TableContent({
                           return (
                             <span
                               style={{ color: 'inherit' }}
-                              title={fileIdentifier.split('/').slice(-1).join('')}
+                              title={fileIdentifier.split(/[/\\]/).slice(-1).join('')}
                             >
-                              {fileIdentifier.split('/').slice(-1)}
+                              {fileIdentifier.split(/[/\\]/).slice(-1).join('')}
                             </span>
                           );
                         }
@@ -293,7 +327,7 @@ export function TableContent({
                       className="font-semibold"
                       style={{ color: 'inherit', userSelect: 'none' }}
                     >
-                      {fileIdentifier.split('/').slice(-1)}
+                      {fileIdentifier.split(/[/\\]/).slice(-1).join('')}
                     </span>
                   )}
                 </div>
@@ -359,7 +393,7 @@ export function TableContent({
               <div className="p-4">
                 <TokenHighlighter
                   tokens={tokens}
-                  editable={isEnterprise}
+                  editable={isFinetuningEnabled}
                   availableTags={tags.map((tag) => tag.type)}
                   unassignableTags={!environment.allowCustomTagsInFeedback ? customTagNames : []}
                   onTagAssign={onTagAssign}

@@ -5,13 +5,13 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Box } from '@mui/material';
-import { ArrowLeft, Plus, RefreshCw, Edit } from 'lucide-react';
+import { ArrowLeft, Plus, RefreshCw, Edit, FileSearch } from 'lucide-react';
 import { nerService } from '@/lib/backend';
 import { NO_GROUP, uniqueFileNames, getFilesFromElectron } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { SearchIcon } from '@heroicons/react/solid';
-import { useLicense } from '@/hooks/useLicense';
-import useTelemetry from '@/hooks/useTelemetry';
+import { useConditionalTelemetry } from '@/hooks/useConditionalTelemetry';
+import { useEnterprise } from '@/hooks/useEnterprise';
 
 import { nerBaseUrl } from '@/lib/axios.config';
 
@@ -35,9 +35,10 @@ const Tag: React.FC<TagProps> = ({
 }) => {
   return (
     <div
-      className={`px-3 py-1 text-sm font-medium overflow-x-scroll max-w-[16vw] rounded-sm ${!custom && 'cursor-pointer'} ${selected ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+      className={`px-3 py-1 text-sm font-medium overflow-hidden text-ellipsis whitespace-nowrap max-w-[16vw] rounded-sm ${!custom && 'cursor-pointer'} ${selected ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
       style={{ userSelect: 'none' }}
       onClick={onClick}
+      title={tag}
     >
       {tag}
     </div>
@@ -187,39 +188,111 @@ const FileSources: React.FC<FileSourcesProps> = ({
 
   // @ts-ignore
   if (window && window.electron) {
-    return (
-      <>
-        <SourceOption
-          onClick={async () => {
-            selectSource('files');
-            try {
-              const { allFilesMeta, totalSize, error } =
-                await getFilesFromElectron(SUPPORTED_TYPES);
-              if (error) {
-                addFilesMeta([]);
-              } else if (allFilesMeta && allFilesMeta.length > 0) {
-                setIsLoadingFiles(true);
-                try {
-                  // Add a small delay to show loading state
-                  await new Promise((resolve) => setTimeout(resolve, 100));
-                  addFilesMeta(allFilesMeta);
-                } finally {
-                  setIsLoadingFiles(false);
+    // Check if we're on macOS
+    const isMacOS = navigator.platform.toLowerCase().includes('mac');
+
+    if (isMacOS) {
+      // macOS: Single button that allows both files and folders
+      return (
+        <>
+          <SourceOption
+            onClick={async () => {
+              selectSource('files');
+              setIsLoadingFiles(true);
+              try {
+                const { allFilesMeta, totalSize, error } = await getFilesFromElectron(
+                  SUPPORTED_TYPES,
+                  false,
+                  true
+                ); // combined mode
+                if (error) {
+                  addFilesMeta([]);
+                } else {
+                  addFilesMeta(allFilesMeta || []);
                 }
+              } finally {
+                setIsLoadingFiles(false);
               }
-            } catch (err) {
-              console.error('Error selecting files:', err);
+            }}
+            icon={
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z M8 11h8m-4-4v8"
+              />
             }
-          }}
-          icon={isLoadingFiles ? <RefreshCw className="w-8 h-8 animate-spin" /> : folderIcon}
-          title="Local Files"
-          description={isLoadingFiles ? 'Loading files...' : 'Scan files from your computer'}
-          disclaimer={`Supported: ${SUPPORTED_TYPES.join(', ')}`}
-          disabled={isLoadingFiles}
-        />
-        {s3}
-      </>
-    );
+            title="Local Files or Folders"
+            description="Select files or folders from your computer"
+            disclaimer={`Supported: ${SUPPORTED_TYPES.join(', ')}`}
+            disabled={isLoadingFiles}
+          />
+          {s3}
+        </>
+      );
+    } else {
+      // Windows/Linux: Separate buttons for files and folders
+      return (
+        <>
+          <SourceOption
+            onClick={async () => {
+              selectSource('files');
+              setIsLoadingFiles(true);
+              try {
+                const { allFilesMeta, totalSize, error } = await getFilesFromElectron(
+                  SUPPORTED_TYPES,
+                  false
+                );
+                if (error) {
+                  addFilesMeta([]);
+                } else {
+                  addFilesMeta(allFilesMeta || []);
+                }
+              } finally {
+                setIsLoadingFiles(false);
+              }
+            }}
+            icon={
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            }
+            title="Local Files"
+            description="Select individual files from your computer"
+            disclaimer={`Supported: ${SUPPORTED_TYPES.join(', ')}`}
+            disabled={isLoadingFiles}
+          />
+          <SourceOption
+            onClick={async () => {
+              selectSource('directory');
+              setIsLoadingFiles(true);
+              try {
+                const { allFilesMeta, totalSize, error } = await getFilesFromElectron(
+                  SUPPORTED_TYPES,
+                  true
+                );
+                if (error) {
+                  addFilesMeta([]);
+                } else {
+                  addFilesMeta(allFilesMeta || []);
+                }
+              } finally {
+                setIsLoadingFiles(false);
+              }
+            }}
+            icon={folderIcon}
+            title="Local Directory"
+            description="Select an entire folder to scan"
+            disclaimer={`Supported: ${SUPPORTED_TYPES.join(', ')}`}
+            disabled={isLoadingFiles}
+          />
+          {s3}
+        </>
+      );
+    }
   }
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -315,9 +388,9 @@ interface CustomTag {
 
 export default function NewJobPage() {
   const router = useRouter();
-  const recordEvent = useTelemetry();
+  const recordEvent = useConditionalTelemetry();
 
-  const { isEnterprise } = useLicense();
+  const { isEnterprise } = useEnterprise();
 
   // Essential state
   const [selectedSource, setSelectedSource] = useState<'s3' | 'files' | 'directory' | ''>('files');
@@ -365,14 +438,24 @@ export default function NewJobPage() {
   }, [models, modelSearchQuery]);
 
   const defaultModels = useMemo(() => {
+    if (isEnterprise) {
+      return [
+        {
+          Id: models.find((model) => model.Name === 'basic')?.Id || 'basic',
+          Name: 'Base',
+          Disabled: false,
+          Description:
+            'Fast and lightweight AI model. Allows users to perpetually customize fields with user feedback, includes advanced monitoring features.',
+        },
+      ];
+    }
     return [
       {
         Id: models.find((model) => model.Name === 'basic')?.Id || 'basic',
         Name: 'Basic',
         Disabled: false,
-        Description: !isEnterprise
-          ? 'Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.'
-          : 'Fast and lightweight AI model, does not allow customization of the fields with user feedback, gives basic usage statistics.',
+        Description:
+          'Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.',
       },
       {
         Id: 'advanced',
@@ -382,7 +465,7 @@ export default function NewJobPage() {
           'Our most advanced AI model, available on enterprise platform. Allows users to perpetually customize fields with user feedback, includes advanced monitoring features.',
       },
     ];
-  }, [models]);
+  }, [models, isEnterprise]);
 
   // Tags handling
   const [availableTags, setAvailableTags] = useState<string[]>([]);
@@ -427,7 +510,8 @@ export default function NewJobPage() {
         const modelData = await nerService.listModels();
         const trainedModels = modelData.filter((model) => model.Status === 'TRAINED');
         setModels(trainedModels.reverse());
-        setSelectedModelId(trainedModels[0].Id);
+        const basicModel = trainedModels.find((model) => model.Name === 'basic');
+        setSelectedModelId(basicModel ? basicModel.Id : null);
       } catch (err) {
         console.error('Error fetching models:', err);
         setError('Failed to load models. Please try again.');
@@ -796,9 +880,14 @@ export default function NewJobPage() {
               mapping[fileMeta.uniqueName] = fileMeta.fullPath;
             }
           });
+          console.log('Frontend - File path mapping being sent:', mapping);
+          console.log('Frontend - Selected files meta:', selectedFilesMeta);
+          console.log('Frontend - Upload ID:', uploadId);
+
           if (Object.keys(mapping).length > 0) {
             if (typeof uploadId === 'string') {
               await nerService.storeFileNameToPath(uploadId, mapping);
+              console.log('Frontend - File path mapping sent successfully');
             } else {
               throw new Error('uploadId is undefined when storing file name to path mapping');
             }
@@ -1173,7 +1262,8 @@ export default function NewJobPage() {
                 </div>
               </div>
 
-              {filteredCustomModels.length > 0 && (
+              {models.filter((model) => !['basic', 'advanced'].includes(model.Name.toLowerCase()))
+                .length > 0 && (
                 <div>
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="text-lg font-semibold">Custom Models</h3>
@@ -1189,32 +1279,41 @@ export default function NewJobPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {filteredCustomModels
-                      .filter((model) => model.Status !== 'TRAINING' && model.Status !== 'QUEUED')
-                      .map((model) => (
-                        <ModelOption
-                          key={model.Id}
-                          title={model.Name}
-                          description={
-                            <div className="space-y-2">
-                              {model.BaseModelId && (
-                                <p className="text-sm text-gray-600">
-                                  Base Model:{' '}
-                                  {models.find((m) => m.Id === model.BaseModelId)?.Name ||
-                                    'Unknown'}
-                                </p>
-                              )}
-                            </div>
-                          }
-                          isSelected={selectedModelId === model.Id}
-                          onClick={() => {
-                            setSelectedModelId(model.Id);
-                            setSelectedModel(model);
-                          }}
-                        />
-                      ))}
-                  </div>
+                  {filteredCustomModels.length === 0 ? (
+                    <div className="text-gray-500 py-8 text-center">
+                      <FileSearch className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                      <p className="text-sm">
+                        No custom models found matching "{modelSearchQuery}"
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {filteredCustomModels
+                        .filter((model) => model.Status !== 'TRAINING' && model.Status !== 'QUEUED')
+                        .map((model) => (
+                          <ModelOption
+                            key={model.Id}
+                            title={model.Name}
+                            description={
+                              <div className="space-y-2">
+                                {model.BaseModelId && (
+                                  <p className="text-sm text-gray-600">
+                                    Base Model:{' '}
+                                    {models.find((m) => m.Id === model.BaseModelId)?.Name ||
+                                      'Unknown'}
+                                  </p>
+                                )}
+                              </div>
+                            }
+                            isSelected={selectedModelId === model.Id}
+                            onClick={() => {
+                              setSelectedModelId(model.Id);
+                              setSelectedModel(model);
+                            }}
+                          />
+                        ))}
+                    </div>
+                  )}
                 </div>
               )}
 

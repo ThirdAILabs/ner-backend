@@ -16,7 +16,7 @@ import { useSearchParams } from 'next/navigation';
 import { nerService } from '@/lib/backend';
 import MetricsDataViewer from './metrics/MetricsDataViewer';
 import { useHealth } from '@/contexts/HealthProvider';
-import useTelemetry from '@/hooks/useTelemetry';
+import { useConditionalTelemetry } from '@/hooks/useConditionalTelemetry';
 
 import { useLicense } from '@/hooks/useLicense';
 
@@ -27,7 +27,7 @@ import Tooltip from '@mui/material/Tooltip';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 
 const Dashboard = () => {
-  const recordEvent = useTelemetry();
+  const recordEvent = useConditionalTelemetry();
   useEffect(() => {
     recordEvent({
       UserAction: 'View usage stats dashboard',
