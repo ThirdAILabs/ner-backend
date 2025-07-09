@@ -3,12 +3,12 @@ import CustomisableCard from '@/components/ui/cards/customisableCard';
 
 // Constants for card dimensions
 const CARD_WIDTH = '363px'; // (242 * 1.5)
-const CARD_HEIGHT = '269px'; // (150 * 1.65)
+const CARD_HEIGHT = '264px'; // (150 * 1.65)
 
 //Background image URL
 const BACKGROUND_IMAGE_URL = {
   SUCCESS: '/success.png',
-  PROGRESS: '/progress.png',
+  PROGRESS: '/fprogress.svg',
   WAVES: '/waves.png',
   QUOTA: '/quota.png',
   TOKENS: '/token.png',
