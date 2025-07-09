@@ -64,10 +64,9 @@ const ModelOption: React.FC<ModelOptionProps> = ({
   <div
     className={`relative p-6 border rounded-md transition-all
       ${isSelected ? 'border-blue-500 border-2' : 'border-gray-200 border-2'}
-      ${
-        disabled
-          ? 'opacity-85 cursor-not-allowed bg-gray-50'
-          : 'cursor-pointer hover:border-blue-300'
+      ${disabled
+        ? 'opacity-85 cursor-not-allowed bg-gray-50'
+        : 'cursor-pointer hover:border-blue-300'
       }
     `}
     onClick={() => !disabled && onClick()}
@@ -118,12 +117,11 @@ const SourceOption: React.FC<SourceOptionProps> = ({
   disabled = false,
 }) => (
   <div
-    className={`relative p-6 border-2 border-dashed rounded-lg transition-colors ${
-      disabled
+    className={`relative p-6 border-2 border-dashed rounded-lg transition-colors ${disabled
         ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
         : 'border-gray-300 hover:border-blue-400 cursor-pointer'
-    }`}
-    onClick={disabled ? () => {} : onClick}
+      }`}
+    onClick={disabled ? () => { } : onClick}
   >
     {input && input}
     <div className="flex flex-col items-center justify-center space-y-4">
@@ -510,7 +508,8 @@ export default function NewJobPage() {
         const modelData = await nerService.listModels();
         const trainedModels = modelData.filter((model) => model.Status === 'TRAINED');
         setModels(trainedModels.reverse());
-        setSelectedModelId(trainedModels[0].Id);
+        const basicModel = trainedModels.find((model) => model.Name === 'basic');
+        setSelectedModelId(basicModel ? basicModel.Id : null);
       } catch (err) {
         console.error('Error fetching models:', err);
         setError('Failed to load models. Please try again.');
@@ -905,20 +904,20 @@ export default function NewJobPage() {
         CustomTags: customTagsObj,
         ...(selectedSource === 's3'
           ? {
-              StorageType: 's3',
-              StorageParams: {
-                Endpoint: sourceS3Endpoint,
-                Region: sourceS3Region,
-                Bucket: sourceS3Bucket,
-                Prefix: sourceS3Prefix,
-              },
-            }
+            StorageType: 's3',
+            StorageParams: {
+              Endpoint: sourceS3Endpoint,
+              Region: sourceS3Region,
+              Bucket: sourceS3Bucket,
+              Prefix: sourceS3Prefix,
+            },
+          }
           : {
-              StorageType: 'upload',
-              StorageParams: {
-                UploadId: uploadId,
-              },
-            }),
+            StorageType: 'upload',
+            StorageParams: {
+              UploadId: uploadId,
+            },
+          }),
         Groups: groups,
         ReportName: jobName,
       });
@@ -1058,9 +1057,8 @@ export default function NewJobPage() {
                   validateJobName(value);
                 }}
                 onBlur={() => validateJobName(jobName)}
-                className={`w-full p-2 border ${
-                  nameError ? 'border-red-500' : 'border-gray-300'
-                } rounded`}
+                className={`w-full p-2 border ${nameError ? 'border-red-500' : 'border-gray-300'
+                  } rounded`}
                 placeholder="Enter_Scan_Name"
                 required
               />
@@ -1263,58 +1261,58 @@ export default function NewJobPage() {
 
               {models.filter((model) => !['basic', 'advanced'].includes(model.Name.toLowerCase()))
                 .length > 0 && (
-                <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-semibold">Custom Models</h3>
-                    <div className="relative w-64">
-                      <input
-                        type="text"
-                        placeholder="Search custom models..."
-                        value={modelSearchQuery}
-                        onChange={(e) => setModelSearchQuery(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                      <SearchIcon className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
+                  <div>
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-semibold">Custom Models</h3>
+                      <div className="relative w-64">
+                        <input
+                          type="text"
+                          placeholder="Search custom models..."
+                          value={modelSearchQuery}
+                          onChange={(e) => setModelSearchQuery(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                        <SearchIcon className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
+                      </div>
                     </div>
-                  </div>
 
-                  {filteredCustomModels.length === 0 ? (
-                    <div className="text-gray-500 py-8 text-center">
-                      <FileSearch className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                      <p className="text-sm">
-                        No custom models found matching "{modelSearchQuery}"
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {filteredCustomModels
-                        .filter((model) => model.Status !== 'TRAINING' && model.Status !== 'QUEUED')
-                        .map((model) => (
-                          <ModelOption
-                            key={model.Id}
-                            title={model.Name}
-                            description={
-                              <div className="space-y-2">
-                                {model.BaseModelId && (
-                                  <p className="text-sm text-gray-600">
-                                    Base Model:{' '}
-                                    {models.find((m) => m.Id === model.BaseModelId)?.Name ||
-                                      'Unknown'}
-                                  </p>
-                                )}
-                              </div>
-                            }
-                            isSelected={selectedModelId === model.Id}
-                            onClick={() => {
-                              setSelectedModelId(model.Id);
-                              setSelectedModel(model);
-                            }}
-                          />
-                        ))}
-                    </div>
-                  )}
-                </div>
-              )}
+                    {filteredCustomModels.length === 0 ? (
+                      <div className="text-gray-500 py-8 text-center">
+                        <FileSearch className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                        <p className="text-sm">
+                          No custom models found matching "{modelSearchQuery}"
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {filteredCustomModels
+                          .filter((model) => model.Status !== 'TRAINING' && model.Status !== 'QUEUED')
+                          .map((model) => (
+                            <ModelOption
+                              key={model.Id}
+                              title={model.Name}
+                              description={
+                                <div className="space-y-2">
+                                  {model.BaseModelId && (
+                                    <p className="text-sm text-gray-600">
+                                      Base Model:{' '}
+                                      {models.find((m) => m.Id === model.BaseModelId)?.Name ||
+                                        'Unknown'}
+                                    </p>
+                                  )}
+                                </div>
+                              }
+                              isSelected={selectedModelId === model.Id}
+                              onClick={() => {
+                                setSelectedModelId(model.Id);
+                                setSelectedModel(model);
+                              }}
+                            />
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
               {/* Tags Section - Only show if a model is selected */}
               {selectedModelId && (
@@ -1472,9 +1470,8 @@ export default function NewJobPage() {
                         value={customTagName}
                         onChange={(e) => handleTagNameChange(e.target.value)}
                         onBlur={(e) => handleTagNameChange(e.target.value)}
-                        className={`w-full p-2 border ${
-                          nameError ? 'border-red-500' : 'border-gray-300'
-                        } rounded`}
+                        className={`w-full p-2 border ${nameError ? 'border-red-500' : 'border-gray-300'
+                          } rounded`}
                         placeholder="CUSTOM_TAG_NAME"
                         required
                       />
