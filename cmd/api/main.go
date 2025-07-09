@@ -111,7 +111,7 @@ func main() {
 		log.Fatalf("License verification failed - Info: %v, Error: %v", licenseInfo, err)
 	}
 
-	apiHandler := api.NewBackendService(db, s3ObjectStore, cfg.UploadBucketName, publisher, cfg.ChunkTargetBytes, licensing, cfg.EnterpriseMode)
+	apiHandler := api.NewBackendService(db, s3ObjectStore, cmd.UploadBucketName, publisher, cfg.ChunkTargetBytes, licensing, cfg.EnterpriseMode)
 
 	// Your existing API routes should be prefixed with /api to avoid conflicts
 	r.Route("/api/v1", func(r chi.Router) {
