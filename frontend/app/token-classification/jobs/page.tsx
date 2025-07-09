@@ -402,7 +402,9 @@ function JobDetail() {
             tags={availableTagsCount}
             customTagNames={customTags.map((t) => t.name)}
             uploadId={
-              reportData && isUploadReport(reportData) ? reportData?.StorageParams.UploadId : ''
+              reportData?.StorageParams.UploadId
+                ? reportData?.StorageParams.UploadId
+                : reportData?.StorageParams.Prefix || ''
             }
             addFeedback={addFeedback}
             initialSelectedTag={selectedTag}
