@@ -510,7 +510,8 @@ export default function NewJobPage() {
         const modelData = await nerService.listModels();
         const trainedModels = modelData.filter((model) => model.Status === 'TRAINED');
         setModels(trainedModels.reverse());
-        setSelectedModelId(trainedModels[0].Id);
+        const basicModel = trainedModels.find((model) => model.Name === 'basic');
+        setSelectedModelId(basicModel ? basicModel.Id : null);
       } catch (err) {
         console.error('Error fetching models:', err);
         setError('Failed to load models. Please try again.');
