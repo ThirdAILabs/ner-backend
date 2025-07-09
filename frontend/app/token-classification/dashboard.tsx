@@ -116,18 +116,6 @@ const Dashboard = () => {
 
   return (
     <>
-      {/* <CustomisableCard className="p-6 bg-white mt-5"
-        width='242px'
-        height='179.5px'
-        backgroundImage='/success.png'>
-        <div className="flex flex-col">
-          <span className="text-6xl font-bold text-blue-500">5</span>
-          <div>
-            <h3 className="text-xl font-semibold text-gray-700">Completed Scans</h3>
-            <p className="text-sm text-gray-500">Ready to review.</p>
-          </div>
-        </div>
-      </CustomisableCard> */}
       <div className="container py-4">
         <StatsCards />
       </div>
