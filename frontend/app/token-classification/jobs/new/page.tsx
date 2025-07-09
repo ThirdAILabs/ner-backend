@@ -15,7 +15,7 @@ import useTelemetry from '@/hooks/useTelemetry';
 
 import { nerBaseUrl } from '@/lib/axios.config';
 import SourceCard from '@/components/ui/cards/sourceCard';
-import ModelOption from '@/components/ui/cards/modelCard';
+import ModelCard from '@/components/ui/cards/modelCard';
 
 const SUPPORTED_TYPES = ['.pdf', '.txt', '.csv', '.html', '.json', '.xml'];
 
@@ -1200,7 +1200,7 @@ export default function NewJobPage() {
                 <h3 className="text-lg font-semibold mb-4">Built-in Models</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {defaultModels.map((model) => (
-                    <ModelOption
+                    <ModelCard
                       key={model.Id}
                       title={model.Name[0].toUpperCase() + model.Name.slice(1)}
                       description={model.Description || ''}
@@ -1244,7 +1244,7 @@ export default function NewJobPage() {
                         {filteredCustomModels
                           .filter((model) => model.Status !== 'TRAINING' && model.Status !== 'QUEUED')
                           .map((model) => (
-                            <ModelOption
+                            <ModelCard
                               key={model.Id}
                               title={model.Name}
                               description={
