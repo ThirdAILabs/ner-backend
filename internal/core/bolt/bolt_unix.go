@@ -1,3 +1,5 @@
+//go:build !windows
+
 package bolt
 
 // #cgo linux LDFLAGS: -L./lib/linux_amd64 -L./lib/linux_arm64 -lthirdai -lrocksdb -lutf8proc -lspdlog -fopenmp

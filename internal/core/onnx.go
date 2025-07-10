@@ -1,3 +1,5 @@
+//go:build !windows
+
 /*
 #cgo linux   LDFLAGS: -L${SRCDIR}/bolt/lib/linux_amd64 \
                      -L${SRCDIR}/bolt/lib/linux_arm64 \

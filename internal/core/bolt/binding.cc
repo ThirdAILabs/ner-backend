@@ -1,3 +1,5 @@
+//go:build !windows
+
 #include "binding.h"
 #include "NER.h"
 #include <cstdlib>

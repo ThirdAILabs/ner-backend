@@ -1,3 +1,5 @@
+//go:build !windows
+
 #pragma once
 
 #ifdef __cplusplus
