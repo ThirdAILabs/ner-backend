@@ -34,11 +34,11 @@ func TestGenerate(t *testing.T) {
 	}
 
 	opts := GenerateOptions{
-		TagsInfo:           tags,
-		Samples:            samples,
-		RecordsToGenerate:  2,
-		RecordsPerTemplate: 2,
-		TestSplit:          0.5,
+		TagsInfo:          tags,
+		Samples:           samples,
+		RecordsToGenerate: 2,
+		RecordsPerLlmCall: 2,
+		TestSplit:         0.5,
 	}
 
 	train, test, err := factory.Generate(opts)

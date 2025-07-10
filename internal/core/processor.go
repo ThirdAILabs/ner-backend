@@ -825,18 +825,18 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 		return fmt.Errorf("error creating local model directory: %w", err)
 	}
 
+	tagsInfo := make([]types.TagInfo, len(baseModel.Tags)) // Assuming model.Tags is same as baseModel.Tags
+	for i, t := range baseModel.Tags {
+		tagsInfo[i] = types.TagInfo{
+			Name:     t.Tag,
+			Desc:     t.Description,
+			Examples: t.Examples,
+			Contexts: t.Contexts,
+		}
+	}
+
 	allSamples := payload.Samples
 	if payload.GenerateData {
-		tagsInfo := make([]types.TagInfo, len(baseModel.Tags)) // Assuming model.Tags is same as baseModel.Tags
-		for i, t := range baseModel.Tags {
-			tagsInfo[i] = types.TagInfo{
-				Name:     t.Tag,
-				Desc:     t.Description,
-				Examples: t.Examples,
-				Contexts: t.Contexts,
-			}
-		}
-
 		genDir := filepath.Join(proc.localModelDir, payload.ModelId.String(), "generated")
 		factory, err := datagenv2.NewDataFactory(genDir)
 		if err != nil {
@@ -848,7 +848,7 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 			TagsInfo:          tagsInfo,
 			Samples:           payload.Samples,
 			RecordsToGenerate: payload.RecordsToGenerate,
-			RecordsPerLlmCall: payload.RecordsPerTemplate,
+			RecordsPerLlmCall: payload.RecordsPerLlmCall,
 			TestSplit:         payload.TestSplit,
 			WriteBatchSize:    payload.RecordsToGenerate,
 		}
@@ -863,7 +863,7 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 		allSamples = append(allSamples, test...)
 	}
 
-	if err := model.FinetuneAndSave(payload.TaskPrompt, payload.Tags, allSamples, localDir); err != nil {
+	if err := model.FinetuneAndSave(payload.TaskPrompt, tagsInfo, allSamples, localDir); err != nil {
 		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint:errcheck
 		slog.Error("error finetuning model", "base_model_id", payload.BaseModelId, "model_id", payload.ModelId, "error", err)
 		return fmt.Errorf("error finetuning model: %w", err)

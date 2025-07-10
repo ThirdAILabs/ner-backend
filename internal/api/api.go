@@ -218,14 +218,14 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 	}
 
 	payload := messaging.FinetuneTaskPayload{
-		ModelId:            model.Id,
-		BaseModelId:        model.BaseModelId.UUID,
-		Samples:            samples,
-		GenerateData:       req.GenerateData,
-		NumValuesPerTag:    30,
-		RecordsToGenerate:  200,
-		RecordsPerTemplate: 3,
-		TestSplit:          0.2,
+		ModelId:           model.Id,
+		BaseModelId:       model.BaseModelId.UUID,
+		Samples:           samples,
+		GenerateData:      req.GenerateData,
+		NumValuesPerTag:   30,
+		RecordsToGenerate: 200,
+		RecordsPerLlmCall: 3,
+		TestSplit:         0.2,
 	}
 	if req.TaskPrompt != nil {
 		payload.TaskPrompt = *req.TaskPrompt
