@@ -228,6 +228,9 @@ function LicenseErrorBanner({
   enterpriseLoading: boolean;
   isLicenseValid: boolean;
 }) {
+  console.log(
+    `License Error Banner: isEnterprise=${isEnterprise}, enterpriseLoading=${enterpriseLoading}, isLicenseValid=${isLicenseValid}`
+  );
   if (!enterpriseLoading && !isLicenseValid && isEnterprise) {
     return (
       <div
