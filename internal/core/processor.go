@@ -850,7 +850,7 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 			RecordsToGenerate: payload.RecordsToGenerate,
 			RecordsPerLlmCall: payload.RecordsPerLlmCall,
 			TestSplit:         payload.TestSplit,
-			WriteBatchSize:    payload.RecordsToGenerate,
+			WriteBatchSize:    payload.WriteBatchSize,
 		}
 
 		train, test, err := factory.Generate(opts)

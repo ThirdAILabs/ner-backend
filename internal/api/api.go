@@ -217,15 +217,21 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 		return nil, CodedErrorf(http.StatusUnprocessableEntity, "no feedback samples found for model %s", modelId)
 	}
 
+	// configuring the data generation parameters
+	recordsToGenerate := max(50, len(samples)*3)
+	testSplit := 0.2
+	recordsPerLlmCall := AutoTuneK(samples, 30, 40)
+	writeBatchSize := recordsPerLlmCall * 60 // 60 parallel threads, each generating recordsPerLlmCall records
+
 	payload := messaging.FinetuneTaskPayload{
 		ModelId:           model.Id,
 		BaseModelId:       model.BaseModelId.UUID,
 		Samples:           samples,
 		GenerateData:      req.GenerateData,
-		NumValuesPerTag:   30,
-		RecordsToGenerate: 200,
-		RecordsPerLlmCall: 3,
-		TestSplit:         0.2,
+		RecordsToGenerate: recordsToGenerate,
+		RecordsPerLlmCall: recordsPerLlmCall,
+		TestSplit:         float32(testSplit),
+		WriteBatchSize:    writeBatchSize,
 	}
 	if req.TaskPrompt != nil {
 		payload.TaskPrompt = *req.TaskPrompt

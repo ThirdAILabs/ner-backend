@@ -36,9 +36,9 @@ type FinetuneTaskPayload struct {
 	Samples    []api.Sample
 
 	GenerateData      bool
-	NumValuesPerTag   int
 	RecordsToGenerate int
 	RecordsPerLlmCall int
+	WriteBatchSize    int
 	TestSplit         float32
 }
 
