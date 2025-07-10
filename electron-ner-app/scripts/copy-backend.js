@@ -53,8 +53,15 @@ try {
   // Copy Windows dependencies if on Windows
   if (isWindows()) {
     const windowsDeps = getWindowsDependencies();
+    const windowsLibsDir = path.join(projectRoot, 'windows_libs');
     for (const dep of windowsDeps) {
-      const sourcePath = path.join(goProjectDir, dep);
+      // First try the windows_libs directory
+      let sourcePath = path.join(windowsLibsDir, dep);
+      if (!fs.existsSync(sourcePath)) {
+        // Fall back to root directory
+        sourcePath = path.join(goProjectDir, dep);
+      }
+      
       const targetPath = path.join(binDir, dep);
       if (fs.existsSync(sourcePath)) {
         console.log(`Copying Windows dependency: ${dep}`);
@@ -113,13 +120,13 @@ function copyRecursivePreservingSymlinks(src, dest) {
 
 // Copy the plugin directory
 if (process.env.MODEL_TYPE?.startsWith('python_') || process.env.MODEL_TYPE?.startsWith('onnx_')) {
-  try {
-    console.log(`Copying plugin directory from ${pluginDir} to ${targetPluginDir}`);
-    fs.rmSync(targetPluginDir, { recursive: true, force: true }); // Remove existing target directory
-    fs.mkdirSync(targetPluginDir, { recursive: true }); // Create new target directory
+  if (fs.existsSync(pluginDir)) {
+    try {
+      console.log(`Copying plugin directory from ${pluginDir} to ${targetPluginDir}`);
+      fs.rmSync(targetPluginDir, { recursive: true, force: true }); // Remove existing target directory
+      fs.mkdirSync(targetPluginDir, { recursive: true }); // Create new target directory
 
-    // Copy entire plugin directory using the custom function
-    if (fs.existsSync(pluginDir)) {
+      // Copy entire plugin directory using the custom function
       // Iterate over the items in the root of pluginDir and copy them to targetPluginDir
       const items = fs.readdirSync(pluginDir);
       for (const item of items) {
@@ -144,14 +151,14 @@ if (process.env.MODEL_TYPE?.startsWith('python_') || process.env.MODEL_TYPE?.sta
       }
       
       console.log('Plugin directory copied successfully using custom function!');
-    } else {
-      console.error(`Plugin directory not found at: ${pluginDir}`);
-      process.exit(1); // Exit if source plugin directory doesn't exist
+    } catch (error) {
+      console.error('Failed to copy plugin directory:', error.message);
+      console.error(error.stack); // It's good practice to log the stack for better debugging
+      process.exit(1); // Exit on any error during the copy process
     }
-  } catch (error) {
-    console.error('Failed to copy plugin directory:', error.message);
-    console.error(error.stack); // It's good practice to log the stack for better debugging
-    process.exit(1); // Exit on any error during the copy process
+  } else {
+    console.log(`Plugin directory not found at: ${pluginDir}`);
+    console.log('Continuing without plugin (plugin may not be required for this model type)');
   }
 } else {
   console.log('Skipping plugin directory copy as MODEL_TYPE is not a python model');
