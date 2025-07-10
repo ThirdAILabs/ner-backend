@@ -195,20 +195,6 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 	}); err != nil {
 		return nil, err
 	}
-	tagNames := make([]string, 0, len(req.Tags))
-	if len(req.Tags) > 0 {
-		for _, tag := range req.Tags {
-			tagNames = append(tagNames, tag.Name)
-		}
-		if err := database.SetModelTags(ctx, s.db, model.Id, tagNames); err != nil {
-			slog.Error("failed to set tags", "model", model.Id, "err", err)
-			return nil, err
-		}
-	} else {
-		for _, tag := range model.Tags {
-			tagNames = append(tagNames, tag.Tag)
-		}
-	}
 
 	samples := make([]api.Sample, 0, len(req.Samples))
 	samples = append(samples, req.Samples...)
@@ -234,7 +220,6 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 	payload := messaging.FinetuneTaskPayload{
 		ModelId:            model.Id,
 		BaseModelId:        model.BaseModelId.UUID,
-		Tags:               req.Tags,
 		Samples:            samples,
 		GenerateData:       req.GenerateData,
 		NumValuesPerTag:    30,

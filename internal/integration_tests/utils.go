@@ -57,7 +57,7 @@ func (m *regexModel) Predict(text string) ([]types.Entity, error) {
 	return entities, nil
 }
 
-func (m *regexModel) FinetuneAndSave(taskPrompt string, tags []api.TagInfo, samples []api.Sample, savePath string) error {
+func (m *regexModel) FinetuneAndSave(taskPrompt string, tags []types.TagInfo, samples []api.Sample, savePath string) error {
 	for _, tag := range tags {
 		pattern, err := regexp.Compile(tag.Name)
 		if err != nil {

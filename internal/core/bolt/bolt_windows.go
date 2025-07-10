@@ -25,7 +25,7 @@ func (ner *NER) train(filename string, learningRate float32, epochs int) error {
 
 }
 
-func (ner *NER) FinetuneAndSave(taskPrompt string, tags []api.TagInfo, samples []api.Sample, savePath string) error {
+func (ner *NER) FinetuneAndSave(taskPrompt string, tags []types.TagInfo, samples []api.Sample, savePath string) error {
 	return ErrBoltNotSupported
 
 }

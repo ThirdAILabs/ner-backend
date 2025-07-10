@@ -41,7 +41,7 @@ var statelessModelTypes = map[ModelType]struct{}{
 type Model interface {
 	Predict(text string) ([]types.Entity, error)
 
-	FinetuneAndSave(taskPrompt string, tags []api.TagInfo, samples []api.Sample, savePath string) error
+	FinetuneAndSave(taskPrompt string, tags []types.TagInfo, samples []api.Sample, savePath string) error
 
 	Release()
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"ner-backend/internal/core/datagen_v2/prompts"
+	"ner-backend/internal/core/types"
 	"ner-backend/pkg/api"
 	"os"
 	"path/filepath"
@@ -18,13 +19,6 @@ import (
 
 	openai "github.com/openai/openai-go"
 )
-
-type TagInfo struct {
-	Name     string   // maps to tag["name"]
-	Desc     string   // maps to tag["desc"]
-	Examples []string // maps to tag["examples"]
-	Contexts []string // maps to tag["contexts"], may be nil initially
-}
 
 type DataFactory struct {
 	OutDir string
@@ -40,7 +34,7 @@ func NewDataFactory(outDir string) (*DataFactory, error) {
 	return &DataFactory{OutDir: outDir, LLM: llm}, nil
 }
 
-func (d *DataFactory) ExtendDescription(tag *TagInfo) (string, error) {
+func (d *DataFactory) ExtendDescription(tag *types.TagInfo) (string, error) {
 	var buf bytes.Buffer
 	if err := prompts.ExtendDescriptionTmpl.Execute(&buf, map[string]interface{}{
 		"Tag": tag,
@@ -67,7 +61,7 @@ func (d *DataFactory) ExtendDescription(tag *TagInfo) (string, error) {
 	return resp.ExtendedDescription, nil
 }
 
-func (d *DataFactory) ExtendExamples(tag *TagInfo, k int) ([]string, error) {
+func (d *DataFactory) ExtendExamples(tag *types.TagInfo, k int) ([]string, error) {
 	var buf bytes.Buffer
 	if err := prompts.ExtendExamplesTmpl.Execute(&buf, map[string]interface{}{
 		"Tag": tag, "K": k,
@@ -94,7 +88,7 @@ func (d *DataFactory) ExtendExamples(tag *TagInfo, k int) ([]string, error) {
 	return resp.ExtendedExamples, nil
 }
 
-func (d *DataFactory) GetTagContext(tag *TagInfo, k int) ([]string, error) {
+func (d *DataFactory) GetTagContext(tag *types.TagInfo, k int) ([]string, error) {
 	var buf bytes.Buffer
 	if err := prompts.ContextTmpl.Execute(&buf, map[string]interface{}{
 		"Tag": tag, "K": k,
@@ -160,13 +154,13 @@ func (d *DataFactory) runAndCollect(
 }
 
 type GenerateOptions struct {
-	TagsInfo          []TagInfo    // built from api.TagInfo
-	Samples           []api.Sample // initial seed samples (optional)
-	RecordsToGenerate int          // total sentences to generate
-	RecordsPerLlmCall int          // sentences per LLM call
-	TestSplit         float32      // fraction to reserve for test
-	UserInstructions  []string     // extra LLM instructions
-	WriteBatchSize    int          // batch size for LLM calls
+	TagsInfo          []types.TagInfo // built from api.types.TagInfo
+	Samples           []api.Sample    // initial seed samples (optional)
+	RecordsToGenerate int             // total sentences to generate
+	RecordsPerLlmCall int             // sentences per LLM call
+	TestSplit         float32         // fraction to reserve for test
+	UserInstructions  []string        // extra LLM instructions
+	WriteBatchSize    int             // batch size for LLM calls
 }
 
 func (opts *GenerateOptions) Validate() error {
@@ -302,7 +296,7 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 			}
 			if err := prompts.AnnotatedDataTmpl.Execute(&buf, map[string]interface{}{
 				"K":                n,
-				"TagInfo":          opts.TagsInfo,
+				"types.TagInfo":    opts.TagsInfo,
 				"Requirements":     reqs,
 				"UserInstructions": opts.UserInstructions,
 				"Feedback":         feedback,
@@ -333,7 +327,7 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 		for i, sentences := range toVerify {
 			var buf bytes.Buffer
 			if err := prompts.AnnotatedTextSamplesTmpl.Execute(&buf, map[string]interface{}{
-				"TagInfo":        opts.TagsInfo,
+				"types.TagInfo":  opts.TagsInfo,
 				"AnnotatedTexts": sentences,
 			}); err != nil {
 				return nil, nil, fmt.Errorf("render verif prompt: %w", err)
@@ -375,7 +369,7 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 	return allSamples[:split], allSamples[split:], nil
 }
 
-func (d *DataFactory) ValidateSentence(src, tgt string, tags []TagInfo) error {
+func (d *DataFactory) ValidateSentence(src, tgt string, tags []types.TagInfo) error {
 	srcToks := strings.Fields(src)
 	tgtToks := strings.Fields(tgt)
 	if len(srcToks) != len(tgtToks) {
@@ -403,7 +397,7 @@ var (
 
 func (d *DataFactory) transformSentence(
 	text string,
-	tags []TagInfo,
+	tags []types.TagInfo,
 ) (string, string, error) {
 	var srcTokens, tgtTokens []string
 	last := 0

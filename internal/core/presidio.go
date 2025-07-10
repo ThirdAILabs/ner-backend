@@ -242,7 +242,7 @@ func (m *PresidioModel) Predict(text string) ([]types.Entity, error) {
 	return entities, nil
 }
 
-func (m *PresidioModel) FinetuneAndSave(taskPrompt string, tags []api.TagInfo, samples []api.Sample, savePath string) error {
+func (m *PresidioModel) FinetuneAndSave(taskPrompt string, tags []types.TagInfo, samples []api.Sample, savePath string) error {
 	return fmt.Errorf("finetune not supported for presidio model")
 }
 

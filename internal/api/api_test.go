@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	backend "ner-backend/internal/api"
+	"ner-backend/internal/core/types"
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/storage"
@@ -115,7 +116,7 @@ func TestFinetuneModel(t *testing.T) {
 		payload := api.FinetuneRequest{
 			Name:       "FinetunedModel",
 			TaskPrompt: &tp,
-			Tags:       []api.TagInfo{{Name: "tag1"}},
+			Tags:       []types.TagInfo{{Name: "tag1"}},
 			Samples: []api.Sample{
 				{
 					Tokens: []string{"example"},

@@ -31,8 +31,11 @@ type Model struct {
 }
 
 type ModelTag struct {
-	ModelId uuid.UUID `gorm:"type:uuid;primaryKey"`
-	Tag     string    `gorm:"primaryKey"`
+	ModelId     uuid.UUID `gorm:"type:uuid;primaryKey"`
+	Tag         string    `gorm:"primaryKey"`
+	Description string    `gorm:"size:1023 default:''"`
+	Examples    []string  `gorm:"type:text[];default:array[]::text[]"`
+	Contexts    []string  `gorm:"type:text[];default:array[]::text[]"`
 }
 
 const (
@@ -53,8 +56,8 @@ type Report struct {
 	Deleted bool `gorm:"default:false"`
 	Stopped bool `gorm:"default:false"`
 
-	StorageType     string `gorm:"size:20;not null"`
-	StorageParams   datatypes.JSON `gorm:"type:jsonb;not null"`
+	StorageType   string         `gorm:"size:20;not null"`
+	StorageParams datatypes.JSON `gorm:"type:jsonb;not null"`
 
 	CreationTime       time.Time
 	SucceededFileCount int `gorm:"default:0"`

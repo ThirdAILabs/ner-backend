@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"ner-backend/internal/core/types"
 	"ner-backend/internal/licensing"
 	"time"
 
@@ -88,23 +89,17 @@ type CreateReportResponse struct {
 	ReportId uuid.UUID
 }
 
-type TagInfo struct {
-	Name        string
-	Description string
-	Examples    []string
-}
-
 type Sample struct {
 	Tokens []string
 	Labels []string
 }
 
 type FinetuneRequest struct {
-	Name         string    `json:"Name"`
-	TaskPrompt   *string   `json:"TaskPrompt"`
-	GenerateData bool      `json:"GenerateData"`
-	Tags         []TagInfo `json:"Tags"`
-	Samples      []Sample  `json:"Samples,omitempty"`
+	Name         string          `json:"Name"`
+	TaskPrompt   *string         `json:"TaskPrompt"`
+	GenerateData bool            `json:"GenerateData"`
+	Tags         []types.TagInfo `json:"Tags"`
+	Samples      []Sample        `json:"Samples,omitempty"`
 }
 
 type FinetuneResponse struct {

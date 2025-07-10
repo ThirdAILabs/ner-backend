@@ -14,6 +14,7 @@ import (
 	backendpkg "ner-backend/internal/api"
 	"ner-backend/internal/core"
 	"ner-backend/internal/core/python"
+	"ner-backend/internal/core/types"
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/storage"
@@ -120,7 +121,7 @@ func TestFinetuning(t *testing.T) {
 	ftReq := api.FinetuneRequest{
 		Name:       "finetuned-model",
 		TaskPrompt: &tp,
-		Tags:       []api.TagInfo{{Name: "URL", Description: "uniform resource locators (URLs), which are references to web resources or pages on the internet", Examples: []string{"https://example.com", "http://thirdai.com"}}},
+		Tags:       []types.TagInfo{{Name: "URL", Desc: "uniform resource locators (URLs), which are references to web resources or pages on the internet", Examples: []string{"https://example.com", "http://thirdai.com"}}},
 	}
 	_, model := finetune(t, router, baseID.String(), ftReq, 10, 100*time.Millisecond)
 
@@ -212,7 +213,7 @@ func finetuningTestHelper(t *testing.T, modelInit func(ctx context.Context, db *
 	ftReq := api.FinetuneRequest{
 		Name:       fmt.Sprintf("finetuned-%s", modelName),
 		TaskPrompt: &tp,
-		Tags:       []api.TagInfo{{Name: "xyz"}},
+		Tags:       []types.TagInfo{{Name: "xyz"}},
 	}
 
 	_, model := finetune(
@@ -266,7 +267,7 @@ func TestFinetuningWithGenerateData(t *testing.T) {
 	ftReq := api.FinetuneRequest{
 		Name:         "finetuned-with-gen",
 		TaskPrompt:   &tp,
-		Tags:         []api.TagInfo{{Name: "xyz"}},
+		Tags:         []types.TagInfo{{Name: "xyz"}},
 		GenerateData: true,
 	}
 
@@ -329,9 +330,9 @@ func TestFinetuningOnnxModel(t *testing.T) {
 		"SEXUAL_ORIENTATION", "SSN", "URL", "VIN",
 	}
 
-	tagInfos := make([]api.TagInfo, len(tags))
+	tagInfos := make([]types.TagInfo, len(tags))
 	for i, tag := range tags {
-		tagInfos[i] = api.TagInfo{Name: tag}
+		tagInfos[i] = types.TagInfo{Name: tag}
 	}
 
 	tp := fmt.Sprintf("%s finetune test", modelName)

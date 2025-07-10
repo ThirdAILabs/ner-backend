@@ -29,14 +29,13 @@ type TaskProcessor struct {
 	storage   storage.ObjectStore
 	publisher messaging.Publisher
 	reciever  messaging.Reciever
-	
+
 	licensing licensing.LicenseVerifier
-	
+
 	localModelDir string
 	modelBucket   string
 	uploadBucket  string
 	modelLoaders  map[ModelType]ModelLoader
-
 }
 
 const bytesPerMB = 1024 * 1024
@@ -50,15 +49,15 @@ var ExcludedTags = map[string]struct{}{
 
 func NewTaskProcessor(db *gorm.DB, storage storage.ObjectStore, publisher messaging.Publisher, reciever messaging.Reciever, licenseVerifier licensing.LicenseVerifier, localModelDir string, modelBucket string, uploadBucket string, modelLoaders map[ModelType]ModelLoader) *TaskProcessor {
 	return &TaskProcessor{
-		db:                      db,
-		storage:                 storage,
-		publisher:               publisher,
-		reciever:                reciever,
-		licensing:               licenseVerifier,
-		localModelDir:           localModelDir,
-		modelBucket:             modelBucket,
-		uploadBucket:            uploadBucket,
-		modelLoaders:            modelLoaders,
+		db:            db,
+		storage:       storage,
+		publisher:     publisher,
+		reciever:      reciever,
+		licensing:     licenseVerifier,
+		localModelDir: localModelDir,
+		modelBucket:   modelBucket,
+		uploadBucket:  uploadBucket,
+		modelLoaders:  modelLoaders,
 	}
 }
 
@@ -720,12 +719,12 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 		slog.Info("Creating inference task", "report_id", reportId, "task_id", taskId, "chunk_size", taskMetadata.TotalSize)
 
 		task := database.InferenceTask{
-			ReportId:     reportId,
-			TaskId:       taskId,
-			Status:       database.JobQueued,
-			CreationTime: time.Now().UTC(),
+			ReportId:      reportId,
+			TaskId:        taskId,
+			Status:        database.JobQueued,
+			CreationTime:  time.Now().UTC(),
 			StorageParams: taskMetadata.Params,
-			TotalSize:    taskMetadata.TotalSize,
+			TotalSize:     taskMetadata.TotalSize,
 		}
 
 		inferencePayload := messaging.InferenceTaskPayload{
@@ -786,7 +785,7 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 
 func (proc *TaskProcessor) getModel(ctx context.Context, modelId uuid.UUID) (database.Model, error) {
 	var model database.Model
-	if err := proc.db.WithContext(ctx).First(&model, "id = ?", modelId).Error; err != nil {
+	if err := proc.db.WithContext(ctx).Preload("Tags").First(&model, "id = ?", modelId).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			slog.Error("model not found", "model_id", modelId)
 			return database.Model{}, fmt.Errorf("model not found: %w", err)
@@ -828,12 +827,13 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 
 	allSamples := payload.Samples
 	if payload.GenerateData {
-		tagsInfo := make([]datagenv2.TagInfo, len(payload.Tags))
-		for i, t := range payload.Tags {
-			tagsInfo[i] = datagenv2.TagInfo{
-				Name:     t.Name,
+		tagsInfo := make([]types.TagInfo, len(baseModel.Tags)) // Assuming model.Tags is same as baseModel.Tags
+		for i, t := range baseModel.Tags {
+			tagsInfo[i] = types.TagInfo{
+				Name:     t.Tag,
 				Desc:     t.Description,
 				Examples: t.Examples,
+				Contexts: t.Contexts,
 			}
 		}
 

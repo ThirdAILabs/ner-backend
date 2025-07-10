@@ -2,6 +2,7 @@ package messaging
 
 import (
 	"context"
+	"ner-backend/internal/core/types"
 	"ner-backend/pkg/api"
 	"time"
 
@@ -33,7 +34,7 @@ type FinetuneTaskPayload struct {
 	BaseModelId uuid.UUID
 
 	TaskPrompt string
-	Tags       []api.TagInfo
+	Tags       []types.TagInfo
 	Samples    []api.Sample
 
 	GenerateData       bool

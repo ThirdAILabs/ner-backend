@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"ner-backend/internal/core/types"
 	"time"
 
 	"github.com/google/uuid"
@@ -63,10 +64,10 @@ func SaveReportError(ctx context.Context, txn *gorm.DB, reportId uuid.UUID, erro
 	}
 }
 
-func SetModelTags(ctx context.Context, db *gorm.DB, modelId uuid.UUID, tags []string) error {
+func SetModelTags(ctx context.Context, db *gorm.DB, modelId uuid.UUID, tags []types.TagInfo) error {
 	newTags := make([]ModelTag, len(tags))
 	for i, t := range tags {
-		newTags[i] = ModelTag{ModelId: modelId, Tag: t}
+		newTags[i] = ModelTag{ModelId: modelId, Tag: t.Name, Description: t.Desc, Examples: t.Examples, Contexts: t.Contexts}
 	}
 
 	if err := db.WithContext(ctx).

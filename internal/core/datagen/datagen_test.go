@@ -7,6 +7,7 @@
 package datagen
 
 import (
+	"ner-backend/internal/core/types"
 	"ner-backend/pkg/api"
 	"testing"
 
@@ -16,7 +17,7 @@ import (
 func TestDatagen(t *testing.T) {
 	train, test, err := GenerateData(DatagenOpts{
 		TaskPrompt: "Generate training data to detect phone numbers",
-		Tags:       []api.TagInfo{{Name: "phone_number", Description: "a phone number", Examples: []string{"+1-800-555-1234", "(123) 456-7890"}}},
+		Tags:       []types.TagInfo{{Name: "phone_number", Description: "a phone number", Examples: []string{"+1-800-555-1234", "(123) 456-7890"}}},
 		Samples: []api.Sample{{
 			Tokens: []string{"My", "phone", "number", "is", "+1-800-555-1234"},
 			Labels: []string{"O", "O", "O", "O", "phone_number"},
