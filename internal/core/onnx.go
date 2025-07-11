@@ -188,13 +188,28 @@ func decryptModel(encPath string) ([]byte, error) {
 }
 
 func LoadOnnxModel(modelDir string) (Model, error) {
-	encPath := filepath.Join(modelDir, "model.onnx")
+	modelPath := filepath.Join(modelDir, "model.onnx")
+	encPath := filepath.Join(modelDir, "model.onnx.enc")
 	crfPath := filepath.Join(modelDir, "transitions.json")
 	tokenizerPath := filepath.Join(modelDir, "qwen_tokenizer/tokenizer.json")
 
-	onnxBytes, err := os.ReadFile(encPath)
-	if err != nil {
-		return nil, fmt.Errorf("error reading model data: %w", err)
+	var onnxBytes []byte
+	var err error
+	
+	// First check if unencrypted model exists
+	if _, err = os.Stat(modelPath); err == nil {
+		onnxBytes, err = os.ReadFile(modelPath)
+		if err != nil {
+			return nil, fmt.Errorf("error reading model data: %w", err)
+		}
+	} else if _, err = os.Stat(encPath); err == nil {
+		// If encrypted model exists, decrypt it
+		onnxBytes, err = decryptModel(encPath)
+		if err != nil {
+			return nil, fmt.Errorf("error decrypting model: %w", err)
+		}
+	} else {
+		return nil, fmt.Errorf("model file not found: neither %s nor %s exist", modelPath, encPath)
 	}
 
 	crf, err := loadCRF(crfPath)
