@@ -35,11 +35,12 @@ type FinetuneTaskPayload struct {
 	TaskPrompt string
 	Samples    []api.Sample
 
-	GenerateData      bool
-	RecordsToGenerate int
-	RecordsPerLlmCall int
-	WriteBatchSize    int
-	TestSplit         float32
+	GenerateData        bool
+	RecordsToGenerate   int
+	RecordsPerLlmCall   int
+	WriteBatchSize      int
+	TestSplit           float32
+	VerifyGeneratedData bool
 }
 
 type ShardDataPayload struct {

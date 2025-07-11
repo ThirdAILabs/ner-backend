@@ -845,12 +845,13 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 		}
 
 		opts := datagenv2.GenerateOptions{
-			TagsInfo:          tagsInfo,
-			Samples:           payload.Samples,
-			RecordsToGenerate: payload.RecordsToGenerate,
-			RecordsPerLlmCall: payload.RecordsPerLlmCall,
-			TestSplit:         payload.TestSplit,
-			WriteBatchSize:    payload.WriteBatchSize,
+			TagsInfo:            tagsInfo,
+			Samples:             payload.Samples,
+			RecordsToGenerate:   payload.RecordsToGenerate,
+			RecordsPerLlmCall:   payload.RecordsPerLlmCall,
+			TestSplit:           payload.TestSplit,
+			WriteBatchSize:      payload.WriteBatchSize,
+			VerifyGeneratedData: payload.VerifyGeneratedData,
 		}
 
 		train, test, err := factory.Generate(opts)

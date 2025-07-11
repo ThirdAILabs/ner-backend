@@ -154,13 +154,14 @@ func (d *DataFactory) runAndCollect(
 }
 
 type GenerateOptions struct {
-	TagsInfo          []types.TagInfo // built from api.types.TagInfo
-	Samples           []api.Sample    // initial seed samples (optional)
-	RecordsToGenerate int             // total sentences to generate
-	RecordsPerLlmCall int             // sentences per LLM call
-	TestSplit         float32         // fraction to reserve for test
-	UserInstructions  []string        // extra LLM instructions
-	WriteBatchSize    int             // batch size for LLM calls
+	TagsInfo            []types.TagInfo // built from api.types.TagInfo
+	Samples             []api.Sample    // initial seed samples (optional)
+	RecordsToGenerate   int             // total sentences to generate
+	RecordsPerLlmCall   int             // sentences per LLM call
+	TestSplit           float32         // fraction to reserve for test
+	UserInstructions    []string        // extra LLM instructions
+	WriteBatchSize      int             // batch size for LLM calls
+	VerifyGeneratedData bool            // whether to verify generated data
 }
 
 func (opts *GenerateOptions) Validate() error {
@@ -234,28 +235,31 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 	for i := range opts.TagsInfo {
 		tag := &opts.TagsInfo[i]
 
-		ed, err := d.ExtendDescription(tag)
-		if err != nil {
-			return nil, nil, fmt.Errorf("extend description: %w", err)
-		}
-		tag.Desc = ed
-
-		exs, err := d.ExtendExamples(tag, 20)
-		if err != nil {
-			return nil, nil, fmt.Errorf("extend examples: %w", err)
-		}
-		tag.Examples = append(tag.Examples, exs...)
-
-		if tag.Contexts == nil {
-			if len(opts.Samples) > 0 {
-				tag.Contexts = make([]string, 0)
-			} else {
-				ctxs, err := d.GetTagContext(tag, rand.Intn(11)+20)
-				if err != nil {
-					return nil, nil, fmt.Errorf("get contexts: %w", err)
-				}
-				tag.Contexts = ctxs
+		if len(strings.Fields(tag.Desc)) <= 10 {
+			ed, err := d.ExtendDescription(tag)
+			if err != nil {
+				return nil, nil, fmt.Errorf("extend description: %w", err)
 			}
+			tag.Desc = ed
+		}
+
+		if len(tag.Examples) < 4 {
+			exs, err := d.ExtendExamples(tag, 20)
+			if err != nil {
+				return nil, nil, fmt.Errorf("extend examples: %w", err)
+			}
+			tag.Examples = append(tag.Examples, exs...)
+		}
+
+		if len(opts.Samples) > 0 {
+			// opts.Samples are used as context for generation
+			tag.Contexts = make([]string, 0)
+		} else if len(tag.Contexts) < 4 {
+			ctxs, err := d.GetTagContext(tag, rand.Intn(11)+20)
+			if err != nil {
+				return nil, nil, fmt.Errorf("get contexts: %w", err)
+			}
+			tag.Contexts = ctxs
 		}
 		_ = bar.Add(1)
 	}
@@ -311,45 +315,49 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 			return nil, nil, fmt.Errorf("batch generate: %w", err)
 		}
 
-		var toVerify [][]string
-		for _, r := range rawGen {
-			var ad prompts.AnnotatedData
-			if err := json.Unmarshal([]byte(r), &ad); err != nil {
-				continue
+		if opts.VerifyGeneratedData {
+			var toVerify [][]string
+			for _, r := range rawGen {
+				var ad prompts.AnnotatedData
+				if err := json.Unmarshal([]byte(r), &ad); err != nil {
+					continue
+				}
+				cleaned := ad.Clean().Sentences
+				if len(cleaned) > 0 {
+					toVerify = append(toVerify, cleaned)
+				}
 			}
-			cleaned := ad.Clean().Sentences
-			if len(cleaned) > 0 {
-				toVerify = append(toVerify, cleaned)
-			}
-		}
 
-		verifPrompts := make([]string, len(toVerify))
-		for i, sentences := range toVerify {
-			var buf bytes.Buffer
-			if err := prompts.AnnotatedTextSamplesTmpl.Execute(&buf, map[string]interface{}{
-				"types.TagInfo":  opts.TagsInfo,
-				"AnnotatedTexts": sentences,
-			}); err != nil {
-				return nil, nil, fmt.Errorf("render verif prompt: %w", err)
+			verifPrompts := make([]string, len(toVerify))
+			for i, sentences := range toVerify {
+				var buf bytes.Buffer
+				if err := prompts.AnnotatedTextSamplesTmpl.Execute(&buf, map[string]interface{}{
+					"types.TagInfo":  opts.TagsInfo,
+					"AnnotatedTexts": sentences,
+				}); err != nil {
+					return nil, nil, fmt.Errorf("render verif prompt: %w", err)
+				}
+				verifPrompts[i] = buf.String()
 			}
-			verifPrompts[i] = buf.String()
-		}
-		rawVerif, err := d.runAndCollect(verifPrompts, prompts.AnnotatedTextCorrectionSystem, verifFmt, true)
-		if err != nil {
-			return nil, nil, fmt.Errorf("batch verify: %w", err)
-		}
+			rawVerif, err := d.runAndCollect(verifPrompts, prompts.AnnotatedTextCorrectionSystem, verifFmt, true)
+			if err != nil {
+				return nil, nil, fmt.Errorf("batch verify: %w", err)
+			}
 
-		for i, orig := range toVerify {
-			var ats prompts.AnnotatedTextSamples
-			if err := json.Unmarshal([]byte(rawVerif[i]), &ats); err != nil {
-				return nil, nil, fmt.Errorf("unmarshal verification response: %w", err)
+			for i, orig := range toVerify {
+				var ats prompts.AnnotatedTextSamples
+				if err := json.Unmarshal([]byte(rawVerif[i]), &ats); err != nil {
+					return nil, nil, fmt.Errorf("unmarshal verification response: %w", err)
+				}
+				cleaned := ats.Clean().AnnotatedTexts
+				if len(cleaned) == 0 {
+					allSentences = append(allSentences, orig...)
+				} else {
+					allSentences = append(allSentences, mergeWithCorrections(orig, cleaned)...)
+				}
 			}
-			cleaned := ats.Clean().AnnotatedTexts
-			if len(cleaned) == 0 {
-				allSentences = append(allSentences, orig...)
-			} else {
-				allSentences = append(allSentences, mergeWithCorrections(orig, cleaned)...)
-			}
+		} else {
+			allSentences = append(allSentences, rawGen...)
 		}
 		_ = bar.Add(1)
 	}

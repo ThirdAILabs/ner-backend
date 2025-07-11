@@ -224,14 +224,15 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 	writeBatchSize := recordsPerLlmCall * 60 // 60 parallel threads, each generating recordsPerLlmCall records
 
 	payload := messaging.FinetuneTaskPayload{
-		ModelId:           model.Id,
-		BaseModelId:       model.BaseModelId.UUID,
-		Samples:           samples,
-		GenerateData:      req.GenerateData,
-		RecordsToGenerate: recordsToGenerate,
-		RecordsPerLlmCall: recordsPerLlmCall,
-		TestSplit:         float32(testSplit),
-		WriteBatchSize:    writeBatchSize,
+		ModelId:             model.Id,
+		BaseModelId:         model.BaseModelId.UUID,
+		Samples:             samples,
+		GenerateData:        req.GenerateData,
+		RecordsToGenerate:   recordsToGenerate,
+		RecordsPerLlmCall:   recordsPerLlmCall,
+		TestSplit:           float32(testSplit),
+		WriteBatchSize:      writeBatchSize,
+		VerifyGeneratedData: req.VerifyGeneratedData,
 	}
 	if req.TaskPrompt != nil {
 		payload.TaskPrompt = *req.TaskPrompt

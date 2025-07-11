@@ -95,11 +95,12 @@ type Sample struct {
 }
 
 type FinetuneRequest struct {
-	Name         string          `json:"Name"`
-	TaskPrompt   *string         `json:"TaskPrompt"`
-	GenerateData bool            `json:"GenerateData"`
-	Tags         []types.TagInfo `json:"Tags"`
-	Samples      []Sample        `json:"Samples,omitempty"`
+	Name                string          `json:"Name"`
+	TaskPrompt          *string         `json:"TaskPrompt"`
+	GenerateData        bool            `json:"GenerateData"`
+	VerifyGeneratedData bool            `json:"VerifyGeneratedData" default:"true"`
+	Tags                []types.TagInfo `json:"Tags"`
+	Samples             []Sample        `json:"Samples,omitempty"`
 }
 
 type FinetuneResponse struct {
