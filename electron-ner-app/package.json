@@ -13,7 +13,7 @@
     "sign-libonnxruntime": "codesign --force --sign \"ThirdAI Corp (KJ35JRW2T6)\" --options runtime --entitlements build/entitlements.mac.plist resources/libonnxruntime.dylib",
     "copy-libonnxruntime": "cp build/libonnxruntime.dylib resources/",
     "sign-libomp": "codesign --force --sign \"ThirdAI Corp (KJ35JRW2T6)\"  --options runtime --entitlements build/entitlements.mac.plist resources/libomp.dylib",
-    "build-plugin-conditional": "([[ (\"$BUILD_PLUGIN\" == TRUE || ! -d ../plugin/plugin-python/dist || -z \"$(ls -A ../plugin/plugin-python/dist 2>/dev/null)\") && (\"$MODEL_TYPE\" == python_* || \"$MODEL_TYPE\" == onnx_*) && (\"$ENABLE_PYTHON\" == TRUE) ]] && npm run build-plugin || true)",
+    "build-plugin-conditional": "node scripts/build-plugin-conditional.js",
     "prepare-files": "rm -rf bin && npm run build-plugin-conditional && npm run copy-backend && npm run copy-model && rm -rf resources && mkdir resources && npm run copy-resources",
     "dev": "npm run prepare-files && concurrently --kill-others \"cd ../frontend && npm run dev && cd ../electron-ner-app\" \"wait-on http://localhost:3007 && electron .\"",
     "start-backend": "node scripts/start-backend.js",
