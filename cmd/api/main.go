@@ -19,6 +19,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+
+	ort "github.com/yalue/onnxruntime_go"
 )
 
 type APIConfig struct {
@@ -36,6 +38,7 @@ type APIConfig struct {
 	LicenseKey        string `env:"LICENSE_KEY" envDefault:""`
 	EnterpriseMode    bool   `env:"ENTERPRISE_MODE" envDefault:"false"`
 	HostModelDir      string `env:"HOST_MODEL_DIR" envDefault:"/app/models"`
+	OnnxRuntimeDylib  string `env:"ONNX_RUNTIME_DYLIB"`
 }
 
 func main() {
@@ -47,6 +50,19 @@ func main() {
 	if err := env.Parse(&cfg); err != nil {
 		log.Fatalf("error parsing config: %v", err)
 	}
+
+	if cfg.OnnxRuntimeDylib == "" {
+		log.Fatalf("ONNX_RUNTIME_DYLIB must be set")
+	}
+	ort.SetSharedLibraryPath(cfg.OnnxRuntimeDylib)
+	if err := ort.InitializeEnvironment(); err != nil {
+		log.Fatalf("could not init ONNX Runtime: %v", err)
+	}
+	defer func() {
+		if err := ort.DestroyEnvironment(); err != nil {
+			log.Fatalf("error destroying onnx env: %v", err)
+		}
+	}()
 
 	db, err := database.NewDatabase(cfg.DatabaseURL)
 	if err != nil {
@@ -74,17 +90,26 @@ func main() {
 
 	cmd.InitializePresidioModel(db)
 
-	if err := cmd.InitializePythonCnnModel(context.Background(), db, s3ObjectStore, cfg.ModelBucketName, "advanced", cfg.HostModelDir); err != nil {
-		log.Fatalf("Failed to init & upload python CNN model: %v", err)
-	}
+	log.Printf("DEBUG: cfg.ModelBucketName = '%s'", cfg.ModelBucketName)
+	log.Printf("DEBUG: cfg.HostModelDir = '%s'", cfg.HostModelDir)
+	log.Printf("DEBUG: env MODEL_TYPE = '%s'", os.Getenv("MODEL_TYPE"))
+	log.Printf("DEBUG: env MODEL_DIR = '%s'", os.Getenv("MODEL_DIR"))
 
-	if err := cmd.InitializePythonTransformerModel(context.Background(), db, s3ObjectStore, cfg.ModelBucketName, "ultra", cfg.HostModelDir); err != nil {
-		log.Fatalf("Failed to init & upload python transformer model: %v", err)
+	log.Printf("DEBUG: About to call InitializePythonCnnModel with HostModelDir = '%s'", cfg.HostModelDir)
+	if err := cmd.InitializeOnnxCnnModel(context.Background(), db, s3ObjectStore, cfg.ModelBucketName, "basic", cfg.HostModelDir); err != nil {
+		log.Fatalf("failed to init ONNX model: %v", err)
 	}
+	// if err := cmd.InitializePythonCnnModel(context.Background(), db, s3ObjectStore, cfg.ModelBucketName, "advanced", cfg.HostModelDir); err != nil {
+	// 	log.Fatalf("Failed to init & upload python CNN model: %v", err)
+	// }
 
-	if err := cmd.RemoveExcludedTagsFromAllModels(db); err != nil {
-		log.Fatalf("Failed to remove excluded tags from all models: %v", err)
-	}
+	// if err := cmd.InitializePythonTransformerModel(context.Background(), db, s3ObjectStore, cfg.ModelBucketName, "ultra", cfg.HostModelDir); err != nil {
+	// 	log.Fatalf("Failed to init & upload python transformer model: %v", err)
+	// }
+
+	// if err := cmd.RemoveExcludedTagsFromAllModels(db); err != nil {
+	// 	log.Fatalf("Failed to remove excluded tags from all models: %v", err)
+	// }
 
 	// Initialize RabbitMQ Publisher
 	publisher, err := messaging.NewRabbitMQPublisher(cfg.RabbitMQURL)

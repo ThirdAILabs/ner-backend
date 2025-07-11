@@ -450,7 +450,7 @@ export default function NewJobPage() {
       return [
         {
           Id: models.find((model) => model.Name === 'basic')?.Id || 'basic',
-          Name: 'Base',
+          Name: 'Default',
           Disabled: false,
           Description:
             'Fast and lightweight AI model. Allows users to perpetually customize fields with user feedback, includes advanced monitoring features.',

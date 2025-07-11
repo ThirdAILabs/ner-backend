@@ -78,10 +78,15 @@ services:
       - S3_ENDPOINT_URL=${S3_ENDPOINT_URL:-http://minio:9000}
       - INTERNAL_AWS_ACCESS_KEY_ID=${INTERNAL_AWS_ACCESS_KEY_ID:-YOURACCESSKEY}
       - INTERNAL_AWS_SECRET_ACCESS_KEY=${INTERNAL_AWS_SECRET_ACCESS_KEY:-YOURSECRETKEY}
+      - ENTERPRISE_MODE=${ENTERPRISE_MODE:-true}
+      - LICENSE_KEY=${LICENSE_KEY:-local:Ln8DAQEHTGljZW5zZQH/gAABAgEHUGF5bG9hZAEKAAEJU2lnbmF0dXJlAQoAAAD+ATX/gAEseyJFeHBpcmF0aW9uIjoiMjAyNS0wOC0wMlQxODowNDo1OC4xNjAwMjFaIn0B/gEAJpoMhnwsqAJ6CmQBvsjiBV6JqxgY1g+Quc8LcX0QIPSAvv0jTKzc8zLdr/QkTnEvOx2m2xb4sKEIY+uDTZ7AFFARSO8Z3exFt4SHDWzGy4adDMfawm9D0xwC94oypbzta2icZ7ikZmgAZuuQcHmrBEcZqLMgOVtYGtS8l6NDUue0FW8F1BzQjINfgaQFGWoJzuVLL7nGYLoHUIVmG5lwn64uY55BzhjhQUUwnL75c8S2hZYEssZghRPj9n1lRwZvaN8gtu7JTKG/E2QuegOf5R1JYfXPMd9ARE/37NtAv9TsDltCFYXXwQkIceDX7OcHQMFn8HkQxmG+oOyxc7Qc7gA=}
+      - MODEL_DIR=${MODEL_DIR:-/Users/ashutosh/ThirdAI/models}
+      - MODEL_TYPE=${MODEL_TYPE:-onnx_cnn}
+      - ONNX_RUNTIME_DYLIB=/app/resources/libonnxruntime.so
     volumes:
       # - .:/app # Mount code for development (requires Go toolchain in container or local build)
       - /etc/localtime:/etc/localtime:ro
-      - ${MODEL_HOST_PATH:-/share/ner/models}:/app/models:ro # Mount models directory (read-only)
+      - ${MODEL_HOST_PATH:-/Users/ashutosh/ThirdAI/models}:/app/models:ro # Mount models directory (read-only)
     depends_on:
       rabbitmq:
         condition: service_healthy

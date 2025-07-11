@@ -121,7 +121,7 @@ To take services down, run: \
 `docker compose --profile worker down`
 
 Access Services (default ports): \
-API Health: http://localhost:8001/health \
+API Health: http://localhost:8001/api/v1/health \
 RabbitMQ UI: http://localhost:15672 \
 MinIO UI: http://localhost:9090
 
