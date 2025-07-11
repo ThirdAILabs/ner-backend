@@ -234,6 +234,9 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 	defer bar.Close()
 	for i := range opts.TagsInfo {
 		tag := &opts.TagsInfo[i]
+		if tag.Name == "O" {
+			continue
+		}
 
 		if len(strings.Fields(tag.Desc)) <= 10 {
 			ed, err := d.ExtendDescription(tag)

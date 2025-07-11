@@ -9,6 +9,16 @@ type TagInfo struct {
 
 var CommonModelTags = []TagInfo{
 	{
+		Name: "O",
+		Desc: "The 'O' tag is used to indicate that a word or phrase does not belong to any specific named entity category. It is typically applied in contexts where the text does not contain any identifiable entities such as names, locations, organizations, or other specific identifiers. This tag helps in distinguishing between relevant entities and general text, allowing for clearer data processing and analysis. Recognizable patterns include words that do not follow the structure of names or titles, such as common nouns, verbs, or adjectives.",
+		Examples: []string{
+			"the", "and", "to", "of", "in", "a", "is", "was", "for", "on", "with", "as", "by", "at", "this", "that", "it", "from", "an", "be", "are", "not", "but", "or", "all", "any", "some", "no", "such", "more", "most", "much", "many",
+		},
+		Contexts: []string{
+			"General text", "Common nouns", "Verbs", "Adjectives", "Prepositions", "Conjunctions", "Articles", "Pronouns", "Adverbs", "Interjections", "Punctuation marks", "Numbers", "Dates without specific entities", "Generic phrases", "Everyday language", "Informal speech", "Technical jargon without entities", "Legal disclaimers", "Scientific terms without entities", "Mathematical expressions",
+		},
+	},
+	{
 		Name: "NAME",
 		Desc: "The 'NAME' tag is used for identifying and categorizing the individual identifiers of people, such as first names, last names, full names, or any combination thereof, as well as titles and honorifics. This tag is typically applied in contexts where personal identification is necessary, such as in lists, narratives, or databases. Recognizable patterns include capitalized words at the beginning of text or following titles (e.g., Dr., Mr., Ms.), or those that form common name structures, such as 'Maria Gomez'. Pay attention to formatting cues, cultural naming conventions, and context to accurately apply this tag.",
 		Examples: []string{
