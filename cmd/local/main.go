@@ -184,6 +184,15 @@ func main() {
 	}
 
 	slog.Info("starting backend", "root", cfg.Root, "port", cfg.Port, "app_data_dir", cfg.AppDataDir, "model_dir", cfg.ModelDir, "model_type", cfg.ModelType)
+	
+	// Convert relative paths to absolute paths
+	if !filepath.IsAbs(cfg.Root) {
+		absRoot, err := filepath.Abs(cfg.Root)
+		if err != nil {
+			log.Fatalf("failed to get absolute path for root: %v", err)
+		}
+		cfg.Root = absRoot
+	}
 
 	localBaseDir := filepath.Join(cfg.Root, "storage")
 
