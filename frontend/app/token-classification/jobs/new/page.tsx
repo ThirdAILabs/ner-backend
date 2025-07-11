@@ -215,12 +215,20 @@ const FileSources: React.FC<FileSourcesProps> = ({
               }
             }}
             icon={
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z M8 11h8m-4-4v8"
-              />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                className="lucide lucide-folder-icon lucide-folder"
+              >
+                <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
+              </svg>
             }
             title="Local Files or Folders"
             description="Select files or folders from your computer"
@@ -510,7 +518,8 @@ export default function NewJobPage() {
         const modelData = await nerService.listModels();
         const trainedModels = modelData.filter((model) => model.Status === 'TRAINED');
         setModels(trainedModels.reverse());
-        setSelectedModelId(trainedModels[0].Id);
+        const basicModel = trainedModels.find((model) => model.Name === 'basic');
+        setSelectedModelId(basicModel ? basicModel.Id : null);
       } catch (err) {
         console.error('Error fetching models:', err);
         setError('Failed to load models. Please try again.');

@@ -209,15 +209,9 @@ export function DatabaseTable({
   // Load path map
   useEffect(() => {
     if (uploadId) {
-      console.log('DatabaseTable - Loading path map for uploadId:', uploadId);
       nerService
         .getFileNameToPath(uploadId)
         .then((pathMap) => {
-          console.log('DatabaseTable - Path map loaded:', {
-            uploadId,
-            pathMapKeys: Object.keys(pathMap || {}),
-            pathMapEntries: Object.entries(pathMap || {}),
-          });
           setPathMap(pathMap);
         })
         .catch((error) => {
