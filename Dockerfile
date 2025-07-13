@@ -71,6 +71,8 @@ RUN mkdir -p /app/resources
 
 COPY resources/libonnxruntime.so /app/resources/libonnxruntime.so
 
+ENV LD_LIBRARY_PATH=/app/resources:$LD_LIBRARY_PATH
+
 COPY plugin/plugin-python/requirements.txt ./requirements.txt
 
 RUN pip install --no-cache-dir -r requirements.txt
