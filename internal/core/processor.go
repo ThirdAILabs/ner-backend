@@ -830,8 +830,8 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 		tagsInfo[i] = types.TagInfo{
 			Name:     t.Tag,
 			Desc:     t.Description,
-			Examples: t.Examples,
-			Contexts: t.Contexts,
+			Examples: []string(t.Examples),
+			Contexts: []string(t.Contexts),
 		}
 	}
 
