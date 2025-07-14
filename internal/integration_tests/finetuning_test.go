@@ -325,9 +325,8 @@ func TestFinetuningOnnxModel(t *testing.T) {
 
 	tags := []string{
 		"ADDRESS", "CARD_NUMBER", "COMPANY", "CREDIT_SCORE", "DATE",
-		"EMAIL", "ETHNICITY", "GENDER", "ID_NUMBER", "LICENSE_PLATE",
-		"LOCATION", "NAME", "O", "PHONENUMBER", "SERVICE_CODE",
-		"SEXUAL_ORIENTATION", "SSN", "URL", "VIN",
+		"EMAIL", "ID_NUMBER", "LICENSE_PLATE",
+		"LOCATION", "NAME", "O", "PHONENUMBER", "SSN", "URL", "VIN",
 	}
 
 	tagInfos := make([]types.TagInfo, len(tags))
