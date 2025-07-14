@@ -17,7 +17,7 @@
   "content_scripts": [
     {
       "matches": ["https://chatgpt.com/*"],
-      "js": ["wasm/wasm-loader.js", "content.js"],
+      "js": ["wasm/wasm-loader.js", "wasm/markitdown-loader.js", "content.js"],
       "css": ["content.css"],
       "run_at": "document_idle"
     }
@@ -50,6 +50,8 @@
         "popup.html",
         "wasm/build/*",
         "wasm/wasm-loader.js",
+        "wasm/markitdown-loader.js",
+        "wasm/markitdown_wasm.wasm",
         "logo-shield.png"
       ],
       "matches": ["https://chatgpt.com/*"]

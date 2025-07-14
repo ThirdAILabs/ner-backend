@@ -547,6 +547,11 @@ function cloneDropEvent(originalEvent) {
 
 function processUploadedFiles(files) {
   console.log("Uploaded files", files);
+  Array.from(files).forEach(file => {
+    file.text().then(text => {
+      console.log("File text", text);
+    });
+  })
   // TODO: Process uploaded files.
 }
 
@@ -567,9 +572,9 @@ class FileUploadInterceptor {
   }
 
   manualUploadEventListener(e) {
-    processUploadedFiles(e.target.files);
     e.stopPropagation();
     e.preventDefault();
+    processUploadedFiles(e.target.files);
   }
 
   setupDropArea() {
@@ -582,12 +587,12 @@ class FileUploadInterceptor {
 
   dropEventListener(e) {
     if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      e.stopPropagation();
+      e.preventDefault();
       processUploadedFiles(e.dataTransfer.files);
       if (FileUploadInterceptor.dropArea) {
         FileUploadInterceptor.dropArea.dispatchEvent(cloneDropEvent(e));
       }
-      e.stopPropagation();
-      e.preventDefault();
     }
   }
 }
@@ -731,7 +736,10 @@ async function initialize() {
     const response = await fetch(`http://localhost:16549/api/v1/chat/sessions/${sessionId}/restore`, {
       method: 'POST',
       body: JSON.stringify({ Message: text }),
-    }).then(response => response.json()).then(data => data.Message);
+    }).then(response => response.json()).then(data => data.Message).catch(() => {
+      console.error("Error restoring message", text);
+      return text;
+    });
     return response;
   }
 

@@ -5,7 +5,7 @@ function injectContentScriptOnMatchingTabs() {
     for (const tab of tabs) {
       chrome.scripting.executeScript({
         target: { tabId: tab.id },
-        files: ["wasm/wasm-loader.js", "content.js"]
+        files: ["wasm/wasm-loader.js", "wasm/markitdown-loader.js", "content.js"]
       });
     }
   });
