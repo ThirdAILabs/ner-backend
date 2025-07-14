@@ -1,4 +1,7 @@
 # --- Frontend Build Stage ---
+ARG ENTERPRISE_MODE=true
+ENV ENTERPRISE_MODE=${ENTERPRISE_MODE}
+
 FROM node:22-alpine AS frontend-builder
 WORKDIR /frontend
 
@@ -49,6 +52,9 @@ RUN CGO_ENABLED=1 GOOS=linux GOARCH=${TARGETARCH} go build -v -o /app/worker ./c
 
 
 FROM ubuntu:24.04
+
+ARG ENTERPRISE_MODE=true
+ENV ENTERPRISE_MODE=${ENTERPRISE_MODE}
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
