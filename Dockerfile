@@ -70,6 +70,7 @@ WORKDIR /app
 RUN mkdir -p /app/resources
 
 COPY resources/libonnxruntime.so /app/resources/libonnxruntime.so
+COPY resources/libonnxruntime_providers_shared.so /app/resources/libonnxruntime_providers_shared.so
 
 ENV LD_LIBRARY_PATH=/app/resources:$LD_LIBRARY_PATH
 

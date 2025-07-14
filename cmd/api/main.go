@@ -93,7 +93,7 @@ func main() {
 		panic("failed to create model bucket")
 	}
 
-	cmd.InitializePresidioModel(db)
+	// cmd.InitializePresidioModel(db)
 
 	log.Printf("DEBUG: cfg.ModelBucketName = '%s'", cfg.ModelBucketName)
 	log.Printf("DEBUG: cfg.HostModelDir = '%s'", cfg.HostModelDir)
