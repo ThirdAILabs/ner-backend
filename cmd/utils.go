@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -18,7 +19,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
-	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
 
@@ -147,12 +147,20 @@ func initializeModel(
 	// Update tags
 	modelTags := make([]database.ModelTag, len(tags))
 	for i, tag := range tags {
+		bExamples, err := json.Marshal(tag.Examples)
+		if err != nil {
+			return fmt.Errorf("failed to marshal examples for tag %s: %w", tag.Name, err)
+		}
+		bContexts, err := json.Marshal(tag.Contexts)
+		if err != nil {
+			return fmt.Errorf("failed to marshal contexts for tag %s: %w", tag.Name, err)
+		}
 		modelTags[i] = database.ModelTag{
 			ModelId:     model.Id,
 			Tag:         tag.Name,
 			Description: tag.Desc,
-			Examples:    pq.StringArray(tag.Examples),
-			Contexts:    pq.StringArray(tag.Contexts),
+			Examples:    bExamples,
+			Contexts:    bContexts,
 		}
 	}
 	if err := db.Model(&model).Association("Tags").Replace(modelTags); err != nil {

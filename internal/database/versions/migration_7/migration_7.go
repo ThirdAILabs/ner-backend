@@ -1,10 +1,12 @@
 package migration_7
 
 import (
+	"encoding/json"
+	"fmt"
 	"ner-backend/internal/core/types"
 
 	"github.com/google/uuid"
-	"github.com/lib/pq"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -12,29 +14,31 @@ type ModelTag struct {
 	ModelId     uuid.UUID      `gorm:"type:uuid;primaryKey"`
 	Tag         string         `gorm:"primaryKey"`
 	Description string         `gorm:"size:1023 default:''"`
-	Examples    pq.StringArray `gorm:"type:text[];default:array[]::text[]"`
-	Contexts    pq.StringArray `gorm:"type:text[];default:array[]::text[]"`
+	Examples    datatypes.JSON `gorm:"type:jsonb;default:'[]'"`
+	Contexts    datatypes.JSON `gorm:"type:jsonb;default:'[]'"`
 }
 
 func Migration(db *gorm.DB) error {
 	// Add new fields to ModelTag
-	if err := db.Migrator().AddColumn(&ModelTag{}, "description"); err != nil {
-		return err
-	}
-	if err := db.Migrator().AddColumn(&ModelTag{}, "examples"); err != nil {
-		return err
-	}
-	if err := db.Migrator().AddColumn(&ModelTag{}, "contexts"); err != nil {
+	if err := db.AutoMigrate(&ModelTag{}); err != nil {
 		return err
 	}
 
 	for _, tagInfo := range types.CommonModelTags {
+		bExamples, err := json.Marshal(tagInfo.Examples)
+		if err != nil {
+			return fmt.Errorf("Migration failed: could not marshal examples for tag %s: %w", tagInfo.Name, err)
+		}
+		bContexts, err := json.Marshal(tagInfo.Contexts)
+		if err != nil {
+			return fmt.Errorf("Migration failed: could not marshal contexts for tag %s: %w", tagInfo.Name, err)
+		}
 		result := db.Model(&ModelTag{}).
 			Where("tag = ?", tagInfo.Name).
 			Updates(map[string]interface{}{
 				"description": tagInfo.Desc,
-				"examples":    pq.StringArray(tagInfo.Examples),
-				"contexts":    pq.StringArray(tagInfo.Contexts),
+				"examples":    bExamples,
+				"contexts":    bContexts,
 			})
 
 		if result.Error != nil {

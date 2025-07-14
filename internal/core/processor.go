@@ -827,11 +827,21 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 
 	tagsInfo := make([]types.TagInfo, len(baseModel.Tags)) // Assuming model.Tags is same as baseModel.Tags
 	for i, t := range baseModel.Tags {
+		var examples []string
+		var contexts []string
+		if err := json.Unmarshal(t.Examples, &examples); err != nil {
+			slog.Error("error unmarshalling tag examples", "tag", t.Tag, "error", err)
+			return fmt.Errorf("error unmarshalling tag examples: %w", err)
+		}
+		if err := json.Unmarshal(t.Contexts, &contexts); err != nil {
+			slog.Error("error unmarshalling tag contexts", "tag", t.Tag, "error", err)
+			return fmt.Errorf("error unmarshalling tag contexts: %w", err)
+		}
 		tagsInfo[i] = types.TagInfo{
 			Name:     t.Tag,
 			Desc:     t.Description,
-			Examples: []string(t.Examples),
-			Contexts: []string(t.Contexts),
+			Examples: examples,
+			Contexts: contexts,
 		}
 	}
 
