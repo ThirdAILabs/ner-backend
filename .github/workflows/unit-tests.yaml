@@ -19,7 +19,7 @@ on:
 
 jobs:
   unit-tests:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-22.04-8-cores
 
     env:
       AWS_ACCESS_KEY_ID:     ${{ secrets.AWS_SECRET_KEY }}
