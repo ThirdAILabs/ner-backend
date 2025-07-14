@@ -55,11 +55,11 @@ func createDatabase(root string) *gorm.DB {
 	if err != nil {
 		log.Fatalf("Failed to set default storage provider: %v", err)
 	}
-
 	path := filepath.Join(root, "db", "pocket-shield.db")
 	if err := os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
 		log.Fatalf("Failed to create database directory: %v", err)
 	}
+	slog.Info("Using database at", "path", path)
 
 	db, err := gorm.Open(sqlite.Open(path), &gorm.Config{})
 	if err != nil {
