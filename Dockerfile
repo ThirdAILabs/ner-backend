@@ -1,9 +1,9 @@
 # --- Frontend Build Stage ---
-ARG ENTERPRISE_MODE=true
-ENV ENTERPRISE_MODE=${ENTERPRISE_MODE}
-
 FROM node:22-alpine AS frontend-builder
 WORKDIR /frontend
+
+ARG ENTERPRISE_MODE=true
+ENV ENTERPRISE_MODE=${ENTERPRISE_MODE}
 
 COPY frontend/package*.json ./
 RUN npm install --force
