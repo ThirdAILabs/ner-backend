@@ -168,7 +168,7 @@ autoUpdater.on('update-downloaded', async (info) => {
 
     const result = await dialog.showMessageBox(mainWindow, {
         type: 'question',
-        buttons: ['Install && Restart Now', 'Later'],
+        buttons: ['Install & Restart Now', 'Later'],
         defaultId: 0,
         cancelId: 1,
         title: 'Update Ready',

@@ -75,26 +75,14 @@ export function TableContent({
       }
     }
 
-    console.log('handleFullPath:', {
-      fileIdentifier,
-      directLookup: pathMap?.[fileIdentifier],
-      parts: fileIdentifier.split(/[/\\]/),
-      extractedFilename: fileIdentifier.split(/[/\\]/).slice(-1).join(''),
-      fullPath,
-      pathMap: Object.keys(pathMap || {}).length,
-      pathMapKeys: Object.keys(pathMap || {}),
-      pathMapEntries: Object.entries(pathMap || {}),
-    });
     const openFile = () => {
       if (!fullPath) {
         console.error('No full path found for file:', fileIdentifier);
-        alert(`Cannot open file: Path not found for ${fileIdentifier}`);
         return;
       }
       // @ts-ignore
       window.electron?.openFile?.(fullPath).catch((err: any) => {
         console.error('Error opening file:', err);
-        alert(`Failed to open file: ${err.message || err}`);
       });
     };
 
