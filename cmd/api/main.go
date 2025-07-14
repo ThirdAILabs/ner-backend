@@ -58,6 +58,11 @@ func main() {
 	if err := ort.InitializeEnvironment(); err != nil {
 		log.Fatalf("could not init ONNX Runtime: %v", err)
 	}
+	// DEBUG
+	log.Println("ONNX Runtime initialized successfully.")
+	version := ort.GetVersion()
+	log.Println("ONNX Runtime version:", version)
+
 	defer func() {
 		if err := ort.DestroyEnvironment(); err != nil {
 			log.Fatalf("error destroying onnx env: %v", err)
