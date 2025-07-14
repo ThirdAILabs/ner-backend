@@ -155,18 +155,17 @@ func transformReports(db *gorm.DB) error {
 		storageType := defaultStorageProvider
 
 		var paramsJSON []byte
-		var err error
+		var marshalErr error
 
 		if storageType == storage.UploadType {
 			uploadId, err := uuid.Parse(report.SourceS3Prefix.String)
 			if err != nil {
 				return fmt.Errorf("for upload reports SourceS3Prefix must be a valid UUID, got '%s': %w", report.SourceS3Prefix.String, err)
 			}
-			// Right now the type shoudl either
 			storageParams := storage.UploadParams{
 				UploadId: uploadId,
 			}
-			paramsJSON, err = json.Marshal(storageParams)
+			paramsJSON, marshalErr = json.Marshal(storageParams)
 		} else if storageType == storage.S3Type {
 			storageParams := storage.S3ConnectorParams{
 				Endpoint: report.S3Endpoint.String,
@@ -174,13 +173,13 @@ func transformReports(db *gorm.DB) error {
 				Bucket:   report.SourceS3Bucket,
 				Prefix:   report.SourceS3Prefix.String,
 			}
-			paramsJSON, err = json.Marshal(storageParams)
+			paramsJSON, marshalErr = json.Marshal(storageParams)
 		} else {
 			return fmt.Errorf("unhandled storage type in migration_6: %s", storageType)
 		}
 
-		if err != nil {
-			return fmt.Errorf("error marshaling params for report %s: %w", report.Id, err)
+		if marshalErr != nil {
+			return fmt.Errorf("error marshaling params for report %s: %w", report.Id, marshalErr)
 		}
 
 		if err := db.Exec("UPDATE reports SET storage_type = ?, storage_params = ? WHERE id = ?",
