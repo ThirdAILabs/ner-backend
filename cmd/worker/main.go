@@ -18,13 +18,11 @@ import (
 type WorkerConfig struct {
 	DatabaseURL                 string `env:"DATABASE_URL,notEmpty,required"`
 	RabbitMQURL                 string `env:"RABBITMQ_URL,notEmpty,required"`
-	S3EndpointURL               string `env:"S3_ENDPOINT_URL,notEmpty,required"`
-	S3AccessKeyID               string `env:"INTERNAL_AWS_ACCESS_KEY_ID,notEmpty,required"`
-	S3SecretAccessKey           string `env:"INTERNAL_AWS_SECRET_ACCESS_KEY,notEmpty,required"`
-	ModelBucketName             string `env:"MODEL_BUCKET_NAME" envDefault:"ner-models"`
-	UploadBucketName            string `env:"UPLOAD_BUCKET_NAME" envDefault:"uploads"`
-	QueueNames                  string `env:"QUEUE_NAMES" envDefault:"inference_queue,training_queue,shard_data_queue"`
-	WorkerConcurrency           int    `env:"CONCURRENCY" envDefault:"1"`
+	S3EndpointURL               string `env:"S3_ENDPOINT_URL"`
+	S3Region                    string `env:"S3_REGION"`
+	S3AccessKeyID               string `env:"INTERNAL_AWS_ACCESS_KEY_ID"`
+	S3SecretAccessKey           string `env:"INTERNAL_AWS_SECRET_ACCESS_KEY"`
+	BucketName                  string `env:"BUCKET_NAME,notEmpty,required"`
 	LicenseKey                  string `env:"LICENSE_KEY" envDefault:""`
 	PythonExecutablePath        string `env:"PYTHON_EXECUTABLE_PATH" envDefault:"python"`
 	PythonModelPluginScriptPath string `env:"PYTHON_MODEL_PLUGIN_SCRIPT_PATH" envDefault:"plugin/plugin-python/plugin.py"`
@@ -46,11 +44,12 @@ func main() {
 	}
 
 	s3ObjectStoreCfg := storage.S3ClientConfig{
-		Endpoint:     cfg.S3EndpointURL,
+		Endpoint:        cfg.S3EndpointURL,
+		Region:          cfg.S3Region,
 		AccessKeyID:     cfg.S3AccessKeyID,
 		SecretAccessKey: cfg.S3SecretAccessKey,
 	}
-	s3ObjectStore, err := storage.NewS3ObjectStore(s3ObjectStoreCfg)
+	s3ObjectStore, err := storage.NewS3ObjectStore(cfg.BucketName, s3ObjectStoreCfg)
 	if err != nil {
 		log.Fatalf("Worker: Failed to create S3 client: %v", err)
 	}
@@ -72,7 +71,7 @@ func main() {
 
 	loaders := core.NewModelLoaders()
 
-	worker := core.NewTaskProcessor(db, s3ObjectStore, publisher, receiver, licensing, "./tmp_models_TODO", cfg.ModelBucketName, cfg.UploadBucketName, loaders)
+	worker := core.NewTaskProcessor(db, s3ObjectStore, publisher, receiver, licensing, "./tmp_models_TODO", cmd.ModelBucketName, cmd.UploadBucketName, loaders)
 
 	go worker.Start()
 

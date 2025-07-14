@@ -47,10 +47,6 @@ const (
 )
 
 func NewBackendService(db *gorm.DB, storage storage.ObjectStore, uploadBucket string, pub messaging.Publisher, chunkTargetBytes int64, licenseVerifier licensing.LicenseVerifier, enterpriseMode bool) *BackendService {
-	if err := storage.CreateBucket(context.Background(), uploadBucket); err != nil {
-		slog.Error("error creating upload bucket", "error", err)
-		panic("failed to create upload bucket")
-	}
 
 	return &BackendService{db: db, storage: storage, uploadBucket: uploadBucket, publisher: pub, chunkTargetBytes: chunkTargetBytes, licensing: licenseVerifier, enterpriseMode: enterpriseMode}
 }
@@ -864,7 +860,7 @@ func (s *BackendService) UploadFiles(r *http.Request) (any, error) {
 			filenames = append(filenames, part.FileName())
 
 			newFilepath := filepath.Join(uploadId.String(), part.FileName())
-			if err := s.storage.PutObject(r.Context(), s.uploadBucket, newFilepath, part); err != nil {
+			if err := s.storage.PutObject(r.Context(), filepath.Join(s.uploadBucket, newFilepath), part); err != nil {
 				slog.Error("error uploading file to storage", "error", err)
 				return nil, CodedErrorf(http.StatusInternalServerError, "error saving file")
 			}

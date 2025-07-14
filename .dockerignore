@@ -1,0 +1,6 @@
+plugin/.cache
+plugin/plugin-python/.cache
+
+frontend/node_modules
+frontend/.next
+frontend/out
