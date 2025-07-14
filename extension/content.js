@@ -522,6 +522,30 @@ class MessageModifier {
   }
 }
 
+function cloneDropEvent(originalEvent) {
+  const init = {
+    bubbles: originalEvent.bubbles,
+    cancelable: originalEvent.cancelable,
+    composed: originalEvent.composed,
+    clientX: originalEvent.clientX,
+    clientY: originalEvent.clientY,
+    screenX: originalEvent.screenX,
+    screenY: originalEvent.screenY,
+    ctrlKey: originalEvent.ctrlKey,
+    shiftKey: originalEvent.shiftKey,
+    altKey: originalEvent.altKey,
+    metaKey: originalEvent.metaKey,
+    button: originalEvent.button,
+    buttons: originalEvent.buttons,
+    relatedTarget: originalEvent.relatedTarget,
+    dataTransfer: new DataTransfer(),
+    // dataTransfer is intentionally excluded
+  };
+
+  return new DragEvent('drop', init);
+}
+
+
 async function setupPage(redact, restore) {
   const file = document.querySelector('input[type="file"]');
   
@@ -535,18 +559,26 @@ async function setupPage(redact, restore) {
       await messageModifier.modifyMessage(message, Date.now());
     }
   }
+
+  let dropArea = null;
+
+  const dropEventListener = (e) => {
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      console.log("Dropped files", e.dataTransfer.files);
+      if (dropArea) {
+        dropArea.dispatchEvent(cloneDropEvent(e));
+      }
+      e.stopPropagation();
+      e.preventDefault();
+    }
+  }
+
+  console.log("Drop areas", document.querySelectorAll("div[role='presentation']"));
   
   let elementObserver = new MutationObserver((mutations) => {
     const file = document.querySelector('input[type="file"]');
     if (file) {
       file.addEventListener('change', (e) => {
-        showFileNotSanitizedWarningPopup();
-      });
-    }
-
-    const dropArea = document.querySelector("div[role='presentation']");
-    if (dropArea) {
-      dropArea.addEventListener('drop', (e) => {
         showFileNotSanitizedWarningPopup();
       });
     }
@@ -561,7 +593,11 @@ async function setupPage(redact, restore) {
     messageModifier.handleMutations(mutations, Date.now());
     addToggleButton();
 
-
+    dropArea = document.querySelector("div[role='presentation']");
+    if (dropArea) {
+      dropArea.removeEventListener('drop', dropEventListener, true);
+      dropArea.addEventListener('drop', dropEventListener, true);
+    }
   });
   elementObserver.observe(document.body, { childList: true, subtree: true });
 
