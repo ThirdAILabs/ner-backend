@@ -29,8 +29,6 @@ type APIConfig struct {
 	S3SecretAccessKey string `env:"INTERNAL_AWS_SECRET_ACCESS_KEY"`
 	BucketName        string `env:"BUCKET_NAME,notEmpty,required"`
 	LicenseKey        string `env:"LICENSE_KEY" envDefault:""`
-	QueueNames        string `env:"QUEUE_NAMES" envDefault:"inference_queue,training_queue,shard_data_queue"`
-	WorkerConcurrency int    `env:"CONCURRENCY" envDefault:"1"`
 	APIPort           string `env:"API_PORT" envDefault:"8001"`
 	ChunkTargetBytes  int64  `env:"S3_CHUNK_TARGET_BYTES" envDefault:"10737418240"`
 	EnterpriseMode    bool   `env:"ENTERPRISE_MODE" envDefault:"false"`
