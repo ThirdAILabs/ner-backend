@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"gorm.io/datatypes"
 )
 
@@ -31,11 +32,11 @@ type Model struct {
 }
 
 type ModelTag struct {
-	ModelId     uuid.UUID `gorm:"type:uuid;primaryKey"`
-	Tag         string    `gorm:"primaryKey"`
-	Description string    `gorm:"size:1023 default:''"`
-	Examples    []string  `gorm:"type:text[];default:array[]::text[]"`
-	Contexts    []string  `gorm:"type:text[];default:array[]::text[]"`
+	ModelId     uuid.UUID      `gorm:"type:uuid;primaryKey"`
+	Tag         string         `gorm:"primaryKey"`
+	Description string         `gorm:"size:1023 default:''"`
+	Examples    pq.StringArray `gorm:"type:text[];default:array[]::text[]"`
+	Contexts    pq.StringArray `gorm:"type:text[];default:array[]::text[]"`
 }
 
 const (

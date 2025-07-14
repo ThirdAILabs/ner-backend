@@ -4,15 +4,16 @@ import (
 	"ner-backend/internal/core/types"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
 
 type ModelTag struct {
-	ModelId     uuid.UUID `gorm:"type:uuid;primaryKey"`
-	Tag         string    `gorm:"primaryKey"`
-	Description string    `gorm:"size:1023;default:''"`
-	Examples    []string  `gorm:"type:text[];default:array[]::text[]"`
-	Contexts    []string  `gorm:"type:text[];default:array[]::text[]"`
+	ModelId     uuid.UUID      `gorm:"type:uuid;primaryKey"`
+	Tag         string         `gorm:"primaryKey"`
+	Description string         `gorm:"size:1023 default:''"`
+	Examples    pq.StringArray `gorm:"type:text[];default:array[]::text[]"`
+	Contexts    pq.StringArray `gorm:"type:text[];default:array[]::text[]"`
 }
 
 func Migration(db *gorm.DB) error {
@@ -32,8 +33,8 @@ func Migration(db *gorm.DB) error {
 			Where("tag = ?", tagInfo.Name).
 			Updates(map[string]interface{}{
 				"description": tagInfo.Desc,
-				"examples":    tagInfo.Examples,
-				"contexts":    tagInfo.Contexts,
+				"examples":    pq.StringArray(tagInfo.Examples),
+				"contexts":    pq.StringArray(tagInfo.Contexts),
 			})
 
 		if result.Error != nil {

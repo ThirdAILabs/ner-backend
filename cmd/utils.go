@@ -18,6 +18,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
 
@@ -150,8 +151,8 @@ func initializeModel(
 			ModelId:     model.Id,
 			Tag:         tag.Name,
 			Description: tag.Desc,
-			Examples:    tag.Examples,
-			Contexts:    tag.Contexts,
+			Examples:    pq.StringArray(tag.Examples),
+			Contexts:    pq.StringArray(tag.Contexts),
 		}
 	}
 	if err := db.Model(&model).Association("Tags").Replace(modelTags); err != nil {
