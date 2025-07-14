@@ -545,15 +545,64 @@ function cloneDropEvent(originalEvent) {
   return new DragEvent('drop', init);
 }
 
+function processUploadedFiles(files) {
+  console.log("Uploaded files", files);
+  // TODO: Process uploaded files.
+}
 
-async function setupPage(redact, restore) {
-  const file = document.querySelector('input[type="file"]');
-  
+class FileUploadInterceptor {
+  static dropArea = null;
+
+  setup() {
+    this.setupManualUpload();
+    this.setupDropArea();
+  }
+
+  setupManualUpload() {
+    const file = document.querySelector('input[type="file"]');
+    if (file) {
+      file.removeEventListener('change', this.manualUploadEventListener, true);
+      file.addEventListener('change', this.manualUploadEventListener, true);
+    }
+  }
+
+  manualUploadEventListener(e) {
+    processUploadedFiles(e.target.files);
+    e.stopPropagation();
+    e.preventDefault();
+  }
+
+  setupDropArea() {
+    FileUploadInterceptor.dropArea = document.querySelector("div[role='presentation']");
+    if (FileUploadInterceptor.dropArea) {
+      FileUploadInterceptor.dropArea.removeEventListener('drop', this.dropEventListener, true);
+      FileUploadInterceptor.dropArea.addEventListener('drop', this.dropEventListener, true);
+    }
+  }
+
+  dropEventListener(e) {
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processUploadedFiles(e.dataTransfer.files);
+      if (FileUploadInterceptor.dropArea) {
+        FileUploadInterceptor.dropArea.dispatchEvent(cloneDropEvent(e));
+      }
+      e.stopPropagation();
+      e.preventDefault();
+    }
+  }
+}
+
+
+async function setupPage(redact, restore) {  
   const promptInterceptor = new PromptInterceptor(redact);
   const messageModifier = new MessageModifier(restore);
+  const fileUploadInterceptor = new FileUploadInterceptor();
+  
+  // Setup prompt interceptor and message modifier if they have been loaded at this time,
+  // e.g. if the page was loaded before the extension.
   addToggleButton();
-
   promptInterceptor.setup();
+  fileUploadInterceptor.setup();
   for (const message of document.querySelectorAll('[data-message-id]')) {
     if (!message.getAttribute('data-message-id').includes('-modified')) {
       await messageModifier.modifyMessage(message, Date.now());
@@ -564,7 +613,7 @@ async function setupPage(redact, restore) {
 
   const dropEventListener = (e) => {
     if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      console.log("Dropped files", e.dataTransfer.files);
+      // TODO: Process the dropped files.
       if (dropArea) {
         dropArea.dispatchEvent(cloneDropEvent(e));
       }
@@ -573,16 +622,7 @@ async function setupPage(redact, restore) {
     }
   }
 
-  console.log("Drop areas", document.querySelectorAll("div[role='presentation']"));
-  
   let elementObserver = new MutationObserver((mutations) => {
-    const file = document.querySelector('input[type="file"]');
-    if (file) {
-      file.addEventListener('change', (e) => {
-        showFileNotSanitizedWarningPopup();
-      });
-    }
-
     if (mutations.reduce((acc, mutation) => {
       const hasButton = mutation.target.id === 'composer-submit-button' || !!mutation.target.querySelector('#composer-submit-button');
       const hasPrompt = mutation.target.id === 'prompt-textarea';
@@ -591,13 +631,8 @@ async function setupPage(redact, restore) {
       promptInterceptor.setup();
     }
     messageModifier.handleMutations(mutations, Date.now());
+    fileUploadInterceptor.setup();
     addToggleButton();
-
-    dropArea = document.querySelector("div[role='presentation']");
-    if (dropArea) {
-      dropArea.removeEventListener('drop', dropEventListener, true);
-      dropArea.addEventListener('drop', dropEventListener, true);
-    }
   });
   elementObserver.observe(document.body, { childList: true, subtree: true });
 
