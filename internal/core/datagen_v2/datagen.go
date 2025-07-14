@@ -303,7 +303,7 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 			}
 			if err := prompts.AnnotatedDataTmpl.Execute(&buf, map[string]interface{}{
 				"K":                n,
-				"types.TagInfo":    opts.TagsInfo,
+				"TagInfo":          opts.TagsInfo,
 				"Requirements":     reqs,
 				"UserInstructions": opts.UserInstructions,
 				"Feedback":         feedback,

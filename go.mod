@@ -20,7 +20,7 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/minio v0.36.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.36.0
 	github.com/testcontainers/testcontainers-go/modules/rabbitmq v0.37.0
-	github.com/yalue/onnxruntime_go v1.21.0
+	github.com/yalue/onnxruntime_go v1.19.0
 	google.golang.org/grpc v1.64.1
 	google.golang.org/protobuf v1.36.6
 	gorm.io/driver/postgres v1.5.11
