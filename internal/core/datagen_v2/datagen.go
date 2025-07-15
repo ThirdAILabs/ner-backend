@@ -2,7 +2,9 @@ package datagenv2
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"ner-backend/internal/core/datagen_v2/prompts"
 	"ner-backend/internal/core/types"
@@ -147,7 +149,11 @@ func (d *DataFactory) runAndCollect(
 
 	for _, e := range errs {
 		if e != nil {
-			return out, fmt.Errorf("batch error: %v", errs)
+			if errors.Is(e, context.DeadlineExceeded) {
+				// Ignore timeout errors
+				continue
+			}
+			return nil, fmt.Errorf("batch error: %v", errs)
 		}
 	}
 	return out, nil
@@ -160,19 +166,15 @@ type GenerateOptions struct {
 	RecordsPerLlmCall   int             // sentences per LLM call
 	TestSplit           float32         // fraction to reserve for test
 	UserInstructions    []string        // extra LLM instructions
-	WriteBatchSize      int             // batch size for LLM calls
 	VerifyGeneratedData bool            // whether to verify generated data
 }
 
 func (opts *GenerateOptions) Validate() error {
-	if opts.RecordsToGenerate < 0 {
+	if opts.RecordsToGenerate <= 0 {
 		return fmt.Errorf("invalid RecordsToGenerate: %d", opts.RecordsToGenerate)
 	}
-	if opts.RecordsPerLlmCall < 0 {
+	if opts.RecordsPerLlmCall <= 0 {
 		return fmt.Errorf("invalid RecordsPerLlmCall: %d", opts.RecordsPerLlmCall)
-	}
-	if opts.WriteBatchSize < 0 {
-		return fmt.Errorf("invalid WriteBatchSize: %d", opts.WriteBatchSize)
 	}
 	if opts.TestSplit < 0.0 || opts.TestSplit > 1.0 {
 		return fmt.Errorf("invalid TestSplit: %f", opts.TestSplit)
@@ -211,13 +213,69 @@ func mergeWithCorrections(orig, cleaned []string) []string {
 	return merged
 }
 
+func (d *DataFactory) verifyGeneratedData(toVerify [][]string, tagsInfo []types.TagInfo) ([]string, error) {
+	verifyFmt, err := prompts.ToResponseFormatUnion(prompts.AnnotatedTextSamplesFormat)
+	if err != nil {
+		return nil, fmt.Errorf("convert verification format: %w", err)
+	}
+	verifyPrompts := make([]string, len(toVerify))
+	for i, orig := range toVerify {
+		var buf bytes.Buffer
+		if err := prompts.AnnotatedTextSamplesTmpl.Execute(&buf, map[string]interface{}{
+			"TagInfo":        tagsInfo,
+			"AnnotatedTexts": orig,
+		}); err != nil {
+			return nil, fmt.Errorf("render verify prompt: %w", err)
+		}
+		verifyPrompts[i] = buf.String()
+	}
+
+	rawVerify, err := d.runAndCollect(verifyPrompts, prompts.AnnotatedTextCorrectionSystem, verifyFmt, true)
+	if err != nil {
+		return nil, fmt.Errorf("batch verify: %w", err)
+	}
+
+	var wg sync.WaitGroup
+	verified := make([][]string, 0, len(toVerify))
+
+	for i, orig := range toVerify {
+		wg.Add(1)
+		go func(idx int, original []string) {
+			defer wg.Done()
+
+			var ats prompts.AnnotatedTextSamples
+			var cleaned []string
+			if err := json.Unmarshal([]byte(rawVerify[idx]), &ats); err == nil {
+				// this openai response adheres to the expected format, otherwise this batch verification will be skipped and the original will be used
+				cleaned = ats.Clean().AnnotatedTexts
+			}
+
+			if len(cleaned) == 0 {
+				verified[idx] = original // no cleaning, keep original
+			} else {
+				verified[idx] = mergeWithCorrections(original, cleaned)
+			}
+		}(i, orig)
+	}
+
+	wg.Wait()
+
+	// Flatten the results
+	var result []string
+	for _, v := range verified {
+		result = append(result, v...)
+	}
+
+	return result, nil
+}
+
 func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample, error) {
 	if err := opts.Validate(); err != nil {
 		return nil, nil, fmt.Errorf("invalid options: %w", err)
 	}
 	total := opts.RecordsToGenerate
 	perCall := opts.RecordsPerLlmCall
-	batchSize := opts.WriteBatchSize
+	batchSize := 300 // records to generate per batch
 
 	if perCall > total {
 		perCall = total
@@ -276,10 +334,6 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 	if err != nil {
 		return nil, nil, fmt.Errorf("convert generation format: %w", err)
 	}
-	verifFmt, err := prompts.ToResponseFormatUnion(prompts.AnnotatedTextSamplesFormat)
-	if err != nil {
-		return nil, nil, fmt.Errorf("convert verification format: %w", err)
-	}
 
 	var allSentences []string
 	bar = progressbar.NewOptions((total+batchSize-1)/batchSize,
@@ -318,49 +372,29 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 			return nil, nil, fmt.Errorf("batch generate: %w", err)
 		}
 
+		var toVerify [][]string
+		for _, r := range rawGen {
+			var ad prompts.AnnotatedData
+			if err := json.Unmarshal([]byte(r), &ad); err != nil {
+				// this openai response did not match expected format, so skip this batch (original sentences) entirely.
+				continue
+			}
+			cleaned := ad.Clean().Sentences
+			if len(cleaned) > 0 {
+				toVerify = append(toVerify, cleaned)
+			}
+		}
+
 		if opts.VerifyGeneratedData {
-			var toVerify [][]string
-			for _, r := range rawGen {
-				var ad prompts.AnnotatedData
-				if err := json.Unmarshal([]byte(r), &ad); err != nil {
-					continue
-				}
-				cleaned := ad.Clean().Sentences
-				if len(cleaned) > 0 {
-					toVerify = append(toVerify, cleaned)
-				}
-			}
-
-			verifPrompts := make([]string, len(toVerify))
-			for i, sentences := range toVerify {
-				var buf bytes.Buffer
-				if err := prompts.AnnotatedTextSamplesTmpl.Execute(&buf, map[string]interface{}{
-					"types.TagInfo":  opts.TagsInfo,
-					"AnnotatedTexts": sentences,
-				}); err != nil {
-					return nil, nil, fmt.Errorf("render verif prompt: %w", err)
-				}
-				verifPrompts[i] = buf.String()
-			}
-			rawVerif, err := d.runAndCollect(verifPrompts, prompts.AnnotatedTextCorrectionSystem, verifFmt, true)
+			verified, err := d.verifyGeneratedData(toVerify, opts.TagsInfo)
 			if err != nil {
-				return nil, nil, fmt.Errorf("batch verify: %w", err)
+				return nil, nil, fmt.Errorf("verify generated data: %w", err)
 			}
-
-			for i, orig := range toVerify {
-				var ats prompts.AnnotatedTextSamples
-				if err := json.Unmarshal([]byte(rawVerif[i]), &ats); err != nil {
-					return nil, nil, fmt.Errorf("unmarshal verification response: %w", err)
-				}
-				cleaned := ats.Clean().AnnotatedTexts
-				if len(cleaned) == 0 {
-					allSentences = append(allSentences, orig...)
-				} else {
-					allSentences = append(allSentences, mergeWithCorrections(orig, cleaned)...)
-				}
-			}
+			allSentences = append(allSentences, verified...)
 		} else {
-			allSentences = append(allSentences, rawGen...)
+			for _, recordsToVerify := range toVerify {
+				allSentences = append(allSentences, recordsToVerify...)
+			}
 		}
 		_ = bar.Add(1)
 	}

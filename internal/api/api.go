@@ -215,9 +215,8 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 
 	// configuring the data generation parameters
 	recordsToGenerate := max(50, len(samples)*3)
-	testSplit := 0.2
+	testSplit := 0.1
 	recordsPerLlmCall := AutoTuneK(samples, 30, 40)
-	writeBatchSize := recordsPerLlmCall * 60 // 60 parallel threads, each generating recordsPerLlmCall records
 
 	payload := messaging.FinetuneTaskPayload{
 		ModelId:             model.Id,
@@ -227,7 +226,6 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 		RecordsToGenerate:   recordsToGenerate,
 		RecordsPerLlmCall:   recordsPerLlmCall,
 		TestSplit:           float32(testSplit),
-		WriteBatchSize:      writeBatchSize,
 		VerifyGeneratedData: req.VerifyGeneratedData,
 	}
 	if req.TaskPrompt != nil {

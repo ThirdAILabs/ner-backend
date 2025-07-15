@@ -41,11 +41,11 @@ func (OldReport) TableName() string {
 }
 
 type OldInferenceTask struct {
-	ReportId uuid.UUID `gorm:"type:uuid;primaryKey"`
-	TaskId   int       `gorm:"primaryKey"`
-	Status   string    `gorm:"size:20;not null"`
-	CreationTime time.Time
-	StartTime sql.NullTime
+	ReportId       uuid.UUID `gorm:"type:uuid;primaryKey"`
+	TaskId         int       `gorm:"primaryKey"`
+	Status         string    `gorm:"size:20;not null"`
+	CreationTime   time.Time
+	StartTime      sql.NullTime
 	CompletionTime sql.NullTime
 
 	// Old source field
@@ -78,15 +78,15 @@ func TestMigration_Reports(t *testing.T) {
 	modelID := uuid.New()
 
 	s3Report := OldReport{
-		Id:              reportID,
-		ReportName:      "test-s3-report",
-		ModelId:         modelID,
-		S3Endpoint:      sql.NullString{String: "https://s3.amazonaws.com", Valid: true},
-		S3Region:        sql.NullString{String: "us-east-1", Valid: true},
-		SourceS3Bucket:  "test-bucket",
-		SourceS3Prefix:  sql.NullString{String: "test/prefix", Valid: true},
-		IsUpload:        false,
-		CreationTime:    time.Now(),
+		Id:             reportID,
+		ReportName:     "test-s3-report",
+		ModelId:        modelID,
+		S3Endpoint:     sql.NullString{String: "https://s3.amazonaws.com", Valid: true},
+		S3Region:       sql.NullString{String: "us-east-1", Valid: true},
+		SourceS3Bucket: "test-bucket",
+		SourceS3Prefix: sql.NullString{String: "test/prefix", Valid: true},
+		IsUpload:       false,
+		CreationTime:   time.Now(),
 	}
 
 	err := db.Create(&s3Report).Error
@@ -124,11 +124,11 @@ func TestMigration_InferenceTasks(t *testing.T) {
 	modelID := uuid.New()
 
 	report := OldReport{
-		Id:              reportID,
-		ReportName:      "test-report",
-		ModelId:         modelID,
-		IsUpload:        false, // S3 case
-		CreationTime:    time.Now(),
+		Id:           reportID,
+		ReportName:   "test-report",
+		ModelId:      modelID,
+		IsUpload:     false, // S3 case
+		CreationTime: time.Now(),
 	}
 
 	err := db.Create(&report).Error
@@ -173,15 +173,15 @@ func TestMigration_ColumnRemoval(t *testing.T) {
 	modelID := uuid.New()
 
 	report := OldReport{
-		Id:              reportID,
-		ReportName:      "test-report",
-		ModelId:         modelID,
-		S3Endpoint:      sql.NullString{String: "https://s3.amazonaws.com", Valid: true},
-		S3Region:        sql.NullString{String: "us-east-1", Valid: true},
-		SourceS3Bucket:  "test-bucket",
-		SourceS3Prefix:  sql.NullString{String: "test/prefix", Valid: true},
-		IsUpload:        false,
-		CreationTime:    time.Now(),
+		Id:             reportID,
+		ReportName:     "test-report",
+		ModelId:        modelID,
+		S3Endpoint:     sql.NullString{String: "https://s3.amazonaws.com", Valid: true},
+		S3Region:       sql.NullString{String: "us-east-1", Valid: true},
+		SourceS3Bucket: "test-bucket",
+		SourceS3Prefix: sql.NullString{String: "test/prefix", Valid: true},
+		IsUpload:       false,
+		CreationTime:   time.Now(),
 	}
 
 	err := db.Create(&report).Error
@@ -192,7 +192,7 @@ func TestMigration_ColumnRemoval(t *testing.T) {
 
 	// Verify old columns are removed
 	var columnExists bool
-	
+
 	err = db.Raw("SELECT COUNT(*) > 0 FROM pragma_table_info('reports') WHERE name = 's3_endpoint'").Scan(&columnExists).Error
 	require.NoError(t, err)
 	assert.False(t, columnExists, "s3_endpoint column should be removed")
@@ -200,4 +200,4 @@ func TestMigration_ColumnRemoval(t *testing.T) {
 	err = db.Raw("SELECT COUNT(*) > 0 FROM pragma_table_info('inference_tasks') WHERE name = 'source_s3_keys'").Scan(&columnExists).Error
 	require.NoError(t, err)
 	assert.False(t, columnExists, "source_s3_keys column should be removed")
-} 
+}

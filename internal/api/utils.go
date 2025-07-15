@@ -199,7 +199,7 @@ func validateName(name string) error {
 	return nil
 }
 
-func MedianWordCount(samples []api.Sample) int {
+func medianWordCount(samples []api.Sample) int {
 	if len(samples) == 0 {
 		return 0
 	}
@@ -218,14 +218,14 @@ func MedianWordCount(samples []api.Sample) int {
 	return wordCounts[mid]
 }
 
+// Heuristic is to scale k inversely or logarithmically depending on the feedback length.
+// -- Shorter feedbacks ⇒ need more records (k ↑) to increase diversity.
+// -- Longer feedbacks ⇒ provide more context, so less records (k ↓) may suffice.
 func AutoTuneK(samples []api.Sample, baseK int, alpha float64) int {
-	count := MedianWordCount(samples)
+	count := medianWordCount(samples)
 	if count <= 0 {
 		return baseK
 	}
 	k := float64(baseK) * math.Log(1+alpha/float64(count))
-	if k < 2 {
-		return 2
-	}
-	return int(k)
+	return max(int(k), 2)
 }

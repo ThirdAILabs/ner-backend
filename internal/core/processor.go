@@ -860,7 +860,6 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 			RecordsToGenerate:   payload.RecordsToGenerate,
 			RecordsPerLlmCall:   payload.RecordsPerLlmCall,
 			TestSplit:           payload.TestSplit,
-			WriteBatchSize:      payload.WriteBatchSize,
 			VerifyGeneratedData: payload.VerifyGeneratedData,
 		}
 

@@ -38,7 +38,6 @@ type FinetuneTaskPayload struct {
 	GenerateData        bool
 	RecordsToGenerate   int
 	RecordsPerLlmCall   int
-	WriteBatchSize      int
 	TestSplit           float32
 	VerifyGeneratedData bool
 }
