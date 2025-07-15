@@ -14,7 +14,6 @@ require (
 	github.com/go-resty/resty/v2 v2.16.5
 	github.com/gorilla/schema v1.4.1
 	github.com/hashicorp/go-plugin v1.6.3
-	github.com/lib/pq v1.10.9
 	github.com/openai/openai-go v0.1.0-beta.10
 	github.com/stretchr/testify v1.10.0
 	github.com/testcontainers/testcontainers-go v0.37.0
