@@ -13,11 +13,9 @@ import (
 
 type S3ConnectorParams struct {
 	Endpoint string
-	Region string
-	Bucket string
-	Prefix string
-	AccessKeyID string      `json:"-"`
-	SecretAccessKey string  `json:"-"`
+	Region   string
+	Bucket   string
+	Prefix   string
 }
 
 type S3ConnectorTaskParams struct {
@@ -25,16 +23,20 @@ type S3ConnectorTaskParams struct {
 }
 
 type S3Connector struct {
-	client     *s3.Client
+	client *s3.Client
 	params S3ConnectorParams
 }
 
 func NewS3Connector(ctx context.Context, params S3ConnectorParams) (*S3Connector, error) {
+	return NewS3ConnectorWithAccessKey(ctx, params, "", "")
+}
+
+func NewS3ConnectorWithAccessKey(ctx context.Context, params S3ConnectorParams, accessKeyID, secretAccessKey string) (*S3Connector, error) {
 	client, err := initializeS3Client(S3ClientConfig{
-		Endpoint: params.Endpoint,
-		Region: params.Region,
-		AccessKeyID: params.AccessKeyID,
-		SecretAccessKey: params.SecretAccessKey,
+		Endpoint:        params.Endpoint,
+		Region:          params.Region,
+		AccessKeyID:     accessKeyID,
+		SecretAccessKey: secretAccessKey,
 	})
 	slog.Info("Initialized S3 Connector", "params", params)
 	if err != nil {
@@ -46,15 +48,15 @@ func NewS3Connector(ctx context.Context, params S3ConnectorParams) (*S3Connector
 	}
 
 	return &S3Connector{
-		client:     client,
-		params:     params,
+		client: client,
+		params: params,
 	}, nil
 }
 
 var _ Connector = (*S3Connector)(nil)
 
 func (c *S3Connector) CreateInferenceTasks(ctx context.Context, targetBytes int64) ([]InferenceTask, int64, error) {
-	return createInferenceTasks(c.iterObjects(ctx, c.params.Bucket, c.params.Prefix), targetBytes)
+	return createInferenceTasks(c.iterObjects(ctx), targetBytes)
 }
 
 func (c *S3Connector) IterTaskChunks(ctx context.Context, params []byte) (<-chan ObjectChunkStream, error) {
@@ -63,13 +65,13 @@ func (c *S3Connector) IterTaskChunks(ctx context.Context, params []byte) (<-chan
 		return nil, fmt.Errorf("error unmarshalling params: %w", err)
 	}
 
-	return iterTaskChunks(ctx, c.params.Bucket, parsedParams.ChunkKeys, c)
+	return iterTaskChunks(ctx, parsedParams.ChunkKeys, c)
 }
 
-func (c *S3Connector) iterObjects(ctx context.Context, bucket, dir string) ObjectIterator {
+func (c *S3Connector) iterObjects(ctx context.Context) ObjectIterator {
 	return func(yield func(obj Object, err error) bool) {
 		paginator := s3.NewListObjectsV2Paginator(c.client, &s3.ListObjectsV2Input{
-			Bucket: aws.String(bucket),
+			Bucket: aws.String(c.params.Bucket),
 			Prefix: aws.String(c.params.Prefix),
 		})
 
@@ -121,6 +123,6 @@ func (s *s3ConnectorObjectStream) Read(p []byte) (int, error) {
 	return n, nil
 }
 
-func (c *S3Connector) GetObjectStream(ctx context.Context, bucket, key string) (io.Reader, error) {
-	return &s3ConnectorObjectStream{client: c.client, bucket: bucket, key: key, offset: 0}, nil
+func (c *S3Connector) GetObjectStream(ctx context.Context, key string) (io.Reader, error) {
+	return &s3ConnectorObjectStream{client: c.client, bucket: c.params.Bucket, key: key, offset: 0}, nil
 }

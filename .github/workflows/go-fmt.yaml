@@ -1,0 +1,44 @@
+name: Go Formatter
+
+# Kills old jobs from the same pr if we push a new commit
+# See https://stackoverflow.com/questions/66335225/how-to-cancel-previous-runs-in-the-pr-when-you-push-new-commitsupdate-the-curre
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the main branch
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+
+jobs:
+  go-format:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Go >=1.23.3
+      uses: actions/setup-go@v5
+      with:
+        go-version: '>=1.23.3'
+
+    - name: Validate Go Module Files
+      run: | 
+        go mod tidy
+        echo "Listing files that would be changed by go mod tidy (if issues found run 'go mod tidy' and commit the result):"
+        git diff --name-only --exit-code
+      
+    - name: Run Formatter
+      run: |
+        if [ -n "$(gofmt -e -l ./)" ]; then
+          echo "Formatting issues detected in the following files please run 'gofmt -w ./' and commit the result:"
+          gofmt -e -l ./
+          exit 1
+        fi

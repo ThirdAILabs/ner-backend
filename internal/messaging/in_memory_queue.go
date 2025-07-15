@@ -51,8 +51,8 @@ func (q *InMemoryQueue) publishTaskInternal(queue string, payload interface{}) e
 		return err
 	}
 
-	// This is to prevent a deadlock case if the shard data task in the worker tries to 
-	// publish a task to the same queue and the queue is full. The deadlock occurs because 
+	// This is to prevent a deadlock case if the shard data task in the worker tries to
+	// publish a task to the same queue and the queue is full. The deadlock occurs because
 	// only the worker can pull from the queue, but it is blocked waiting for the task to
 	// be published.
 	select {

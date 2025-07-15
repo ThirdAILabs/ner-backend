@@ -109,7 +109,7 @@ func (parser *DefaultParser) parsePlaintext(filename string, data io.Reader, out
 		}
 		offset += n
 
-		if isEnd {
+		if isEnd || err != nil {
 			return
 		}
 	}
