@@ -36,14 +36,17 @@ type Connector interface {
 }
 
 type storageType string
+
 const (
 	UploadType storageType = "upload"
-	LocalType storageType = "local"
-	S3Type storageType = "s3"
+	LocalType  storageType = "local"
+	S3Type     storageType = "s3"
 )
 
 func ToStorageType(typeString string) (storageType, error) {
 	switch typeString {
+	case string(UploadType):
+		return UploadType, nil
 	case string(LocalType):
 		return LocalType, nil
 	case string(S3Type):
@@ -62,7 +65,7 @@ func NewConnector(ctx context.Context, storageType storageType, params []byte) (
 			return nil, err
 		}
 		return NewS3Connector(ctx, s3ConnectorParams)
-		
+
 	default:
 		return nil, fmt.Errorf("unknown connector type: %s", storageType)
 	}
