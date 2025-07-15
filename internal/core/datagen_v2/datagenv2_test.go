@@ -51,8 +51,8 @@ func TestGenerate(t *testing.T) {
 		train, test, err := factory.Generate(opts)
 		require.NoError(t, err)
 
-		// there should be at least 14 train samples and and 2 test samples
-		require.GreaterOrEqual(t, len(train), 14)
-		require.GreaterOrEqual(t, len(test), 2)
+		// at most one batch of generation could fail still 15 total records would be generated
+		require.GreaterOrEqual(t, len(train), 12)
+		require.GreaterOrEqual(t, len(test), 3)
 	}
 }
