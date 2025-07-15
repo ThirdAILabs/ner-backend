@@ -2,8 +2,8 @@ import React from 'react';
 import CustomisableCard from '@/components/ui/cards/customisableCard';
 
 // Constants for card dimensions
-const CARD_WIDTH = '392px'; // (242 * 1.5)
-const CARD_HEIGHT = '264px'; // (150 * 1.65)
+const CARD_WIDTH = '392px';
+const CARD_HEIGHT = '264px';
 const percentageUsed = 20;
 
 //Background image URL
@@ -92,7 +92,7 @@ const StatsCards = () => {
               Don't worry, you got a lot of room to play with.
             </p>
           </div>
-          <div className="mt-2 ml-4 w-[296px] p-2 relative h-2 bg-white/20 rounded-full"> {/* Progress bar container */}
+          <div className="mt-2 ml-4 w-[296px] p-2 relative h-2 bg-white/20 rounded-full">
             <div
               className="absolute left-0 top-0 h-full bg-white rounded-md transition-all duration-300"
               style={{ width: `${percentageUsed}%` }}
