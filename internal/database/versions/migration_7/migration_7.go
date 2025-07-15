@@ -13,7 +13,7 @@ import (
 type ModelTag struct {
 	ModelId     uuid.UUID      `gorm:"type:uuid;primaryKey"`
 	Tag         string         `gorm:"primaryKey"`
-	Description string         `gorm:"size:1023 default:''"`
+	Description string         `gorm:"default:''"`
 	Examples    datatypes.JSON `gorm:"type:jsonb;default:'[]'"`
 	Contexts    datatypes.JSON `gorm:"type:jsonb;default:'[]'"`
 }
