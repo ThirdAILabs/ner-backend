@@ -274,15 +274,8 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 		return nil, nil, fmt.Errorf("invalid options: %w", err)
 	}
 	total := opts.RecordsToGenerate
-	perCall := opts.RecordsPerLlmCall
-	batchSize := 300 // records to generate per batch
-
-	if perCall > total {
-		perCall = total
-	}
-	if batchSize > total {
-		batchSize = total
-	}
+	perCall := min(opts.RecordsPerLlmCall, total)
+	batchSize := min(300, total)
 
 	feedback := SamplesToAnnotatedStrings(opts.Samples)
 
