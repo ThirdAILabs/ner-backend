@@ -58,7 +58,7 @@ func setOpenAIAPIKey(t *testing.T, router chi.Router, apiKey string) {
 	assert.Equal(t, http.StatusOK, rec.Code)
 }
 
-func getOpenAIAPIKey(t *testing.T,router chi.Router) string {
+func getOpenAIAPIKey(t *testing.T, router chi.Router) string {
 	req := httptest.NewRequest(http.MethodGet, "/chat/api-key", nil)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
@@ -158,11 +158,10 @@ func sendMessage(t *testing.T, router chi.Router, sessionID string, message stri
 	return rec
 }
 
-
 func processStreamResponse(t *testing.T, rec *httptest.ResponseRecorder) (redactedMessage string, reply string, tagMap map[string]string) {
 	reader := bufio.NewReader(rec.Body)
 	var streamResp StreamMessage
-	
+
 	for {
 		line, err := reader.ReadString('\n')
 		if err != nil {
@@ -181,13 +180,13 @@ func processStreamResponse(t *testing.T, rec *httptest.ResponseRecorder) (redact
 		if err := json.Unmarshal([]byte(line), &streamResp); err != nil {
 			t.Fatalf("decode chat response: %v", err)
 		}
-		
+
 		if streamResp.Error != "" {
 			t.Fatalf("stream response error: %s", streamResp.Error)
 		}
-		
+
 		if streamResp.Data == nil {
-			t.Fatalf("stream response data is nil") 
+			t.Fatalf("stream response data is nil")
 		}
 
 		jsonData, err := json.Marshal(streamResp.Data)
@@ -213,17 +212,17 @@ func processStreamResponse(t *testing.T, rec *httptest.ResponseRecorder) (redact
 	return redactedMessage, reply, tagMap
 }
 
-func getHistory(t *testing.T, router chi.Router, sessionID string) []pkgapi.ChatHistoryItem {	
+func getHistory(t *testing.T, router chi.Router, sessionID string) []pkgapi.ChatHistoryItem {
 	req := httptest.NewRequest(http.MethodGet, "/chat/sessions/"+sessionID+"/history", nil)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	assert.Equal(t, http.StatusOK, rec.Code)
-	
+
 	var history []pkgapi.ChatHistoryItem
 	if err := json.NewDecoder(rec.Body).Decode(&history); err != nil {
 		t.Fatalf("decode history: %v", err)
 	}
-	
+
 	return history
 }
 
@@ -280,7 +279,7 @@ func TestChatEndpoint(t *testing.T) {
 	t.Run("TestDeleteSession", func(t *testing.T) {
 		sessionID := startSession(t, router, "Test Session")
 		deleteSession(t, router, sessionID)
-		
+
 		sessions := getSessions(t, router)
 		assert.Equal(t, 0, len(sessions))
 	})
@@ -297,7 +296,7 @@ func TestChatEndpoint(t *testing.T) {
 	t.Run("TestRenameSession", func(t *testing.T) {
 		sessionID := startSession(t, router, "Test Session")
 		defer deleteSession(t, router, sessionID)
-		
+
 		session := getSession(t, router, sessionID)
 		assert.Equal(t, "Test Session", session.Title)
 
@@ -309,7 +308,7 @@ func TestChatEndpoint(t *testing.T) {
 
 	t.Run("TestSendMessage", func(t *testing.T) {
 		apiKey := os.Getenv("OPENAI_API_KEY")
-		
+
 		setOpenAIAPIKey(t, router, apiKey)
 		defer deleteOpenAIAPIKey(t, router)
 
@@ -321,7 +320,7 @@ func TestChatEndpoint(t *testing.T) {
 		rec := sendMessage(t, router, sessionID, message)
 		assert.Equal(t, http.StatusOK, rec.Code)
 		redactedMessage, reply, tagMap := processStreamResponse(t, rec)
-		
+
 		expectedRedacted := "Hello, how are you today? I am Yashwanth and I work at ThirdAI and my email is [EMAIL_1]"
 		assert.Equal(t, expectedRedacted, redactedMessage)
 		assert.NotEmpty(t, reply)
@@ -330,17 +329,17 @@ func TestChatEndpoint(t *testing.T) {
 			tagMap,
 		)
 	})
-	
+
 	t.Run("TestSendMessage_UpdatesHistory", func(t *testing.T) {
 		apiKey := os.Getenv("OPENAI_API_KEY")
-		
+
 		setOpenAIAPIKey(t, router, apiKey)
 		defer deleteOpenAIAPIKey(t, router)
 
 		sessionID := startSession(t, router, "Test Session")
 		defer deleteSession(t, router, sessionID)
 		assert.NotEmpty(t, sessionID)
-		
+
 		message := "Hello, how are you today? I am Yashwanth and I work at ThirdAI and my email is yash@thirdai.com"
 		rec := sendMessage(t, router, sessionID, message)
 		assert.Equal(t, http.StatusOK, rec.Code)
@@ -359,7 +358,7 @@ func TestChatEndpoint(t *testing.T) {
 
 		setOpenAIAPIKey(t, router, apiKey)
 		defer deleteOpenAIAPIKey(t, router)
-		
+
 		sessionID := startSession(t, router, "Test Session")
 		defer deleteSession(t, router, sessionID)
 		assert.NotEmpty(t, sessionID)
@@ -394,14 +393,14 @@ func TestChatEndpoint(t *testing.T) {
 
 		routine := func() {
 			defer wg.Done()
-			
+
 			rec := sendMessage(t, router, sessionID, "Hi, introduce yourself in 30 words")
-			
+
 			// Wait for the stream to finish so we can delete the session safely afterwards.
 			if rec.Code == http.StatusOK {
 				processStreamResponse(t, rec)
 			}
-			
+
 			mu.Lock()
 			if rec.Code == http.StatusOK {
 				successCount++
@@ -411,7 +410,7 @@ func TestChatEndpoint(t *testing.T) {
 			}
 			mu.Unlock()
 		}
-		
+
 		wg.Add(2)
 		go routine()
 		go routine()
@@ -421,7 +420,7 @@ func TestChatEndpoint(t *testing.T) {
 			// If both succeeded, verify the second message was processed after the first
 			history := getHistory(t, router, sessionID)
 			assert.Equal(t, 4, len(history)) // 2 messages, 2 responses
-			assert.True(t, lastAckTime.After(history[2].Timestamp), 
+			assert.True(t, lastAckTime.After(history[2].Timestamp),
 				"Last acknowledgement time should be after second message timestamp")
 		} else {
 			// Otherwise verify one succeeded and one failed
@@ -429,7 +428,7 @@ func TestChatEndpoint(t *testing.T) {
 			assert.Equal(t, 1, failureCount)
 		}
 	})
-	
+
 	t.Run("TestSendMessage_ConcurrentDifferentSessions", func(t *testing.T) {
 		apiKey := os.Getenv("OPENAI_API_KEY")
 
@@ -450,14 +449,14 @@ func TestChatEndpoint(t *testing.T) {
 
 		routine := func(sessionID string) {
 			defer wg.Done()
-			
+
 			rec := sendMessage(t, router, sessionID, "Hi, introduce yourself in 30 words")
-			
+
 			// Wait for the stream to finish so we can delete the session safely afterwards.
 			if rec.Code == http.StatusOK {
 				processStreamResponse(t, rec)
 			}
-			
+
 			mu.Lock()
 			if rec.Code == http.StatusOK {
 				successCount++
@@ -466,7 +465,7 @@ func TestChatEndpoint(t *testing.T) {
 			}
 			mu.Unlock()
 		}
-		
+
 		wg.Add(2)
 		go routine(sessionID1)
 		go routine(sessionID2)

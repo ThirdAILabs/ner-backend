@@ -9,8 +9,8 @@ import (
 )
 
 type FileNameToPath struct {
-	ID       uuid.UUID      `gorm:"type:uuid;primaryKey"`
-	Mapping  datatypes.JSON `gorm:"type:jsonb"`
+	ID      uuid.UUID      `gorm:"type:uuid;primaryKey"`
+	Mapping datatypes.JSON `gorm:"type:jsonb"`
 }
 
 func Migration(db *gorm.DB) error {
@@ -25,4 +25,4 @@ func Rollback(db *gorm.DB) error {
 		return fmt.Errorf("Rollback3 failed: %w", err)
 	}
 	return nil
-} 
+}
