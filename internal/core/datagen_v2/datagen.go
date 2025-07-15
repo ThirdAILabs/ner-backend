@@ -236,7 +236,7 @@ func (d *DataFactory) verifyGeneratedData(toVerify [][]string, tagsInfo []types.
 	}
 
 	var wg sync.WaitGroup
-	verified := make([][]string, 0, len(toVerify))
+	verified := make([][]string, len(toVerify))
 
 	for i, orig := range toVerify {
 		wg.Add(1)

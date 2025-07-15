@@ -58,7 +58,7 @@ const AnnotatedTextCorrectionUser = `Given the following annotated text samples,
 {{- range .TagInfo }}
 **Tag name:** {{ .Name }}
 **Tag description:** {{ .Desc }}
-{{- end }}
+{{ end }}
 
 Annotated text samples:
 {{- range .AnnotatedTexts }}
