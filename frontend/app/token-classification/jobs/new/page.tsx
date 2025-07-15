@@ -10,8 +10,8 @@ import { nerService } from '@/lib/backend';
 import { NO_GROUP, uniqueFileNames, getFilesFromElectron } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { SearchIcon } from '@heroicons/react/solid';
-import { useLicense } from '@/hooks/useLicense';
-import useTelemetry from '@/hooks/useTelemetry';
+import { useConditionalTelemetry } from '@/hooks/useConditionalTelemetry';
+import { useEnterprise } from '@/hooks/useEnterprise';
 
 import { nerBaseUrl } from '@/lib/axios.config';
 import SourceCard from '@/components/ui/cards/sourceCard';
@@ -178,12 +178,20 @@ const FileSources: React.FC<FileSourcesProps> = ({
               }
             }}
             icon={
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z M8 11h8m-4-4v8"
-              />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                className="lucide lucide-folder-icon lucide-folder"
+              >
+                <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
+              </svg>
             }
             title="Local Files or Folders"
             description="Select files or folders from your computer"
@@ -351,9 +359,9 @@ interface CustomTag {
 
 export default function NewJobPage() {
   const router = useRouter();
-  const recordEvent = useTelemetry();
+  const recordEvent = useConditionalTelemetry();
 
-  const { isEnterprise } = useLicense();
+  const { isEnterprise } = useEnterprise();
 
   // Essential state
   const [selectedSource, setSelectedSource] = useState<'s3' | 'files' | 'directory' | ''>('files');
@@ -401,14 +409,24 @@ export default function NewJobPage() {
   }, [models, modelSearchQuery]);
 
   const defaultModels = useMemo(() => {
+    if (isEnterprise) {
+      return [
+        {
+          Id: models.find((model) => model.Name === 'basic')?.Id || 'basic',
+          Name: 'Base',
+          Disabled: false,
+          Description:
+            'Fast and lightweight AI model. Allows users to perpetually customize fields with user feedback, includes advanced monitoring features.',
+        },
+      ];
+    }
     return [
       {
         Id: models.find((model) => model.Name === 'basic')?.Id || 'basic',
         Name: 'Basic',
         Disabled: false,
-        Description: !isEnterprise
-          ? 'Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.'
-          : 'Fast and lightweight AI model, does not allow customization of the fields with user feedback, gives basic usage statistics.',
+        Description:
+          'Fast and lightweight AI model, comes with the free version, does not allow customization of the fields with user feedback, gives basic usage statistics.',
       },
       {
         Id: 'advanced',
@@ -418,7 +436,7 @@ export default function NewJobPage() {
           'Our most advanced AI model, available on enterprise platform. Allows users to perpetually customize fields with user feedback, includes advanced monitoring features.',
       },
     ];
-  }, [models]);
+  }, [models, isEnterprise]);
 
   // Tags handling
   const [availableTags, setAvailableTags] = useState<string[]>([]);
@@ -463,7 +481,8 @@ export default function NewJobPage() {
         const modelData = await nerService.listModels();
         const trainedModels = modelData.filter((model) => model.Status === 'TRAINED');
         setModels(trainedModels.reverse());
-        setSelectedModelId(trainedModels[0].Id);
+        const basicModel = trainedModels.find((model) => model.Name === 'basic');
+        setSelectedModelId(basicModel ? basicModel.Id : null);
       } catch (err) {
         console.error('Error fetching models:', err);
         setError('Failed to load models. Please try again.');

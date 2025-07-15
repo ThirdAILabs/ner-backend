@@ -87,6 +87,8 @@ COPY --from=frontend-builder /frontend/next.config.js ./
 # Copy the build output directory
 COPY --from=frontend-builder /frontend/.next ./.next
 
+COPY --from=frontend-builder /frontend/public ./public
+
 # Install only production dependencies for Next.js runtime
 RUN npm install --production --ignore-scripts --prefer-offline --force
 

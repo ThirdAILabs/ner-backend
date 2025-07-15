@@ -6,13 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"ner-backend/internal/core/datagen"
+	datagenv2 "ner-backend/internal/core/datagen_v2"
 	"ner-backend/internal/core/types"
 	"ner-backend/internal/database"
 	"ner-backend/internal/licensing"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/storage"
-	"ner-backend/pkg/api"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -30,14 +29,13 @@ type TaskProcessor struct {
 	storage   storage.ObjectStore
 	publisher messaging.Publisher
 	reciever  messaging.Reciever
-	
+
 	licensing licensing.LicenseVerifier
-	
+
 	localModelDir string
 	modelBucket   string
 	uploadBucket  string
 	modelLoaders  map[ModelType]ModelLoader
-
 }
 
 const bytesPerMB = 1024 * 1024
@@ -51,15 +49,15 @@ var ExcludedTags = map[string]struct{}{
 
 func NewTaskProcessor(db *gorm.DB, storage storage.ObjectStore, publisher messaging.Publisher, reciever messaging.Reciever, licenseVerifier licensing.LicenseVerifier, localModelDir string, modelBucket string, uploadBucket string, modelLoaders map[ModelType]ModelLoader) *TaskProcessor {
 	return &TaskProcessor{
-		db:                      db,
-		storage:                 storage,
-		publisher:               publisher,
-		reciever:                reciever,
-		licensing:               licenseVerifier,
-		localModelDir:           localModelDir,
-		modelBucket:             modelBucket,
-		uploadBucket:            uploadBucket,
-		modelLoaders:            modelLoaders,
+		db:            db,
+		storage:       storage,
+		publisher:     publisher,
+		reciever:      reciever,
+		licensing:     licenseVerifier,
+		localModelDir: localModelDir,
+		modelBucket:   modelBucket,
+		uploadBucket:  uploadBucket,
+		modelLoaders:  modelLoaders,
 	}
 }
 
@@ -420,7 +418,7 @@ func (proc *TaskProcessor) loadModel(ctx context.Context, modelId uuid.UUID, mod
 		if _, err := os.Stat(localDir); os.IsNotExist(err) {
 			slog.Info("model not found locally, downloading from S3", "modelId", modelId)
 
-			if err := proc.storage.DownloadDir(ctx, proc.modelBucket, modelId.String(), localDir, false); err != nil {
+			if err := proc.storage.DownloadDir(ctx, filepath.Join(proc.modelBucket, modelId.String()), localDir, false); err != nil {
 				return nil, fmt.Errorf("failed to download model from S3: %w", err)
 			}
 		}
@@ -721,12 +719,12 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 		slog.Info("Creating inference task", "report_id", reportId, "task_id", taskId, "chunk_size", taskMetadata.TotalSize)
 
 		task := database.InferenceTask{
-			ReportId:     reportId,
-			TaskId:       taskId,
-			Status:       database.JobQueued,
-			CreationTime: time.Now().UTC(),
+			ReportId:      reportId,
+			TaskId:        taskId,
+			Status:        database.JobQueued,
+			CreationTime:  time.Now().UTC(),
 			StorageParams: taskMetadata.Params,
-			TotalSize:    taskMetadata.TotalSize,
+			TotalSize:     taskMetadata.TotalSize,
 		}
 
 		inferencePayload := messaging.InferenceTaskPayload{
@@ -798,14 +796,6 @@ func (proc *TaskProcessor) getModel(ctx context.Context, modelId uuid.UUID) (dat
 	return model, nil
 }
 
-func extractTagNames(infos []api.TagInfo) []string {
-	out := make([]string, len(infos))
-	for i, t := range infos {
-		out[i] = t.Name
-	}
-	return out
-}
-
 func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload messaging.FinetuneTaskPayload) error {
 	database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelTraining) //nolint:errcheck
 
@@ -837,19 +827,37 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 
 	allSamples := payload.Samples
 	if payload.GenerateData {
-		opts := datagen.DatagenOpts{
-			Tags:               extractTagNames(payload.Tags),
-			Samples:            payload.Samples,
-			NumValuesPerTag:    payload.NumValuesPerTag,
-			RecordsToGenerate:  payload.RecordsToGenerate,
-			RecordsPerTemplate: payload.RecordsPerTemplate,
-			TestSplit:          payload.TestSplit,
+		tagsInfo := make([]datagenv2.TagInfo, len(payload.Tags))
+		for i, t := range payload.Tags {
+			tagsInfo[i] = datagenv2.TagInfo{
+				Name:     t.Name,
+				Desc:     t.Description,
+				Examples: t.Examples,
+			}
 		}
-		train, test, err := datagen.GenerateData(opts)
+
+		genDir := filepath.Join(proc.localModelDir, payload.ModelId.String(), "generated")
+		factory, err := datagenv2.NewDataFactory(genDir)
 		if err != nil {
 			database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint
-			return fmt.Errorf("datagen error: %w", err)
+			return fmt.Errorf("creating DataFactory: %w", err)
 		}
+
+		opts := datagenv2.GenerateOptions{
+			TagsInfo:          tagsInfo,
+			Samples:           payload.Samples,
+			RecordsToGenerate: payload.RecordsToGenerate,
+			RecordsPerLlmCall: payload.RecordsPerTemplate,
+			TestSplit:         payload.TestSplit,
+			WriteBatchSize:    payload.RecordsToGenerate,
+		}
+
+		train, test, err := factory.Generate(opts)
+		if err != nil {
+			database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint
+			return fmt.Errorf("generating synthetic data: %w", err)
+		}
+
 		allSamples = append(allSamples, train...)
 		allSamples = append(allSamples, test...)
 	}
@@ -862,7 +870,7 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 
 	slog.Info("finetuning completed", "model_id", payload.ModelId, "base_model_id", payload.BaseModelId)
 
-	if err := proc.storage.UploadDir(ctx, proc.modelBucket, payload.ModelId.String(), localDir); err != nil {
+	if err := proc.storage.UploadDir(ctx, localDir, filepath.Join(proc.modelBucket, payload.ModelId.String())); err != nil {
 		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint:errcheck
 		slog.Error("error uploading finetuned model to S3", "model_id", payload.ModelId, "error", err)
 		return fmt.Errorf("error uploading model to S3: %w", err)

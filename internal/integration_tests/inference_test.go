@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -79,25 +80,28 @@ var expected = []string{
 	"123",
 }
 
-func createData(t *testing.T, storage storage.ObjectStore) {
-	require.NoError(t, storage.CreateBucket(context.Background(), dataBucket))
+func createData(t *testing.T, minioEndpoint string) {
+	storage, err := storage.NewS3ObjectStore(dataBucket, storage.S3ClientConfig{
+		Endpoint:        minioEndpoint,
+		AccessKeyID:     minioUsername,
+		SecretAccessKey: minioPassword,
+	})
+	require.NoError(t, err)
 
 	for i := 0; i < 10; i++ {
 		phonePath := fmt.Sprintf("phone-%d.txt", i)
 		phoneData := fmt.Sprintf("this file contains a phone number %d%d%d-123-4567", i, i, i)
 
-		err := storage.PutObject(context.Background(), dataBucket, phonePath, strings.NewReader(phoneData))
+		err := storage.PutObject(context.Background(), filepath.Join(dataBucket, phonePath), strings.NewReader(phoneData))
 		require.NoError(t, err)
 
 		emailPath := fmt.Sprintf("email-%d.txt", i)
 		emailData := fmt.Sprintf("this file contains a email address id-%d@email.com", i)
 
-		err = storage.PutObject(context.Background(), dataBucket, emailPath, strings.NewReader(emailData))
-		require.NoError(t, err)
+		require.NoError(t, storage.PutObject(context.Background(), filepath.Join(dataBucket, emailPath), strings.NewReader(emailData)))
 	}
 
-	err := storage.PutObject(context.Background(), dataBucket, "custom-token.txt", strings.NewReader("this is a custom token a1b2c3"))
-	require.NoError(t, err)
+	require.NoError(t, storage.PutObject(context.Background(), filepath.Join(dataBucket, "custom-token.txt"), strings.NewReader("this is a custom token a1b2c3")))
 }
 
 func createReport(t *testing.T, router http.Handler, req api.CreateReportRequest) uuid.UUID {
@@ -149,7 +153,7 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 
 	minioUrl := setupMinioContainer(t, ctx)
 
-	s3ObjectStore, err := storage.NewS3ObjectStore(storage.S3ClientConfig{
+	s3ObjectStore, err := storage.NewS3ObjectStore("ner-test-bucket", storage.S3ClientConfig{
 		Endpoint:        minioUrl,
 		AccessKeyID:     minioUsername,
 		SecretAccessKey: minioPassword,
@@ -176,7 +180,7 @@ func TestInferenceWorkflowOnBucket(t *testing.T) {
 	go worker.Start()
 	defer worker.Stop()
 
-	createData(t, s3ObjectStore)
+	createData(t, minioUrl)
 
 	storageParams, _ := json.Marshal(map[string]any{"Endpoint": minioUrl, "Bucket": dataBucket})
 
@@ -262,7 +266,7 @@ func TestInferenceWorkflowOnUpload(t *testing.T) {
 
 	minioUrl := setupMinioContainer(t, ctx)
 
-	s3ObjectStore, err := storage.NewS3ObjectStore(storage.S3ClientConfig{
+	s3ObjectStore, err := storage.NewS3ObjectStore("ner-test-bucket", storage.S3ClientConfig{
 		Endpoint:        minioUrl,
 		AccessKeyID:     minioUsername,
 		SecretAccessKey: minioPassword,
@@ -320,14 +324,12 @@ func TestInferenceWorkflowForModels(t *testing.T) {
 
 	minioURL := setupMinioContainer(t, ctx)
 
-	s3ObjectStore, err := storage.NewS3ObjectStore(storage.S3ClientConfig{
+	s3ObjectStore, err := storage.NewS3ObjectStore("ner-test-bucket", storage.S3ClientConfig{
 		Endpoint:        minioURL,
 		AccessKeyID:     minioUsername,
 		SecretAccessKey: minioPassword,
 	})
 	require.NoError(t, err)
-
-	require.NoError(t, s3ObjectStore.CreateBucket(ctx, modelBucket))
 
 	db := createDB(t)
 

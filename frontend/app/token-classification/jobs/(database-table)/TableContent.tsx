@@ -5,7 +5,7 @@ import { NO_GROUP } from '@/lib/utils';
 import { TokenHighlighter } from '@/components/feedback/TokenHighlighter';
 import * as _ from 'lodash';
 import type { TableContentProps } from '@/types/analyticsTypes';
-import { useLicense } from '@/hooks/useLicense';
+import { useFinetuning } from '@/hooks/useFinetuning';
 import { environment } from '@/lib/environment';
 
 const PASTELS = ['#E5A49C', '#F6C886', '#FBE7AA', '#99E3B5', '#A6E6E7', '#A5A1E1', '#D8A4E2'];
@@ -33,7 +33,7 @@ export function TableContent({
   pathMap,
   addFeedback,
 }: TableContentProps) {
-  const { isEnterprise } = useLicense();
+  const { isFinetuningEnabled } = useFinetuning();
 
   const tagColors = useMemo(() => {
     const colors: Record<string, HighlightColor> = {};
@@ -75,26 +75,14 @@ export function TableContent({
       }
     }
 
-    console.log('handleFullPath:', {
-      fileIdentifier,
-      directLookup: pathMap?.[fileIdentifier],
-      parts: fileIdentifier.split(/[/\\]/),
-      extractedFilename: fileIdentifier.split(/[/\\]/).slice(-1).join(''),
-      fullPath,
-      pathMap: Object.keys(pathMap || {}).length,
-      pathMapKeys: Object.keys(pathMap || {}),
-      pathMapEntries: Object.entries(pathMap || {}),
-    });
     const openFile = () => {
       if (!fullPath) {
         console.error('No full path found for file:', fileIdentifier);
-        alert(`Cannot open file: Path not found for ${fileIdentifier}`);
         return;
       }
       // @ts-ignore
       window.electron?.openFile?.(fullPath).catch((err: any) => {
         console.error('Error opening file:', err);
-        alert(`Failed to open file: ${err.message || err}`);
       });
     };
 
@@ -393,7 +381,7 @@ export function TableContent({
               <div className="p-4">
                 <TokenHighlighter
                   tokens={tokens}
-                  editable={isEnterprise}
+                  editable={isFinetuningEnabled}
                   availableTags={tags.map((tag) => tag.type)}
                   unassignableTags={!environment.allowCustomTagsInFeedback ? customTagNames : []}
                   onTagAssign={onTagAssign}

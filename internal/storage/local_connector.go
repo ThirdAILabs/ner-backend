@@ -14,8 +14,7 @@ import (
 
 type LocalConnectorParams struct {
 	BaseDir string
-	Bucket string
-	Prefix string
+	SubDir  string
 }
 
 type LocalConnectorTaskParams struct {
@@ -42,12 +41,12 @@ func (c *LocalConnector) IterTaskChunks(ctx context.Context, params []byte) (<-c
 		return nil, fmt.Errorf("error unmarshalling params: %w", err)
 	}
 
-	return iterTaskChunks(ctx, c.params.Bucket, parsedParams.ChunkKeys, c)
+	return iterTaskChunks(ctx, parsedParams.ChunkKeys, c)
 }
 
 func (c *LocalConnector) iterObjects() ObjectIterator {
 	return func(yield func(obj Object, err error) bool) {
-		err := filepath.WalkDir(localStorageFullpath(c.params.BaseDir, c.params.Bucket, c.params.Prefix), func(path string, d fs.DirEntry, err error) error {
+		err := filepath.WalkDir(localStorageFullpath(c.params.BaseDir, c.params.SubDir), func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
@@ -60,7 +59,7 @@ func (c *LocalConnector) iterObjects() ObjectIterator {
 				return err
 			}
 
-			obj := Object{Name: filepath.Join(c.params.Prefix, d.Name()), Size: info.Size()}
+			obj := Object{Name: filepath.Join(c.params.SubDir, d.Name()), Size: info.Size()}
 			if !yield(obj, nil) {
 				return io.EOF
 			}
@@ -73,19 +72,18 @@ func (c *LocalConnector) iterObjects() ObjectIterator {
 	}
 }
 
-
-func (c *LocalConnector) getObject(bucket, key string) ([]byte, error) {
+func (c *LocalConnector) getObject(key string) ([]byte, error) {
 	// TODO: This method loads entire files into memory which can cause issues with large files.
 	// Change this method to return io.ReadCloser instead of []byte to stream data
-	data, err := os.ReadFile(localStorageFullpath(c.params.BaseDir, bucket, key))
+	data, err := os.ReadFile(localStorageFullpath(c.params.BaseDir, key))
 	if err != nil {
-		return nil, fmt.Errorf("failed to read file %s/%s: %w", bucket, key, err)
+		return nil, fmt.Errorf("failed to read file %s/%s/%s: %w", c.params.BaseDir, c.params.SubDir, key, err)
 	}
 	return data, nil
 }
 
-func (c *LocalConnector) GetObjectStream(ctx context.Context, bucket, key string) (io.Reader, error) {
-	data, err := c.getObject(bucket, key)
+func (c *LocalConnector) GetObjectStream(ctx context.Context, key string) (io.Reader, error) {
+	data, err := c.getObject(key)
 	if err != nil {
 		return nil, err
 	}

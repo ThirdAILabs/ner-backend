@@ -63,7 +63,7 @@ func NewModelLoaders() map[ModelType]ModelLoader {
 			return python.LoadPythonModel("python_combined_ner_model", cfgJSON)
 		},
 		PythonCnn: func(modelDir string) (Model, error) {
-			return python.LoadCnnModel(modelDir)
+			return python.LoadCnnModel(modelDir, cnnModelKey)
 		},
 		Presidio: func(_ string) (Model, error) {
 			return NewPresidioModel()

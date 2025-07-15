@@ -12,15 +12,13 @@ type UploadParams struct {
 }
 
 type ObjectStore interface {
-	CreateBucket(ctx context.Context, bucket string) error
+	PutObject(ctx context.Context, key string, data io.Reader) error
 
-	PutObject(ctx context.Context, bucket, key string, data io.Reader) error
+	DeleteObjects(ctx context.Context, dir string) error
 
-	DeleteObjects(ctx context.Context, bucket string, prefix string) error
+	DownloadDir(ctx context.Context, src, dest string, overwrite bool) error
 
-	DownloadDir(ctx context.Context, bucket, prefix, dest string, overwrite bool) error
+	UploadDir(ctx context.Context, src, dest string) error
 
-	UploadDir(ctx context.Context, bucket, prefix, src string) error
-
-	GetUploadConnector(ctx context.Context, bucket string, uploadParams UploadParams) (Connector, error)
+	GetUploadConnector(ctx context.Context, dir string, uploadParams UploadParams) (Connector, error)
 }

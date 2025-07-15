@@ -82,6 +82,15 @@ export const nerService = {
     }
   },
 
+  getEnterprise: async (): Promise<boolean> => {
+    try {
+      const response = await axiosInstance.get('/enterprise');
+      return response.data;
+    } catch (error) {
+      return handleApiError(error, 'Failed to load enterprise information');
+    }
+  },
+
   listModels: async (): Promise<Model[]> => {
     try {
       const response = await axiosInstance.get('/models');
