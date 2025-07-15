@@ -32,6 +32,7 @@ jobs:
     - name: Validate Go Module Files
       run: | 
         go mod tidy
+        echo "Listing files that would be changed by go mod tidy:"
         git diff --name-only --exit-code
       
     - name: Run Formatter
