@@ -5,27 +5,13 @@ import {
   Box,
   Typography,
   CircularProgress,
-  FormControl,
-  Select,
-  MenuItem,
   SelectChangeEvent,
-  Card,
-  CardContent,
 } from '@mui/material';
 import { useSearchParams } from 'next/navigation';
 import { nerService } from '@/lib/backend';
-import MetricsDataViewer from './metrics/MetricsDataViewer';
 import { useHealth } from '@/contexts/HealthProvider';
 import { useConditionalTelemetry } from '@/hooks/useConditionalTelemetry';
-
 import { useLicense } from '@/hooks/useLicense';
-
-import MetricsDataViewerCard from '@/components/ui/MetricsDataViewerCard';
-import { formatFileSize } from '@/lib/utils';
-
-import Tooltip from '@mui/material/Tooltip';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import CustomisableCard from '@/components/ui/cards/customisableCard';
 import StatsCards from '@/components/stats/StatsCards';
 import FilterDropdown from '@/components/ui/FilterDropdown';
 
