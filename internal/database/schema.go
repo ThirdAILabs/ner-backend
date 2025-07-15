@@ -53,8 +53,8 @@ type Report struct {
 	Deleted bool `gorm:"default:false"`
 	Stopped bool `gorm:"default:false"`
 
-	StorageType     string `gorm:"size:20;not null"`
-	StorageParams   datatypes.JSON `gorm:"type:jsonb;not null"`
+	StorageType   string         `gorm:"size:20;not null"`
+	StorageParams datatypes.JSON `gorm:"type:jsonb;not null"`
 
 	CreationTime       time.Time
 	SucceededFileCount int `gorm:"default:0"`
