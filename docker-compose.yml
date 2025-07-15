@@ -76,9 +76,10 @@ services:
       - DATABASE_URL=${DATABASE_URL:-postgresql://user:password@postgres:5432/ner-backend?sslmode=disable}
       - RABBITMQ_URL=${RABBITMQ_URL:-amqp://user:password@rabbitmq:5672/}
       - S3_ENDPOINT_URL=${S3_ENDPOINT_URL:-http://minio:9000}
+      - S3_REGION=${S3_REGION:-us-east-1}
       - INTERNAL_AWS_ACCESS_KEY_ID=${INTERNAL_AWS_ACCESS_KEY_ID:-YOURACCESSKEY}
       - INTERNAL_AWS_SECRET_ACCESS_KEY=${INTERNAL_AWS_SECRET_ACCESS_KEY:-YOURSECRETKEY}
-      - BUCKET_NAME="ner-backend"
+      - BUCKET_NAME=ner-backend
     volumes:
       # - .:/app # Mount code for development (requires Go toolchain in container or local build)
       - /etc/localtime:/etc/localtime:ro
@@ -106,7 +107,8 @@ services:
       - S3_ENDPOINT_URL=${S3_ENDPOINT_URL:-http://minio:9000}
       - INTERNAL_AWS_ACCESS_KEY_ID=${INTERNAL_AWS_ACCESS_KEY_ID:-YOURACCESSKEY}
       - INTERNAL_AWS_SECRET_ACCESS_KEY=${INTERNAL_AWS_SECRET_ACCESS_KEY:-YOURSECRETKEY}
-      - BUCKET_NAME="ner-backend"
+      - S3_REGION=${S3_REGION:-us-east-1}
+      - BUCKET_NAME=ner-backend
       - PYTHON_EXECUTABLE_PATH=${PYTHON_EXECUTABLE_PATH:-python}
       - PYTHON_MODEL_PLUGIN_SCRIPT_PATH=${PYTHON_MODEL_PLUGIN_SCRIPT_PATH:-plugin/plugin-python/plugin.py}
     volumes:

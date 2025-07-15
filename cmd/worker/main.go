@@ -13,6 +13,7 @@ import (
 	"syscall"
 
 	"github.com/caarlos0/env/v11"
+	ort "github.com/yalue/onnxruntime_go"
 )
 
 type WorkerConfig struct {
@@ -26,6 +27,7 @@ type WorkerConfig struct {
 	LicenseKey                  string `env:"LICENSE_KEY" envDefault:""`
 	PythonExecutablePath        string `env:"PYTHON_EXECUTABLE_PATH" envDefault:"python"`
 	PythonModelPluginScriptPath string `env:"PYTHON_MODEL_PLUGIN_SCRIPT_PATH" envDefault:"plugin/plugin-python/plugin.py"`
+	OnnxRuntimeDylib            string `env:"ONNX_RUNTIME_DYLIB"`
 }
 
 func main() {
@@ -37,6 +39,19 @@ func main() {
 	if err := env.Parse(&cfg); err != nil {
 		log.Fatalf("error parsing config: %v", err)
 	}
+
+	if cfg.OnnxRuntimeDylib == "" {
+		log.Fatalf("ONNX_RUNTIME_DYLIB must be set")
+	}
+	ort.SetSharedLibraryPath(cfg.OnnxRuntimeDylib)
+	if err := ort.InitializeEnvironment(); err != nil {
+		log.Fatalf("could not init ONNX Runtime: %v", err)
+	}
+	defer func() {
+		if err := ort.DestroyEnvironment(); err != nil {
+			log.Fatalf("error destroying onnx env: %v", err)
+		}
+	}()
 
 	db, err := database.NewDatabase(cfg.DatabaseURL)
 	if err != nil {

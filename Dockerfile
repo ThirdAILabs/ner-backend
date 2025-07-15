@@ -59,6 +59,7 @@ ENV PATH="/opt/venv/bin:${PATH}"
 RUN python3 -m venv /opt/venv && \
     pip install --upgrade pip
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
     build-essential \
     git \
     nodejs \
@@ -73,6 +74,16 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Downloading the model here to avoid grpc plugin emitting download logs
 RUN python -m spacy download en_core_web_lg
+
+# download ONNX Runtime linux-x64 v1.22.0
+ARG ONNX_URL="https://github.com/microsoft/onnxruntime/releases/download/v1.22.0/onnxruntime-linux-x64-1.22.0.tgz"
+RUN mkdir -p /app/onnxruntime \
+    && curl -fsSL "$ONNX_URL" -o ort.tgz \
+    && tar -C /app/onnxruntime --strip-components=1 -xzf ort.tgz \
+    && rm ort.tgz
+
+# point your Go code at the .so
+ENV ONNX_RUNTIME_DYLIB=/app/onnxruntime/lib/libonnxruntime.so
 
 # Copy only the necessary artifacts from the builder stage
 COPY --from=backend-builder /app/api /app/api
