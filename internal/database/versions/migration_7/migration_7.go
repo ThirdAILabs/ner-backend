@@ -24,6 +24,7 @@ func Migration(db *gorm.DB) error {
 		return err
 	}
 
+	commonTagsName := make([]string, len(types.CommonModelTags))
 	for _, tagInfo := range types.CommonModelTags {
 		bExamples, err := json.Marshal(tagInfo.Examples)
 		if err != nil {
@@ -33,6 +34,7 @@ func Migration(db *gorm.DB) error {
 		if err != nil {
 			return fmt.Errorf("Migration failed: could not marshal contexts for tag %s: %w", tagInfo.Name, err)
 		}
+		commonTagsName = append(commonTagsName, tagInfo.Name)
 		result := db.Model(&ModelTag{}).
 			Where("tag = ?", tagInfo.Name).
 			Updates(map[string]interface{}{
@@ -44,6 +46,16 @@ func Migration(db *gorm.DB) error {
 		if result.Error != nil {
 			return result.Error
 		}
+
+		// check if there any non-common tags
+		var count int64
+		if err := db.Model(&ModelTag{}).Where("tag NOT IN ?", commonTagsName).Count(&count).Error; err != nil {
+			return fmt.Errorf("Migration failed: could not count non-common tags: %w", err)
+		}
+		if count > 0 {
+			return fmt.Errorf("Migration failed: there are non-common tags in the database, please remove them before running the migration")
+		}
+
 	}
 
 	return nil
