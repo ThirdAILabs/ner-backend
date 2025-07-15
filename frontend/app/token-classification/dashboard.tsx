@@ -27,6 +27,24 @@ import Tooltip from '@mui/material/Tooltip';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import CustomisableCard from '@/components/ui/cards/customisableCard';
 import StatsCards from '@/components/stats/StatsCards';
+import FilterDropdown from '@/components/ui/FilterDropdown';
+
+const styles = {
+  metricsHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4rem',
+    marginBottom: '36px',
+  },
+  metricsTitle: {
+    fontWeight: 600,
+  },
+  filtersContainer: {
+    display: 'flex',
+    gap: '2.4rem',
+    alignItems: 'center',
+  },
+};
 
 const Dashboard = () => {
   const recordEvent = useConditionalTelemetry();
@@ -55,7 +73,7 @@ const Dashboard = () => {
 
   // Models for the dropdown
   const [days, setDays] = useState<number>(7);
-  const handleDaysChange = (e: SelectChangeEvent<number>) => {
+  const handleDaysChange = (e: SelectChangeEvent<string | number>) => {
     const newDays = Number(e.target.value);
     setDays(newDays);
     recordEvent({
@@ -67,7 +85,7 @@ const Dashboard = () => {
   };
   const [models, setModels] = useState<Model[]>([]);
   const [selectedModel, setSelectedModel] = useState<Model | null>(null);
-  const handleModelChange = (e: SelectChangeEvent<string>) => {
+  const handleModelChange = (e: SelectChangeEvent<string | number>) => {
     const model = models.find((m) => m.Id === e.target.value) || null;
     setSelectedModel(model);
     recordEvent({
@@ -114,9 +132,37 @@ const Dashboard = () => {
     );
   }
 
+  const daysOptions = [
+    { value: 7, label: '7 days' },
+    { value: 30, label: '30 days' },
+    { value: 90, label: '90 days' },
+  ];
+
+  const modelOptions = models.map((model) => ({
+    value: model.Id,
+    label: model.Name || model.Id,
+  }));
+
   return (
     <>
       <div className="container py-4">
+        <div style={styles.metricsHeader}>
+          <span style={styles.metricsTitle} className='text-gray-500 text-2xl'>Metrics</span>
+          <div style={styles.filtersContainer}>
+            <FilterDropdown
+              label="Days"
+              value={days}
+              options={daysOptions}
+              onChange={handleDaysChange}
+            />
+            <FilterDropdown
+              label="Model"
+              value={selectedModel?.Id || 'all'}
+              options={[{ value: 'all', label: 'All Models' }, ...modelOptions]}
+              onChange={handleModelChange}
+            />
+          </div>
+        </div>
         <StatsCards />
       </div>
     </>
