@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"log"
-	"log/slog"
 	"ner-backend/cmd"
 	"ner-backend/internal/api"
 	"ner-backend/internal/database"
@@ -24,16 +23,14 @@ import (
 type APIConfig struct {
 	DatabaseURL       string `env:"DATABASE_URL,notEmpty,required"`
 	RabbitMQURL       string `env:"RABBITMQ_URL,notEmpty,required"`
-	S3EndpointURL     string `env:"S3_ENDPOINT_URL,notEmpty,required"`
-	S3AccessKeyID     string `env:"INTERNAL_AWS_ACCESS_KEY_ID,notEmpty,required"`
-	S3SecretAccessKey string `env:"INTERNAL_AWS_SECRET_ACCESS_KEY,notEmpty,required"`
-	ModelBucketName   string `env:"MODEL_BUCKET_NAME" envDefault:"ner-models"`
-	UploadBucketName  string `env:"UPLOAD_BUCKET_NAME" envDefault:"uploads"`
-	QueueNames        string `env:"QUEUE_NAMES" envDefault:"inference_queue,training_queue,shard_data_queue"`
-	WorkerConcurrency int    `env:"CONCURRENCY" envDefault:"1"`
+	S3EndpointURL     string `env:"S3_ENDPOINT_URL"`
+	S3Region          string `env:"S3_REGION"`
+	S3AccessKeyID     string `env:"INTERNAL_AWS_ACCESS_KEY_ID"`
+	S3SecretAccessKey string `env:"INTERNAL_AWS_SECRET_ACCESS_KEY"`
+	BucketName        string `env:"BUCKET_NAME,notEmpty,required"`
+	LicenseKey        string `env:"LICENSE_KEY" envDefault:""`
 	APIPort           string `env:"API_PORT" envDefault:"8001"`
 	ChunkTargetBytes  int64  `env:"S3_CHUNK_TARGET_BYTES" envDefault:"10737418240"`
-	LicenseKey        string `env:"LICENSE_KEY" envDefault:""`
 	EnterpriseMode    bool   `env:"ENTERPRISE_MODE" envDefault:"false"`
 	HostModelDir      string `env:"HOST_MODEL_DIR" envDefault:"/app/models"`
 }
@@ -55,10 +52,11 @@ func main() {
 
 	s3Cfg := storage.S3ClientConfig{
 		Endpoint:        cfg.S3EndpointURL,
+		Region:          cfg.S3Region,
 		AccessKeyID:     cfg.S3AccessKeyID,
 		SecretAccessKey: cfg.S3SecretAccessKey,
 	}
-	s3ObjectStore, err := storage.NewS3ObjectStore(s3Cfg)
+	s3ObjectStore, err := storage.NewS3ObjectStore(cfg.BucketName, s3Cfg)
 	if err != nil {
 		log.Fatalf("Failed to create S3 object store: %v", err)
 	}
@@ -67,18 +65,13 @@ func main() {
 		log.Fatalf("Worker: Failed to create S3 client: %v", err)
 	}
 
-	if err := s3ObjectStore.CreateBucket(context.Background(), cfg.ModelBucketName); err != nil {
-		slog.Error("error creating model bucket", "error", err)
-		panic("failed to create model bucket")
-	}
-
 	cmd.InitializePresidioModel(db)
 
-	if err := cmd.InitializePythonCnnModel(context.Background(), db, s3ObjectStore, cfg.ModelBucketName, "advanced", cfg.HostModelDir); err != nil {
+	if err := cmd.InitializePythonCnnModel(context.Background(), db, s3ObjectStore, cmd.ModelBucketName, "advanced", cfg.HostModelDir); err != nil {
 		log.Fatalf("Failed to init & upload python CNN model: %v", err)
 	}
 
-	if err := cmd.InitializePythonTransformerModel(context.Background(), db, s3ObjectStore, cfg.ModelBucketName, "ultra", cfg.HostModelDir); err != nil {
+	if err := cmd.InitializePythonTransformerModel(context.Background(), db, s3ObjectStore, cmd.ModelBucketName, "ultra", cfg.HostModelDir); err != nil {
 		log.Fatalf("Failed to init & upload python transformer model: %v", err)
 	}
 
@@ -116,7 +109,7 @@ func main() {
 		log.Fatalf("License verification failed - Info: %v, Error: %v", licenseInfo, err)
 	}
 
-	apiHandler := api.NewBackendService(db, s3ObjectStore, cfg.UploadBucketName, publisher, cfg.ChunkTargetBytes, licensing, cfg.EnterpriseMode)
+	apiHandler := api.NewBackendService(db, s3ObjectStore, cmd.UploadBucketName, publisher, cfg.ChunkTargetBytes, licensing, cfg.EnterpriseMode)
 
 	// Your existing API routes should be prefixed with /api to avoid conflicts
 	r.Route("/api/v1", func(r chi.Router) {

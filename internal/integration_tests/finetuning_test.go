@@ -40,7 +40,7 @@ func setupCommon(t *testing.T) (
 
 	minioURL := setupMinioContainer(t, ctx)
 
-	s3ObjectStore, err := storage.NewS3ObjectStore(storage.S3ClientConfig{
+	s3ObjectStore, err := storage.NewS3ObjectStore("ner-test-bucket", storage.S3ClientConfig{
 		Endpoint:        minioURL,
 		AccessKeyID:     minioUsername,
 		SecretAccessKey: minioPassword,
@@ -129,14 +129,9 @@ func TestFinetuning(t *testing.T) {
 	require.NotNil(t, model.BaseModelId)
 	assert.Equal(t, baseID, *model.BaseModelId)
 
-	// Download the model.json file to a temporary location, then assert that it contains the expected metadata.
-	tempFile := filepath.Join(t.TempDir(), "model.json")
-	err := s3ObjectStore.DownloadObject(context.Background(), modelBucket, fmt.Sprintf("%s/model.json", model.Id), tempFile)
+	objData, err := s3ObjectStore.GetObject(context.Background(), filepath.Join(modelBucket, model.Id.String(), "model.json"))
 	require.NoError(t, err)
-
-	file, err := os.Open(tempFile)
-	require.NoError(t, err)
-	defer file.Close()
+	defer objData.Close()
 }
 
 func finetuningTestHelper(t *testing.T, modelInit func(ctx context.Context, db *gorm.DB, s3p storage.ObjectStore, bucket, name, hostModelDir string) error) {
@@ -152,8 +147,6 @@ func finetuningTestHelper(t *testing.T, modelInit func(ctx context.Context, db *
 
 	ctx, cancel, s3ObjectStore, db, pub, sub, router := setupCommon(t)
 	defer cancel()
-
-	require.NoError(t, s3ObjectStore.CreateBucket(context.Background(), modelBucket))
 
 	os.Setenv("AWS_ACCESS_KEY_ID", minioUsername)
 	os.Setenv("AWS_SECRET_ACCESS_KEY", minioPassword)
@@ -289,8 +282,6 @@ func TestFinetuningOnnxModel(t *testing.T) {
 
 	ctx, cancel, s3ObjectStore, db, pub, sub, router := setupCommon(t)
 	defer cancel()
-
-	require.NoError(t, s3ObjectStore.CreateBucket(context.Background(), modelBucket))
 
 	os.Setenv("AWS_ACCESS_KEY_ID", minioUsername)
 	os.Setenv("AWS_SECRET_ACCESS_KEY", minioPassword)

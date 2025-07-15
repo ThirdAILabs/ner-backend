@@ -83,8 +83,8 @@ func LoadPythonModel(pluginModelName, kwargsJSON string) (*PythonModel, error) {
 	}, nil
 }
 
-func LoadCnnModel(modelDir string) (*PythonModel, error) {
-	cfgJSON := fmt.Sprintf(`{"model_path":"%s", "tokenizer_path":"%s/qwen_tokenizer"}`, modelDir, modelDir)
+func LoadCnnModel(modelDir, keyB64 string) (*PythonModel, error) {
+	cfgJSON := fmt.Sprintf(`{"model_path":"%s", "tokenizer_path":"%s/qwen_tokenizer", "key_b64": "%s"}`, modelDir, modelDir, keyB64)
 	return LoadPythonModel("python_cnn_ner_model", cfgJSON)
 }
 

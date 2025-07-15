@@ -2,7 +2,6 @@ package api_test
 
 import (
 	"bytes"
-	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -42,10 +41,6 @@ func createDB(t *testing.T, create ...any) *gorm.DB {
 
 type mockStorage struct {
 	storage.ObjectStore
-}
-
-func (m *mockStorage) CreateBucket(ctx context.Context, bucket string) error {
-	return nil
 }
 
 func TestListModels(t *testing.T) {

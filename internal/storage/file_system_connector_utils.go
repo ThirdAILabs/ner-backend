@@ -20,14 +20,14 @@ func createInferenceTasks(iterObjects ObjectIterator, targetBytes int64) ([]Infe
 		taskParams := LocalConnectorTaskParams{
 			ChunkKeys: chunkKeys,
 		}
-		
+
 		taskParamsBytes, err := json.Marshal(taskParams)
 		if err != nil {
 			return fmt.Errorf("error marshalling task params: %w", err)
 		}
 
 		tasks = append(tasks, InferenceTask{
-			Params: taskParamsBytes,
+			Params:    taskParamsBytes,
 			TotalSize: chunkSize,
 		})
 
@@ -43,11 +43,11 @@ func createInferenceTasks(iterObjects ObjectIterator, targetBytes int64) ([]Infe
 			if err := addTask(currentChunkKeys, currentChunkSize); err != nil {
 				return nil, 0, err
 			}
-			
+
 			currentChunkKeys = []string{}
 			currentChunkSize = 0
 		}
-		
+
 		currentChunkKeys = append(currentChunkKeys, obj.Name)
 		currentChunkSize += obj.Size
 		totalObjects++
@@ -63,10 +63,10 @@ func createInferenceTasks(iterObjects ObjectIterator, targetBytes int64) ([]Infe
 }
 
 type FsConnector interface {
-	GetObjectStream(ctx context.Context, bucket, key string) (io.Reader, error)
+	GetObjectStream(ctx context.Context, key string) (io.Reader, error)
 }
 
-func iterTaskChunks(ctx context.Context, bucket string, keys []string, connector FsConnector) (<-chan ObjectChunkStream, error) {
+func iterTaskChunks(ctx context.Context, keys []string, connector FsConnector) (<-chan ObjectChunkStream, error) {
 	parser := NewDefaultParser()
 
 	// Allocate a small buffer so we can preprocess multiple chunks in the background while the inference is running.
@@ -74,21 +74,20 @@ func iterTaskChunks(ctx context.Context, bucket string, keys []string, connector
 
 	go func() {
 		defer close(chunkStreams)
-		
-		
+
 		for _, objectKey := range keys {
-			objectStream, err := connector.GetObjectStream(ctx, bucket, objectKey)
+			objectStream, err := connector.GetObjectStream(ctx, objectKey)
 			if err != nil {
 				chunkStreams <- ObjectChunkStream{Name: objectKey, Chunks: nil, Error: err}
 				continue
 			}
 
 			parsedChunks := parser.Parse(objectKey, objectStream)
-			
+
 			chunkStreams <- ObjectChunkStream{
-				Name: objectKey,
+				Name:   objectKey,
 				Chunks: parsedChunks,
-				Error: nil,
+				Error:  nil,
 			}
 		}
 	}()

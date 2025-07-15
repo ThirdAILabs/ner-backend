@@ -125,10 +125,8 @@ const (
 func createModel(t *testing.T, storage storage.ObjectStore, db *gorm.DB, modelBucket string) (string, core.ModelLoader, uuid.UUID) {
 	modelData := `{"phone": "\\d{3}-\\d{3}-\\d{4}", "email": "\\w+@email\\.com"}`
 
-	require.NoError(t, storage.CreateBucket(context.Background(), modelBucket))
-
 	modelId := uuid.New()
-	err := storage.PutObject(context.Background(), modelBucket, modelId.String()+"/model.json", strings.NewReader(modelData))
+	err := storage.PutObject(context.Background(), filepath.Join(modelBucket, modelId.String(), "model.json"), strings.NewReader(modelData))
 	require.NoError(t, err)
 
 	model := database.Model{

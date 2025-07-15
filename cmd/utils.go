@@ -22,6 +22,11 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	ModelBucketName  = "ner-models"
+	UploadBucketName = "uploads"
+)
+
 func LoadEnvFile() {
 	var configPath string
 
@@ -101,7 +106,7 @@ func initializeModel(
 	ctx context.Context,
 	db *gorm.DB,
 	s3p storage.ObjectStore,
-	bucket,
+	modelBucket,
 	name,
 	modelType,
 	localDir string,
@@ -180,7 +185,7 @@ func initializeModel(
 		return fmt.Errorf("local model dir %s is not a directory", localDir)
 	}
 
-	if err := s3p.UploadDir(ctx, bucket, model.Id.String(), localDir); err != nil {
+	if err := s3p.UploadDir(ctx, localDir, filepath.Join(modelBucket, model.Id.String())); err != nil {
 		database.UpdateModelStatus(ctx, db, model.Id, database.ModelFailed) // nolint:errcheck
 		slog.Warn("failed to upload model to S3", "model_id", model.Id, "error", err)
 		return fmt.Errorf("error uploading model %s: %w", name, err)

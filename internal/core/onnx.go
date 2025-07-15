@@ -152,9 +152,9 @@ type OnnxModel struct {
 	modelDir string
 }
 
-func decryptModel(encPath string) ([]byte, error) {
-	keyB64 := "UuTl+ZEVxcUCJoXIDkePg49vS/GYjHa+Fd96kp8vG5E="
+const cnnModelKey = "UuTl+ZEVxcUCJoXIDkePg49vS/GYjHa+Fd96kp8vG5E="
 
+func decryptModel(encPath, keyB64 string) ([]byte, error) {
 	key, err := base64.StdEncoding.DecodeString(keyB64)
 	if err != nil {
 		return nil, fmt.Errorf("invalid MODEL_KEY: %w", err)
@@ -188,11 +188,11 @@ func decryptModel(encPath string) ([]byte, error) {
 }
 
 func LoadOnnxModel(modelDir string) (Model, error) {
-	encPath := filepath.Join(modelDir, "model.onnx")
+	encPath := filepath.Join(modelDir, "model.onnx.enc")
 	crfPath := filepath.Join(modelDir, "transitions.json")
 	tokenizerPath := filepath.Join(modelDir, "qwen_tokenizer/tokenizer.json")
 
-	onnxBytes, err := os.ReadFile(encPath)
+	onnxBytes, err := decryptModel(encPath, cnnModelKey)
 	if err != nil {
 		return nil, fmt.Errorf("error reading model data: %w", err)
 	}
@@ -303,7 +303,7 @@ func (m *OnnxModel) Predict(text string) ([]types.Entity, error) {
 }
 
 func (m *OnnxModel) FinetuneAndSave(taskPrompt string, tags []types.TagInfo, samples []api.Sample, savePath string) error {
-	pythonModel, err := python.LoadCnnModel(m.modelDir)
+	pythonModel, err := python.LoadCnnModel(m.modelDir, cnnModelKey)
 	if err != nil {
 		return fmt.Errorf("failed to load Python model for finetuning: %w", err)
 	}
