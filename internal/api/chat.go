@@ -21,7 +21,7 @@ import (
 )
 
 type SessionLock struct {
-	mu sync.Mutex
+	mu       sync.Mutex
 	sessions map[uuid.UUID]bool
 }
 
@@ -90,8 +90,8 @@ func (s *ChatService) GetSessions(r *http.Request) (any, error) {
 	apiSessions := make([]api.ChatSessionMetadata, len(sessions))
 	for i, session := range sessions {
 		apiSessions[i] = api.ChatSessionMetadata{
-			ID:      session.ID,
-			Title:   session.Title,
+			ID:    session.ID,
+			Title: session.Title,
 		}
 	}
 
@@ -113,7 +113,7 @@ func (s *ChatService) StartSession(r *http.Request) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	sessionID := uuid.New()
 	err = s.db.CreateSession(&database.ChatSession{
 		ID:          sessionID,
@@ -151,9 +151,9 @@ func (s *ChatService) GetSession(r *http.Request) (any, error) {
 	}
 
 	return api.ChatSessionMetadata{
-		ID:      session.ID,
-		Title:   session.Title,
-		TagMap:  tagMetadata.TagMap,
+		ID:     session.ID,
+		Title:  session.Title,
+		TagMap: tagMetadata.TagMap,
 	}, nil
 }
 
@@ -162,7 +162,7 @@ func (s *ChatService) RenameSession(r *http.Request) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if err := s.lock.Lock(sessionID); err != nil {
 		return nil, err
 	}
@@ -210,7 +210,7 @@ func (s *ChatService) SendMessageStream(r *http.Request) (StreamResponse, error)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	chatIterator, err := session.ChatStream(req.Message)
 	if err != nil {
 		return nil, err
@@ -282,7 +282,7 @@ func (s *ChatService) getOpenAIApiKey() string {
 	// TODO: Store in a more secure way.
 	apiKey := ""
 	if data, err := os.ReadFile("api-key.txt"); err == nil {
-		apiKey = strings.TrimSpace(string(data));
+		apiKey = strings.TrimSpace(string(data))
 	}
 	return apiKey
 }
@@ -299,13 +299,13 @@ func (s *ChatService) SetOpenAIApiKey(r *http.Request) (any, error) {
 	}
 
 	slog.Info("Setting OpenAI API key", "key_length", len(req.ApiKey))
-	
+
 	err = os.WriteFile("api-key.txt", []byte(req.ApiKey), 0600)
 	if err != nil {
 		slog.Error("Failed to write API key file", "error", err)
 		return nil, err
 	}
-	
+
 	// Also set it as environment variable immediately
 	os.Setenv("OPENAI_API_KEY", req.ApiKey)
 	slog.Info("OpenAI API key saved and set as environment variable")
@@ -344,7 +344,7 @@ func (s *ChatService) ValidateOpenAIApiKey(r *http.Request) (any, error) {
 	if err != nil {
 		return api.ValidationResponse{Valid: false, Message: "Failed to create validation request"}, nil
 	}
-	
+
 	testReq.Header.Set("Authorization", "Bearer "+apiKey)
 	resp, err := client.Do(testReq)
 	if err != nil {

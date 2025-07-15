@@ -32,13 +32,13 @@ jobs:
     - name: Validate Go Module Files
       run: | 
         go mod tidy
-        echo "Listing files that would be changed by go mod tidy:"
+        echo "Listing files that would be changed by go mod tidy (if issues found run 'go mod tidy' and commit the result):"
         git diff --name-only --exit-code
       
     - name: Run Formatter
       run: |
         if [ -n "$(gofmt -e -l ./)" ]; then
-          echo "Formatting issues detected in the following files:"
+          echo "Formatting issues detected in the following files please run 'gofmt -w ./' and commit the result:"
           gofmt -e -l ./
           exit 1
         fi
