@@ -5,6 +5,7 @@ import (
 	"log"
 	"ner-backend/cmd"
 	"ner-backend/internal/api"
+	"ner-backend/internal/core"
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/storage"
@@ -33,6 +34,7 @@ type APIConfig struct {
 	ChunkTargetBytes  int64  `env:"S3_CHUNK_TARGET_BYTES" envDefault:"10737418240"`
 	EnterpriseMode    bool   `env:"ENTERPRISE_MODE" envDefault:"false"`
 	HostModelDir      string `env:"HOST_MODEL_DIR" envDefault:"/app/models"`
+	ModelType         string `env:"MODEL_TYPE" envDefault:"onnx_cnn"`
 }
 
 func main() {
@@ -111,9 +113,19 @@ func main() {
 
 	apiHandler := api.NewBackendService(db, s3ObjectStore, cmd.UploadBucketName, publisher, cfg.ChunkTargetBytes, licensing, cfg.EnterpriseMode)
 
+	// Load NER model for chat service
+	loaders := core.NewModelLoaders()
+	nerModel, err := loaders[core.ParseModelType(cfg.ModelType)](cfg.HostModelDir)
+	if err != nil {
+		log.Fatalf("could not load NER model: %v", err)
+	}
+
+	chatHandler := api.NewChatService(db, nerModel)
+
 	// Your existing API routes should be prefixed with /api to avoid conflicts
 	r.Route("/api/v1", func(r chi.Router) {
 		apiHandler.AddRoutes(r)
+		chatHandler.AddRoutes(r)
 	})
 
 	// --- Start HTTP Server ---

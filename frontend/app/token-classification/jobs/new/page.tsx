@@ -1257,7 +1257,7 @@ export default function NewJobPage() {
                   {defaultModels.map((model) => (
                     <ModelOption
                       key={model.Id}
-                      title={model.Name[0].toUpperCase() + model.Name.slice(1)}
+                      title={model.Name}
                       description={model.Description || ''}
                       isSelected={selectedModelId === model.Id}
                       onClick={() => {

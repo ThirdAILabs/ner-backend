@@ -820,6 +820,16 @@ func getMultipartBoundary(r *http.Request) (string, error) {
 	return boundary, nil
 }
 
+func isAllowedFileType(filename string) bool {
+	ext := strings.ToLower(filepath.Ext(filename))
+	switch ext {
+	case ".pdf", ".txt", ".csv", ".html", ".json", ".xml":
+		return true
+	default:
+		return false
+	}
+}
+
 func (s *BackendService) UploadFiles(r *http.Request) (any, error) {
 	boundary, err := getMultipartBoundary(r)
 	if err != nil {
@@ -845,6 +855,11 @@ func (s *BackendService) UploadFiles(r *http.Request) (any, error) {
 		if part.FormName() == "files" {
 			if part.FileName() == "" {
 				return nil, CodedErrorf(http.StatusUnprocessableEntity, "invalid filename detected in upload files: filename cannot be empty")
+			}
+
+			if !isAllowedFileType(part.FileName()) {
+				slog.Warn("skipping unsupported file type", "filename", part.FileName())
+				continue
 			}
 
 			filenames = append(filenames, part.FileName())
@@ -1045,7 +1060,7 @@ func (s *BackendService) ValidateS3Access(r *http.Request) (any, error) {
 		r.Context(),
 		storage.S3ConnectorParams{
 			Endpoint: req.S3Endpoint,
-			Region:   req.Region,
+			Region:   req.S3Region,
 			Bucket:   req.SourceS3Bucket,
 			Prefix:   req.SourceS3Prefix,
 		},
