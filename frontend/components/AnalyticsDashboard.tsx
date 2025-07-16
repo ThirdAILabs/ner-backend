@@ -22,6 +22,7 @@ interface AnalyticsDashboardProps {
   tags: Tag[];
   timeTaken: number;
   succeededFileCount: number;
+  skippedFileCount: number;
   failedFileCount: number;
   totalFileCount: number;
   dataProcessed: number;
@@ -58,6 +59,7 @@ export function AnalyticsDashboard({
   tags,
   timeTaken,
   succeededFileCount,
+  skippedFileCount,
   failedFileCount,
   totalFileCount,
   dataProcessed,
@@ -65,8 +67,10 @@ export function AnalyticsDashboard({
   setSelectedTag,
 }: AnalyticsDashboardProps) {
   const tokenChartData = tags;
-  const progress = ((succeededFileCount + failedFileCount) * 100) / totalFileCount || 0;
+  const progress =
+    ((succeededFileCount + skippedFileCount + failedFileCount) * 100) / totalFileCount || 0;
   const filesSucceeded = (succeededFileCount * 100) / totalFileCount || 0;
+  const filesSkipped = (skippedFileCount * 100) / totalFileCount || 0;
   const filesFailed = (failedFileCount * 100) / totalFileCount || 0;
 
   const formattedTime = formatTime(timeTaken);
@@ -114,6 +118,20 @@ export function AnalyticsDashboard({
                       className="transition-all duration-500 ease-in-out"
                     />
                   )}
+                  {skippedFileCount > 0 && (
+                    <circle
+                      cx="60"
+                      cy="60"
+                      r="52"
+                      fill="none"
+                      stroke="#ffeb3b"
+                      strokeWidth="6"
+                      strokeLinecap="round"
+                      strokeDasharray={`${(skippedFileCount / totalFileCount) * 326.725} 326.725`}
+                      strokeDashoffset={-((succeededFileCount / totalFileCount) * 326.725)}
+                      className="transition-all duration-500 ease-in-out"
+                    />
+                  )}
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <span className="text-xl font-bold text-gray-700">{progress.toFixed(0)}%</span>
@@ -139,6 +157,15 @@ export function AnalyticsDashboard({
                   </div>
                   <span className="text-xl font-bold ml-4 text-red-600">
                     {filesFailed.toFixed(2)}%
+                  </span>
+                </div>
+                <div className="flex flex-col">
+                  <div className="flex items-center space-x-2">
+                    <div className="h-2.5 w-2.5 rounded-full bg-yellow-400"></div>
+                    <span className="text-xs font-medium text-gray-600">Skipped</span>
+                  </div>
+                  <span className="text-xl font-bold ml-4 text-yellow-400">
+                    {filesSkipped.toFixed(2)}%
                   </span>
                 </div>
               </div>
