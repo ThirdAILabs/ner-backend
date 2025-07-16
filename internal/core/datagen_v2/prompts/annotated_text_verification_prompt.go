@@ -51,7 +51,7 @@ Corrected annotated text:
 ##The Red Cross##COMPANY## coordinated their relief efforts from their base in ##Ottawa, Ontario##LOCATION##.
 
 Corections of the above example:
-- The tag Company was incorrectly applied to the token "The Red Cross coordinated". It should be corrected to "##The Red Cross##COMPANY## coordinated".
+- The tag Company was incorrectly applied to the token "The Red Cross coordinated". It should be corrected to "##The Red Cross##COMPANY##".
 `
 
 const AnnotatedTextCorrectionUser = `Given the following annotated text samples, verify the correctness of the tags and correct them if necessary.
