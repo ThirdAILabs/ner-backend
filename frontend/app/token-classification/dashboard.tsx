@@ -43,6 +43,7 @@ const Dashboard = () => {
   }, []);
   const { healthStatus } = useHealth();
   const { license } = useLicense();
+  console.log('License:', license);
   const searchParams = useSearchParams();
   const deploymentId = searchParams.get('deploymentId');
   const [isLoading, setIsLoading] = useState(true);
@@ -129,6 +130,30 @@ const Dashboard = () => {
     label: model.Name || model.Id,
   }));
 
+  const [stats, setStats] = useState<InferenceMetrics | null>(null);
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const metrics = await nerService.getInferenceMetrics(selectedModel?.Id, days);
+        setStats(metrics);
+        setIsLoading(false);
+      } catch (err) {
+        console.error('Failed to fetch inference metrics:', err);
+        setError('Failed to load metrics');
+        setIsLoading(false);
+      }
+    };
+
+    // Initial fetch
+    fetchStats();
+
+    // // Set up polling every 5 seconds
+    // const intervalId = setInterval(fetchStats, 5000);
+
+    // // Cleanup interval on unmount
+    // return () => clearInterval(intervalId);
+  }, [days, selectedModel, healthStatus]);
+
   return (
     <>
       <div className="container py-4">
@@ -149,7 +174,9 @@ const Dashboard = () => {
             />
           </div>
         </div>
-        <StatsCards />
+        <StatsCards
+          stats={stats}
+          license={license} />
       </div>
     </>
   );
