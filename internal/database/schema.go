@@ -31,8 +31,11 @@ type Model struct {
 }
 
 type ModelTag struct {
-	ModelId uuid.UUID `gorm:"type:uuid;primaryKey"`
-	Tag     string    `gorm:"primaryKey"`
+	ModelId     uuid.UUID      `gorm:"type:uuid;primaryKey"`
+	Tag         string         `gorm:"primaryKey"`
+	Description string         `gorm:"default:''"`
+	Examples    datatypes.JSON `gorm:"type:jsonb;default:'[]'"`
+	Contexts    datatypes.JSON `gorm:"type:jsonb;default:'[]'"`
 }
 
 const (

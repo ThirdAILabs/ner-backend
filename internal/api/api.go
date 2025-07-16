@@ -191,20 +191,6 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 	}); err != nil {
 		return nil, err
 	}
-	tagNames := make([]string, 0, len(req.Tags))
-	if len(req.Tags) > 0 {
-		for _, tag := range req.Tags {
-			tagNames = append(tagNames, tag.Name)
-		}
-		if err := database.SetModelTags(ctx, s.db, model.Id, tagNames); err != nil {
-			slog.Error("failed to set tags", "model", model.Id, "err", err)
-			return nil, err
-		}
-	} else {
-		for _, tag := range model.Tags {
-			tagNames = append(tagNames, tag.Tag)
-		}
-	}
 
 	samples := make([]api.Sample, 0, len(req.Samples))
 	samples = append(samples, req.Samples...)
@@ -227,16 +213,20 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 		return nil, CodedErrorf(http.StatusUnprocessableEntity, "no feedback samples found for model %s", modelId)
 	}
 
+	// TODO(anyone): Run some experiment to find optimal value of K based on the number of samples and model being finetuned.
+	recordsToGenerate := max(50, len(samples)*3)
+	testSplit := 0.1
+	recordsPerLlmCall := AutoTuneK(samples, 30, 40)
+
 	payload := messaging.FinetuneTaskPayload{
-		ModelId:            model.Id,
-		BaseModelId:        model.BaseModelId.UUID,
-		Tags:               req.Tags,
-		Samples:            samples,
-		GenerateData:       req.GenerateData,
-		NumValuesPerTag:    30,
-		RecordsToGenerate:  200,
-		RecordsPerTemplate: 3,
-		TestSplit:          0.2,
+		ModelId:             model.Id,
+		BaseModelId:         model.BaseModelId.UUID,
+		Samples:             samples,
+		GenerateData:        req.GenerateData,
+		RecordsToGenerate:   recordsToGenerate,
+		RecordsPerLlmCall:   recordsPerLlmCall,
+		TestSplit:           float32(testSplit),
+		VerifyGeneratedData: req.VerifyGeneratedData,
 	}
 	if req.TaskPrompt != nil {
 		payload.TaskPrompt = *req.TaskPrompt

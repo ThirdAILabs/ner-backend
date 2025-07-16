@@ -14,6 +14,7 @@ import (
 	backendpkg "ner-backend/internal/api"
 	"ner-backend/internal/core"
 	"ner-backend/internal/core/python"
+	"ner-backend/internal/core/types"
 	"ner-backend/internal/database"
 	"ner-backend/internal/messaging"
 	"ner-backend/internal/storage"
@@ -120,7 +121,6 @@ func TestFinetuning(t *testing.T) {
 	ftReq := api.FinetuneRequest{
 		Name:       "finetuned-model",
 		TaskPrompt: &tp,
-		Tags:       []api.TagInfo{{Name: "URL", Description: "uniform resource locators (URLs), which are references to web resources or pages on the internet", Examples: []string{"https://example.com", "http://thirdai.com"}}},
 	}
 	_, model := finetune(t, router, baseID.String(), ftReq, 10, 100*time.Millisecond)
 
@@ -132,10 +132,6 @@ func TestFinetuning(t *testing.T) {
 	objData, err := s3ObjectStore.GetObject(context.Background(), filepath.Join(modelBucket, model.Id.String(), "model.json"))
 	require.NoError(t, err)
 	defer objData.Close()
-
-	var data map[string]string
-	require.NoError(t, json.NewDecoder(objData).Decode(&data))
-	assert.Contains(t, data, "URL")
 }
 
 func finetuningTestHelper(t *testing.T, modelInit func(ctx context.Context, db *gorm.DB, s3p storage.ObjectStore, bucket, name, hostModelDir string) error) {
@@ -205,7 +201,7 @@ func finetuningTestHelper(t *testing.T, modelInit func(ctx context.Context, db *
 	ftReq := api.FinetuneRequest{
 		Name:       fmt.Sprintf("finetuned-%s", modelName),
 		TaskPrompt: &tp,
-		Tags:       []api.TagInfo{{Name: "xyz"}},
+		Tags:       []types.TagInfo{{Name: "xyz"}},
 	}
 
 	_, model := finetune(
@@ -259,7 +255,7 @@ func TestFinetuningWithGenerateData(t *testing.T) {
 	ftReq := api.FinetuneRequest{
 		Name:         "finetuned-with-gen",
 		TaskPrompt:   &tp,
-		Tags:         []api.TagInfo{{Name: "xyz"}},
+		Tags:         []types.TagInfo{{Name: "xyz"}},
 		GenerateData: true,
 	}
 
@@ -315,14 +311,13 @@ func TestFinetuningOnnxModel(t *testing.T) {
 
 	tags := []string{
 		"ADDRESS", "CARD_NUMBER", "COMPANY", "CREDIT_SCORE", "DATE",
-		"EMAIL", "ETHNICITY", "GENDER", "ID_NUMBER", "LICENSE_PLATE",
-		"LOCATION", "NAME", "O", "PHONENUMBER", "SERVICE_CODE",
-		"SEXUAL_ORIENTATION", "SSN", "URL", "VIN",
+		"EMAIL", "ID_NUMBER", "LICENSE_PLATE",
+		"LOCATION", "NAME", "O", "PHONENUMBER", "SSN", "URL", "VIN",
 	}
 
-	tagInfos := make([]api.TagInfo, len(tags))
+	tagInfos := make([]types.TagInfo, len(tags))
 	for i, tag := range tags {
-		tagInfos[i] = api.TagInfo{Name: tag}
+		tagInfos[i] = types.TagInfo{Name: tag}
 	}
 
 	tp := fmt.Sprintf("%s finetune test", modelName)

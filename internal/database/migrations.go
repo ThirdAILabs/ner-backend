@@ -9,6 +9,7 @@ import (
 	"ner-backend/internal/database/versions/migration_4"
 	"ner-backend/internal/database/versions/migration_5"
 	"ner-backend/internal/database/versions/migration_6"
+	"ner-backend/internal/database/versions/migration_7"
 
 	"github.com/go-gormigrate/gormigrate/v2"
 	"gorm.io/gorm"
@@ -48,6 +49,11 @@ func GetMigrator(db *gorm.DB) *gormigrate.Gormigrate {
 		{
 			ID:      "6",
 			Migrate: migration_6.Migration,
+		},
+		{
+			ID:       "7",
+			Migrate:  migration_7.Migration,
+			Rollback: migration_7.Rollback,
 		},
 	})
 
