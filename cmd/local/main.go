@@ -182,8 +182,7 @@ func main() {
 		python.EnablePythonPlugin("python", "plugin/plugin-python/plugin.py")
 	}
 
-	slog.Info("Starting backend", "config", cfg)
-
+	slog.Info("Stating backend", "root", cfg.Root, "port", cfg.Port, "enterprise_mode", cfg.EnterpriseMode, "model_dir", cfg.ModelDir, "model_type", cfg.ModelType, "upload_bucket", cfg.UploadBucket, "app_data_dir", cfg.AppDataDir, "enable_python", cfg.EnablePython)
 	localBaseDir := filepath.Join(cfg.Root, "storage")
 
 	db := createDatabase(cfg.AppDataDir)
