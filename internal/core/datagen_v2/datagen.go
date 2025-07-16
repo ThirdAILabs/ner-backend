@@ -356,12 +356,9 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 
 		var toVerify [][]string
 		for _, r := range rawGen {
-			if r == "" {
-				continue // skip empty string, probably context timed out.
-			}
 			var ad prompts.AnnotatedData
 			if err := json.Unmarshal([]byte(r), &ad); err != nil {
-				// this openai response did not match expected format, so skip this batch (original sentences) entirely.
+				// this openai response did not match expected format or context timed out, so skip this batch (original sentences) entirely.
 				continue
 			}
 			cleaned := ad.Clean().Sentences
