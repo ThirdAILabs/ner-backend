@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -27,25 +28,30 @@ func NewDefaultParser() *DefaultParser {
 	return &DefaultParser{maxChunkSize: defaultMaxChunkSize}
 }
 
-func (parser *DefaultParser) Parse(object string, data io.Reader) chan Chunk {
+var ErrUnsupportedFileType = errors.New("unsupported file type")
+
+func (parser *DefaultParser) Parse(object string, data io.Reader) (chan Chunk, error) {
 	output := make(chan Chunk, queueBufferSize)
 
 	ext := filepath.Ext(object)
 
+	var parseFn func(object string, data io.Reader, output chan Chunk)
+	switch ext {
+	case ".pdf":
+		parseFn = parser.parsePdf
+	case ".txt", ".csv", ".html", ".json", ".xml":
+		parseFn = parser.parsePlaintext
+	default:
+		slog.Warn("unsupported file type", "object", object)
+		return nil, ErrUnsupportedFileType
+	}
+
 	go func() {
 		defer close(output)
-
-		switch ext {
-		case ".pdf":
-			parser.parsePdf(object, data, output)
-		case ".txt", ".csv", ".html", ".json", ".xml":
-			parser.parsePlaintext(object, data, output)
-		default:
-			slog.Warn("unsupported file type", "object", object)
-		}
+		parseFn(object, data, output)
 	}()
 
-	return output
+	return output, nil
 }
 
 func (parser *DefaultParser) parsePdf(object string, data io.Reader, output chan Chunk) {
