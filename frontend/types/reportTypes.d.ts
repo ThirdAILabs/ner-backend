@@ -7,7 +7,7 @@ interface Model {
   BaseModelId?: string;
   CreationTime?: string;
   Tags?: string[];
-  CreationTime?: string;
+  CompletionTime?: string;
 }
 
 interface Group {

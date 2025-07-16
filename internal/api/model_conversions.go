@@ -19,6 +19,10 @@ func convertModel(m database.Model) api.Model {
 		model.BaseModelId = &m.BaseModelId.UUID
 	}
 
+	if m.CompletionTime.Valid {
+		model.CompletionTime = &m.CompletionTime.Time
+	}
+
 	for _, tag := range m.Tags {
 		model.Tags = append(model.Tags, tag.Tag)
 	}

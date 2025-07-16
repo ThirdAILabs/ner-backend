@@ -296,6 +296,12 @@ const Dashboard = () => {
                 </Typography>
               )}
 
+              {selectedModel.BaseModelId && selectedModel.CompletionTime && (
+                <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>
+                  Completed Training: {new Date(selectedModel.CompletionTime).toLocaleString()}
+                </Typography>
+              )}
+
               {selectedModel.BaseModelId && (
                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                   Base Model:{' '}
