@@ -18,7 +18,7 @@ function Choice({
   subtitle,
   icon,
   href,
-  backgroundImage
+  backgroundImage,
 }: {
   title: string;
   subtitle: string;
@@ -30,13 +30,13 @@ function Choice({
     <Link href={href}>
       <CustomisableCard
         children={
-          <div className='flex flex-col h-full ml-12 mt-16'>
-            <span className='text-[#5598E5] text-2xl font-semibold'>{title}</span>
-            <span className='mt-2 text-xs text-gray-500 w-56'>{subtitle}</span>
+          <div className="flex flex-col h-full ml-12 mt-16">
+            <span className="text-[#5598E5] text-2xl font-semibold">{title}</span>
+            <span className="mt-2 text-xs text-gray-500 w-56">{subtitle}</span>
           </div>
         }
-        width='26vw'
-        height='26vw'
+        width="26vw"
+        height="26vw"
         backgroundImage={backgroundImage}
       />
     </Link>
@@ -47,24 +47,28 @@ export default function Page() {
   return (
     <>
       {/* Background div */}
-      <div style={{
-        width: '100%',
-        height: '100vh',
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        margin: '0',
-        padding: '0',
-        background: 'linear-gradient(135deg, #74AFF4 5%, #5598E5 33%, #2F547F 100%)',
-        zIndex: -1
-      }} />
+      <div
+        style={{
+          width: '100%',
+          height: '100vh',
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          margin: '0',
+          padding: '0',
+          background: 'linear-gradient(135deg, #74AFF4 5%, #5598E5 33%, #2F547F 100%)',
+          zIndex: -1,
+        }}
+      />
 
       {/* Content div */}
-      <div style={{
-        width: '100%',
-        height: '100vh',
-        position: 'relative'
-      }}>
+      <div
+        style={{
+          width: '100%',
+          height: '100vh',
+          position: 'relative',
+        }}
+      >
         <header
           style={{
             width: '100%',
@@ -80,7 +84,7 @@ export default function Page() {
               alignItems: 'center',
               gap: '20px',
               justifyContent: 'center',
-              paddingTop: '60px'
+              paddingTop: '60px',
             }}
           >
             <Image
@@ -115,7 +119,7 @@ export default function Page() {
             justifyContent: 'center',
             backgroundColor: 'white',
             marginInline: '4px',
-            borderRadius: '16px'
+            borderRadius: '16px',
           }}
         >
           <Box sx={{ position: 'relative', marginTop: '-100px' }}>

@@ -16,7 +16,7 @@ const BACKGROUND_IMAGE_URL = {
 };
 
 interface StatsCardsProps {
-  stats: InferenceMetrics | null,
+  stats: InferenceMetrics | null;
   license?: License | null;
 }
 
@@ -24,12 +24,17 @@ function getLicenseInfo(license: License) {
   return {
     maxBytes: license?.LicenseInfo?.Usage?.MaxBytes || 0,
     usedBytes: license?.LicenseInfo?.Usage?.UsedBytes || 0,
-    percentageUsed: (((license?.LicenseInfo?.Usage?.UsedBytes) || 0) / ((license?.LicenseInfo?.Usage?.MaxBytes) || 1)) * 100,
+    percentageUsed:
+      ((license?.LicenseInfo?.Usage?.UsedBytes || 0) /
+        (license?.LicenseInfo?.Usage?.MaxBytes || 1)) *
+      100,
   };
 }
 
 const StatsCards = ({ stats, license }: StatsCardsProps) => {
-  const licenseInfo = license ? getLicenseInfo(license) : { maxBytes: 0, usedBytes: 0, percentageUsed: 0 };
+  const licenseInfo = license
+    ? getLicenseInfo(license)
+    : { maxBytes: 0, usedBytes: 0, percentageUsed: 0 };
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
       {/* Completed Scans Card */}
@@ -40,7 +45,9 @@ const StatsCards = ({ stats, license }: StatsCardsProps) => {
         backgroundImage={BACKGROUND_IMAGE_URL.SUCCESS}
       >
         <div className="flex flex-row items-center gap-8 mt-[-12px]">
-          <span className="text-[136px] font-bold text-[rgb(101,150,223)]">{stats?.Completed || 0}</span>
+          <span className="text-[136px] font-bold text-[rgb(101,150,223)]">
+            {stats?.Completed || 0}
+          </span>
           <div>
             <h3 className="text-2xl font-semibold text-[rgb(102,102,102)]">Completed</h3>
             <h3 className="text-2xl font-semibold text-[rgb(102,102,102)]">Scans</h3>
@@ -59,7 +66,9 @@ const StatsCards = ({ stats, license }: StatsCardsProps) => {
         backgroundImage={BACKGROUND_IMAGE_URL.PROGRESS}
       >
         <div className="flex flex-row items-center gap-8 mt-[-16px]">
-          <span className="text-[136px] font-bold text-[rgb(101,150,223)]">{stats?.InProgress || 0}</span>
+          <span className="text-[136px] font-bold text-[rgb(101,150,223)]">
+            {stats?.InProgress || 0}
+          </span>
           <div>
             <h3 className="text-2xl font-semibold text-[rgb(102,102,102)]">Scans</h3>
             <h3 className="text-2xl font-semibold text-[rgb(102,102,102)]">In-Progress</h3>
@@ -97,7 +106,9 @@ const StatsCards = ({ stats, license }: StatsCardsProps) => {
         backgroundImage={BACKGROUND_IMAGE_URL.QUOTA}
       >
         <div className="flex flex-col">
-          <span className="text-8xl font-bold text-white mt-[12%] ml-3">{formatFileSize(licenseInfo.usedBytes)}</span>
+          <span className="text-8xl font-bold text-white mt-[12%] ml-3">
+            {formatFileSize(licenseInfo.usedBytes)}
+          </span>
           <div>
             <p className="text-2xl mt-1 font-semibold text-[rgb(192,213,242)] ml-8">
               / {formatFileSize(licenseInfo.maxBytes)} Monthly Quota
@@ -123,7 +134,9 @@ const StatsCards = ({ stats, license }: StatsCardsProps) => {
         backgroundImage={BACKGROUND_IMAGE_URL.TOKENS}
       >
         <div className="flex flex-col mt-[10%] items-center">
-          <span className="text-8xl font-bold text-[rgb(135,228,172)]">{formatNumber(stats?.TokensProcessed || 0)}</span>
+          <span className="text-8xl font-bold text-[rgb(135,228,172)]">
+            {formatNumber(stats?.TokensProcessed || 0)}
+          </span>
           <div>
             <h3 className="text-2xl mt-1 font-semibold text-[rgb(135,228,172)]">
               Tokens Processed

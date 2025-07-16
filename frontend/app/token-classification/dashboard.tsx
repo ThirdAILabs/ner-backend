@@ -1,12 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import {
-  Box,
-  Typography,
-  CircularProgress,
-  SelectChangeEvent,
-} from '@mui/material';
+import { Box, Typography, CircularProgress, SelectChangeEvent } from '@mui/material';
 import { useSearchParams } from 'next/navigation';
 import { nerService } from '@/lib/backend';
 import { useHealth } from '@/contexts/HealthProvider';
@@ -158,7 +153,9 @@ const Dashboard = () => {
     <>
       <div className="container py-4">
         <div style={styles.metricsHeader}>
-          <span style={styles.metricsTitle} className='text-gray-500 text-2xl'>Metrics</span>
+          <span style={styles.metricsTitle} className="text-gray-500 text-2xl">
+            Metrics
+          </span>
           <div style={styles.filtersContainer}>
             <FilterDropdown
               label="Days"
@@ -174,9 +171,7 @@ const Dashboard = () => {
             />
           </div>
         </div>
-        <StatsCards
-          stats={stats}
-          license={license} />
+        <StatsCards stats={stats} license={license} />
       </div>
     </>
   );
