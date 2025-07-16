@@ -160,10 +160,10 @@ func (d *DataFactory) runAndCollect(
 }
 
 type GenerateOptions struct {
-	TagsInfo            []types.TagInfo // built from api.types.TagInfo
-	Samples             []api.Sample    // initial seed samples (optional)
-	RecordsToGenerate   int             // total sentences to generate
-	RecordsPerLlmCall   int             // sentences per LLM call
+	TagsInfo            []types.TagInfo // built from ypes.TagInfo
+	Samples             []api.Sample    // Feedback samples (optional)
+	RecordsToGenerate   int             // total records to generate
+	RecordsPerLlmCall   int             // records generated per LLM call
 	TestSplit           float32         // fraction to reserve for test
 	UserInstructions    []string        // extra LLM instructions
 	VerifyGeneratedData bool            // whether to verify generated data

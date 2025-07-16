@@ -29,6 +29,7 @@ Corrected annotated text:
 Corrections of the above example:
 - 'Emma watson' should be tagged as "##Emma watson##NAME##".
 - The tag LOCATION was incorrectly applied to the token "San Francisco". It should be corrected to "##San Francisco##LOCATION##".
+- The tag COMPANY was incorrectly applied to the token "TechCorp". It should be corrected to "##TechCorp##COMPANY##".
 
 ### Example 2:
 Incorrectly annotated text:
