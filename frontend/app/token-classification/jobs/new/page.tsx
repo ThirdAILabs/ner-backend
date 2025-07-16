@@ -450,7 +450,7 @@ export default function NewJobPage() {
       return [
         {
           Id: models.find((model) => model.Name === 'basic')?.Id || 'basic',
-          Name: 'Base',
+          Name: 'Default',
           Disabled: false,
           Description:
             'Fast and lightweight AI model. Allows users to perpetually customize fields with user feedback, includes advanced monitoring features.',
@@ -1307,8 +1307,18 @@ export default function NewJobPage() {
                                 {model.BaseModelId && (
                                   <p className="text-sm text-gray-600">
                                     Base Model:{' '}
-                                    {models.find((m) => m.Id === model.BaseModelId)?.Name ||
-                                      'Unknown'}
+                                    {(() => {
+                                      const baseModel = models.find(
+                                        (m) => m.Id === model.BaseModelId
+                                      );
+                                      if (baseModel?.Name) {
+                                        return (
+                                          baseModel.Name.charAt(0).toUpperCase() +
+                                          baseModel.Name.slice(1)
+                                        );
+                                      }
+                                      return 'Unknown';
+                                    })()}
                                   </p>
                                 )}
                               </div>
