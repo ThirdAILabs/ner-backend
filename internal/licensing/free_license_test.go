@@ -35,15 +35,15 @@ func TestFreeLicensing(t *testing.T) {
 
 	// Create tasks in May 2025
 	require.NoError(t, db.Create(&database.InferenceTask{
-		ReportId:     uuid.New(),
-		TotalSize:    200,
-		CreationTime: mayTime,
+		ReportId:      uuid.New(),
+		TotalSize:     200,
+		CreationTime:  mayTime,
 		StorageParams: []byte(`{"ChunkKeys": ["chunk1", "chunk2"]}`),
 	}).Error)
 	require.NoError(t, db.Create(&database.InferenceTask{
-		ReportId:     uuid.New(),
-		TotalSize:    50,
-		CreationTime: mayTime,
+		ReportId:      uuid.New(),
+		TotalSize:     50,
+		CreationTime:  mayTime,
 		StorageParams: []byte(`{"ChunkKeys": ["chunk3", "chunk4"]}`),
 	}).Error)
 
@@ -51,9 +51,9 @@ func TestFreeLicensing(t *testing.T) {
 	assert.NoError(t, err)
 
 	require.NoError(t, db.Create(&database.InferenceTask{
-		ReportId:     uuid.New(),
-		TotalSize:    100,
-		CreationTime: mayTime,
+		ReportId:      uuid.New(),
+		TotalSize:     100,
+		CreationTime:  mayTime,
 		StorageParams: []byte(`{"ChunkKeys": ["chunk5", "chunk6"]}`),
 	}).Error)
 
@@ -67,9 +67,9 @@ func TestFreeLicensing(t *testing.T) {
 
 	// Create a task in June that is equal to the quota
 	require.NoError(t, db.Create(&database.InferenceTask{
-		ReportId:     uuid.New(),
-		TotalSize:    300,
-		CreationTime: juneTime,
+		ReportId:      uuid.New(),
+		TotalSize:     300,
+		CreationTime:  juneTime,
 		StorageParams: []byte(`{"ChunkKeys": ["chunk7", "chunk8"]}`),
 	}).Error)
 
@@ -79,9 +79,9 @@ func TestFreeLicensing(t *testing.T) {
 
 	// Create a task in june that exceeds the quota
 	require.NoError(t, db.Create(&database.InferenceTask{
-		ReportId:     uuid.New(),
-		TotalSize:    1,
-		CreationTime: juneTime,
+		ReportId:      uuid.New(),
+		TotalSize:     1,
+		CreationTime:  juneTime,
 		StorageParams: []byte(`{"ChunkKeys": ["chunk9", "chunk10"]}`),
 	}).Error)
 

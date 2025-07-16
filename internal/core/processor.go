@@ -785,7 +785,7 @@ func (proc *TaskProcessor) processShardDataTask(ctx context.Context, payload mes
 
 func (proc *TaskProcessor) getModel(ctx context.Context, modelId uuid.UUID) (database.Model, error) {
 	var model database.Model
-	if err := proc.db.WithContext(ctx).First(&model, "id = ?", modelId).Error; err != nil {
+	if err := proc.db.WithContext(ctx).Preload("Tags").First(&model, "id = ?", modelId).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			slog.Error("model not found", "model_id", modelId)
 			return database.Model{}, fmt.Errorf("model not found: %w", err)
@@ -825,17 +825,28 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 		return fmt.Errorf("error creating local model directory: %w", err)
 	}
 
+	tagsInfo := make([]types.TagInfo, len(baseModel.Tags)) // Assuming model.Tags is same as baseModel.Tags
+	for i, t := range baseModel.Tags {
+		var examples []string
+		var contexts []string
+		if err := json.Unmarshal(t.Examples, &examples); err != nil {
+			slog.Error("error unmarshalling tag examples", "tag", t.Tag, "error", err)
+			return fmt.Errorf("error unmarshalling tag examples: %w", err)
+		}
+		if err := json.Unmarshal(t.Contexts, &contexts); err != nil {
+			slog.Error("error unmarshalling tag contexts", "tag", t.Tag, "error", err)
+			return fmt.Errorf("error unmarshalling tag contexts: %w", err)
+		}
+		tagsInfo[i] = types.TagInfo{
+			Name:     t.Tag,
+			Desc:     t.Description,
+			Examples: examples,
+			Contexts: contexts,
+		}
+	}
+
 	allSamples := payload.Samples
 	if payload.GenerateData {
-		tagsInfo := make([]datagenv2.TagInfo, len(payload.Tags))
-		for i, t := range payload.Tags {
-			tagsInfo[i] = datagenv2.TagInfo{
-				Name:     t.Name,
-				Desc:     t.Description,
-				Examples: t.Examples,
-			}
-		}
-
 		genDir := filepath.Join(proc.localModelDir, payload.ModelId.String(), "generated")
 		factory, err := datagenv2.NewDataFactory(genDir)
 		if err != nil {
@@ -844,12 +855,12 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 		}
 
 		opts := datagenv2.GenerateOptions{
-			TagsInfo:          tagsInfo,
-			Samples:           payload.Samples,
-			RecordsToGenerate: payload.RecordsToGenerate,
-			RecordsPerLlmCall: payload.RecordsPerTemplate,
-			TestSplit:         payload.TestSplit,
-			WriteBatchSize:    payload.RecordsToGenerate,
+			TagsInfo:            tagsInfo,
+			Samples:             payload.Samples,
+			RecordsToGenerate:   payload.RecordsToGenerate,
+			RecordsPerLlmCall:   payload.RecordsPerLlmCall,
+			TestSplit:           payload.TestSplit,
+			VerifyGeneratedData: payload.VerifyGeneratedData,
 		}
 
 		train, test, err := factory.Generate(opts)
@@ -862,7 +873,7 @@ func (proc *TaskProcessor) processFinetuneTask(ctx context.Context, payload mess
 		allSamples = append(allSamples, test...)
 	}
 
-	if err := model.FinetuneAndSave(payload.TaskPrompt, payload.Tags, allSamples, localDir); err != nil {
+	if err := model.FinetuneAndSave(payload.TaskPrompt, tagsInfo, allSamples, localDir); err != nil {
 		database.UpdateModelStatus(ctx, proc.db, payload.ModelId, database.ModelFailed) //nolint:errcheck
 		slog.Error("error finetuning model", "base_model_id", payload.BaseModelId, "model_id", payload.ModelId, "error", err)
 		return fmt.Errorf("error finetuning model: %w", err)

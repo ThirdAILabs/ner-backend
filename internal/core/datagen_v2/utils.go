@@ -128,19 +128,32 @@ func formatAnnotated(tokens, labels []string) (string, error) {
 		return "", fmt.Errorf("tokens/labels length mismatch: %d vs %d", len(tokens), len(labels))
 	}
 
-	parts := make([]string, 0)
-	for i, tok := range tokens {
-		lbl := labels[i]
-		if lbl != "O" {
-			if i > 0 && strings.HasPrefix(parts[i-1], "##") {
-				parts[i-1] = fmt.Sprintf("##%s %s##", strings.Trim(parts[i-1], "#"), lbl)
-			} else {
-				parts = append(parts, fmt.Sprintf("##%s##%s##", tok, lbl))
-			}
+	var parts []string
+	i := 0
+
+	for i < len(tokens) {
+		currentLabel := labels[i]
+
+		if currentLabel == "O" {
+			// Single token with "O" label
+			parts = append(parts, tokens[i])
+			i++
 		} else {
-			parts = append(parts, tok)
+			// Collect consecutive tokens with the same non-"O" label
+			var groupTokens []string
+			groupLabel := currentLabel
+
+			for i < len(tokens) && labels[i] == groupLabel {
+				groupTokens = append(groupTokens, tokens[i])
+				i++
+			}
+
+			// Format the group
+			groupText := strings.Join(groupTokens, " ")
+			parts = append(parts, fmt.Sprintf("##%s##%s##", groupText, groupLabel))
 		}
 	}
+
 	return strings.Join(parts, " "), nil
 }
 

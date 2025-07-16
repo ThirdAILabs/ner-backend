@@ -80,6 +80,7 @@ services:
       - INTERNAL_AWS_ACCESS_KEY_ID=${INTERNAL_AWS_ACCESS_KEY_ID:-YOURACCESSKEY}
       - INTERNAL_AWS_SECRET_ACCESS_KEY=${INTERNAL_AWS_SECRET_ACCESS_KEY:-YOURSECRETKEY}
       - BUCKET_NAME=ner-backend
+      - NEXT_PUBLIC_API_ENDPOINT=${NEXT_PUBLIC_API_ENDPOINT:-http://api:8001/api/v1}
     volumes:
       # - .:/app # Mount code for development (requires Go toolchain in container or local build)
       - /etc/localtime:/etc/localtime:ro
