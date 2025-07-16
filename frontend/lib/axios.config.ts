@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Use our fixed port (16549) for backend communication
-export const nerBaseUrl = process.env.ENTERPRISE_MODE ? '/api/v1' : 'http://localhost:16549/api/v1';
+export const nerBaseUrl = process.env.NEXT_PUBLIC_API_ENDPOINT || 'http://localhost:16549/api/v1';
 
 const axiosInstance = axios.create({
   baseURL: nerBaseUrl,

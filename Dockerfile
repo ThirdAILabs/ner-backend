@@ -2,8 +2,8 @@
 FROM node:22-alpine AS frontend-builder
 WORKDIR /frontend
 
-ARG ENTERPRISE_MODE=true
-ENV ENTERPRISE_MODE=${ENTERPRISE_MODE}
+ARG api_endpoint=/api/v1
+ENV NEXT_PUBLIC_API_ENDPOINT=${api_endpoint}
 
 COPY frontend/package*.json ./
 RUN npm install --force
@@ -53,8 +53,7 @@ RUN CGO_ENABLED=1 GOOS=linux GOARCH=${TARGETARCH} go build -v -o /app/worker ./c
 
 FROM ubuntu:24.04
 
-ARG ENTERPRISE_MODE=true
-ENV ENTERPRISE_MODE=${ENTERPRISE_MODE}
+ENV ENTERPRISE_MODE=true
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -105,8 +104,6 @@ EXPOSE 3000
 EXPOSE 8001
 
 RUN chmod +x /app/entrypoint.sh
-
-EXPOSE 8001
 
 ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["--worker"]
