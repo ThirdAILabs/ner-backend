@@ -213,7 +213,7 @@ func (s *BackendService) FinetuneModel(r *http.Request) (any, error) {
 		return nil, CodedErrorf(http.StatusUnprocessableEntity, "no feedback samples found for model %s", modelId)
 	}
 
-	// configuring the data generation parameters
+	// TODO(anyone): Run some experiment to find optimal value of K based on the number of samples and model being finetuned.
 	recordsToGenerate := max(50, len(samples)*3)
 	testSplit := 0.1
 	recordsPerLlmCall := AutoTuneK(samples, 30, 40)

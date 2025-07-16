@@ -235,38 +235,22 @@ func (d *DataFactory) verifyGeneratedData(toVerify [][]string, tagsInfo []types.
 		return nil, fmt.Errorf("batch verify: %w", err)
 	}
 
-	var wg sync.WaitGroup
-	verified := make([][]string, len(toVerify))
-
+	var verified []string
 	for i, orig := range toVerify {
-		wg.Add(1)
-		go func(idx int, original []string) {
-			defer wg.Done()
-
-			var ats prompts.AnnotatedTextSamples
-			var cleaned []string
-			if err := json.Unmarshal([]byte(rawVerify[idx]), &ats); err == nil {
-				// this openai response adheres to the expected format, otherwise this batch verification will be skipped and the original will be used
-				cleaned = ats.Clean().AnnotatedTexts
-			}
-
-			if len(cleaned) == 0 {
-				verified[idx] = original // no cleaning, keep original
-			} else {
-				verified[idx] = mergeWithCorrections(original, cleaned)
-			}
-		}(i, orig)
+		var ats prompts.AnnotatedTextSamples
+		var cleaned []string
+		if err := json.Unmarshal([]byte(rawVerify[i]), &ats); err == nil {
+			// this openai response adheres to the expected format, otherwise this batch verification will be skipped and the original will be used
+			cleaned = ats.Clean().AnnotatedTexts
+		}
+		if len(cleaned) == 0 {
+			verified = append(verified, orig...)
+		} else {
+			verified = append(verified, mergeWithCorrections(orig, cleaned)...)
+		}
 	}
 
-	wg.Wait()
-
-	// Flatten the results
-	var result []string
-	for _, v := range verified {
-		result = append(result, v...)
-	}
-
-	return result, nil
+	return verified, nil
 }
 
 func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample, error) {
@@ -277,6 +261,14 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 	perCall := min(opts.RecordsPerLlmCall, total)
 	batchSize := min(300, total)
 
+	// remove 'O' tag from tagsInfo (if present)
+	for i := range opts.TagsInfo {
+		if opts.TagsInfo[i].Name == "O" {
+			opts.TagsInfo = append(opts.TagsInfo[:i], opts.TagsInfo[i+1:]...)
+			break
+		}
+	}
+
 	feedback := SamplesToAnnotatedStrings(opts.Samples)
 
 	bar := progressbar.NewOptions(len(opts.TagsInfo),
@@ -285,9 +277,6 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 	defer bar.Close()
 	for i := range opts.TagsInfo {
 		tag := &opts.TagsInfo[i]
-		if tag.Name == "O" {
-			continue
-		}
 
 		if len(strings.Fields(tag.Desc)) <= 10 {
 			ed, err := d.ExtendDescription(tag)
@@ -367,6 +356,9 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 
 		var toVerify [][]string
 		for _, r := range rawGen {
+			if r == "" {
+				continue // skip empty string, probably context timed out.
+			}
 			var ad prompts.AnnotatedData
 			if err := json.Unmarshal([]byte(r), &ad); err != nil {
 				// this openai response did not match expected format, so skip this batch (original sentences) entirely.
@@ -455,7 +447,7 @@ func (d *DataFactory) transformSentence(
 			before = text[m[2]:m[3]]
 		}
 		entity := strings.TrimSpace(text[m[4]:m[5]])
-		tag := text[m[6]:m[7]]
+		entityTag := text[m[6]:m[7]]
 		after := ""
 		if m[8] >= 0 {
 			after = text[m[8]:m[9]]
@@ -464,8 +456,8 @@ func (d *DataFactory) transformSentence(
 
 		mark := "O"
 		for _, t := range tags {
-			if t.Name == tag {
-				mark = tag
+			if t.Name == entityTag {
+				mark = entityTag
 				break
 			}
 		}
