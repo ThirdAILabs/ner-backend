@@ -46,6 +46,7 @@ type Report struct {
 	CreationTime       time.Time
 	TotalFileCount     int
 	SucceededFileCount int
+	SkippedFileCount   int
 	FailedFileCount    int
 
 	Tags       []string          `json:"Tags,omitempty"`

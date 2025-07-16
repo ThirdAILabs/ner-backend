@@ -137,13 +137,8 @@ func (proc *TaskProcessor) ProcessTask(task messaging.Task) {
 	}
 }
 
-func (proc *TaskProcessor) updateFileCount(reportId uuid.UUID, success bool) error {
-	var column string
-	if success {
-		column = "succeeded_file_count"
-	} else {
-		column = "failed_file_count"
-	}
+func (proc *TaskProcessor) updateFileCount(reportId uuid.UUID, category string) error {
+	column := category + "_file_count"
 
 	if err := proc.db.
 		Model(&database.Report{}).
@@ -324,9 +319,17 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 
 	for object := range queue {
 		if object.Error != nil {
+			if errors.Is(object.Error, storage.ErrUnsupportedFileType) {
+				slog.Warn("unsupported file type, skipping object", "object", object.Name, "error", object.Error)
+				if err := proc.updateFileCount(reportId, "skipped"); err != nil {
+					return totalTokens, err
+				}
+				continue
+			}
+
 			slog.Error("error getting object stream", "object", object.Name, "error", object.Error, "task_params", string(taskParams))
 			objectErrorCnt++
-			if err := proc.updateFileCount(reportId, false); err != nil {
+			if err := proc.updateFileCount(reportId, "failed"); err != nil {
 				return totalTokens, err
 			}
 			continue
@@ -337,7 +340,7 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 		if err != nil {
 			slog.Error("error processing object", "object", object.Name, "error", err)
 			objectErrorCnt++
-			if err := proc.updateFileCount(reportId, false); err != nil {
+			if err := proc.updateFileCount(reportId, "failed"); err != nil {
 				return totalTokens, err
 			}
 			continue
@@ -346,7 +349,7 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 		if err := proc.db.CreateInBatches(&result.Entities, 100).Error; err != nil {
 			slog.Error("error saving entities to database", "object", object.Name, "error", err)
 			objectErrorCnt++
-			if err := proc.updateFileCount(reportId, false); err != nil {
+			if err := proc.updateFileCount(reportId, "failed"); err != nil {
 				return totalTokens, err
 			}
 			continue
@@ -355,7 +358,7 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 		if err := proc.db.CreateInBatches(result.Groups, 100).Error; err != nil {
 			slog.Error("error saving groups to database", "object", object.Name, "error", err)
 			objectErrorCnt++
-			if err := proc.updateFileCount(reportId, false); err != nil {
+			if err := proc.updateFileCount(reportId, "failed"); err != nil {
 				return totalTokens, err
 			}
 			continue
@@ -364,7 +367,7 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 		if err := proc.updateInferenceTagCount(reportId, result.TagCount, false); err != nil {
 			slog.Error("error updating tag count", "object", object.Name, "error", err)
 			objectErrorCnt++
-			if err := proc.updateFileCount(reportId, false); err != nil {
+			if err := proc.updateFileCount(reportId, "failed"); err != nil {
 				return totalTokens, err
 			}
 			continue
@@ -373,13 +376,13 @@ func (proc *TaskProcessor) runInferenceOnBucket(
 		if err := proc.updateInferenceTagCount(reportId, result.CustomTagCount, true); err != nil {
 			slog.Error("error updating custom tag count", "object", object.Name, "error", err)
 			objectErrorCnt++
-			if err := proc.updateFileCount(reportId, false); err != nil {
+			if err := proc.updateFileCount(reportId, "failed"); err != nil {
 				return totalTokens, err
 			}
 			continue
 		}
 
-		if err := proc.updateFileCount(reportId, true); err != nil {
+		if err := proc.updateFileCount(reportId, "succeeded"); err != nil {
 			return totalTokens, err
 		}
 
