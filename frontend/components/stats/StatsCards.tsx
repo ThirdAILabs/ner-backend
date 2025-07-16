@@ -1,10 +1,10 @@
 import React from 'react';
 import CustomisableCard from '@/components/ui/cards/customisableCard';
+import { formatFileSize, formatNumber } from '@/lib/utils';
 
 // Constants for card dimensions
 const CARD_WIDTH = '392px';
 const CARD_HEIGHT = '264px';
-const percentageUsed = 20;
 
 //Background image URL
 const BACKGROUND_IMAGE_URL = {
@@ -15,7 +15,21 @@ const BACKGROUND_IMAGE_URL = {
   TOKENS: '/token.svg',
 };
 
-const StatsCards = () => {
+interface StatsCardsProps {
+  stats: InferenceMetrics | null,
+  license?: License | null;
+}
+
+function getLicenseInfo(license: License) {
+  return {
+    maxBytes: license?.LicenseInfo?.Usage?.MaxBytes || 0,
+    usedBytes: license?.LicenseInfo?.Usage?.UsedBytes || 0,
+    percentageUsed: (((license?.LicenseInfo?.Usage?.UsedBytes) || 0) / ((license?.LicenseInfo?.Usage?.MaxBytes) || 1)) * 100,
+  };
+}
+
+const StatsCards = ({ stats, license }: StatsCardsProps) => {
+  const licenseInfo = license ? getLicenseInfo(license) : { maxBytes: 0, usedBytes: 0, percentageUsed: 0 };
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
       {/* Completed Scans Card */}
@@ -26,7 +40,7 @@ const StatsCards = () => {
         backgroundImage={BACKGROUND_IMAGE_URL.SUCCESS}
       >
         <div className="flex flex-row items-center gap-8 mt-[-12px]">
-          <span className="text-[136px] font-bold text-[rgb(101,150,223)]">5</span>
+          <span className="text-[136px] font-bold text-[rgb(101,150,223)]">{stats?.Completed || 0}</span>
           <div>
             <h3 className="text-2xl font-semibold text-[rgb(102,102,102)]">Completed</h3>
             <h3 className="text-2xl font-semibold text-[rgb(102,102,102)]">Scans</h3>
@@ -45,7 +59,7 @@ const StatsCards = () => {
         backgroundImage={BACKGROUND_IMAGE_URL.PROGRESS}
       >
         <div className="flex flex-row items-center gap-8 mt-[-16px]">
-          <span className="text-[136px] font-bold text-[rgb(101,150,223)]">2</span>
+          <span className="text-[136px] font-bold text-[rgb(101,150,223)]">{stats?.InProgress || 0}</span>
           <div>
             <h3 className="text-2xl font-semibold text-[rgb(102,102,102)]">Scans</h3>
             <h3 className="text-2xl font-semibold text-[rgb(102,102,102)]">In-Progress</h3>
@@ -64,7 +78,7 @@ const StatsCards = () => {
         height={CARD_HEIGHT}
         backgroundImage={BACKGROUND_IMAGE_URL.WAVES}
       >
-        <div className="flex flex-col mt-[12%]">
+        <div className="flex flex-col mt-[12%] items-center">
           <span className="text-8xl font-bold text-white">320.23</span>
           <div className="mt-1 ml-3">
             <h3 className="text-2xl font-semibold text-[rgb(192,213,242)]">Tokens per second</h3>
@@ -83,19 +97,19 @@ const StatsCards = () => {
         backgroundImage={BACKGROUND_IMAGE_URL.QUOTA}
       >
         <div className="flex flex-col">
-          <span className="text-8xl font-bold text-white mt-[12%] ml-3">1.01GB</span>
+          <span className="text-8xl font-bold text-white mt-[12%] ml-3">{formatFileSize(licenseInfo.usedBytes)}</span>
           <div>
-            <p className="text-2xl font-semibold text-[rgb(192,213,242)] ml-8">
-              / 5GB Monthly Quota
+            <p className="text-2xl mt-1 font-semibold text-[rgb(192,213,242)] ml-8">
+              / {formatFileSize(licenseInfo.maxBytes)} Monthly Quota
             </p>
             <p className="text-sm opacity-80 text-[rgb(192,213,242)] ml-4">
               Don't worry, you got a lot of room to play with.
             </p>
           </div>
-          <div className="mt-2 ml-4 w-[296px] p-2 relative h-2 bg-white/20 rounded-full">
+          <div className="mt-2 ml-4 w-[324px] p-2 relative h-2 bg-white/20 rounded-full">
             <div
-              className="absolute left-0 top-0 h-full bg-white rounded-md transition-all duration-300"
-              style={{ width: `${percentageUsed}%` }}
+              className={`absolute left-0 top-0 h-full ${licenseInfo.percentageUsed < 90 ? 'bg-white' : 'bg-red-500'} rounded-md transition-all duration-300`}
+              style={{ width: `${licenseInfo.percentageUsed}%` }}
             />
           </div>
         </div>
@@ -108,8 +122,8 @@ const StatsCards = () => {
         height={CARD_HEIGHT}
         backgroundImage={BACKGROUND_IMAGE_URL.TOKENS}
       >
-        <div className="flex flex-col mt-[10%] ml-0">
-          <span className="text-8xl font-bold text-[rgb(135,228,172)]">325.7K</span>
+        <div className="flex flex-col mt-[10%] items-center">
+          <span className="text-8xl font-bold text-[rgb(135,228,172)]">{formatNumber(stats?.TokensProcessed || 0)}</span>
           <div>
             <h3 className="text-2xl mt-1 font-semibold text-[rgb(135,228,172)]">
               Tokens Processed
