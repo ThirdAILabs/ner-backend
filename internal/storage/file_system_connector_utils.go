@@ -82,7 +82,11 @@ func iterTaskChunks(ctx context.Context, keys []string, connector FsConnector) (
 				continue
 			}
 
-			parsedChunks := parser.Parse(objectKey, objectStream)
+			parsedChunks, err := parser.Parse(objectKey, objectStream)
+			if err != nil {
+				chunkStreams <- ObjectChunkStream{Name: objectKey, Chunks: nil, Error: err}
+				continue
+			}
 
 			chunkStreams <- ObjectChunkStream{
 				Name:   objectKey,
