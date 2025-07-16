@@ -2,11 +2,13 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"log/slog"
 	"ner-backend/internal/core"
+	"ner-backend/internal/core/types"
 	"ner-backend/internal/database"
 	"ner-backend/internal/licensing"
 	"ner-backend/internal/storage"
@@ -90,17 +92,10 @@ func InitializePresidioModel(db *gorm.DB) {
 	}
 }
 
-var commonModelTags = []string{
-	"ADDRESS", "CARD_NUMBER", "COMPANY", "CREDIT_SCORE", "DATE",
-	"EMAIL", "ETHNICITY", "GENDER", "ID_NUMBER", "LICENSE_PLATE",
-	"LOCATION", "NAME", "PHONENUMBER", "SERVICE_CODE", "SEXUAL_ORIENTATION",
-	"SSN", "URL", "VIN", "O",
-}
-
-func filterExcludedTags(tags []string) []string {
-	var filteredTags []string
+func filterExcludedTags(tags []types.TagInfo) []types.TagInfo {
+	var filteredTags []types.TagInfo
 	for _, tag := range tags {
-		if _, exists := core.ExcludedTags[tag]; !exists {
+		if _, exists := core.ExcludedTags[tag.Name]; !exists {
 			filteredTags = append(filteredTags, tag)
 		}
 	}
@@ -115,7 +110,7 @@ func initializeModel(
 	name,
 	modelType,
 	localDir string,
-	tags []string,
+	tags []types.TagInfo,
 ) error {
 	tags = filterExcludedTags(tags)
 	var model database.Model
@@ -157,9 +152,20 @@ func initializeModel(
 	// Update tags
 	modelTags := make([]database.ModelTag, len(tags))
 	for i, tag := range tags {
+		bExamples, err := json.Marshal(tag.Examples)
+		if err != nil {
+			return fmt.Errorf("failed to marshal examples for tag %s: %w", tag.Name, err)
+		}
+		bContexts, err := json.Marshal(tag.Contexts)
+		if err != nil {
+			return fmt.Errorf("failed to marshal contexts for tag %s: %w", tag.Name, err)
+		}
 		modelTags[i] = database.ModelTag{
-			ModelId: model.Id,
-			Tag:     tag,
+			ModelId:     model.Id,
+			Tag:         tag.Name,
+			Description: tag.Desc,
+			Examples:    bExamples,
+			Contexts:    bContexts,
 		}
 	}
 	if err := db.Model(&model).Association("Tags").Replace(modelTags); err != nil {
@@ -198,21 +204,21 @@ func InitializePythonCnnModel(ctx context.Context, db *gorm.DB, s3p storage.Obje
 	slog.Info("initializing python CNN model", "model_name", "python_cnn", "local_model_path", filepath.Join(hostModelDir, "python_cnn"))
 	return initializeModel(ctx, db, s3p, bucket,
 		name, "python_cnn", filepath.Join(hostModelDir, "python_cnn"),
-		commonModelTags,
+		types.CommonModelTags,
 	)
 }
 
 func InitializePythonTransformerModel(ctx context.Context, db *gorm.DB, s3p storage.ObjectStore, bucket, name, hostModelDir string) error {
 	return initializeModel(ctx, db, s3p, bucket,
 		name, "python_transformer", filepath.Join(hostModelDir, "python_transformer"),
-		commonModelTags,
+		types.CommonModelTags,
 	)
 }
 
 func InitializeBoltUdtModel(ctx context.Context, db *gorm.DB, s3p storage.ObjectStore, bucket, name, hostModelDir string) error {
 	return initializeModel(ctx, db, s3p, bucket,
 		name, "bolt_udt", filepath.Join(hostModelDir, "bolt_udt"),
-		commonModelTags,
+		types.CommonModelTags,
 	)
 }
 
@@ -224,7 +230,7 @@ func InitializeOnnxCnnModel(
 ) error {
 	return initializeModel(
 		context.Background(), db, s3p, bucket,
-		name, "onnx_cnn", filepath.Join(hostModelDir, "onnx_cnn"), commonModelTags,
+		name, "onnx_cnn", filepath.Join(hostModelDir, "onnx_cnn"), types.CommonModelTags,
 	)
 }
 

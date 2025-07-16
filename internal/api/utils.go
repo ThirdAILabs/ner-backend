@@ -5,8 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
+	"ner-backend/pkg/api"
 	"net/http"
 	"regexp"
+	"sort"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -194,4 +197,35 @@ func validateName(name string) error {
 	}
 
 	return nil
+}
+
+func medianWordCount(samples []api.Sample) int {
+	if len(samples) == 0 {
+		return 0
+	}
+
+	wordCounts := make([]int, len(samples))
+	for i, sample := range samples {
+		wordCounts[i] = len(sample.Tokens)
+	}
+
+	sort.Ints(wordCounts)
+
+	mid := len(wordCounts) / 2
+	if len(wordCounts)%2 == 0 {
+		return (wordCounts[mid-1] + wordCounts[mid]) / 2
+	}
+	return wordCounts[mid]
+}
+
+// Heuristic is to scale k inversely or logarithmically depending on the feedback length.
+// -- Shorter feedbacks ⇒ need more records (k ↑) to increase diversity.
+// -- Longer feedbacks ⇒ provide more context, so less records (k ↓) may suffice.
+func AutoTuneK(samples []api.Sample, baseK int, alpha float64) int {
+	count := medianWordCount(samples)
+	if count <= 0 {
+		return baseK
+	}
+	k := float64(baseK) * math.Log(1+alpha/float64(count))
+	return max(int(k), 2)
 }

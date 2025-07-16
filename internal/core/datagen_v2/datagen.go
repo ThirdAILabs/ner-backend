@@ -2,9 +2,12 @@ package datagenv2
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"ner-backend/internal/core/datagen_v2/prompts"
+	"ner-backend/internal/core/types"
 	"ner-backend/pkg/api"
 	"os"
 	"path/filepath"
@@ -18,13 +21,6 @@ import (
 
 	openai "github.com/openai/openai-go"
 )
-
-type TagInfo struct {
-	Name     string   // maps to tag["name"]
-	Desc     string   // maps to tag["desc"]
-	Examples []string // maps to tag["examples"]
-	Contexts []string // maps to tag["contexts"], may be nil initially
-}
 
 type DataFactory struct {
 	OutDir string
@@ -40,7 +36,7 @@ func NewDataFactory(outDir string) (*DataFactory, error) {
 	return &DataFactory{OutDir: outDir, LLM: llm}, nil
 }
 
-func (d *DataFactory) ExtendDescription(tag *TagInfo) (string, error) {
+func (d *DataFactory) ExtendDescription(tag *types.TagInfo) (string, error) {
 	var buf bytes.Buffer
 	if err := prompts.ExtendDescriptionTmpl.Execute(&buf, map[string]interface{}{
 		"Tag": tag,
@@ -67,7 +63,7 @@ func (d *DataFactory) ExtendDescription(tag *TagInfo) (string, error) {
 	return resp.ExtendedDescription, nil
 }
 
-func (d *DataFactory) ExtendExamples(tag *TagInfo, k int) ([]string, error) {
+func (d *DataFactory) ExtendExamples(tag *types.TagInfo, k int) ([]string, error) {
 	var buf bytes.Buffer
 	if err := prompts.ExtendExamplesTmpl.Execute(&buf, map[string]interface{}{
 		"Tag": tag, "K": k,
@@ -94,7 +90,7 @@ func (d *DataFactory) ExtendExamples(tag *TagInfo, k int) ([]string, error) {
 	return resp.ExtendedExamples, nil
 }
 
-func (d *DataFactory) GetTagContext(tag *TagInfo, k int) ([]string, error) {
+func (d *DataFactory) GetTagContext(tag *types.TagInfo, k int) ([]string, error) {
 	var buf bytes.Buffer
 	if err := prompts.ContextTmpl.Execute(&buf, map[string]interface{}{
 		"Tag": tag, "K": k,
@@ -153,31 +149,32 @@ func (d *DataFactory) runAndCollect(
 
 	for _, e := range errs {
 		if e != nil {
-			return out, fmt.Errorf("batch error: %v", errs)
+			if errors.Is(e, context.DeadlineExceeded) {
+				// Ignore timeout errors
+				continue
+			}
+			return nil, fmt.Errorf("batch error: %v", errs)
 		}
 	}
 	return out, nil
 }
 
 type GenerateOptions struct {
-	TagsInfo          []TagInfo    // built from api.TagInfo
-	Samples           []api.Sample // initial seed samples (optional)
-	RecordsToGenerate int          // total sentences to generate
-	RecordsPerLlmCall int          // sentences per LLM call
-	TestSplit         float32      // fraction to reserve for test
-	UserInstructions  []string     // extra LLM instructions
-	WriteBatchSize    int          // batch size for LLM calls
+	TagsInfo            []types.TagInfo // built from ypes.TagInfo
+	Samples             []api.Sample    // Feedback samples (optional)
+	RecordsToGenerate   int             // total records to generate
+	RecordsPerLlmCall   int             // records generated per LLM call
+	TestSplit           float32         // fraction to reserve for test
+	UserInstructions    []string        // extra LLM instructions
+	VerifyGeneratedData bool            // whether to verify generated data
 }
 
 func (opts *GenerateOptions) Validate() error {
-	if opts.RecordsToGenerate < 0 {
+	if opts.RecordsToGenerate <= 0 {
 		return fmt.Errorf("invalid RecordsToGenerate: %d", opts.RecordsToGenerate)
 	}
-	if opts.RecordsPerLlmCall < 0 {
+	if opts.RecordsPerLlmCall <= 0 {
 		return fmt.Errorf("invalid RecordsPerLlmCall: %d", opts.RecordsPerLlmCall)
-	}
-	if opts.WriteBatchSize < 0 {
-		return fmt.Errorf("invalid WriteBatchSize: %d", opts.WriteBatchSize)
 	}
 	if opts.TestSplit < 0.0 || opts.TestSplit > 1.0 {
 		return fmt.Errorf("invalid TestSplit: %f", opts.TestSplit)
@@ -216,19 +213,60 @@ func mergeWithCorrections(orig, cleaned []string) []string {
 	return merged
 }
 
+func (d *DataFactory) verifyGeneratedData(toVerify [][]string, tagsInfo []types.TagInfo) ([]string, error) {
+	verifyFmt, err := prompts.ToResponseFormatUnion(prompts.AnnotatedTextSamplesFormat)
+	if err != nil {
+		return nil, fmt.Errorf("convert verification format: %w", err)
+	}
+	verifyPrompts := make([]string, len(toVerify))
+	for i, orig := range toVerify {
+		var buf bytes.Buffer
+		if err := prompts.AnnotatedTextSamplesTmpl.Execute(&buf, map[string]interface{}{
+			"TagInfo":        tagsInfo,
+			"AnnotatedTexts": orig,
+		}); err != nil {
+			return nil, fmt.Errorf("render verify prompt: %w", err)
+		}
+		verifyPrompts[i] = buf.String()
+	}
+
+	rawVerify, err := d.runAndCollect(verifyPrompts, prompts.AnnotatedTextCorrectionSystem, verifyFmt, true)
+	if err != nil {
+		return nil, fmt.Errorf("batch verify: %w", err)
+	}
+
+	var verified []string
+	for i, orig := range toVerify {
+		var ats prompts.AnnotatedTextSamples
+		var cleaned []string
+		if err := json.Unmarshal([]byte(rawVerify[i]), &ats); err == nil {
+			// this openai response adheres to the expected format, otherwise this batch verification will be skipped and the original will be used
+			cleaned = ats.Clean().AnnotatedTexts
+		}
+		if len(cleaned) == 0 {
+			verified = append(verified, orig...)
+		} else {
+			verified = append(verified, mergeWithCorrections(orig, cleaned)...)
+		}
+	}
+
+	return verified, nil
+}
+
 func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample, error) {
 	if err := opts.Validate(); err != nil {
 		return nil, nil, fmt.Errorf("invalid options: %w", err)
 	}
 	total := opts.RecordsToGenerate
-	perCall := opts.RecordsPerLlmCall
-	batchSize := opts.WriteBatchSize
+	perCall := min(opts.RecordsPerLlmCall, total)
+	batchSize := min(300, total)
 
-	if perCall > total {
-		perCall = total
-	}
-	if batchSize > total {
-		batchSize = total
+	// remove 'O' tag from tagsInfo (if present)
+	for i := range opts.TagsInfo {
+		if opts.TagsInfo[i].Name == "O" {
+			opts.TagsInfo = append(opts.TagsInfo[:i], opts.TagsInfo[i+1:]...)
+			break
+		}
 	}
 
 	feedback := SamplesToAnnotatedStrings(opts.Samples)
@@ -240,28 +278,31 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 	for i := range opts.TagsInfo {
 		tag := &opts.TagsInfo[i]
 
-		ed, err := d.ExtendDescription(tag)
-		if err != nil {
-			return nil, nil, fmt.Errorf("extend description: %w", err)
-		}
-		tag.Desc = ed
-
-		exs, err := d.ExtendExamples(tag, 20)
-		if err != nil {
-			return nil, nil, fmt.Errorf("extend examples: %w", err)
-		}
-		tag.Examples = append(tag.Examples, exs...)
-
-		if tag.Contexts == nil {
-			if len(opts.Samples) > 0 {
-				tag.Contexts = make([]string, 0)
-			} else {
-				ctxs, err := d.GetTagContext(tag, rand.Intn(11)+20)
-				if err != nil {
-					return nil, nil, fmt.Errorf("get contexts: %w", err)
-				}
-				tag.Contexts = ctxs
+		if len(strings.Fields(tag.Desc)) <= 10 {
+			ed, err := d.ExtendDescription(tag)
+			if err != nil {
+				return nil, nil, fmt.Errorf("extend description: %w", err)
 			}
+			tag.Desc = ed
+		}
+
+		if len(tag.Examples) < 4 {
+			exs, err := d.ExtendExamples(tag, 20)
+			if err != nil {
+				return nil, nil, fmt.Errorf("extend examples: %w", err)
+			}
+			tag.Examples = append(tag.Examples, exs...)
+		}
+
+		if len(opts.Samples) > 0 {
+			// opts.Samples are used as context for generation
+			tag.Contexts = make([]string, 0)
+		} else if len(tag.Contexts) < 4 {
+			ctxs, err := d.GetTagContext(tag, rand.Intn(11)+20)
+			if err != nil {
+				return nil, nil, fmt.Errorf("get contexts: %w", err)
+			}
+			tag.Contexts = ctxs
 		}
 		_ = bar.Add(1)
 	}
@@ -274,10 +315,6 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 	genFmt, err := prompts.ToResponseFormatUnion(prompts.AnnotatedDataFormat)
 	if err != nil {
 		return nil, nil, fmt.Errorf("convert generation format: %w", err)
-	}
-	verifFmt, err := prompts.ToResponseFormatUnion(prompts.AnnotatedTextSamplesFormat)
-	if err != nil {
-		return nil, nil, fmt.Errorf("convert verification format: %w", err)
 	}
 
 	var allSentences []string
@@ -321,6 +358,7 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 		for _, r := range rawGen {
 			var ad prompts.AnnotatedData
 			if err := json.Unmarshal([]byte(r), &ad); err != nil {
+				// this openai response did not match expected format or context timed out, so skip this batch (original sentences) entirely.
 				continue
 			}
 			cleaned := ad.Clean().Sentences
@@ -329,32 +367,15 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 			}
 		}
 
-		verifPrompts := make([]string, len(toVerify))
-		for i, sentences := range toVerify {
-			var buf bytes.Buffer
-			if err := prompts.AnnotatedTextSamplesTmpl.Execute(&buf, map[string]interface{}{
-				"TagInfo":        opts.TagsInfo,
-				"AnnotatedTexts": sentences,
-			}); err != nil {
-				return nil, nil, fmt.Errorf("render verif prompt: %w", err)
+		if opts.VerifyGeneratedData {
+			verified, err := d.verifyGeneratedData(toVerify, opts.TagsInfo)
+			if err != nil {
+				return nil, nil, fmt.Errorf("verify generated data: %w", err)
 			}
-			verifPrompts[i] = buf.String()
-		}
-		rawVerif, err := d.runAndCollect(verifPrompts, prompts.AnnotatedTextCorrectionSystem, verifFmt, true)
-		if err != nil {
-			return nil, nil, fmt.Errorf("batch verify: %w", err)
-		}
-
-		for i, orig := range toVerify {
-			var ats prompts.AnnotatedTextSamples
-			if err := json.Unmarshal([]byte(rawVerif[i]), &ats); err != nil {
-				return nil, nil, fmt.Errorf("unmarshal verification response: %w", err)
-			}
-			cleaned := ats.Clean().AnnotatedTexts
-			if len(cleaned) == 0 {
-				allSentences = append(allSentences, orig...)
-			} else {
-				allSentences = append(allSentences, mergeWithCorrections(orig, cleaned)...)
+			allSentences = append(allSentences, verified...)
+		} else {
+			for _, recordsToVerify := range toVerify {
+				allSentences = append(allSentences, recordsToVerify...)
 			}
 		}
 		_ = bar.Add(1)
@@ -375,7 +396,7 @@ func (d *DataFactory) Generate(opts GenerateOptions) ([]api.Sample, []api.Sample
 	return allSamples[:split], allSamples[split:], nil
 }
 
-func (d *DataFactory) ValidateSentence(src, tgt string, tags []TagInfo) error {
+func (d *DataFactory) ValidateSentence(src, tgt string, tags []types.TagInfo) error {
 	srcToks := strings.Fields(src)
 	tgtToks := strings.Fields(tgt)
 	if len(srcToks) != len(tgtToks) {
@@ -403,7 +424,7 @@ var (
 
 func (d *DataFactory) transformSentence(
 	text string,
-	tags []TagInfo,
+	tags []types.TagInfo,
 ) (string, string, error) {
 	var srcTokens, tgtTokens []string
 	last := 0
@@ -423,7 +444,7 @@ func (d *DataFactory) transformSentence(
 			before = text[m[2]:m[3]]
 		}
 		entity := strings.TrimSpace(text[m[4]:m[5]])
-		tag := text[m[6]:m[7]]
+		entityTag := text[m[6]:m[7]]
 		after := ""
 		if m[8] >= 0 {
 			after = text[m[8]:m[9]]
@@ -432,8 +453,8 @@ func (d *DataFactory) transformSentence(
 
 		mark := "O"
 		for _, t := range tags {
-			if t.Name == tag {
-				mark = tag
+			if t.Name == entityTag {
+				mark = entityTag
 				break
 			}
 		}

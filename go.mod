@@ -14,7 +14,6 @@ require (
 	github.com/go-resty/resty/v2 v2.16.5
 	github.com/gorilla/schema v1.4.1
 	github.com/hashicorp/go-plugin v1.6.3
-	github.com/jaswdr/faker/v2 v2.3.3
 	github.com/openai/openai-go v0.1.0-beta.10
 	github.com/stretchr/testify v1.10.0
 	github.com/testcontainers/testcontainers-go v0.37.0
@@ -135,7 +134,6 @@ require (
 	github.com/schollz/progressbar/v3 v3.18.0
 	github.com/tmc/langchaingo v0.1.13
 	golang.org/x/crypto v0.37.0 // indirect
-	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b
 	golang.org/x/sync v0.15.0 // indirect
 	golang.org/x/text v0.24.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0

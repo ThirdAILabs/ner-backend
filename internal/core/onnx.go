@@ -302,7 +302,7 @@ func (m *OnnxModel) Predict(text string) ([]types.Entity, error) {
 	return ents, nil
 }
 
-func (m *OnnxModel) FinetuneAndSave(taskPrompt string, tags []api.TagInfo, samples []api.Sample, savePath string) error {
+func (m *OnnxModel) FinetuneAndSave(taskPrompt string, tags []types.TagInfo, samples []api.Sample, savePath string) error {
 	pythonModel, err := python.LoadCnnModel(m.modelDir, cnnModelKey)
 	if err != nil {
 		return fmt.Errorf("failed to load Python model for finetuning: %w", err)

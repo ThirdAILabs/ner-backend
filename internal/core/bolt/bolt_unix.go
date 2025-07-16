@@ -86,7 +86,7 @@ func (ner *NER) train(filename string, learningRate float32, epochs int) error {
 	return nil
 }
 
-func (ner *NER) FinetuneAndSave(taskPrompt string, tags []api.TagInfo, samples []api.Sample, savePath string) error {
+func (ner *NER) FinetuneAndSave(taskPrompt string, tags []types.TagInfo, samples []api.Sample, savePath string) error {
 	var cTokensCol, cTagsCol *C.char
 	C.NER_source_target_cols(ner.model, &cTokensCol, &cTagsCol)
 	tokensCol := C.GoString(cTokensCol)

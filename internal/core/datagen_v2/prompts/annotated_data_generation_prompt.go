@@ -22,11 +22,9 @@ const AnnotatedDataUser = `## Task: Generate {{ .K }} diverse and realistic sent
 {{- if gt (len .Contexts) 0 }}
 **Tag context:** {{ join (randomSample .Contexts 4) ", " }}
 {{- end }}
-{{- end }}
-
+{{ end }}
 > Token-Tag pair should be enclosed in this tagging format : ##tokens##TAG##
-
-{{- if .Feedback }}
+{{ if .Feedback -}}
 # Below are some Contextual examples.
 {{- range randomSample .Feedback 4 }}
 - {{ . }}

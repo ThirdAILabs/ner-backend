@@ -51,7 +51,7 @@ func NewOpenAILLM(model, trackUsageAt string, temp float64) *OpenAILLM {
 }
 
 func (o *OpenAILLM) Generate(systemPrompt, prompt string, responseFormat openai.ChatCompletionNewParamsResponseFormatUnion) (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
 	var messages []openai.ChatCompletionMessageParamUnion

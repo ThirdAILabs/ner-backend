@@ -29,6 +29,7 @@ Corrected annotated text:
 Corrections of the above example:
 - 'Emma watson' should be tagged as "##Emma watson##NAME##".
 - The tag LOCATION was incorrectly applied to the token "San Francisco". It should be corrected to "##San Francisco##LOCATION##".
+- The tag COMPANY was incorrectly applied to the token "TechCorp". It should be corrected to "##TechCorp##COMPANY##".
 
 ### Example 2:
 Incorrectly annotated text:
@@ -50,7 +51,7 @@ Corrected annotated text:
 ##The Red Cross##COMPANY## coordinated their relief efforts from their base in ##Ottawa, Ontario##LOCATION##.
 
 Corections of the above example:
-- The tag Company was incorrectly applied to the token "The Red Cross coordinated". It should be corrected to "##The Red Cross##COMPANY## coordinated".
+- The tag Company was incorrectly applied to the token "The Red Cross coordinated". It should be corrected to "##The Red Cross##COMPANY##".
 `
 
 const AnnotatedTextCorrectionUser = `Given the following annotated text samples, verify the correctness of the tags and correct them if necessary.
@@ -58,7 +59,7 @@ const AnnotatedTextCorrectionUser = `Given the following annotated text samples,
 {{- range .TagInfo }}
 **Tag name:** {{ .Name }}
 **Tag description:** {{ .Desc }}
-{{- end }}
+{{ end }}
 
 Annotated text samples:
 {{- range .AnnotatedTexts }}

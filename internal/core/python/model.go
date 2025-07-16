@@ -88,7 +88,7 @@ func LoadCnnModel(modelDir, keyB64 string) (*PythonModel, error) {
 	return LoadPythonModel("python_cnn_ner_model", cfgJSON)
 }
 
-func (ner *PythonModel) FinetuneAndSave(prompt string, tags []api.TagInfo, samples []api.Sample, savePath string) error {
+func (ner *PythonModel) FinetuneAndSave(prompt string, tags []types.TagInfo, samples []api.Sample, savePath string) error {
 	const maxPayload = 2 * 1024 * 1024 // 2 MB
 
 	// convert TagInfo
@@ -96,7 +96,7 @@ func (ner *PythonModel) FinetuneAndSave(prompt string, tags []api.TagInfo, sampl
 	for i, t := range tags {
 		protoTags[i] = &proto.TagInfo{
 			Name:        t.Name,
-			Description: t.Description,
+			Description: t.Desc,
 			Examples:    t.Examples,
 		}
 	}

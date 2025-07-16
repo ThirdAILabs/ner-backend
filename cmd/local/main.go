@@ -55,7 +55,6 @@ func createDatabase(root string) *gorm.DB {
 	if err != nil {
 		log.Fatalf("Failed to set default storage provider: %v", err)
 	}
-
 	path := filepath.Join(root, "db", "pocket-shield.db")
 	if err := os.MkdirAll(filepath.Dir(path), os.ModePerm); err != nil {
 		log.Fatalf("Failed to create database directory: %v", err)
@@ -183,7 +182,7 @@ func main() {
 		python.EnablePythonPlugin("python", "plugin/plugin-python/plugin.py")
 	}
 
-	slog.Info("starting backend", "root", cfg.Root, "port", cfg.Port, "app_data_dir", cfg.AppDataDir, "model_dir", cfg.ModelDir, "model_type", cfg.ModelType)
+	slog.Info("Starting backend", "config", cfg)
 
 	localBaseDir := filepath.Join(cfg.Root, "storage")
 
