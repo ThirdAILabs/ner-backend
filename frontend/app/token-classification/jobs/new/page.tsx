@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { SearchIcon } from '@heroicons/react/solid';
 import { useConditionalTelemetry } from '@/hooks/useConditionalTelemetry';
 import { useEnterprise } from '@/hooks/useEnterprise';
+import toast, { Toaster } from 'react-hot-toast';
 
 import { nerBaseUrl } from '@/lib/axios.config';
 
@@ -310,8 +311,30 @@ const FileSources: React.FC<FileSourcesProps> = ({
       try {
         // Add a small delay to show loading state for quick file selections
         await new Promise((resolve) => setTimeout(resolve, 100));
+
+        const supportedFiles = Array.from(files).filter((file) =>
+          SUPPORTED_TYPES.some((ext) => file.name.toLowerCase().endsWith(ext))
+        );
+        if (supportedFiles.length === 0) {
+          toast.error(
+            `No supported files selected. Only ${SUPPORTED_TYPES.join(', ')} files are allowed.`,
+            {
+              duration: 5000,
+              style: {
+                background: '#f44336',
+                color: '#fff',
+                padding: '10px',
+                borderRadius: '8px',
+              },
+            }
+          );
+          setIsLoadingFiles(false);
+          e.target.value = '';
+          return;
+        }
+
         addFilesMeta(
-          Array.from(files).map((file) => ({
+          supportedFiles.map((file) => ({
             name: file.name,
             size: file.size,
             fullPath: '',
@@ -1033,6 +1056,7 @@ export default function NewJobPage() {
 
   return (
     <div className="container px-4 py-8" style={{ width: '90%' }}>
+      <Toaster position="top-right" />
       {/* Title and Back Button */}
       <div className="flex items-center justify-between mb-6">
         <Button variant="outline" size="sm" asChild>
