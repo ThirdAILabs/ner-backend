@@ -294,9 +294,15 @@ const Dashboard = () => {
           {/* Model Details */}
           {selectedModel && (
             <Box sx={{ mb: 4, ml: 4 }}>
-              {selectedModel.CreationTime && (
+              {selectedModel.BaseModelId && selectedModel.CreationTime && (
                 <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>
                   Started Training: {new Date(selectedModel.CreationTime).toLocaleString()}
+                </Typography>
+              )}
+
+              {selectedModel.BaseModelId && selectedModel.CompletionTime && (
+                <Typography variant="body2" sx={{ color: 'text.secondary', mb: 1 }}>
+                  Completed Training: {new Date(selectedModel.CompletionTime).toLocaleString()}
                 </Typography>
               )}
 

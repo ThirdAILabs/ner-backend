@@ -10,12 +10,13 @@ import (
 )
 
 type Model struct {
-	Id           uuid.UUID
-	BaseModelId  *uuid.UUID
-	Name         string
-	Status       string
-	CreationTime time.Time
-	Finetunable  bool
+	Id             uuid.UUID
+	BaseModelId    *uuid.UUID
+	Name           string
+	Status         string
+	CreationTime   time.Time
+	CompletionTime *time.Time `json:"CompletionTime,omitempty"`
+	Finetunable    bool
 
 	Tags []string `json:"Tags,omitempty"`
 }

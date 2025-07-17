@@ -14,7 +14,7 @@ import (
 
 func UpdateModelStatus(ctx context.Context, txn *gorm.DB, modelId uuid.UUID, status string) error {
 	updates := map[string]any{"status": status}
-	if status == JobCompleted || status == JobFailed {
+	if status == ModelTrained || status == JobCompleted || status == JobFailed {
 		updates["completion_time"] = time.Now().UTC()
 	}
 

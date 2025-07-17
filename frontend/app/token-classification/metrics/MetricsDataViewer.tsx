@@ -82,6 +82,7 @@ const MetricsDataViewer: React.FC<MetricsDataViewerProps> = ({ modelId, days }) 
           );
         } else {
           setTpMetrics(null);
+          setThroughput('-');
         }
 
         // 3) Fetch feedback data if modelId is provided
