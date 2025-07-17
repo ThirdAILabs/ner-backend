@@ -4,143 +4,179 @@ import * as _ from 'lodash';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Box, Typography } from '@mui/material';
-import { Card, CardTitle } from '@/components/ui/card/index';
 import { FileText, MessageSquare } from 'lucide-react';
+import CustomisableCard from '@/components/ui/cards/customisableCard';
+
+const BACKGROUND_IMAGE_URL = {
+  Scan: '/scan.svg',
+  SafeGPT: '/safegpt.svg',
+};
 
 function Choice({
   title,
   subtitle,
   icon,
   href,
+  backgroundImage,
 }: {
   title: string;
   subtitle: string;
   icon: React.ReactNode;
   href: string;
+  backgroundImage: string;
 }) {
   return (
     <Link href={href}>
-      <Card className="w-[300px] h-[250px] flex justify-center items-center hover:scale-105 transition-transform duration-200 hover:shadow-lg cursor-pointer">
-        <Box>
-          <div className="flex justify-center mt-4">{icon}</div>
-          <CardTitle className="text-center text-gray-500">{title}</CardTitle>
-          <Typography variant="subtitle2" className="text-center text-gray-400 pt-3">
-            {subtitle}
-          </Typography>
-        </Box>
-      </Card>
+      <CustomisableCard
+        children={
+          <div className="flex flex-col h-full ml-12 mt-16">
+            <span className="text-[#5598E5] text-2xl font-semibold">{title}</span>
+            <span className="mt-2 text-xs text-gray-500 w-56">{subtitle}</span>
+          </div>
+        }
+        width="26vw"
+        height="26vw"
+        backgroundImage={backgroundImage}
+      />
     </Link>
   );
 }
-
 export default function Page() {
+  console.log('Page loaded', BACKGROUND_IMAGE_URL);
+
   return (
-    // Height is 100vh - 30px to account for the title bar region of the electron app.
-    <div style={{ width: '90%', minHeight: 'calc(100vh-30px)', margin: '0 auto' }}>
-      <header
+    <>
+      <div
         style={{
           width: '100%',
-          padding: '16px',
-          borderBottom: '1px solid #e0e0e0',
+          height: '100vh',
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          margin: '0',
+          padding: '0',
+          background: 'linear-gradient(135deg, #74AFF4 5%, #5598E5 33%, #2F547F 100%)',
+          zIndex: -1,
+        }}
+      />
+
+      <div
+        style={{
+          width: '100%',
+          height: '100vh',
+          position: 'relative',
         }}
       >
-        <div
+        <header
           style={{
-            margin: '0 auto',
-            marginBottom: '8px',
-            display: 'flex',
-            flexDirection: 'row',
-            gap: '20px',
-            justifyContent: 'center',
+            width: '100%',
+            padding: '16px',
           }}
         >
-          <Image
-            src="/thirdai-logo.png"
-            alt="ThirdAI Logo"
-            width={40}
-            height={40}
-            style={{ objectFit: 'contain' }}
-            priority
-          />
-          <Typography
-            variant="h5"
-            title={'PocketShield'}
-            sx={{
-              mt: 0.5,
-              fontFamily: '"Plus Jakarta Sans", sans-serif',
-              fontWeight: 600,
-              color: 'rgb(85,152,229)',
+          <div
+            style={{
+              margin: '0 auto',
+              marginBottom: '8px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '20px',
+              justifyContent: 'center',
+              paddingTop: '60px',
             }}
           >
-            {'PocketShield'}
-          </Typography>
-        </div>
-      </header>
-
-      <main
-        style={{
-          height: '80%',
-          margin: '0 auto',
-          padding: '50px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Box sx={{ position: 'relative' }}>
-          <Box sx={{ textAlign: 'center', mb: 8 }}>
+            <Image
+              src="/thirdaiWhite.svg"
+              alt="ThirdAI Logo"
+              width={40}
+              height={40}
+              style={{ objectFit: 'contain', color: 'white' }}
+              priority
+            />
             <Typography
-              className="text-gray-500"
               variant="h5"
               title={'PocketShield'}
               sx={{
                 mt: 0.5,
                 fontFamily: '"Plus Jakarta Sans", sans-serif',
                 fontWeight: 600,
+                color: 'white',
               }}
             >
-              What would you like to do today?
+              {'Welcome to PocketShield'}
             </Typography>
+          </div>
+        </header>
+
+        <main
+          style={{
+            height: '76.2%',
+            marginTop: '0.8%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'white',
+            marginInline: '4px',
+            borderRadius: '16px',
+          }}
+        >
+          <Box sx={{ position: 'relative', marginTop: '-100px' }}>
+            <Box sx={{ textAlign: 'center', mb: 4 }}>
+              <Typography
+                className="text-gray-500"
+                variant="h5"
+                title={'PocketShield'}
+                sx={{
+                  mt: 0.5,
+                  fontFamily: '"Plus Jakarta Sans", sans-serif',
+                  fontWeight: 600,
+                }}
+              >
+                What would you like to do today?
+              </Typography>
+            </Box>
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'row',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: '50px',
+                width: '100%',
+              }}
+            >
+              <Choice
+                title="Scan Files"
+                subtitle="Scan your files for sensitive data, completely air-gapped"
+                icon={
+                  <FileText
+                    className="text-[rgb(85,152,229)]"
+                    size={80}
+                    style={{ marginBottom: 24 }}
+                    strokeWidth={1}
+                  />
+                }
+                href="/token-classification/landing"
+                backgroundImage={BACKGROUND_IMAGE_URL.Scan}
+              />
+              <Choice
+                title="SafeGPT"
+                subtitle="The ChatGPT you know and love, with local LLM  guardrails"
+                icon={
+                  <MessageSquare
+                    className="text-[rgb(85,152,229)]"
+                    size={80}
+                    style={{ marginBottom: 24 }}
+                    strokeWidth={1}
+                  />
+                }
+                href="/safegpt?id=new"
+                backgroundImage={BACKGROUND_IMAGE_URL.SafeGPT}
+              />
+            </Box>
           </Box>
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'row',
-              justifyContent: 'center',
-              alignItems: 'center',
-              gap: '50px',
-              width: '100%',
-            }}
-          >
-            <Choice
-              title="Scan Files"
-              subtitle="Completely Airgapped"
-              icon={
-                <FileText
-                  className="text-[rgb(85,152,229)]"
-                  size={80}
-                  style={{ marginBottom: 24 }}
-                  strokeWidth={1}
-                />
-              }
-              href="/token-classification/landing"
-            />
-            <Choice
-              title="SafeGPT"
-              subtitle="With Local LLM Guardrails"
-              icon={
-                <MessageSquare
-                  className="text-[rgb(85,152,229)]"
-                  size={80}
-                  style={{ marginBottom: 24 }}
-                  strokeWidth={1}
-                />
-              }
-              href="/safegpt?id=new"
-            />
-          </Box>
-        </Box>
-      </main>
-    </div>
+        </main>
+      </div>
+    </>
   );
 }

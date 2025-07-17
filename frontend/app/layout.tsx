@@ -25,7 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       {/* Top padding pushes the content down to make room for the title bar region of the electron app. */}
-      <body className="flex min-h-screen w-full flex-col bg-white pt-[30px]">
+      <body className="flex min-h-screen w-full flex-col font-['Plus_Jakarta_Sans'] bg-white pt-[30px]">
         {/*
           Draggable region of the app window. titlebar class is defined in globals.css
           Ideally, we should use the same element to push the content down and make it draggable,
