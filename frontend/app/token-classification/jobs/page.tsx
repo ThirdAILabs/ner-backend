@@ -21,10 +21,11 @@ import { isUploadReport } from '@/lib/utils';
 
 const calculateProgress = (report: Report | null): number => {
   const successfulFiles = report?.SucceededFileCount || 0;
+  const skippedFileCount = report?.SkippedFileCount || 0;
   const failedFiles = report?.FailedFileCount || 0;
   const totalFiles = report?.TotalFileCount || 1;
 
-  return floor(((successfulFiles + failedFiles) / totalFiles) * 100);
+  return floor(((successfulFiles + skippedFileCount + failedFiles) / totalFiles) * 100);
 };
 
 const getProcessedTokens = (report: Report | null): number => {
@@ -383,6 +384,7 @@ function JobDetail() {
             tags={availableTagsCount}
             timeTaken={timeTaken}
             succeededFileCount={reportData?.SucceededFileCount || 0}
+            skippedFileCount={reportData?.SkippedFileCount || 0}
             failedFileCount={reportData?.FailedFileCount || 0}
             totalFileCount={reportData?.TotalFileCount || 1}
             dataProcessed={dataProcessed || 0}

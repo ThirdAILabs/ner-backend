@@ -34,6 +34,7 @@ interface Report {
   CustomTags?: { [key: string]: string };
   TotalFileCount: number;
   SucceededFileCount: number;
+  SkippedFileCount: number;
   FailedFileCount: number;
   Groups?: Group[];
   ShardDataTaskStatus?: string;

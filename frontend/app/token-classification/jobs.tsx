@@ -105,6 +105,7 @@ function JobStatus({ report }: { report: ReportWithStatus }) {
 
   const fileCount = report.TotalFileCount || 1;
   const succeededFileCount = report.SucceededFileCount || 0;
+  const skippedFileCount = report.SkippedFileCount || 0;
   const failedFileCount = report.FailedFileCount || 0;
 
   const totalTasks = completed + running + queued + failed + aborted;
@@ -141,13 +142,16 @@ function JobStatus({ report }: { report: ReportWithStatus }) {
       if (failedFileCount > 0) {
         msg += `, ${failedFileCount}/${fileCount} Failed`;
       }
+      if (skippedFileCount > 0) {
+        msg += `, ${skippedFileCount}/${fileCount} Skipped`;
+      }
       return msg;
     } else if (fileCount > 0 && succeededFileCount === fileCount) {
       return `Files: ${fileCount}/${fileCount} Processed`;
     } else if (fileCount > 0 && failedFileCount === fileCount) {
       return `Files: ${failedFileCount}/${fileCount} Failed`;
     } else if (fileCount > 0) {
-      return `Files: ${succeededFileCount}/${fileCount} Processed${failedFileCount > 0 ? `, ${failedFileCount}/${fileCount} Failed` : ''}`;
+      return `Files: ${succeededFileCount}/${fileCount} Processed${failedFileCount > 0 ? `, ${failedFileCount}/${fileCount} Failed` : ''}${skippedFileCount > 0 ? `, ${skippedFileCount}/${fileCount} Skipped` : ''}`;
     }
 
     return 'Queued...';
@@ -183,9 +187,17 @@ function JobStatus({ report }: { report: ReportWithStatus }) {
               bgcolor: '#ef4444',
             }}
           />
+          {/* Yellow (skipped files) */}
+          <Box
+            sx={{
+              height: '100%',
+              width: `${(skippedFileCount / fileCount) * 100}%`,
+              bgcolor: '#ffeb3b',
+            }}
+          />
           {/* Loading animation */}
           {!monthlyQuotaExceeded &&
-            succeededFileCount + failedFileCount < fileCount &&
+            succeededFileCount + skippedFileCount + failedFileCount < fileCount &&
             aborted === 0 && (
               <Box
                 className="shimmer-effect"
@@ -207,7 +219,7 @@ function JobStatus({ report }: { report: ReportWithStatus }) {
             fontWeight: 'medium',
           }}
         >
-          {`${(((succeededFileCount + failedFileCount) / fileCount) * 100).toFixed(0)} %`}
+          {`${(((succeededFileCount + skippedFileCount + failedFileCount) / fileCount) * 100).toFixed(0)} %`}
         </Typography>
       </Box>
       <Typography variant="caption" sx={{ color: 'text.secondary' }}>
@@ -265,6 +277,7 @@ function Job({ initialReport, onDelete }: JobProps) {
         ...prev,
         Errors: detailedReport.Errors || [],
         SucceededFileCount: detailedReport.SucceededFileCount,
+        SkippedFileCount: detailedReport.SkippedFileCount,
         FailedFileCount: detailedReport.FailedFileCount,
         TotalFileCount: detailedReport.TotalFileCount,
         detailedStatus: {
@@ -274,7 +287,10 @@ function Job({ initialReport, onDelete }: JobProps) {
         isLoadingStatus: false,
       }));
 
-      const seenFileCount = detailedReport.SucceededFileCount + detailedReport.FailedFileCount;
+      const seenFileCount =
+        detailedReport.SucceededFileCount +
+        detailedReport.SkippedFileCount +
+        detailedReport.FailedFileCount;
 
       const isCompleted =
         detailedReport.TotalFileCount !== 0 && seenFileCount === detailedReport.TotalFileCount;
