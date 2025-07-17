@@ -4,13 +4,12 @@ import * as _ from 'lodash';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Box, Typography } from '@mui/material';
-import { Card, CardTitle } from '@/components/ui/cards/index';
 import { FileText, MessageSquare } from 'lucide-react';
 import CustomisableCard from '@/components/ui/cards/customisableCard';
 
 const BACKGROUND_IMAGE_URL = {
-  Scan: 'scan.svg',
-  SafeGPT: 'safegpt.svg',
+  Scan: '/scan.svg',
+  SafeGPT: '/safegpt.svg',
 };
 
 function Choice({
@@ -42,11 +41,11 @@ function Choice({
     </Link>
   );
 }
-
 export default function Page() {
+  console.log('Page loaded', BACKGROUND_IMAGE_URL);
+
   return (
     <>
-      {/* Background div */}
       <div
         style={{
           width: '100%',
@@ -61,7 +60,6 @@ export default function Page() {
         }}
       />
 
-      {/* Content div */}
       <div
         style={{
           width: '100%',
