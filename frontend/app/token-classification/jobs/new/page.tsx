@@ -310,8 +310,18 @@ const FileSources: React.FC<FileSourcesProps> = ({
       try {
         // Add a small delay to show loading state for quick file selections
         await new Promise((resolve) => setTimeout(resolve, 100));
+
+        const supportedFiles = Array.from(files).filter((file) =>
+          SUPPORTED_TYPES.some((ext) => file.name.toLowerCase().endsWith(ext))
+        );
+        if (supportedFiles.length === 0) {
+          setIsLoadingFiles(false);
+          e.target.value = '';
+          return;
+        }
+
         addFilesMeta(
-          Array.from(files).map((file) => ({
+          supportedFiles.map((file) => ({
             name: file.name,
             size: file.size,
             fullPath: '',
