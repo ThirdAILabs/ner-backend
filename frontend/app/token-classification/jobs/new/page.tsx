@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -105,7 +105,7 @@ interface SourceOptionProps {
   icon: React.ReactNode;
   title: string;
   description: string;
-  disclaimer: string;
+  disclaimer: ReactNode;
   disabled?: boolean;
 }
 
@@ -152,6 +152,7 @@ interface FileSourcesProps {
   isLoadingFiles: boolean;
   setIsLoadingFiles: (loading: boolean) => void;
   addFilesMeta: (filesMeta: any[]) => void;
+  isEnterprise: boolean;
 }
 
 const FileSources: React.FC<FileSourcesProps> = ({
@@ -159,6 +160,7 @@ const FileSources: React.FC<FileSourcesProps> = ({
   isLoadingFiles,
   setIsLoadingFiles,
   addFilesMeta,
+  isEnterprise,
 }) => {
   const s3 = (
     <SourceOption
@@ -173,7 +175,17 @@ const FileSources: React.FC<FileSourcesProps> = ({
       }
       title="S3 Bucket"
       description="Scan files from an S3 bucket"
-      disclaimer="Public buckets only without enterprise subscription."
+      disclaimer={
+        isEnterprise ? (
+          `Supported: ${SUPPORTED_TYPES.join(', ')}`
+        ) : (
+          <>
+            Public buckets only without an enterprise subscription.
+            <br />
+            Supported: {SUPPORTED_TYPES.join(', ')}
+          </>
+        )
+      }
       disabled={isLoadingFiles}
     />
   );
@@ -1119,6 +1131,7 @@ export default function NewJobPage() {
                   isLoadingFiles={isLoadingFiles}
                   setIsLoadingFiles={setIsLoadingFiles}
                   addFilesMeta={addFilesMeta}
+                  isEnterprise={isEnterprise}
                 />
               </div>
 

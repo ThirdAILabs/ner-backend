@@ -228,7 +228,11 @@ const Dashboard = () => {
                 }}
               >
                 <Select
-                  value={selectedModel?.Name || ''}
+                  value={
+                    selectedModel && selectedModel.Name
+                      ? selectedModel.Name.charAt(0).toUpperCase() + selectedModel.Name.slice(1)
+                      : ''
+                  }
                   displayEmpty
                   onChange={handleModelChange}
                   renderValue={(val) =>
