@@ -18,6 +18,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	ort "github.com/yalue/onnxruntime_go"
 )
 
 type APIConfig struct {
@@ -33,6 +34,7 @@ type APIConfig struct {
 	ChunkTargetBytes  int64  `env:"S3_CHUNK_TARGET_BYTES" envDefault:"10737418240"`
 	EnterpriseMode    bool   `env:"ENTERPRISE_MODE" envDefault:"false"`
 	HostModelDir      string `env:"HOST_MODEL_DIR" envDefault:"/app/models"`
+	OnnxRuntimeDylib  string `env:"ONNX_RUNTIME_DYLIB"`
 }
 
 func main() {
@@ -44,6 +46,19 @@ func main() {
 	if err := env.Parse(&cfg); err != nil {
 		log.Fatalf("error parsing config: %v", err)
 	}
+
+	if cfg.OnnxRuntimeDylib == "" {
+		log.Fatalf("ONNX_RUNTIME_DYLIB must be set")
+	}
+	ort.SetSharedLibraryPath(cfg.OnnxRuntimeDylib)
+	if err := ort.InitializeEnvironment(); err != nil {
+		log.Fatalf("could not init ONNX Runtime: %v", err)
+	}
+	defer func() {
+		if err := ort.DestroyEnvironment(); err != nil {
+			log.Fatalf("error destroying onnx env: %v", err)
+		}
+	}()
 
 	db, err := database.NewDatabase(cfg.DatabaseURL)
 	if err != nil {
@@ -65,14 +80,8 @@ func main() {
 		log.Fatalf("Worker: Failed to create S3 client: %v", err)
 	}
 
-	cmd.InitializePresidioModel(db)
-
-	if err := cmd.InitializePythonCnnModel(context.Background(), db, s3ObjectStore, cmd.ModelBucketName, "advanced", cfg.HostModelDir); err != nil {
-		log.Fatalf("Failed to init & upload python CNN model: %v", err)
-	}
-
-	if err := cmd.InitializePythonTransformerModel(context.Background(), db, s3ObjectStore, cmd.ModelBucketName, "ultra", cfg.HostModelDir); err != nil {
-		log.Fatalf("Failed to init & upload python transformer model: %v", err)
+	if err := cmd.InitializeOnnxCnnModel(context.Background(), db, s3ObjectStore, cmd.ModelBucketName, "basic", cfg.HostModelDir); err != nil {
+		log.Fatalf("failed to init ONNX model: %v", err)
 	}
 
 	if err := cmd.RemoveExcludedTagsFromAllModels(db); err != nil {
