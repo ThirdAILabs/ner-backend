@@ -38,6 +38,7 @@ ENV PATH="/usr/local/go/bin:${PATH}"
 WORKDIR /app
 
 # Copy module files and download dependencies first for caching
+RUN go install github.com/google/go-licenses@latest
 COPY go.mod go.sum ./
 RUN go mod download
 
@@ -50,6 +51,8 @@ RUN CGO_ENABLED=1 GOOS=linux GOARCH=${TARGETARCH} go build -v -o /app/api ./cmd/
 # Build the Worker binary
 RUN CGO_ENABLED=1 GOOS=linux GOARCH=${TARGETARCH} go build -v -o /app/worker ./cmd/worker
 
+RUN /root/go/bin/go-licenses save ./cmd/api --save_path ./third_party_licenses/api  || :
+RUN /root/go/bin/go-licenses save ./cmd/worker --save_path ./third_party_licenses/worker || :
 
 FROM ubuntu:24.04
 
@@ -89,6 +92,9 @@ RUN mkdir -p /app/onnxruntime \
 ENV ONNX_RUNTIME_DYLIB=/app/onnxruntime/lib/libonnxruntime.so
 
 # Copy only the necessary artifacts from the builder stage
+COPY --from=backend-builder /app/COPYING .
+COPY --from=backend-builder /app/third_party_licenses ./third_party_licenses
+COPY --from=backend-builder /app/internal/core/bolt/lib/THIRD_PARTY_NOTICES.txt .
 COPY --from=backend-builder /app/api /app/api
 COPY --from=backend-builder /app/worker /app/worker
 COPY --from=backend-builder /app/entrypoint.sh /app/entrypoint.sh
@@ -114,5 +120,5 @@ EXPOSE 8001
 
 RUN chmod +x /app/entrypoint.sh
 
-ENTRYPOINT ["/app/entrypoint.sh"]
-CMD ["--worker"]
+# ENTRYPOINT ["/app/entrypoint.sh"]
+# CMD ["--worker"]
