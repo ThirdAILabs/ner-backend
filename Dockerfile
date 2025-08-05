@@ -120,5 +120,5 @@ EXPOSE 8001
 
 RUN chmod +x /app/entrypoint.sh
 
-# ENTRYPOINT ["/app/entrypoint.sh"]
-# CMD ["--worker"]
+ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["--worker"]
