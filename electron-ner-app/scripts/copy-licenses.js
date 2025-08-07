@@ -40,6 +40,23 @@ try {
       preserveTimestamps: true
     });
   }
+
+  // Copy backend licenses
+  const backendLicensePath = path.join(projectRoot, 'third_party_licenses');
+  const targetBackendLicensePath = path.join(targetLicenseDir, 'go_third_party_licenses');
+  
+  if (!fs.existsSync(backendLicensePath)) {
+    console.error('Backend licenses not found at:', backendLicensePath);
+    process.exit(1);
+  }
+
+  fs.cpSync(backendLicensePath, targetBackendLicensePath, {
+    recursive: true,
+    force: true,
+    dereference: false,
+    preserveTimestamps: true
+  });
+  
   console.log('Licenses copied successfully!');
 } catch (error) {
   console.error('Failed to copy licenses:', error.message);
