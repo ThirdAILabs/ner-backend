@@ -7,6 +7,7 @@
   "scripts": {
     "start": "electron .",
     "copy-model": "node scripts/copy-model.js",
+    "copy-licenses": "node scripts/copy-licenses.js",
     "copy-backend": "node scripts/copy-backend.js",
     "copy-resources": "node scripts/copy-resources.js",
     "copy-libomp": "otool -L bin/main | grep libomp | awk '{print $1}' | xargs -I {} cp {} resources/",
@@ -14,7 +15,7 @@
     "copy-libonnxruntime": "cp build/libonnxruntime.dylib resources/",
     "sign-libomp": "codesign --force --sign \"ThirdAI Corp (KJ35JRW2T6)\"  --options runtime --entitlements build/entitlements.mac.plist resources/libomp.dylib",
     "build-plugin-conditional": "([[ (\"$BUILD_PLUGIN\" == TRUE || ! -d ../plugin/plugin-python/dist || -z \"$(ls -A ../plugin/plugin-python/dist 2>/dev/null)\") && (\"$MODEL_TYPE\" == python_* || \"$MODEL_TYPE\" == onnx_*) && (\"$ENABLE_PYTHON\" == TRUE) ]] && npm run build-plugin || true)",
-    "prepare-files": "rm -rf bin && npm run build-plugin-conditional && npm run copy-backend && npm run copy-model && rm -rf resources && mkdir resources && npm run copy-resources",
+    "prepare-files": "rm -rf bin && npm run build-plugin-conditional && npm run copy-backend && npm run copy-model && rm -rf resources && mkdir resources && npm run copy-resources && npm run copy-licenses",
     "dev": "npm run prepare-files && concurrently --kill-others \"cd ../frontend && npm run dev && cd ../electron-ner-app\" \"wait-on http://localhost:3007 && electron .\"",
     "start-backend": "node scripts/start-backend.js",
     "build-plugin": "cd ../plugin/plugin-python && [ -d venv ] || python -m venv venv && venv/bin/pip install -r requirements.txt && rm -rf dist && PYINSTALLER_CONFIG_DIR=$HOME/.cache/pyinstaller venv/bin/python -m PyInstaller plugin.spec --noconfirm --workpath ../.cache/plugin-build && cd ../../electron-ner-app",
@@ -45,6 +46,7 @@
     "cross-env": "^7.0.3",
     "electron": "^35.5.1",
     "electron-builder": "^24.6.4",
+    "generate-license-file": "^4.0.0",
     "shx": "^0.4.0",
     "typescript": "^5.5.3",
     "vite": "^5.1.4"
@@ -89,6 +91,10 @@
       {
         "from": "bin",
         "to": "bin"
+      },
+      {
+        "from": "licenses",
+        "to": "licenses"
       },
       {
         "from": "node_modules/electron-is-dev",
